@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import FlameGraph from '#lib/components/FlameGraph.svelte';
 	import Waterfall from '#lib/components/Waterfall.svelte';
 	import { trace as traceQuery } from '#lib/remote/query.remote.ts';
@@ -25,8 +26,6 @@
 	let { data }: PageProps = $props();
 
 	let selected = $state<string | null>(null);
-
-	const assembled = $derived(await traceQuery({ tenant: data.tenant, traceId: data.traceId }));
 </script>
 
 <svelte:head>
@@ -39,10 +38,19 @@
 	<header class="page__head">
 		<h1>Trace</h1>
 		<p class="mono page__id">{data.traceId}</p>
-		<a class="btn btn--sm" href="/{data.tenant}/explore">Back to explore</a>
+		<a class="btn btn--sm" href={resolve('/[tenant]/explore', { tenant: data.tenant })}>
+			Back to explore
+		</a>
 	</header>
 
+	<!--
+		Awaited inside the boundary, with no `pending` snippet, for the reason the
+		traces page gives: the server renders the trace itself, or the reason it
+		could not, rather than "Loading the trace…" over a trace it already had.
+	-->
 	<svelte:boundary>
+		{const assembled = $derived(await traceQuery({ tenant: data.tenant, traceId: data.traceId }))}
+
 		{#if assembled}
 			<ul class="totals">
 				{#each serviceTotals(assembled) as total (total.service)}
@@ -61,14 +69,9 @@
 			</p>
 		{/if}
 
-		{#snippet pending()}
-			<p class="empty" role="status">Loading the trace…</p>
-		{/snippet}
-
+		<!-- An `App.Error`, not an `HttpError`: the server's words are on `message`. Why: the traces page. -->
 		{#snippet failed(error)}
-			<p class="empty" role="alert">
-				{(error as { body?: { message?: string } })?.body?.message ?? 'The trace could not load.'}
-			</p>
+			<p class="empty" role="alert">{(error as App.Error).message}</p>
 		{/snippet}
 	</svelte:boundary>
 </div>

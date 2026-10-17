@@ -27,8 +27,8 @@
  * every retry policy that this request changes something, so nothing may cache
  * it and a client library will refuse to retry it on a timeout.
  *
- * `QUERY` — added to `+server` handlers in SvelteKit 3.0.0-next.24 — is the
- * method that means "a read, with a body". It is safe and idempotent like `GET`
+ * `QUERY` — which SvelteKit 3 added to `+server` handlers — is the method that
+ * means "a read, with a body". It is safe and idempotent like `GET`
  * and carries a body like `POST`, which is precisely the shape of this endpoint.
  *
  * `POST` IS ALSO ACCEPTED, DELIBERATELY
@@ -46,7 +46,6 @@
  */
 
 import type { RequestHandler } from './$types';
-import { json } from '@sveltejs/kit';
 import * as v from 'valibot';
 import { authenticateKey, hasScope } from '#lib/server/access.ts';
 import { check } from '#lib/sqf/check.ts';
@@ -61,8 +60,7 @@ import { DEFAULT_RANGE, resolve } from '#lib/time/range.ts';
  * `from..to` in epoch milliseconds — so a link copied out of the address bar
  * pastes straight into a script. Sharing the vocabulary is most of what makes an
  * API feel like the same product.
- */
-/**
+ *
  * `_`-prefixed, so it can be tested from the file next door.
  *
  * SvelteKit refuses unknown exports from a `+server.ts` — the list is the HTTP
@@ -74,7 +72,7 @@ import { DEFAULT_RANGE, resolve } from '#lib/time/range.ts';
  * What it is reached *by* is the new part. `+server.test.ts` sitting beside this
  * file used to be a build error: every `+`-prefixed file in `src/routes` was a
  * route, so a test named after the thing it tests became a route that exported
- * `describe`. SvelteKit 3.0.0-next.19 excludes `+` files containing `.test.`,
+ * `describe`. SvelteKit 3 excludes `+` files containing `.test.`,
  * `.spec.` or `.stories.` from routing, which is what lets the test live where
  * the reader is already looking.
  */
@@ -97,7 +95,14 @@ async function handle(request: Request, method: 'QUERY' | 'POST'): Promise<Respo
 	const access = await authenticateKey(request.headers.get('authorization'));
 
 	if (!access) {
-		return json(
+		/*
+		 * `Response.json`, the platform's own, rather than `json` from
+		 * `@sveltejs/kit`. SvelteKit 3 deprecates its helper because the standard
+		 * one does the same job — serialise, set `content-type: application/json` —
+		 * and a handler written against `Request` and `Response` alone is one a
+		 * reader can follow with the MDN page open and nothing else.
+		 */
+		return Response.json(
 			{ message: 'Provide a valid API key in the Authorization header.' },
 			{
 				status: 401,
@@ -115,19 +120,19 @@ async function handle(request: Request, method: 'QUERY' | 'POST'): Promise<Respo
 	 * collector a data breach rather than a nuisance.
 	 */
 	if (!hasScope(access, 'read')) {
-		return json({ message: 'This key may write but not read.' }, { status: 403 });
+		return Response.json({ message: 'This key may write but not read.' }, { status: 403 });
 	}
 
 	let body: unknown;
 	try {
 		body = await request.json();
 	} catch {
-		return json({ message: 'Body is not valid JSON.' }, { status: 400 });
+		return Response.json({ message: 'Body is not valid JSON.' }, { status: 400 });
 	}
 
 	const parsed = v.safeParse(_RequestSchema, body);
 	if (!parsed.success) {
-		return json(
+		return Response.json(
 			{
 				message: 'The request body is not valid.',
 				issues: parsed.issues.map((issue) => ({
@@ -150,7 +155,7 @@ async function handle(request: Request, method: 'QUERY' | 'POST'): Promise<Respo
 	const query = parse(parsed.output.q);
 	if (!query.query || query.errors.length > 0) {
 		const first = query.errors[0];
-		return json(
+		return Response.json(
 			{
 				message: first?.message ?? 'Could not parse the query.',
 				hint: first?.hint,
@@ -164,7 +169,7 @@ async function handle(request: Request, method: 'QUERY' | 'POST'): Promise<Respo
 	const checked = check(query.query);
 	if (checked.errors.length > 0) {
 		const first = checked.errors[0]!;
-		return json(
+		return Response.json(
 			{
 				message: first.message,
 				hint: first.hint,
@@ -186,7 +191,7 @@ async function handle(request: Request, method: 'QUERY' | 'POST'): Promise<Respo
 		signal: request.signal
 	});
 
-	return json(
+	return Response.json(
 		{
 			columns: result.columns,
 			rows: result.rows,

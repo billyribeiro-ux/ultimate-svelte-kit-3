@@ -53,7 +53,7 @@
 <aside class="callout callout--warn"><p>The window is a few milliseconds wide. It will not happen while you are testing. It will happen the morning the studio posts a promotion, and the first you hear of it is two people standing in a doorway.</p></aside>
 <h3 id="shape">Changing the shape of the question</h3>
 <p>The fix is not better checking. It is to stop asking a question and start making a <strong>claim</strong> — and to arrange things so that the database itself can only accept one.</p>
-<p>Remember the five-minute grid. An appointment is a run of cells. So give the cells their own table, one row per cell per person, and make the pair *(person, cell)* the primary key.</p>
+<p>Remember the five-minute grid. An appointment is a run of cells. So give the cells their own table, one row per cell per person, and make the pair <em>(person, cell)</em> the primary key.</p>
 
 <figure class="code">
 	<figcaption>
@@ -85,7 +85,7 @@
 
 <aside class="callout callout--why">
 	<h4>Why this is different in kind, not degree</h4>
-	<p>A primary key is not a check your code performs. It is a promise the storage engine makes, enforced by the same machinery that keeps the file from corrupting. There is no interleaving of two requests that produces two rows with the same *(staffId, slotStart)* — not on a slow day, not under load, not if your process is duplicated across eight machines. You cannot write this bug once the constraint exists.</p>
+	<p>A primary key is not a check your code performs. It is a promise the storage engine makes, enforced by the same machinery that keeps the file from corrupting. There is no interleaving of two requests that produces two rows with the same <em>(staffId, slotStart)</em> — not on a slow day, not under load, not if your process is duplicated across eight machines. You cannot write this bug once the constraint exists.</p>
 </aside>
 <h3 id="losing-well">Losing well</h3>
 <p>Which leaves one job: when the constraint fires, turn a database error into a sentence a person can act on.</p>
@@ -149,7 +149,7 @@ try {
 </figure>
 <h3 id="three-layers">Three layers, one guarantee</h3>
 <p>The finished booking path has three defences, and it is worth being precise about which one is load-bearing.</p>
-<ol><li><strong>Re-derive availability before writing.</strong> Catches the ordinary case — someone left the tab open for an hour — and produces a good error. *Not a guarantee.*</li><li><strong>A write queue.</strong> Keeps two writes in the same process from colliding on SQLite's single-writer lock. Politeness, and it evaporates across two servers. *Not a guarantee.*</li><li><strong>The composite primary key.</strong> *This is the guarantee.* Nothing above it can be removed safely, and nothing below it is needed.</li></ol>
+<ol><li><strong>Re-derive availability before writing.</strong> Catches the ordinary case — someone left the tab open for an hour — and produces a good error. <em>Not a guarantee.</em></li><li><strong>A write queue.</strong> Keeps two writes in the same process from colliding on SQLite's single-writer lock. Politeness, and it evaporates across two servers. <em>Not a guarantee.</em></li><li><strong>The composite primary key.</strong> <em>This is the guarantee.</em> Nothing above it can be removed safely, and nothing below it is needed.</li></ol>
 <aside class="callout callout--note"><p>Being able to say which layer is the guarantee is the difference between a system you trust and one you hope about. If somebody deletes layers 1 and 2, the app gets ruder. If somebody deletes layer 3, the app silently starts double-booking.</p></aside>
 <h3 id="cost">What it costs</h3>
 <ul><li><strong>Rows.</strong> A busy salon with two staff generates a few hundred claim rows a day. At 24 bytes a row that is single-digit megabytes a year.</li><li><strong>Cancellation is free.</strong> <code>onDelete: 'cascade'</code> means deleting the booking removes its claims. There is no cleanup job.</li><li><strong>Availability queries get faster.</strong> &quot;Which cells are taken between these two instants&quot; is one indexed range scan returning integers — no overlap arithmetic anywhere.</li></ul>

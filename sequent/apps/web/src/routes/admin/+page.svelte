@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { messageFrom } from '#lib/errors.ts';
 	import { reveal, sweep } from '#lib/motion/motion.svelte.ts';
 	import {
 		addWebhook,
@@ -16,18 +17,9 @@
 		setFeatureFlag,
 		setPhase
 	} from './admin.remote.ts';
+	import type { PageProps } from './$types';
 
-	let {
-		data
-	}: {
-		data: {
-			canManageKeys: boolean;
-			canRunVenue: boolean;
-			canSeeQueue: boolean;
-			canSeeLedger: boolean;
-			firmId: string;
-		};
-	} = $props();
+	let { data }: PageProps = $props();
 
 	/*
 	 * All state above the awaited deriveds — the SSR getter-ordering rule again.
@@ -81,16 +73,6 @@
 	 */
 	const money = (units: number) =>
 		`£${(units / 10_000).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-
-	function messageFrom(thrown: unknown): string {
-		if (typeof thrown === 'object' && thrown !== null) {
-			const body = (thrown as { body?: { message?: unknown } }).body;
-			if (body && typeof body.message === 'string') return body.message;
-			const message = (thrown as { message?: unknown }).message;
-			if (typeof message === 'string' && message) return message;
-		}
-		return 'That did not work.';
-	}
 
 	async function mint() {
 		await run(async () => {
@@ -203,8 +185,7 @@
 							{#each PHASES as phase (phase)}
 								<button
 									type="button"
-									class="phase-button"
-									class:current={instrument.phase === phase}
+									class={['phase-button', { current: instrument.phase === phase }]}
 									disabled={busy || instrument.phase === phase}
 									onclick={() => void movePhase(instrument.instrumentId, phase)}
 								>
@@ -428,7 +409,7 @@
 					</thead>
 					<tbody>
 						{#each keys.keys as key (key.keyId)}
-							<tr class:revoked={key.revoked}>
+							<tr class={{ revoked: key.revoked }}>
 								<td class="pin small">{key.label}</td>
 								<td class="mono small">{key.keyId}</td>
 								<td class="small">{key.scopes.join(' ')}</td>
@@ -556,7 +537,7 @@
 									<tr>
 										<td class="mono small pin">{delivery.at}</td>
 										<td class="small">{delivery.event}</td>
-										<td class="small" class:down={delivery.status !== 'delivered'}>
+										<td class={['small', { down: delivery.status !== 'delivered' }]}>
 											{delivery.statusCode ?? delivery.status}
 										</td>
 										<td class="mono small">{delivery.durationMs}ms</td>
@@ -578,22 +559,22 @@
 				<span class="badge level" data-level={ops.verdict.level}>{ops.verdict.level}</span>
 			</header>
 
-			<p class="small" class:down={ops.verdict.level !== 'ok'}>{ops.verdict.summary}</p>
+			<p class={['small', { down: ops.verdict.level !== 'ok' }]}>{ops.verdict.summary}</p>
 
 			<div class="stats">
-				<div class="stat" class:bad={ops.health.engineLag > 500}>
+				<div class={['stat', { bad: ops.health.engineLag > 500 }]}>
 					<span class="mono big">{ops.health.engineLag}</span>
 					<span class="small faint">engine lag</span>
 				</div>
-				<div class="stat" class:bad={ops.health.projectorLag > 1000}>
+				<div class={['stat', { bad: ops.health.projectorLag > 1000 }]}>
 					<span class="mono big">{ops.health.projectorLag}</span>
 					<span class="small faint">projector lag</span>
 				</div>
-				<div class="stat" class:bad={ops.health.outboxAgeMs > 120_000}>
+				<div class={['stat', { bad: ops.health.outboxAgeMs > 120_000 }]}>
 					<span class="mono big">{Math.round(ops.health.outboxAgeMs / 1000)}s</span>
 					<span class="small faint">oldest queued</span>
 				</div>
-				<div class="stat" class:bad={ops.health.trialBalance !== 0}>
+				<div class={['stat', { bad: ops.health.trialBalance !== 0 }]}>
 					<span class="mono big">{ops.health.trialBalance}</span>
 					<span class="small faint">trial balance</span>
 				</div>
@@ -621,7 +602,7 @@
 								<code class="mono small">{flag.name}</code>
 								<button
 									type="button"
-									class:danger={flag.enabled}
+									class={{ danger: flag.enabled }}
 									disabled={busy}
 									onclick={() => void toggleFlag(flag.name, !flag.enabled)}
 								>
@@ -677,11 +658,11 @@
 					<span class="mono big">{queue.stats.delivered.toLocaleString('en-GB')}</span>
 					<span class="small faint">delivered</span>
 				</div>
-				<div class="stat" class:bad={queue.stats.dead > 0}>
+				<div class={['stat', { bad: queue.stats.dead > 0 }]}>
 					<span class="mono big">{queue.stats.dead}</span>
 					<span class="small faint">dead</span>
 				</div>
-				<div class="stat" class:bad={queue.stats.oldestPendingAgeMs > 60_000}>
+				<div class={['stat', { bad: queue.stats.oldestPendingAgeMs > 60_000 }]}>
 					<span class="mono big">{Math.round(queue.stats.oldestPendingAgeMs / 1000)}s</span>
 					<span class="small faint">oldest pending</span>
 				</div>

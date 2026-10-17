@@ -104,6 +104,13 @@ export function absoluteUrl(path: string): string {
  * without supplying a \`slug\`. This conditional type filters any route ID containing a
  * \`[\` out of the union, so the nav can only ever hold routes that are safe to link
  * to directly — and \`resolve(href)\` type-checks without needing a params argument.
+ *
+ * On the leading slash: SvelteKit 3's \`resolve()\` accepts either a route ID
+ * (\`'/features'\`, always with a leading slash) or a pathname (\`'features'\`, never
+ * with one). We store route IDs on purpose — a pathname is just a string that
+ * happens to exist today, whereas a route ID is checked against the union above.
+ * Both forms may carry a \`?search\` or \`#hash\` suffix, which is how the blog links
+ * to an author's section on \`/about\`.
  */
 export type StaticRoute = Exclude<PageRouteId, \`\${string}[\${string}\`>;
 
@@ -134,7 +141,7 @@ export const primaryNav: readonly NavLink[] = [
 			{ type: 'h3', id: 'features', text: 'Features, pricing, FAQ, team, posts' },
 			{
 				type: 'p',
-				text: 'The rest follow the same pattern: an exported `interface`, then a `readonly` array. Here is the shape of the features module:'
+				text: 'The rest follow the same pattern: an exported `interface`, then a `readonly` array. Here is the shape of the features module — the first of its six features in full, with each `// …` standing for code left out (the long `detail` copy, and the five features that follow the same shape):'
 			},
 			{
 				type: 'code',
@@ -170,12 +177,12 @@ export const features: readonly Feature[] = [
 			'Filter by premium, size, expiry, moneyness or ticker'
 		]
 	},
-	// …five more
+	// …
 ];`
 			},
 			{
 				type: 'note',
-				text: 'Icons are stored as **strings**, not imported components. A `.ts` data file importing `.svelte` files couples your data to your view layer and makes it untestable in plain Node. We build a lookup table in chapter 13 that maps the string to a component.'
+				text: 'Icons are stored as **strings**, not imported components. A `.ts` data file importing `.svelte` files couples your data to your view layer and makes it untestable in plain Node. We build a lookup table in chapter 19 that maps the string to a component.'
 			},
 			{
 				type: 'p',
@@ -315,8 +322,15 @@ LEADS_DIR=".data"
 
 # Signs the ebook download links. Minimum 32 characters.
 # Generate one with:  node -e "console.log(crypto.randomBytes(32).toString('hex'))"
-# Leave unset in development and a throwaway key is generated at boot.
-EBOOK_TOKEN_SECRET=""`
+# Leave it commented out in development and a throwaway key is generated at boot.
+# Commented out, not set to "": an empty string is a value, and it fails the
+# 32-character rule in src/env.ts, so every page would answer with env_invalid.
+# EBOOK_TOKEN_SECRET=`
+			},
+			{
+				type: 'why',
+				title: 'Why the secret is commented out rather than left empty',
+				text: "Because an empty value is still a value. `cp .env.example .env` copies every line, and a line that reads `EBOOK_TOKEN_SECRET=\"\"` hands the server the string `''`. The schema in `src/env.ts` is `v.optional(v.pipe(v.string(), v.minLength(32)))`, and `optional` only steps in when the value is *missing* — `''` is present, is a string, and is 32 characters short of the minimum. SvelteKit validates environment variables before it renders anything, so every page would answer with an `env_invalid` error. Commented out, the variable is genuinely unset, `optional` lets it through, and `tokens.ts` generates its throwaway key. You could teach the schema to treat `''` as unset instead; we keep the schema strict and the example file honest, because in production an empty secret is a mistake worth failing loudly on."
 			},
 			{
 				type: 'note',
@@ -400,7 +414,7 @@ EBOOK_TOKEN_SECRET=""`
 			},
 			{
 				type: 'note',
-				text: '`$props()` is the Svelte 5 rune that replaces `export let`. Destructure it, give defaults inline, and type it with an interface. There is no separate props declaration.'
+				text: '`$props()` is the Svelte 5 rune that replaces Svelte 4\'s `export let`. Destructure it, give defaults inline, and type it with an interface. There is no separate props declaration.'
 			},
 			{ type: 'h3', id: 'canonical', text: 'The canonical URL' },
 			{
@@ -566,6 +580,7 @@ EBOOK_TOKEN_SECRET=""`
 				code: `export const ids = {
 	organization: \`\${site.url}/#organization\`,
 	website: \`\${site.url}/#website\`,
+	/** Per-page nodes. \`url\` must already be absolute. */
 	webPage: (url: string) => \`\${url}#webpage\`,
 	breadcrumb: (url: string) => \`\${url}#breadcrumb\`,
 	article: (url: string) => \`\${url}#article\`,
@@ -638,7 +653,10 @@ EBOOK_TOKEN_SECRET=""`
 				type: 'code',
 				file: 'src/lib/seo/schema.ts',
 				lang: 'ts',
-				code: `	offers: plans.map((plan) => ({ /* … */ }))
+				code: `	offers: plans.map((plan) => ({
+		'@type': 'Offer',
+		// …
+	}))
 	// NOTE: there is deliberately no \`aggregateRating\` here. We have not collected
 	// verifiable reviews, and inventing one is a spam policy violation that gets
 	// sites manually penalised. Rich stars are not worth a manual action.`
@@ -663,7 +681,7 @@ EBOOK_TOKEN_SECRET=""`
 	};
 }
 
-/* … */
+// …
 export function serializeJsonLd(graph: Record<string, unknown>): string {
 	return JSON.stringify(graph)
 		.replace(/</g, '\\\\u003c')
@@ -748,9 +766,24 @@ export function serializeJsonLd(graph: Record<string, unknown>): string {
 
 export interface SitemapEntry {
 	readonly path: StaticRoute;
+	/**
+	 * ISO date of the last *meaningful* content change.
+	 *
+	 * Omit it unless you genuinely track it. Google's documented guidance is that it
+	 * uses \`lastmod\` only when it appears consistently accurate — and a site that
+	 * stamps today's date on every page at every deploy teaches it to ignore the field
+	 * entirely. Blog posts have real dates, so they get one. Marketing pages don't
+	 * track edits, so they don't.
+	 */
 	readonly lastmod?: string;
 }
 
+/**
+ * Static pages that belong in the index.
+ *
+ * Deliberately excluded:
+ *   /guide/thank-you  — gated confirmation page, noindexed
+ */
 export const staticSitemapEntries: readonly SitemapEntry[] = [
 	{ path: '/' },
 	{ path: '/features' },
@@ -860,15 +893,9 @@ export const GET: RequestHandler = () => {
 User-agent: *
 Allow: /
 
-# SvelteKit's internal asset directory. Nothing here is a page; letting crawlers
-# walk it just burns crawl budget on hashed JS chunks.
-Disallow: /_app/
-
-# Gated confirmation page. Also carries a noindex meta tag, which is what actually
-# keeps it out of the index — this line just saves the crawl.
-Disallow: /guide/thank-you
-
-# Signed, single-use download links. Never useful to a crawler.
+# Signed, expiring download links. Never useful to a crawler, so this saves the
+# crawl. It is not what keeps the PDF out of the index: the only page that links
+# to it is the thank-you page, which is noindex, nofollow.
 Disallow: /guide/download
 
 Sitemap: \${absoluteUrl('/sitemap.xml')}
@@ -881,6 +908,15 @@ Sitemap: \${absoluteUrl('/sitemap.xml')}
 		}
 	});
 };`
+			},
+			{
+				type: 'p',
+				text: "Notice what is *not* in that file. The thank-you page (chapter 29) is kept out of the index with a `noindex` meta tag and an `X-Robots-Tag` header, so it is deliberately left crawlable — the rule from the box above, applied. The only `Disallow` is for the signed download links, and its comment says plainly that it saves crawl budget rather than keeping anything out of the index."
+			},
+			{
+				type: 'why',
+				title: 'Why `/_app/` is not blocked either',
+				text: "It is tempting: `/_app/` holds no pages, only hashed JavaScript and CSS, and blocking it looks like tidy crawl-budget hygiene. But a crawler does not *walk* that folder — it fetches the files a page links to, because Google renders a page with its stylesheet and scripts to see what a visitor sees. Google's own robots.txt guide allows blocking a resource only \"if you think that pages loaded without these resources won't be significantly affected by the loss\". A page without its stylesheet is significantly affected. So the folder stays open."
 			},
 			{ type: 'h3', id: 'llms', text: 'llms.txt' },
 			{
@@ -987,9 +1023,12 @@ Sitemap: \${absoluteUrl('/sitemap.xml')}
 
 <svelte:element
 	this={tag}
-	class="btn btn--{variant} btn--{size}"
-	class:btn--full={fullWidth}
-	class:btn--disabled={disabled}
+	class={[
+		'btn',
+		\`btn--\${variant}\`,
+		\`btn--\${size}\`,
+		{ 'btn--full': fullWidth, 'btn--disabled': disabled }
+	]}
 	{href}
 	{onclick}
 	aria-label={ariaLabel}
@@ -1010,6 +1049,15 @@ Sitemap: \${absoluteUrl('/sitemap.xml')}
 		<span class="btn__icon" aria-hidden="true">{@render iconTrailing()}</span>
 	{/if}
 </svelte:element>`
+			},
+			{
+				type: 'p',
+				text: "Look at the `class` attribute. It is an **array**: the fixed `'btn'`, two modifiers built from props, and an **object** whose keys are added only when their values are truthy. Since Svelte 5.16 the `class` attribute accepts arrays and objects and flattens them into an ordinary string for you (the same rules as the popular `clsx` library), so `variant=\"secondary\"` and `fullWidth` produce `class=\"btn btn--secondary btn--md btn--full\"`."
+			},
+			{
+				type: 'why',
+				title: 'Why one class attribute rather than class: directives',
+				text: "Older Svelte code writes this as `class=\"btn btn--{variant}\"` plus a `class:btn--full={fullWidth}` directive per modifier. That was the convenient way before Svelte 5.16, and you will meet it in plenty of tutorials. The Svelte documentation now says: \"Unless you're using an older version of Svelte, consider avoiding `class:`, since the attribute is more powerful and composable.\" Composable is the important word. One attribute holds every class decision in one place; an array can hold another array, so a component can accept a `class` prop and drop it straight in; and one condition can switch several classes at once. We use the attribute everywhere in StrikeFlow — and in two places, the pricing toggle in chapter 23 and the header links in chapter 20, we need no class at all, because the state is already on the element for CSS to read."
 			},
 			{
 				type: 'note',
@@ -1093,33 +1141,42 @@ Sitemap: \${absoluteUrl('/sitemap.xml')}
 	BellRingingIcon,
 	RewindIcon
 } from 'phosphor-svelte';
+import type { IconComponentProps } from 'phosphor-svelte';
 import type { Component } from 'svelte';
 import type { IconName } from '#lib/data/features.ts';
 
-/* … */
-export const featureIcons: Record<IconName, Component<Record<string, unknown>>> = {
+// …
+export const featureIcons: Record<IconName, Component<IconComponentProps>> = {
 	PulseIcon,
 	CrosshairIcon,
 	FunctionIcon,
 	EyeIcon,
 	BellRingingIcon,
 	RewindIcon
-} as Record<IconName, Component<Record<string, unknown>>>;`
+};`
 			},
 			{
 				type: 'note',
-				text: 'Typing it as a full `Record<IconName, …>` is the point: add a name to the `IconName` union and forget to register it here, and TypeScript fails the build. A plain object with a runtime lookup would fail silently with an invisible icon in production.'
+				text: "Typing it as a full `Record<IconName, …>` is the point: add a name to the `IconName` union and forget to register it here, and TypeScript fails the build. A plain object with a runtime lookup would fail silently with an invisible icon in production. `IconComponentProps` is Phosphor's own props type, so the call site is checked too: `weight=\"duotne\"` is a build error, not a quietly regular-weight icon."
+			},
+			{
+				type: 'warn',
+				text: "**The annotation is the whole check, so never add `as` to the object.** An earlier version of this file ended `} as Record<IconName, …>`, and it looked like extra safety. It was the opposite. A cast tells TypeScript to believe you, and TypeScript accepts `{ A, B } as Record<'A' | 'B' | 'C', …>` without a word, so with the cast in place the missing-icon build error never fires. Take an icon out of the object above and `pnpm run check` fails with \"Property 'RewindIcon' is missing\"; put the cast back and it passes. Reach for `as` only when you know something the compiler cannot — never to make an error go away."
 			},
 			{
 				type: 'p',
-				text: 'In Svelte 5 you render a component held in a variable by just using it as a tag. `<svelte:component this={Icon} />` is legacy:'
+				text: 'In Svelte 5 you render a component held in a variable by just using it as a tag. The Svelte 4 way, `<svelte:component this={Icon} />`, is now legacy and not needed:'
 			},
 			{
 				type: 'code',
 				lang: 'svelte',
 				file: 'usage',
-				code: `{@const Icon = featureIcons[feature.icon]}
+				code: `{const Icon = $derived(featureIcons[feature.icon])}
 <Icon size={26} weight="duotone" />`
+			},
+			{
+				type: 'note',
+				text: '`{const Icon = $derived(…)}` is a **declaration tag**: a `const` written straight into the markup, naming a value for the markup around it. Since Svelte 5.56 the older `{@const Icon = …}` tag is legacy. The `$derived` is not decoration: `{@const}` was worked out again whenever what it read changed, while a bare `{const Icon = …}` is worked out once, like a `const` in the script, so `$derived` is what keeps that reactivity. The scope is lexical: the name is visible to the tag\'s siblings and their children, so inside an `{#each}`, as in the feature grid later on, it reaches that item\'s whole card and nothing outside the loop.'
 			},
 			{ type: 'h3', id: 'phosphor-vite', text: 'One important build setting' },
 			{
@@ -1132,16 +1189,23 @@ export const featureIcons: Record<IconName, Component<Record<string, unknown>>> 
 				lang: 'ts',
 				code: `import { sveltePhosphorOptimize } from 'phosphor-svelte/vite';
 
+// …
 export default defineConfig({
 	plugins: [
-		sveltekit({ /* … */ }),
-		sveltePhosphorOptimize()   // MUST come AFTER sveltekit()
-	]
+		sveltekit({
+			// …
+		}),
+
+		// …
+		sveltePhosphorOptimize()
+	],
+
+	// …
 });`
 			},
 			{
 				type: 'warn',
-				text: 'The ordering matters and the failure is loud. Vite runs `transform` hooks in array order, and this plugin parses its input as JavaScript. Put it **before** `sveltekit()` and it receives raw `.svelte` source — markup and all — and dies on the first `<h1>` with *"Unexpected JSX expression"*. I lost ten minutes to this.'
+				text: 'The ordering matters and the failure is loud. Vite runs `transform` hooks in array order, and this plugin parses its input as JavaScript. Put it **before** `sveltekit()` and it receives raw `.svelte` source — markup and all — and dies on the first `<h1>` with *"Unexpected JSX expression"*. I lost ten minutes to this. The `// …` just above `sveltePhosphorOptimize()` stands for the comment in the real file that records all of this — it opens with *MUST come AFTER `sveltekit()`*.'
 			},
 			{
 				type: 'checkpoint',
@@ -1192,7 +1256,7 @@ export default defineConfig({
 	import Button from '#lib/components/ui/Button.svelte';
 
 	// …
-	let drawer = $state<HTMLDialogElement | null>(null);
+	let drawer: HTMLDialogElement | undefined;
 	let isOpen = $state(false);
 
 	// …
@@ -1209,8 +1273,9 @@ export default defineConfig({
 
 	/**
 	 * The dialog fires \`close\` however it was closed — our button, the Escape key,
-	 * or a backdrop click. Syncing state here rather than in \`closeDrawer\` means we
-	 * can't get out of sync when the browser closes it behind our back.
+	 * or a backdrop click (\`closedby="any"\`, below). Syncing state here rather than
+	 * in \`closeDrawer\` means we can't get out of sync when the browser closes it
+	 * behind our back.
 	 */
 	function handleClose() {
 		isOpen = false;
@@ -1221,17 +1286,39 @@ export default defineConfig({
 	 *
 	 * Without this, tapping a link in the drawer changes the page underneath while
 	 * the drawer stays open on top of it — a classic SPA bug.
+	 *
+	 * SvelteKit 3 also fires the navigation hooks for *shallow* navigations —
+	 * \`goto(url, { shallow: true, state })\`, the replacement for \`pushState\`. Those
+	 * change \`page.state\`, not the page, so closing the drawer for one would be wrong.
+	 * The site has no shallow routing today; the guard is here so adding some later
+	 * can't quietly break the drawer.
 	 */
-	afterNavigate(() => {
+	afterNavigate((navigation) => {
+		if (navigation.shallow) return;
 		if (drawer?.open) drawer.close();
 	});
 
-	// …
+	/**
+	 * Is this link the page we're on?
+	 *
+	 * Compared by ROUTE ID, not by URL. Our nav already stores route IDs, and
+	 * \`page.route.id\` is the route being rendered — the same value on the server, in
+	 * the prerendered HTML, and in the browser, and untouched by any base path.
+	 *
+	 * Comparing \`resolve(href)\` with \`page.url.pathname\` looks equivalent and is
+	 * not: during server rendering \`resolve()\` returns a path relative to the page
+	 * (\`./features\`), which never equals \`/features\`. The prerendered HTML would
+	 * mark nothing as current, and only hydration would fix it — too late for
+	 * anyone without JavaScript, and for a screen reader that read the page first.
+	 *
+	 * The \`startsWith\` branch handles section highlighting: /blog stays marked as
+	 * current while you're reading /blog/[slug]. \`null\` (no route matched — the 404
+	 * page) marks nothing.
+	 */
 	function isCurrent(href: StaticRoute): boolean {
-		const target = resolve(href);
-		const here = page.url.pathname;
-		if (target === resolve('/')) return here === target;
-		return here === target || here.startsWith(\`\${target}/\`);
+		const here = page.route.id;
+		if (href === '/') return here === '/';
+		return here === href || (here?.startsWith(\`\${href}/\`) ?? false);
 	}
 </script>`
 			},
@@ -1239,12 +1326,17 @@ export default defineConfig({
 				type: 'note',
 				text: '`scrollY` from `svelte/reactivity/window` is a reactive wrapper around `window.scrollY`. It attaches its listener lazily — only while something is reading `.current` — and cleans up on its own. It is also SSR-safe: `.current` is `undefined` on the server rather than throwing. Much better than an `$effect` with `addEventListener`.'
 			},
+			{
+				type: 'why',
+				title: 'Why `drawer` is a plain `let`, and `isOpen` is `$state`',
+				text: "`bind:this={drawer}` (in the markup below) puts the `<dialog>` element into the variable once it exists. Nothing on the page has to re-render when that happens: only `openDrawer`, `closeDrawer` and the navigation hook read it, and they run long afterwards. So it is an ordinary `let`. `isOpen` is different — the toggle button's `aria-expanded` reads it in the markup, so it must be `$state`, or the attribute would never change. The rule is the one from the Svelte docs: `$state` is for values the page reads reactively. And `bind:this` rather than an attachment, because an attachment is for work that starts when an element mounts and stops when it goes; we only need to hold on to the node."
+			},
 			{ type: 'h3', id: 'markup', text: 'The markup' },
 			{
 				type: 'code',
 				file: 'src/lib/components/layout/SiteHeader.svelte',
 				lang: 'svelte',
-				code: `<header class="header" class:header--scrolled={isScrolled}>
+				code: `<header class={['header', { 'header--scrolled': isScrolled }]}>
 	<div class="header__inner container container--wide">
 		<a class="header__brand" href={resolve('/')} aria-label="StrikeFlow — home">
 			<Logo size={1.5} />
@@ -1255,9 +1347,12 @@ export default defineConfig({
 			<ul class="header__nav-list" role="list">
 				{#each primaryNav as link (link.href)}
 					<li>
+						<!--
+							The active look is styled off \`aria-current\` itself (see the CSS),
+							so what is announced and what is shown cannot disagree.
+						-->
 						<a
 							class="header__nav-link"
-							class:is-current={isCurrent(link.href)}
 							href={resolve(link.href)}
 							aria-current={isCurrent(link.href) ? 'page' : undefined}
 						>
@@ -1291,7 +1386,13 @@ export default defineConfig({
 </header>
 
 <!-- … -->
-<dialog bind:this={drawer} class="drawer" onclose={handleClose} aria-label="Navigation menu">
+<dialog
+	bind:this={drawer}
+	class="drawer"
+	closedby="any"
+	onclose={handleClose}
+	aria-label="Navigation menu"
+>
 	<!-- … -->
 </dialog>`
 			},
@@ -1302,7 +1403,16 @@ export default defineConfig({
 			},
 			{
 				type: 'note',
-				text: '`aria-current="page"` on the active link is what tells a screen reader "you are here". It is also a free CSS hook — we style the active state off the same attribute, so the visual and the announced state can never disagree.'
+				text: "`aria-current=\"page\"` on the active link is what tells a screen reader \"you are here\". It is also a free CSS hook: the desktop link's active look is `.header__nav-link[aria-current='page']`, and the drawer's is `.drawer__link[aria-current='page']`. There is no separate `is-current` class to keep in step, so the visual and the announced state can never disagree."
+			},
+			{
+				type: 'why',
+				title: 'Why `isCurrent` compares route IDs, not URLs',
+				text: "The obvious version is `resolve(href) === page.url.pathname`, and it works — in the browser. On the server it never matches, because during server rendering `resolve()` returns a path *relative to the page being rendered*. The `$app/paths` docs say so: \"During server rendering, the base path is relative and depends on the page currently being rendered.\" On `/features`, `resolve('/features')` is `./features`, which is not `/features`. Every page on this site is rendered on the server first — most of them once, at build time — so the HTML that ships would mark nothing as current; only hydration would fix it, which is too late for a visitor without JavaScript and for a screen reader that read the page first. `page.route.id` has neither problem. It is the route being rendered — `/features`, or `/blog/[slug]` on an article — and it is the same on the server and in the browser. Our nav already stores route IDs, so the comparison is direct. An end-to-end test in `e2e/header.e2e.ts` loads `/features` with JavaScript off and checks the link carries `aria-current=\"page\"`."
+			},
+			{
+				type: 'note',
+				text: "`closedby=\"any\"` on the `<dialog>` adds the one closing gesture `showModal()` does not give you by default: a click or tap on the backdrop. Browsers that do not support the attribute yet simply ignore it, and the drawer still closes with Escape and the close button. Whichever way it closes, the dialog fires `close`, and `handleClose` keeps `isOpen` honest."
 			},
 			{ type: 'h3', id: 'drawer-css', text: 'The drawer styles' },
 			{
@@ -1399,11 +1509,19 @@ export default defineConfig({
 	import SiteHeader from '#lib/components/layout/SiteHeader.svelte';
 	import SiteFooter from '#lib/components/layout/SiteFooter.svelte';
 	import { prefersReducedMotion } from '#lib/motion/index.ts';
+	import type { LayoutProps } from './$types';
 
-	let { children } = $props();
+	let { children }: LayoutProps = $props();
 
 	// …
 	onNavigate((navigation) => {
+		// Kit 3 runs the navigation hooks for shallow navigations too — a
+		// \`goto(url, { shallow: true })\` that only changes \`page.state\`. Nothing on
+		// screen is replaced by one, so a full-page cross-fade would be a flash for
+		// no reason. Same guard as the header drawer; the site has no shallow routing
+		// today, so this is insurance rather than a fix.
+		if (navigation.shallow) return;
+
 		// Not supported in every browser, and correctly skipped for reduced motion.
 		// Returning nothing lets SvelteKit navigate normally.
 		if (!document.startViewTransition || prefersReducedMotion()) return;
@@ -1441,7 +1559,11 @@ export default defineConfig({
 			},
 			{
 				type: 'note',
-				text: 'The `onNavigate` block wires up the View Transitions API: the browser snapshots the outgoing page and cross-fades to the new one, with the animation itself defined in CSS. It ships inert until part 4, where we build `#lib/motion/` (including this `prefersReducedMotion` helper) and the `::view-transition-*` rules in `motion.css` — building chapter by chapter, add it when you get there. The promise dance is exactly what the API requires: resolving inside the callback is what tells SvelteKit to complete the navigation.'
+				text: "`LayoutProps` comes from `./$types`, a module SvelteKit generates for every route folder. It types everything a layout receives: `children`, the snippet holding the page, and `data` if the layout has a load function. Pages use its sibling, `PageProps`. Writing the props type by hand — `{ children: Snippet }` — works until the route changes, and then quietly lies; the generated type changes with it."
+			},
+			{
+				type: 'note',
+				text: 'The `onNavigate` block wires up the View Transitions API: the browser snapshots the outgoing page and cross-fades to the new one, with the animation itself defined in CSS. It ships inert until part 4, where we build `#lib/motion/` (including this `prefersReducedMotion` helper) and the `::view-transition-*` rules in `motion.css` — building chapter by chapter, add it when you get there. The promise dance is exactly what the API requires: resolving inside the callback is what tells SvelteKit to complete the navigation. The `navigation.shallow` guard is the same one the header drawer uses in chapter 20: since Kit 3, `onNavigate` also fires for `goto(url, { shallow: true })`, and a change that only touches `page.state` should not cross-fade the whole page.'
 			},
 			{
 				type: 'why',
@@ -1478,12 +1600,15 @@ main:focus {
 				type: 'code',
 				file: 'src/routes/+layout.ts',
 				lang: 'ts',
-				code: `export const prerender = true;
+				code: `// …
+export const prerender = true;
+
+// …
 export const trailingSlash = 'never';`
 			},
 			{
 				type: 'p',
-				text: "Options exported from a layout cascade to every page beneath it, so those two lines configure the entire site. At build time SvelteKit crawls your app, renders each page and writes plain HTML files. A visitor gets a static file from the CDN edge — no server render, no cold start."
+				text: "Options exported from a layout cascade to every page beneath it, so those two lines configure the entire site (each `// …` stands for a doc comment in the real file saying what follows here). At build time SvelteKit crawls your app, renders each page and writes plain HTML files. A visitor gets a static file from the CDN edge — no server render, no cold start."
 			},
 			{
 				type: 'note',
@@ -1526,7 +1651,7 @@ export const trailingSlash = 'never';`
 		<!-- … -->
 		<meta name="color-scheme" content="dark" />
 
-		<!-- … the MOTION GATE comment — see the note below … -->
+		<!-- … -->
 		<script>
 			(function () {
 				var root = document.documentElement;
@@ -1571,7 +1696,7 @@ export const trailingSlash = 'never';`
 			},
 			{
 				type: 'note',
-				text: 'That `<script>` in the head is the **motion gate** — the only inline script on the site. It adds a `motion-pending` class to `<html>` before first paint, which the motion CSS in part 4 uses to hide elements until they animate in; it is skipped entirely under reduced motion, and a 2.5-second failsafe (plus the catch-all `catch`) removes the class so a failed animation library can never leave the page blank. Part 4 builds the CSS and the loader around it — until then it sits there doing nothing, because nothing styles `motion-pending` yet.'
+				text: 'That `<script>` in the head is the **motion gate** — the only inline script on the site, and the `<!-- … -->` just above it stands for the long comment headed THE MOTION GATE in the real file (the other `<!-- … -->` lines are the comments explaining each tag). It adds a `motion-pending` class to `<html>` before first paint, which the motion CSS in part 4 uses to hide elements until they animate in; it is skipped entirely under reduced motion, and a 2.5-second failsafe (plus the catch-all `catch`) removes the class so a failed animation library can never leave the page blank. Part 4 builds the CSS and the loader around it — until then it sits there doing nothing, because nothing styles `motion-pending` yet.'
 			},
 			{
 				type: 'checkpoint',
@@ -1645,7 +1770,7 @@ export function mulberry32(seed: number): () => number {
 			{ type: 'h3', id: 'attach', text: 'The component: {@attach}' },
 			{
 				type: 'p',
-				text: 'An **attachment** is a function that runs when an element is added to the DOM and returns a cleanup function. It replaces both the old `onMount` + `bind:this` dance and `use:` actions.'
+				text: 'An **attachment** is a function that runs when an element is added to the DOM and returns a cleanup function. It replaces both the old `onMount` + `bind:this` dance and `use:` actions. The listing below is most of `FlowChart.svelte`; each `// …` or `<!-- … -->` stands for something left out — two long explanatory comments, the grid, price-scale, time-scale and crosshair options, and the header strip with the price readout.'
 			},
 			{
 				type: 'code',
@@ -1702,8 +1827,16 @@ export function mulberry32(seed: number): () => number {
 	/**
 	 * The chart attachment.
 	 *
-	 * It reads \`shouldAnimate\` and \`height\`, so Svelte re-runs it (tearing down the
-	 * old chart first, via the returned cleanup) whenever either changes.
+	 * An attachment runs inside an effect, and an effect depends on exactly the
+	 * reactive values it reads SYNCHRONOUSLY — before its first \`await\`. Reads after
+	 * the \`await import(…)\` below, or inside the timer's callback, are not tracked
+	 * at all. So the three reads at the top are the whole dependency list: change
+	 * \`seed\` (through \`initial\`), \`live\`, or the reduced-motion setting, and Svelte
+	 * tears the old chart down via the returned cleanup and builds a new one.
+	 *
+	 * \`height\` is deliberately not on that list. It reaches the chart through CSS —
+	 * the container's \`min-height\` — and \`autoSize\` follows the container, so a
+	 * height change resizes the chart in place instead of rebuilding it.
 	 */
 	const chart: Attachment<HTMLDivElement> = (node) => {
 		// Guards the async gap: if the component unmounts while the dynamic import is
@@ -1711,10 +1844,15 @@ export function mulberry32(seed: number): () => number {
 		let disposed = false;
 		let teardown: (() => void) | undefined;
 
-		// Snapshot the derived data ONCE, at attachment time. Reading \`initial\` again
-		// inside the timer would make the effect depend on it and re-run in a loop.
+		// Read everything this chart is built from NOW, before the await. These reads
+		// are what make the attachment re-run when they change; the same reads after
+		// the await would be silently ignored, and would see a later moment's values
+		// than the ones this chart was built for.
 		const data = initial;
 		const animate = shouldAnimate;
+		// Seeded separately (seed + 1) so the live tail is deterministic too, but
+		// doesn't simply repeat the initial series.
+		const tailSeed = seed + 1;
 
 		// A fresh chart means a fresh tail.
 		tick = null;
@@ -1726,19 +1864,41 @@ export function mulberry32(seed: number): () => number {
 			if (disposed) return;
 
 			const api = createChart(node, {
+				// ResizeObserver-backed. Saves writing one ourselves, and it correctly
+				// handles the container changing size without the window resizing —
+				// which a \`window.onresize\` handler would miss entirely. With autoSize
+				// on, the library ignores \`width\` and \`height\` options, so we pass
+				// neither: the container's CSS size is the one source of truth.
 				autoSize: true,
-				height,
 				layout: {
 					background: { type: ColorType.Solid, color: 'transparent' },
 					textColor: '#7f8ba3',
 					fontFamily: "'Sofia Sans Variable', system-ui, sans-serif",
 					attributionLogo: false
 				},
-				// …grid, price-scale, time-scale and crosshair options…
+				// …
 				handleScroll: false,
 				handleScale: false
 			});
 
+			let timer: ReturnType<typeof setInterval> | undefined;
+
+			// Assigned the moment the chart exists, so every path below — the early
+			// return included — still disposes of it.
+			teardown = () => {
+				clearInterval(timer);
+				// \`remove()\` disposes the canvas, the ResizeObserver and every internal
+				// listener. Skip it and you leak a full chart instance on every
+				// navigation — which on a SPA compounds until the tab dies.
+				api.remove();
+			};
+
+			/*
+			 * v5 API note: series are created with \`addSeries(Definition, options)\`.
+			 * The v4 style — \`chart.addAreaSeries(options)\` — was removed. Most
+			 * tutorials you'll find online are still v4, and this is the line that
+			 * breaks.
+			 */
 			const priceSeries = api.addSeries(AreaSeries, {
 				lineColor: '#4f7dff',
 				lineWidth: 2,
@@ -1765,17 +1925,40 @@ export function mulberry32(seed: number): () => number {
 			volumeSeries.setData(data.volume.slice());
 			api.timeScale().fitContent();
 
-			let timer: ReturnType<typeof setInterval> | undefined;
+			if (animate) {
+				const random = mulberry32(tailSeed);
 
-			if (animate) { /* …append a bar every 1600ms… */ }
+				const lastPoint = data.price[data.price.length - 1];
+				const firstValue = data.price[0]?.value ?? data.last;
+				if (!lastPoint) return;
 
-			teardown = () => {
-				if (timer) clearInterval(timer);
-				// \`remove()\` disposes the canvas, the ResizeObserver and every internal
-				// listener. Skip it and you leak a full chart instance on every
-				// navigation — which on a SPA compounds until the tab dies.
-				api.remove();
-			};
+				let cursor: PricePoint = lastPoint;
+				// Kept locally: this callback is the only thing that moves the tail, so
+				// it already knows the previous value. Reading the \`last\` derived here
+				// would not be tracked — a timer callback never is — but it would tie
+				// the callback to the readout it is about to overwrite.
+				let previousValue = cursor.value;
+
+				timer = setInterval(() => {
+					cursor = nextPoint(cursor, random);
+
+					priceSeries.update({ time: cursor.time, value: cursor.value });
+					volumeSeries.update({
+						time: cursor.time,
+						value: Math.round(180 + random() * 500),
+						color:
+							cursor.value >= previousValue ? 'rgba(22, 199, 132, 0.5)' : 'rgba(234, 57, 67, 0.5)'
+					});
+
+					previousValue = cursor.value;
+
+					tick = {
+						last: cursor.value,
+						changeAbs: Number((cursor.value - firstValue).toFixed(2)),
+						changePct: Number((((cursor.value - firstValue) / firstValue) * 100).toFixed(2))
+					};
+				}, 1600);
+			}
 		})();
 
 		return () => {
@@ -1786,14 +1969,16 @@ export function mulberry32(seed: number): () => number {
 </script>
 
 <!-- … -->
-<div
-	class="chart__canvas"
-	style="min-height: {height}px"
-	aria-hidden="true"
-	{@attach chart}
-></div>`
+	<div
+		class="chart__canvas"
+		style="min-height: {height}px"
+		aria-hidden="true"
+		{@attach chart}
+	></div>
+
+<!-- … -->`
 			},
-			{ type: 'h3', id: 'three-things', text: 'Three things worth understanding' },
+			{ type: 'h3', id: 'three-things', text: 'Four things worth understanding' },
 			{
 				type: 'why',
 				title: '1. Why the dynamic import',
@@ -1802,12 +1987,17 @@ export function mulberry32(seed: number): () => number {
 			{
 				type: 'why',
 				title: '2. Why the `disposed` flag',
-				text: 'There is an `await` between the attachment starting and the chart being created. If the component unmounts in that gap — a fast navigation — you would create a chart inside a detached node that nothing will ever clean up. The flag closes that window.'
+				text: "There is an `await` between the attachment starting and the chart being created. If the component unmounts in that gap — a fast navigation — you would create a chart inside a detached node that nothing will ever clean up. The flag closes that window. The same care puts `teardown` straight after `createChart`, before anything else can `return`: the `if (!lastPoint) return;` further down can never strand a live chart, because by then the cleanup already knows about it."
 			},
 			{
 				type: 'why',
 				title: '3. Why a chart is not accessible on its own',
 				text: 'It renders to `<canvas>`, which to a screen reader is a blank rectangle. Every number the chart conveys is therefore **also** available as real text — in the stat row beside it, and in a visually-hidden summary in the `<figcaption>`. If your chart is the only place some information exists, that information does not exist for a chunk of your users.'
+			},
+			{
+				type: 'why',
+				title: '4. Why every read comes before the `await`',
+				text: "An attachment runs inside an effect, and an effect re-runs when the reactive values it read change. But only the values it read *synchronously*. The Svelte docs are exact about it: \"Values that are read asynchronously — after an `await` or inside a `setTimeout`, for example — will not be tracked.\" So the first lines of `chart` are its dependency list: `initial` (which follows `seed`), `shouldAnimate` (which follows `live` and the reduced-motion setting) and `seed` itself. Change any of them and Svelte runs the cleanup and builds a fresh chart. Had we read `seed` after `await import(…)`, a new seed would be silently ignored — the bug would be a chart that stops responding to a prop, not an error. The timer is the other half of the rule. Its callback writes `tick` every 1.6 seconds, and the attachment never *reads* `tick` (it only resets it), so each write updates the readout and leaves the chart alone; and whatever the callback reads is untracked anyway, so it cannot start a loop either. And `height` is deliberately absent: it reaches the chart through the container's CSS `min-height`, and `autoSize` follows the container, so a new height resizes the chart in place instead of rebuilding it."
 			},
 			{
 				type: 'warn',
@@ -1875,7 +2065,7 @@ export function mulberry32(seed: number): () => number {
 				lang: 'svelte',
 				code: `<ul class="feature-grid auto-grid" role="list">
 	{#each items as feature (feature.id)}
-		{@const Icon = featureIcons[feature.icon]}
+		{const Icon = $derived(featureIcons[feature.icon])}
 		<li class="feature-grid__item">
 			<Card as="article">
 				<span class="feature-grid__icon" aria-hidden="true">
@@ -1914,7 +2104,7 @@ export function mulberry32(seed: number): () => number {
 				type: 'code',
 				file: 'src/lib/components/marketing/StatStrip.svelte',
 				lang: 'svelte',
-				code: `<dl class="stats" class:stats--bordered={bordered}>
+				code: `<dl class={['stats', { 'stats--bordered': bordered }]}>
 	{#each stats as stat (stat.label)}
 		<div class="stats__item">
 			<dt class="stats__label">{stat.label}</dt>
@@ -1984,38 +2174,120 @@ export function mulberry32(seed: number): () => number {
 }
 .faq__summary::-webkit-details-marker { display: none; }  /* older Safari */`
 			},
-			{ type: 'h3', id: 'pricing', text: 'PricingTable: a real radiogroup' },
+			{ type: 'h3', id: 'pricing', text: 'PricingTable: a real radio group' },
+			{
+				type: 'p',
+				text: "The monthly/annual switch looks like a pill with two segments, but it answers one question with exactly one answer. HTML has a control for that: radio buttons. So that is what it is."
+			},
 			{
 				type: 'code',
 				file: 'src/lib/components/marketing/PricingTable.svelte',
 				lang: 'svelte',
-				code: `<div class="pricing__toggle" role="radiogroup" aria-label="Billing period">
-	<button
-		type="button"
-		role="radio"
-		aria-checked={billing === 'monthly'}
-		class="pricing__toggle-option"
-		class:is-active={billing === 'monthly'}
-		onclick={() => (billing = 'monthly')}
-	>
+				code: `<fieldset class="pricing__toggle">
+	<legend class="visually-hidden">Billing period</legend>
+
+	<label class="pricing__toggle-option">
+		<input
+			class="pricing__toggle-input"
+			type="radio"
+			name={radioName}
+			value="monthly"
+			bind:group={billing}
+		/>
 		Monthly
-	</button>
-	<button
-		type="button"
-		role="radio"
-		aria-checked={billing === 'annual'}
-		class="pricing__toggle-option"
-		class:is-active={billing === 'annual'}
-		onclick={() => (billing = 'annual')}
-	>
+	</label>
+	<label class="pricing__toggle-option">
+		<input
+			class="pricing__toggle-input"
+			type="radio"
+			name={radioName}
+			value="annual"
+			bind:group={billing}
+		/>
 		Annual
 		<span class="pricing__saving">save {bestSaving}%</span>
-	</button>
-</div>`
+	</label>
+</fieldset>`
+			},
+			{
+				type: 'ul',
+				items: [
+					"`<fieldset>` and `<legend>` are the native wrapper for \"these controls answer one question\". The legend becomes the group's name, so a screen reader announces \"Billing period, radio group\". It is visually hidden only because the two labels already explain themselves on screen.",
+					"Wrapping each `<input>` in its `<label>` makes the whole segment clickable and names the radio after its text.",
+					"`bind:group={billing}` keeps the `billing` state and the checked radio in step in both directions. Each radio contributes its `value`, so `billing` is always `'monthly'` or `'annual'`.",
+					"Both radios share a `name`, and that is not decoration: a shared name is what makes them one group to the browser, and what the arrow keys move within."
+				]
+			},
+			{
+				type: 'code',
+				file: 'src/lib/components/marketing/PricingTable.svelte',
+				lang: 'svelte',
+				code: `	type Billing = 'monthly' | 'annual';
+
+	let billing = $state<Billing>('monthly');
+
+	/**
+	 * The radios' shared \`name\`. A shared name is what makes two radios ONE group to
+	 * the browser — it is what the arrow keys move within. \`$props.id()\` makes it
+	 * unique per instance, so two pricing tables on one page stay two groups, and
+	 * it is the same on the server and in the browser, so hydration agrees.
+	 */
+	const radioName = $props.id();`
+			},
+			{
+				type: 'note',
+				text: "`$props.id()` gives each instance of the component its own id, the same on the server and in the browser, so hydration agrees with the HTML. It is the Svelte 5 way to make ids — and here, a group name — that cannot collide: put two pricing tables on one page and they stay two groups. It can only be called at the top level of a component, as the initial value of a variable."
+			},
+			{
+				type: 'why',
+				title: 'Why native radios rather than buttons with role="radio"',
+				text: "Because a role is a promise, and the browser only keeps the promises it makes itself. An earlier version of this component used two `<button role=\"radio\">` elements inside a `role=\"radiogroup\"`, and its comment claimed the arrow keys worked. They did not. A screen reader announced \"radio button, 1 of 2\", the user pressed the right arrow as the announcement invited, and nothing happened — and both buttons were separate tab stops, which a radio group is not supposed to be. ARIA changes what assistive technology *says*; it adds no behaviour. To keep that promise with buttons you write the keyboard handling yourself: arrow keys that wrap, Home and End, a roving `tabindex`. Native radios come with all of it, tested in every browser, for no code at all. Reach for ARIA when HTML has no element for the job. Here it does."
 			},
 			{
 				type: 'p',
-				text: '`role="radiogroup"` plus `role="radio"` gives assistive tech the right mental model — "one of two options", rather than "two unrelated buttons".'
+				text: "Styling a native radio as a segment takes three rules:"
+			},
+			{
+				type: 'code',
+				file: 'src/lib/components/marketing/PricingTable.svelte',
+				lang: 'css',
+				code: `/*
+ * The radio is invisible but still THERE: laid over its whole label, so it is
+ * what a click or tap lands on, and still focusable and announced. \`display: none\`
+ * or \`visibility: hidden\` would take it out of the tab order and the
+ * accessibility tree, and the group's keyboard behaviour with it.
+ */
+.pricing__toggle-input {
+	position: absolute;
+	inset: 0;
+	margin: 0;
+	opacity: 0;
+	appearance: none;
+	cursor: inherit;
+}
+
+/*
+ * The active and focused looks read the radio's own state, so they cannot
+ * disagree with what a screen reader announces, and they are right even before
+ * the JavaScript has loaded. The ring moves to the label because the radio
+ * itself is transparent.
+ */
+.pricing__toggle-option:has(.pricing__toggle-input:checked) {
+	background-color: var(--accent);
+	color: var(--accent-contrast);
+}
+
+.pricing__toggle-option:has(.pricing__toggle-input:focus-visible) {
+	box-shadow: var(--focus-ring);
+}`
+			},
+			{
+				type: 'p',
+				text: "The radio is made transparent and laid over its label, not removed. `display: none` would take it out of the tab order and the accessibility tree, and the keyboard behaviour we chose it for would go with it. The active segment is then styled with `:has()`, which matches an element that *contains* something — here, a label containing a checked radio. So the look comes straight from the radio's own state: there is no `is-active` class to keep in step, and the right segment is lit even before the JavaScript has loaded."
+			},
+			{
+				type: 'note',
+				text: "Before hydration the radios already work as radios, but the prices only switch once Svelte is running, because `billing` lives in JavaScript. If someone picks **Annual** in that first moment, `bind:group` adopts their choice when the page hydrates instead of resetting it, so the prices catch up. An end-to-end test, `e2e/pricing.e2e.ts`, focuses **Monthly**, presses the right arrow, and expects **Annual** to be checked and the annual prices on screen."
 			},
 			{
 				type: 'note',
@@ -2023,7 +2295,7 @@ export function mulberry32(seed: number): () => number {
 			},
 			{
 				type: 'checkpoint',
-				text: 'All six marketing components compile. Open the FAQ in a browser, close every item, then Ctrl+F for a word inside one — it should expand.'
+				text: 'All six marketing components compile. Open the FAQ in a browser, close every item, then Ctrl+F for a word inside one — it should expand. On the pricing page, Tab to the billing toggle and press the arrow keys: the selection and the prices move together, and one more Tab leaves the group entirely.'
 			}
 		]
 	}

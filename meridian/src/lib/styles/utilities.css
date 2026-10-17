@@ -7,7 +7,7 @@
  */
 
 .container {
-	width: min(100% - 2 * var(--space-4), var(--container));
+	width: min(100% - 2 * var(--gutter), var(--container));
 	margin-inline: auto;
 }
 
@@ -17,10 +17,18 @@
 	}
 }
 
+/*
+ * `.stack` sets its own `--stack-gap` rather than falling back to one. A
+ * custom property inherits, so with a fallback a card that is a `.stack`
+ * inside a `.stack--lg` section took the section's 32px between its own
+ * heading and its first line. Set here, every stack starts at 16px and only
+ * its own modifier changes that.
+ */
 .stack {
+	--stack-gap: var(--space-4);
 	display: flex;
 	flex-direction: column;
-	gap: var(--stack-gap, var(--space-4));
+	gap: var(--stack-gap);
 }
 .stack--sm {
 	--stack-gap: var(--space-2);
@@ -39,6 +47,37 @@
 	justify-content: space-between;
 }
 
+/*
+ * A row of facts with middle dots between them — "8 days · 14 stops · 3
+ * companions" — that may wrap. A separator must be neither the last thing
+ * on a line nor the first, and CSS cannot ask which item starts a line. So
+ * every item carries its dot in a `::before` that hangs into the space on
+ * its left, the row is pulled one dot-width left, and `clip-path` cuts that
+ * width off again: the item that starts a line loses its dot, every other
+ * item shows one. `/ ''` is the dot's alternative text — nothing to read
+ * aloud. Two limits, both fine here: an item must not have a background
+ * (the dot sits inside it), and the clip is physical, so left-to-right only,
+ * which all three of the app's languages are.
+ */
+.dotted {
+	display: flex;
+	flex-wrap: wrap;
+	row-gap: var(--space-0);
+	margin-inline-start: -1.25em;
+	clip-path: inset(0 0 0 1.25em);
+}
+.dotted > * {
+	white-space: nowrap;
+}
+.dotted > *::before {
+	content: '·';
+	content: '·' / '';
+	display: inline-block;
+	width: 1.25em;
+	text-align: center;
+	color: var(--ink-4);
+}
+
 .grid {
 	display: grid;
 	gap: var(--space-4);
@@ -47,15 +86,30 @@
 
 .prose {
 	max-width: var(--measure);
+	font-size: var(--text-md);
+}
+/* Long-form reads at 1.65; the UI's 1.55 is tuned for a sentence, not a page. */
+.prose p,
+.prose li {
+	line-height: var(--leading-prose);
 }
 .prose > * + * {
 	margin-block-start: var(--space-4);
 }
+/* The first block sits flush: a note that starts with a heading does not start with a gap. */
+.prose > :first-child {
+	margin-block-start: 0;
+}
 .prose h2 {
-	margin-block-start: var(--space-6);
+	margin-block-start: var(--space-7);
+	font-size: var(--text-xl);
 }
 .prose h3 {
 	margin-block-start: var(--space-5);
+	font-size: var(--text-lg);
+}
+.prose strong {
+	font-weight: 600;
 }
 .prose ul,
 .prose ol {
@@ -84,10 +138,4 @@
 
 .tabular {
 	font-variant-numeric: tabular-nums;
-}
-
-.truncate {
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
 }

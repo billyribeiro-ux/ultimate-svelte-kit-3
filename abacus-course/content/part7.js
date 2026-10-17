@@ -16,7 +16,7 @@ export const part7 = [
 			'Two Vitest projects: pure logic in Node, and the `$state` classes in a real Chromium. What each layer’s tests look like, and the one test that caught the bug the course is built around.',
 		goal: 'Know which test runs where and why, and write a test for a runes class without rendering a component.',
 		blocks: [
-			code('vite.config.ts', 213, 258),
+			code('vite.config.ts', 221, 270),
 			{
 				type: 'p',
 				text: 'The `server` project is the fast loop: the formula language, the engine, the locale layer, the CSV parser, the identity code — pure TypeScript, deterministic, milliseconds. The `client` project is a real browser, because the sheet model uses runes and `flushSync`, and because a `.svelte.test.ts` file is the way to test a `$state` class without a component.'
@@ -38,14 +38,16 @@ export const part7 = [
 			{
 				type: 'terminal',
 				code: `
-$ pnpm run test:unit -- --run
+$ pnpm run test:unit --run
  ✓ [server] src/lib/formula/formula.spec.ts (20 tests)
  ✓ [server] src/lib/engine/engine.spec.ts (20 tests)
  ✓ [server] src/lib/engine/engine.property.spec.ts (4 tests)
- ✓ [server] src/lib/sheet/locale.spec.ts, document.spec.ts, templates.spec.ts
- ✓ [server] src/lib/csv/parse.spec.ts, src/lib/grid/axis.spec.ts
+ ✓ [server] src/lib/sheet/locale.spec.ts, document.spec.ts, templates.spec.ts, demo.spec.ts
+ ✓ [server] src/lib/csv/parse.spec.ts, src/lib/grid/axis.spec.ts, src/lib/errors.spec.ts
  ✓ [server] src/lib/server/identity.spec.ts, src/routes/api/published/+server.test.ts
- ✓ [client] src/lib/sheet/sheet.svelte.test.ts (13 tests)  chromium`
+ ✓ [client] src/lib/sheet/sheet.svelte.test.ts (13 tests)  chromium
+ Test Files  13 passed (13)
+      Tests  92 passed (92)`
 			},
 			{
 				type: 'checkpoint',
@@ -66,16 +68,16 @@ $ pnpm run test:unit -- --run
 		goal: 'Run an end-to-end suite the way a deployment runs, test WebAuthn without a device, and read a failing test as a bug report.',
 		blocks: [
 			code('playwright.config.ts', 1, 32),
-			code('playwright.config.ts', 33, 87),
+			code('playwright.config.ts', 33, 94),
 			{
 				type: 'p',
 				text: 'Against `node build/index.js`, not `vite preview`, because the health endpoint, graceful shutdown and the Content Security Policy belong to the built server. Two projects, because the toolbar and the grid render differently at phone widths. One worker and no retries, because one SQLite file has one writer and a suite that passes on retry is a suite that hides races. `PUBLIC_ORIGIN` is identical in the build and in the server’s environment, and the config says why.'
 			},
-			code('e2e/passkeys.ts', 19, 52),
+			code('e2e/passkeys.ts', 20, 72),
 
 			{ type: 'h3', id: 'the-tests', text: 'The tests' },
 			code('e2e/local.e2e.ts', 27, 44),
-			code('e2e/local.e2e.ts', 122, 156),
+			code('e2e/local.e2e.ts', 170, 204),
 			{
 				type: 'p',
 				text: 'The local sheet tests drive the grid the way a person does — click a cell, type, press Enter — and read back the cells, which is the only thing a person can read. The import test hands a file to the hidden input with `setInputFiles`, waits for the toast, and reads the exported file back through Playwright’s download API.'
@@ -90,24 +92,51 @@ $ pnpm run test:unit -- --run
 			{
 				type: 'why',
 				title: 'What the suite found',
-				text: 'Five real bugs, none of which the unit tests could see. A cell that depended on another cell kept its old value on screen — the version subscription of chapter 15. The Unpublish button never appeared — the load snapshot of chapter 33. A person who closed their tab stayed in the room — the mailbox close of chapter 28. A Reconnect button flashed on every load and shifted the grid on a phone — chapter 33. And a tap on a phone landed one cell down and one across, because the pointer arrived in the frame between a scroll and its event, and the hit test used a stale scroll position — chapter 20’s `cellAt` now reads the element. Each one was a failing assertion with a screenshot, and each fix is a comment in the code that names the test.'
+				text: 'Five real bugs, none of which the unit tests could see. A cell that depended on another cell kept its old value on screen — the version subscription of chapter 15. The Unpublish button never appeared — the load snapshot of chapter 33. A person who closed their tab stayed in the room — the mailbox close of chapter 28. A Reconnect button flashed on every load and shifted the grid on a phone — chapter 33. And a tap on a phone landed one cell down and one across, because the pointer arrived in the frame between a scroll and its event, and the hit test used a stale scroll position — chapter 20’s `cellAt` now reads the element. Each one was a failing assertion with a screenshot, and each fix is a comment in the code that names the test. Three more turned up later, in the error paths: toasts that were empty because an `HttpError` has no `message` of its own, a client hook that put one sentence in place of every deliberate message, and a lesson page that never recovered from the cycle it asks you to make (ch. 17, 29). And a review found six more that every test passed over: a refused save that went back to saying “Saved” on the next edit, a reconnect that applied every batch since the page loaded a second time, a sharing form that could not submit without JavaScript, a lesson whose two counts measured different things, a `TypeError` in the console on every committed edit, and a double-click that threw an open edit away (ch. 17, 20, 21, 28, 33). Probes found those; the tests below, and the new ones in `collab.e2e.ts`, `lesson.e2e.ts` and `local.e2e.ts`, are what keep them fixed.'
+			},
+			code('e2e/errors.e2e.ts', 1, 59),
+			code('e2e/errors.e2e.ts', 61, 86),
+			{
+				type: 'p',
+				text: 'Each test makes the server, or a load, refuse something on purpose — a published sheet that does not exist, the only passkey, a passkey the server never issued, a template that is not there — and passes only if the person reads the refusal itself. Against the first version of the pages they fail with an empty toast, “Something went wrong with the passkey.” and “Something went wrong in this tab.”. `addUnknownPasskey` in `passkeys.ts` puts a key on the virtual device that no server issued. The last test waits for `history.scrollRestoration` to turn `\'manual\'`, the first thing SvelteKit’s router does when it starts, so the click is a client-side navigation and the browser’s hook is the one under test; clicked any sooner, it is an ordinary page load and the server answers instead.'
+			},
+			code('e2e/errors.e2e.ts', 88, 137),
+			{
+				type: 'p',
+				text: 'The session test covers the four places a page reads a refusal in a `catch`: the `create` form, the delete with its optimistic override, the `publish` command and the profile form. Each page is opened signed in and left to fetch what it shows; then the cookie is cleared, as an expiry would, and the action is tried. Every one must show “Sign in with a passkey first” — the server’s sentence, by way of `messageOf` — and the deleted card must come back. Revert `messageOf` at any of the four and the toast falls back to a fixed sentence, and this test fails.'
+			},
+			code('e2e/errors.e2e.ts', 139, 188),
+			{
+				type: 'p',
+				text: 'The refused batch. The suite runs its server with a `CELL_LIMIT` of a thousand — the smallest `src/env.ts` allows — so a 1,200-cell CSV crosses it. The test asserts what the page says, that a later edit does not quietly turn the chip back to “Saved”, and that after Reload the sheet is what the server kept: the cell saved before the refusal, and neither the import nor the edit after it. It found a second bug on the way: the grid swallowed a first keystroke of `a`, `z` or `y`, because the cases for Ctrl+A, Ctrl+Z and Ctrl+Y returned even without the modifier. A test of its own in `local.e2e.ts` now types “apple”, “zebra” and “Yes”.'
+			},
+			code('e2e/account.e2e.ts', 157, 181),
+			{
+				type: 'p',
+				text: 'The back-and-forward test is the criterion chapter 02 names for turning `forkPreloads` on: the navigation that failed in another project with the flag on, onto a page with a top-level `await`. Each direction checks that one page is on screen and the other is not, because the failure it guards against was a changed URL over the old page.'
+			},
+			code('e2e/account.e2e.ts', 183, 209),
+			code('e2e/platform.e2e.ts', 22, 28),
+			{
+				type: 'p',
+				text: 'The second half of the first platform test is the one that proves `router.resolution: \'server\'` (ch. 02): a click from the prerendered landing page to the templates page is a client-side navigation, so the browser has to ask the server which route the path belongs to before it can load it, and the three templates must be there when it has. The first half checks the landing page’s policy arrived as a meta tag with script hashes, which is how a prerendered page carries one.'
 			},
 			code('e2e/platform.e2e.ts', 45, 68),
 			{
 				type: 'terminal',
 				code: `
 $ pnpm exec playwright test
-Running 46 tests using 1 worker
-  ✓ [desktop] account · collab · lesson · local · platform  (23)
-  ✓ [phone]   account · collab · lesson · local · platform  (23)
-  46 passed`
+Running 72 tests using 1 worker
+  ✓ [desktop] account · collab · errors · lesson · local · platform  (36)
+  ✓ [phone]   account · collab · errors · lesson · local · platform  (36)
+  72 passed`
 			},
 			{
 				type: 'checkpoint',
 				items: [
 					'You can say what a virtual authenticator does and does not fake.',
 					'You can explain why the suite runs against the built server.',
-					'You can pick one of the five bugs and say which assertion caught it.'
+					'You can pick one of the bugs and say which assertion caught it, or keeps it caught.'
 				]
 			}
 		]
@@ -124,6 +153,15 @@ Running 46 tests using 1 worker
 			{
 				type: 'p',
 				text: 'Three stages so the image that runs holds only what running needs. The origin is a *build* argument because SvelteKit bakes `paths.origin` into the server and the passkey relying-party id is derived from it: build one image per origin. `--frozen-lockfile` fails the build if the lockfile disagrees with `package.json` instead of resolving something newer.'
+			},
+			{
+				type: 'p',
+				text: 'adapter-node 6.0 serves `build/client` from a list it records at build time — each file with a content-hash `ETag`, no `Last-Modified`, and only to `GET` and `HEAD` (anything else is a 405). A file copied into the directory after the build is not served, and a replaced one keeps its old size and tag. That is the right answer for an image that is built once and started many times, and the reason the Dockerfile copies `build` as a unit: there is nothing to patch in place, and runtime configuration goes through environment variables.'
+			},
+			code('pnpm-workspace.yaml', 1, 25),
+			{
+				type: 'p',
+				text: 'pnpm reads `package.json`, the lockfile, `.npmrc` — which here holds a single setting npm shares, `engine-strict` — and this file, for the settings that are pnpm’s own. `allowBuilds` names the single dependency allowed to run an install script, because `postinstall` is arbitrary code from something you have never read, and the comment gives the reason it is esbuild: drizzle-kit loads the config and the schema through it. It is not Vite’s reason any more — Vite 8 transforms with Oxc and bundles with Rolldown, and esbuild is only an optional peer. `minimumReleaseAgeExclude` is pnpm 12’s supply-chain delay showing: a version published very recently is held back until it has had time to be noticed and pulled, and the list is the record of the ones this project took early. pnpm appends each one as it installs it, and removes nothing, so the list is kept honest by hand — the entry for `@simplewebauthn/server@14.0.0` went when the lockfile moved on to 14.0.3.'
 			},
 			code('Dockerfile', 35, 51),
 			code('Dockerfile', 53, 92),
@@ -178,9 +216,9 @@ Running 46 tests using 1 worker
 $ pnpm run verify
   check     svelte-check: 0 errors, 0 warnings · tsc (worker): clean
   lint      prettier + eslint: clean
-  test:unit 86 passed  (server: node · client: chromium)
+  test:unit 92 passed  (server: node · client: chromium)
   build     adapter-node · 11 routes · 5 prerendered · precompressed
-  test:e2e  46 passed  (23 scenarios × desktop, phone)`
+  test:e2e  72 passed  (36 scenarios × desktop, phone)`
 			},
 			{ type: 'h3', id: 'five-directions', text: 'Five directions' },
 			{

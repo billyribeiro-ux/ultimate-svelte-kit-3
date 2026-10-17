@@ -308,13 +308,18 @@ try {
  * would sit in the outbox for the life of the browser profile. Those are
  * surfaced and the queue is left alone for a person to decide about — losing
  * their work silently to tidy up a queue is not an option.
+ *
+ * `isHttpError` is what tells the two apart. A command the server answered
+ * rejects with an `HttpError` — `{ status, body }`, where `body` is the
+ * `App.Error` and `body.message` the server's own sentence — and anything else
+ * is a request that never got an answer. The guard narrows the type, so there
+ * is no cast here to be wrong about the shape, and a rejection that is not an
+ * object at all is simply &quot;not an `HttpError`&quot; rather than a `TypeError`
+ * thrown from inside the error handler.
  */
 #onPushFailure(thrown: unknown): void {
-	const status = (thrown as { status?: number }).status;
-
-	if (status === 403 || status === 422) {
-		this.refusal =
-			(thrown as { body?: { message?: string } }).body?.message ?? 'The server refused a change.';
+	if (isHttpError(thrown) &amp;&amp; (thrown.status === 403 || thrown.status === 422)) {
+		this.refusal = thrown.body.message;
 		this.status = 'refused';
 		return;
 	}
@@ -328,6 +333,7 @@ try {
 	<h4>Retryable or not</h4>
 	<p>A network error is retryable and the outbox keeps the work. A 403 or 422 is not: sending it again fails identically, forever, and the operations would sit in the outbox for the life of the browser profile. Those are surfaced and <strong>the queue is left alone</strong> for a person to decide about. Losing somebody’s work silently in order to tidy up a queue is not a trade a tool gets to make on their behalf.</p>
 </aside>
+<aside class="callout callout--note"><p>Why <code>isHttpError</code>, and why <code>body.message</code> rather than <code>message</code>? An awaited command that the server refuses rejects with an <code>HttpError</code>: <code>{ status, body }</code>, with the server’s <code>App.Error</code> as the <code>body</code>. It is not an <code>Error</code> and has no <code>message</code> of its own. <code>isHttpError(thrown)</code>, from <code>@sveltejs/kit</code>, is the type guard for that shape: inside the <code>if</code>, <code>thrown.status</code> and <code>thrown.body.message</code> are typed, and anything else — a request that never got an answer, or a rejection that is not an object at all — is simply &quot;not an <code>HttpError</code>&quot;. The tempting alternative, <code>(thrown as { status?: number }).status</code>, is a cast that only *claims* the shape, and it throws a <code>TypeError</code> from inside the error handler the first time something rejects with <code>undefined</code>. Chapters 30 and 36 use the same guard, and chapter 30 puts this shape next to the other one, the <code>App.Error</code> a boundary is handed.</p></aside>
 <h3 id="snapshots">Local snapshots, debounced</h3>
 
 <figure class="code">

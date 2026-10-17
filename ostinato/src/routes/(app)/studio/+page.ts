@@ -1,6 +1,5 @@
 import type { PageLoad } from './$types.js';
 import { decodePattern } from '#lib/pattern/codec.ts';
-import type { Pattern } from '#lib/pattern/model.ts';
 import { preset, PRESETS } from '#lib/pattern/presets.ts';
 import { getPattern } from '#lib/remote/patterns.remote.ts';
 
@@ -52,7 +51,7 @@ export const load: PageLoad = async ({ url }) => {
 	if (name && name in PRESETS) {
 		return {
 			source: 'preset' as const,
-			pattern: preset(name) as Pattern,
+			pattern: preset(name),
 			remixOf: null,
 			title: 'Studio'
 		};

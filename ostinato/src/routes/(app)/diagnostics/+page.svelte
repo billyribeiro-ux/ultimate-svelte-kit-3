@@ -10,8 +10,10 @@
 	 * ==================================
 	 *
 	 * Spans from the in-memory ring, the adapter's platform object, and the
-	 * version check. Nothing here is secret and none of it needs a second
-	 * service — it exists to make "why was that slow" answerable from the app.
+	 * version check. A public page, so nothing in it names a person or carries
+	 * a request's arguments (`diagnostics.remote.ts` says how), and none of it
+	 * needs a second service — it exists to make "why was that slow"
+	 * answerable from the app.
 	 */
 	let filters = $state({ limit: 120 });
 	let selected = $state<string | null>(null);
@@ -121,8 +123,6 @@
 								<td>
 									{span.name}{span.attributes['sveltekit.remote.call.name']
 										? ` · ${span.attributes['sveltekit.remote.call.name']}`
-										: ''}{span.attributes['artist.handle']
-										? ` · @${span.attributes['artist.handle']}`
 										: ''}
 								</td>
 								<td class="mono">{span.duration}</td>
@@ -160,8 +160,8 @@
 				{const total = $derived(Math.max(1, ...spans.map((s) => s.start + s.duration - start)))}
 				<ol class="waterfall">
 					{#each spans as span (span.spanId)}
-						{const left = ((span.start - start) / total) * 100}
-						{const width = Math.max(0.5, (span.duration / total) * 100)}
+						{const left = $derived(((span.start - start) / total) * 100)}
+						{const width = $derived(Math.max(0.5, (span.duration / total) * 100))}
 						<li class="waterfall__row">
 							<span class="waterfall__name">{span.name}</span>
 							<span class="waterfall__track">

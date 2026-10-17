@@ -65,12 +65,12 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 	const { query, errors } = parse(text);
 
 	if (!query || errors.length > 0) {
-		error(400, { message: errors[0]?.message ?? 'Could not parse the query.' });
+		error(400, errors[0]?.message ?? 'Could not parse the query.');
 	}
 
 	const checked = check(query);
 	if (checked.errors.length > 0) {
-		error(400, { message: checked.errors[0]!.message });
+		error(400, checked.errors[0]!.message);
 	}
 
 	/*
@@ -82,9 +82,7 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 	 * is better than streaming something that looks like an answer.
 	 */
 	if (query.stages.some((stage) => stage.kind === 'summarize')) {
-		error(400, {
-			message: 'A tail cannot summarize. Remove the summarize, or use the chart instead.'
-		});
+		error(400, 'A tail cannot summarize. Remove the summarize, or use the chart instead.');
 	}
 
 	const signal: Signal = query.source;

@@ -68,12 +68,19 @@ export default defineConfig({
 
 	test: {
 		expect: { requireAssertions: true },
+
+		/*
+		 * Vitest 5: inline projects inherit the root config by default (`extends: true`),
+		 * so each project already has the `sveltekit()` and Phosphor plugins above. Vitest 4
+		 * needed an explicit `extends: './vite.config.ts'` on every project, which re-read
+		 * this file from disk per project — the same plugins loaded two extra times. Set
+		 * `extends: false` on a project if you ever need one that is deliberately separate.
+		 */
 		projects: [
 			{
 				// Component tests — run in a real Chromium, not a DOM emulator.
 				// Worth the extra seconds: jsdom quietly lies about layout and focus,
 				// which are exactly the things a component test should verify.
-				extends: './vite.config.ts',
 				test: {
 					name: 'client',
 					browser: {
@@ -87,7 +94,6 @@ export default defineConfig({
 			},
 			{
 				// Pure logic tests — plain Node, no browser, fast.
-				extends: './vite.config.ts',
 				test: {
 					name: 'server',
 					environment: 'node',

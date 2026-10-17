@@ -35,7 +35,7 @@
 			<h1>Testing time with Vitest</h1>
 			<p class="lede">Setting up Vitest properly, then writing the tests that would otherwise take six months to run.</p>
 			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>A green test run that includes both clock changes, a half-hour-offset zone, and a window that runs past midnight.</p></aside>
-			<p>The whole reason the last two chapters were pure functions is so this chapter can exist. We are about to test both daylight-saving transitions, in two hemispheres, in under a second.</p>
+			<p>The whole reason the last two chapters were pure functions is so this chapter can exist. We are about to test both daylight-saving transitions, a zone that sits 45 minutes off the hour, and a shift that runs past midnight, in under a second.</p>
 <h3 id="setup">Two test environments, one config</h3>
 <p>Our project needs two kinds of unit test: server-side ones that run in Node, and component ones that need a browser DOM. Vitest calls these <strong>projects</strong>, and one config file describes both.</p>
 
@@ -53,7 +53,12 @@
 			// Component tests — a real Chromium, not a DOM emulator. jsdom quietly
 			// lies about layout, focus and `matchMedia`, which are exactly the things
 			// a booking UI needs to get right.
-			extends: './vite.config.ts',
+			//
+			// No `extends` here. Since Vitest 5 an inline project inherits the config
+			// file that declares it — plugins, `ssr.external`, the lot — so pointing
+			// it back at this very file (the Vitest 4 idiom) is redundant, and now
+			// draws a warning about plugins being applied twice. `extends: false` is
+			// the opt-out, for a project that genuinely wants a blank slate.
 			test: {
 				name: 'client',
 				browser: {
@@ -68,7 +73,7 @@
 		{
 			// Pure logic — plain Node, no browser, fast. The time engine and the
 			// booking rules live here, and they are the tests that matter most.
-			extends: './vite.config.ts',
+			// Inherits this file too, for the same reason as above.
 			test: {
 				name: 'server',
 				environment: 'node',
@@ -79,7 +84,7 @@
 	]
 }</code></pre>
 </figure>
-<ul><li>The <strong>client</strong> project runs in a real, headless Chromium — <code>provider: playwright()</code>, a function imported from <code>@vitest/browser-playwright</code> — not a simulated DOM. Component tests that pass in jsdom and fail in a browser are a genuine waste of a morning.</li><li>The <strong>server</strong> project is plain Node and starts instantly. All our time tests live here.</li><li>The naming convention does the routing: <code>foo.svelte.spec.ts</code> is a component test, <code>foo.spec.ts</code> is a server one.</li></ul>
+<ul><li>The <strong>client</strong> project runs in a real, headless Chromium — <code>provider: playwright()</code>, a function imported from <code>@vitest/browser-playwright</code> — not a simulated DOM. Component tests that pass in jsdom and fail in a browser are a genuine waste of a morning.</li><li>The <strong>server</strong> project is plain Node and starts instantly. All our time tests live here.</li><li>Neither project says <code>extends</code>. Vitest 5 makes an inline project inherit the file that declares it — the SvelteKit plugin, the <code>ssr.external</code> list, everything — so the Vitest 4 habit of pointing each project back at <code>./vite.config.ts</code> is gone, and repeating it earns a warning about plugins applied twice.</li><li>The naming convention does the routing: <code>foo.svelte.spec.ts</code> is a component test, <code>foo.spec.ts</code> is a server one. Every test in this chapter is a server one; chapter 32 writes the app's component test, for the form field that wires up its own label and error.</li></ul>
 
 <aside class="callout callout--why">
 	<h4>requireAssertions</h4>
@@ -195,6 +200,8 @@ import {
 const LONDON = 'Europe/London';
 // …
 const iso = (instant: number) =&gt; new Date(instant).toISOString();
+
+// …
 
 describe('wallClockToInstant — the mornings clocks move', () =&gt; {
 	/*

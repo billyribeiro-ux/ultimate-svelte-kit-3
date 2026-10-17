@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The toolbar, find and replace, and the workbench — Building Abacus</title>
-<meta name="description" content="Buttons that call the sheet model, with native popovers for menus and no `Menu` component. A find bar with a resettable index. A workbench that owns the two things that need a file, and clears a file input with a `DataTransfer`.">
+<meta name="description" content="Buttons that call the sheet model, with native popovers for menus and no Menu component. A find bar with a resettable index. A workbench that owns the two things that need a file, and clears a file input with a DataTransfer.">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -76,45 +76,44 @@ let {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/grid/Toolbar.svelte<span class="code__lines">:102-137</span></span>
+		<span class="code__file">src/lib/grid/Toolbar.svelte<span class="code__lines">:103-137</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">{#if !readonly}
-	&lt;div class=&quot;group&quot;&gt;
-		&lt;button
-			type=&quot;button&quot;
-			class=&quot;btn btn--sm&quot;
-			popovertarget=&quot;format-menu&quot;
-			aria-label=&quot;Number format&quot;
-		&gt;
-			&lt;ListNumbersIcon size={16} /&gt; Format
-		&lt;/button&gt;
-		&lt;div id=&quot;format-menu&quot; class=&quot;menu&quot; popover=&quot;auto&quot;&gt;
-			{#each formats as { label, format } (label)}
-				&lt;button type=&quot;button&quot; class=&quot;menu__item&quot; onclick={() =&gt; sheet.setFormat(format)}&gt;
-					{label}
-				&lt;/button&gt;
-			{/each}
-		&lt;/div&gt;
-		&lt;button
-			type=&quot;button&quot;
-			class=&quot;btn btn--sm btn--icon&quot;
-			aria-label=&quot;Percent format&quot;
-			title=&quot;Percent&quot;
-			onclick={() =&gt; sheet.setFormat({ kind: 'percent', decimals: 1 })}
-		&gt;
-			&lt;PercentIcon size={16} /&gt;
-		&lt;/button&gt;
-		&lt;button
-			type=&quot;button&quot;
-			class=&quot;btn btn--sm btn--icon&quot;
-			aria-label=&quot;Currency format&quot;
-			title=&quot;Currency&quot;
-			onclick={() =&gt; sheet.setFormat({ kind: 'currency', currency: 'USD', decimals: 2 })}
-		&gt;
-			&lt;CurrencyDollarIcon size={16} /&gt;
-		&lt;/button&gt;
-	&lt;/div&gt;</code></pre>
+	<pre><code class="lang-svelte">&lt;div class=&quot;group&quot;&gt;
+	&lt;button
+		type=&quot;button&quot;
+		class=&quot;btn btn--sm&quot;
+		popovertarget=&quot;format-menu&quot;
+		aria-label=&quot;Number format&quot;
+	&gt;
+		&lt;ListNumbersIcon size={16} /&gt; Format
+	&lt;/button&gt;
+	&lt;div id=&quot;format-menu&quot; class=&quot;menu&quot; popover=&quot;auto&quot;&gt;
+		{#each formats as { label, format } (label)}
+			&lt;button type=&quot;button&quot; class=&quot;menu__item&quot; onclick={() =&gt; sheet.setFormat(format)}&gt;
+				{label}
+			&lt;/button&gt;
+		{/each}
+	&lt;/div&gt;
+	&lt;button
+		type=&quot;button&quot;
+		class=&quot;btn btn--sm btn--icon&quot;
+		aria-label=&quot;Percent format&quot;
+		title=&quot;Percent&quot;
+		onclick={() =&gt; sheet.setFormat({ kind: 'percent', decimals: 1 })}
+	&gt;
+		&lt;PercentIcon size={16} /&gt;
+	&lt;/button&gt;
+	&lt;button
+		type=&quot;button&quot;
+		class=&quot;btn btn--sm btn--icon&quot;
+		aria-label=&quot;Currency format&quot;
+		title=&quot;Currency&quot;
+		onclick={() =&gt; sheet.setFormat({ kind: 'currency', currency: 'USD', decimals: 2 })}
+	&gt;
+		&lt;CurrencyDollarIcon size={16} /&gt;
+	&lt;/button&gt;
+&lt;/div&gt;</code></pre>
 </figure>
 
 <figure class="code">
@@ -291,7 +290,7 @@ let {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/grid/Workbench.svelte<span class="code__lines">:14-45</span></span>
+		<span class="code__file">src/lib/grid/Workbench.svelte<span class="code__lines">:14-50</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/**
@@ -322,6 +321,11 @@ let {
 	status?: Snippet;
 } = $props();
 
+/*
+ * The hidden file input, so the toolbar's Import button can open the
+ * browser's file picker with `click()` — an imperative call from a handler,
+ * which is what `bind:this` is for, rather than work done on mount.
+ */
 let fileInput = $state&lt;HTMLInputElement&gt;();
 let files = $state&lt;FileList&gt;();
 let progress = $state&lt;Progress | null&gt;(null);
@@ -330,7 +334,7 @@ let finding = $state(false);</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/grid/Workbench.svelte<span class="code__lines">:47-95</span></span>
+		<span class="code__file">src/lib/grid/Workbench.svelte<span class="code__lines">:52-102</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/**
@@ -361,7 +365,9 @@ async function imported() {
 			`Imported ${rows.length.toLocaleString()} rows (${delimiter === '\t' ? 'tab' : delimiter}-separated)`
 		);
 	} catch (e) {
-		toast((e as Error).message, 'error');
+		// The worker's failures are `Error`s with a sentence for a person; a
+		// cancelled import is a `DOMException`, which is one too.
+		toast(e instanceof Error ? e.message : 'Could not import that file', 'error');
 	} finally {
 		progress = null;
 		files = new DataTransfer().files;
@@ -391,7 +397,7 @@ function keydown(event: KeyboardEvent) {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/grid/Workbench.svelte<span class="code__lines">:98-138</span></span>
+		<span class="code__file">src/lib/grid/Workbench.svelte<span class="code__lines">:105-145</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;svelte:window onkeydown={keydown} /&gt;

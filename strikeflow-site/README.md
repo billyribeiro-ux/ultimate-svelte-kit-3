@@ -1,7 +1,7 @@
 # StrikeFlow — marketing site
 
 A production-grade marketing site for a fictional real-time options flow data product,
-built on **SvelteKit 3** (release candidate) and Svelte 5.
+built on **SvelteKit 3** (3.0.1, the first stable release) and Svelte 5.
 
 It exists as the worked example for a course, so every non-obvious decision is
 explained in a comment where the decision lives, rather than in documentation that
@@ -19,7 +19,7 @@ drifts out of date.
 
 | Concern    | Choice                                                |
 | ---------- | ----------------------------------------------------- |
-| Framework  | SvelteKit 3 RC (`@sveltejs/kit@next`), Svelte 5       |
+| Framework  | SvelteKit 3.0.1 (`@sveltejs/kit`), Svelte 5.57        |
 | Language   | TypeScript, `strict` plus `noUncheckedIndexedAccess`  |
 | Styling    | Vanilla CSS with custom properties. No Tailwind       |
 | Icons      | `phosphor-svelte`                                     |
@@ -27,13 +27,13 @@ drifts out of date.
 | Fonts      | Fontsource — Montserrat (headings), Sofia Sans (body) |
 | Motion     | GSAP 3.15 — ScrollTrigger, SplitText, CustomEase      |
 | Validation | Valibot (Standard Schema)                             |
-| Adapter    | `@sveltejs/adapter-node`                              |
-| Tests      | Vitest (unit), Playwright (e2e, desktop + mobile)     |
+| Adapter    | `@sveltejs/adapter-node` 6                            |
+| Tests      | Vitest 5 (unit), Playwright (e2e, desktop + mobile)   |
 
 ## Requirements
 
-- **Node 24.20.0** — the current LTS, pinned in `.nvmrc` and `engines` (SvelteKit 3’s own floor is 22.17)
-- **pnpm 11+**
+- **Node 24.21.0** — the current LTS, pinned in `.nvmrc` and `engines` (SvelteKit 3’s own floor is 22.17)
+- **pnpm 12.10.1** — pinned in `packageManager`; any pnpm 10+ switches to it automatically
 
 ## Getting started
 
@@ -87,6 +87,7 @@ src/
     utils/                   Deterministic market data generation
   routes/
     +layout.ts               prerender = true for the whole site
+    +error.svelte            The site's error page — 404s and server failures, inside the layout
     guide/                   Lead capture — remote form(), thank-you, gated download
     blog/[slug]/             Articles with Article + Person + BreadcrumbList schema
     legal/                   Risk disclosure, privacy, terms
@@ -115,6 +116,31 @@ private/ebook/               The gated PDF. Deliberately NOT in static/
   as the `scroll-behavior: smooth` bug above. See `src/lib/motion/gsap.ts`.
 - **Never hide content behind an animation without a failsafe.** The motion gate in
   `src/app.html` has three independent paths that all end with content visible.
+- **`resolve()` takes route IDs (leading slash) or pathnames (no slash), optionally
+  with `?search` or `#hash`.** Build composite links _inside_ `resolve()` — see the
+  blog byline and the thank-you page — rather than concatenating strings. External
+  links carry `rel="external"`, which is also how the lint rule tells them apart.
+- **Call `resolve()` where you render, never in a `load` function.** On the server it
+  returns a path _relative to the current request_ (`./features`, `../guide/download`),
+  and a load's request can be the page or its `__data.json`. Return the parts (the
+  thank-you page returns its token) and build the link in the component. For the same
+  reason the header compares `page.route.id`, not `resolve(href)`, to mark the current
+  page.
+- **adapter-node 6 has no `ORIGIN` env var.** Behind a proxy that hides the real host,
+  set `paths.origin` in `vite.config.ts`. Static assets are served from a list fixed at
+  build time, `GET`/`HEAD` only, with content-hash `ETag`s and no `Last-Modified`.
+- **`node build` assumes https.** With no `paths.origin` and no `PROTOCOL_HEADER`, the
+  origin is derived as `https://<host>`, so a local `node build` over plain http
+  refuses every signup with 403 (the CSRF check). Smoke-test locally with
+  `pnpm run preview`; behind your host's TLS, nothing is needed.
+- **Behind a proxy, set `ADDRESS_HEADER`** (and `XFF_DEPTH` for `X-Forwarded-For`).
+  Otherwise `getClientAddress()` returns the proxy's IP, every visitor shares one
+  rate-limit bucket, and the sixth signup in any minute is refused.
+- **pnpm 12 gates releases younger than 24 hours.** The built-in `minimumReleaseAge`
+  default is non-strict: when an install needs a release that fresh, pnpm installs it and
+  records it in `minimumReleaseAgeExclude` in `pnpm-workspace.yaml` so frozen installs keep
+  passing. It only refuses when you set `minimumReleaseAge` yourself. Entries go stale after
+  a day; `minimumReleaseAgeExcludePrune` removes them on the next add/update/remove.
 
 ## Disclaimer
 

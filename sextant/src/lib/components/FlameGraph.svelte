@@ -106,10 +106,14 @@
 	{#if depth <= MAX_DEPTH}
 		<button
 			type="button"
-			class="bar"
-			class:bar--error={node.status === 'error'}
-			class:bar--selected={selected === node.spanId}
-			class:bar--synthetic={node.synthetic}
+			class={[
+				'bar',
+				{
+					'bar--error': node.status === 'error',
+					'bar--selected': selected === node.spanId,
+					'bar--synthetic': node.synthetic
+				}
+			]}
 			style:left="{offsetOf(node)}%"
 			style:width="{widthOf(node)}%"
 			style:top="{depth * 20}px"

@@ -116,65 +116,70 @@ export const part0 = [
 		blocks: [
 			{
 				type: 'p',
-				text: 'There is no `svelte.config.js`. SvelteKit 3 moved every option into the `sveltekit()` plugin call in `vite.config.ts`, and the config is a *function* because it needs to read the environment before the build starts.'
+				text: 'There is no `svelte.config.js`. In SvelteKit 2 the framework options lived in that file; SvelteKit 3 moved every one of them into the `sveltekit()` plugin call in `vite.config.ts`, and the config is a *function* because it needs to read the environment before the build starts.'
 			},
-			code('vite.config.ts', 1, 33, { partial: true }),
+			code('vite.config.ts', 1, 38, { partial: true }),
 			{
 				type: 'p',
-				text: '`defineConfig` comes from `vitest/config` rather than `vite`, so the `test` block at the bottom type-checks. `paths.origin` is read from the environment at *build* time: adapter-node 6 bakes it into the server, so a process started on plain HTTP behind a proxy does not reconstruct `https://…` from headers and reject every form post as cross-site. The passkey ceremonies use the same value’s hostname as the relying-party id, which is why chapter 03 makes it a `static` environment variable.'
+				text: '`defineConfig` comes from `vitest/config` rather than `vite`, so the `test` block at the bottom type-checks. `package.json` is imported whole, as `pkg`, rather than as `{ version }`: a JSON module has exactly one export, its default, and Vite 8 warns that its coming native config loader — plain Node, no bundling — will refuse the named form. `paths.origin` is read from the environment at *build* time: adapter-node 6 bakes it into the server, so a process started on plain HTTP behind a proxy does not reconstruct `https://…` from headers and reject every form post as cross-site. The passkey ceremonies use the same value’s hostname as the relying-party id, which is why chapter 03 makes it a `static` environment variable.'
 			},
 
 			{ type: 'h3', id: 'compiler', text: 'The compiler options' },
-			code('vite.config.ts', 35, 53),
+			code('vite.config.ts', 40, 58),
 			{
 				type: 'p',
 				text: '`runes` is a function so that a dependency written in Svelte 4 style keeps compiling. `experimental.async` is the one that changes how you write components: `await` at the top of a `<script>`, inside `$derived`, and directly in markup — and with it `pending` snippets, `$effect.pending()`, `settled()` and `fork()`. A spreadsheet has more of this than it looks: opening a sheet, importing a file, publishing, signing in with a passkey — every one is “wait, then draw”.'
 			},
 
-			{ type: 'h3', id: 'adapter', text: 'The adapter, and the experiments' },
-			code('vite.config.ts', 55, 89),
+			{ type: 'h3', id: 'adapter', text: 'The adapter, the experiments, prerendering' },
+			code('vite.config.ts', 60, 97),
 			{
 				type: 'p',
 				text: 'Project 6 wrote an adapter from scratch. This one deploys the way most Node applications do — `node build` behind a reverse proxy, in a container — and spends its deployment chapter on what makes that safe. `precompress` writes `.br` and `.gz` beside every asset so the server never compresses on the fly.'
 			},
 			{
 				type: 'p',
-				text: '`forkPreloads` is off, and the comment says why: two projects’ end-to-end suites found navigation failures that bisected to it. The evidence is in those suites, not in an opinion, and the criterion for turning it back on is named — one test, in one file.'
+				text: '`forkPreloads` is off, and the comment says why: two projects’ end-to-end suites found navigation failures that bisected to it. The evidence is in those suites, not in an opinion, and the criterion for turning it back on is named — one test, in one file: “back from a sheet shows the workspace, and forward shows the sheet”, in `e2e/account.e2e.ts`, which chapter 37 quotes. It makes the kind of navigation that failed elsewhere, onto a page with a top-level `await`, and it passes with the flag off. Turn the flag on, and that test passing run after run, on both profiles, is the evidence that it may stay on. It is a test that can fail, which a criterion has to be: give the sheet page an `onNavigate` that never lets a back navigation finish — the URL changes, the old page stays — and it fails at the first thing it expects to see, the workspace’s heading.'
+			},
+			code('vite.config.ts', 99, 103),
+			{
+				type: 'p',
+				text: 'Both prerender options are SvelteKit’s defaults, written out so nobody has to remember them. `handleHttpError: \'fail\'` stops the build when a prerendered page links to a page that answers with an error, and `handleMissingId: \'fail\'` stops it when a `#fragment` link points at an `id` the target page does not have. The landing page and the template pages are prerendered (ch. 31), so a broken link between them is a failed build rather than a 404 somebody finds later.'
 			},
 
 			{ type: 'h3', id: 'csp', text: 'The Content Security Policy' },
-			code('vite.config.ts', 91, 139),
+			code('vite.config.ts', 105, 140),
 			{
 				type: 'p',
 				text: '`mode: \'auto\'` uses hashes for prerendered pages — where the whole document is known at build time — and nonces for dynamically rendered ones. The directives that are specific to a spreadsheet are each explained in place. The one worth reading twice is `style-src \'unsafe-inline\'`: a virtualised grid positions ten thousand cells with `style:` attributes and column widths are numbers a person drags, and attributes cannot be hashed. The exposure is CSS injection, not script execution, and the comment says so rather than pretending the trade is free.'
 			},
 
 			{ type: 'h3', id: 'version', text: 'CSRF, versioning, bundling' },
-			code('vite.config.ts', 140, 161),
+			code('vite.config.ts', 142, 169),
 			{
 				type: 'p',
-				text: 'Nobody else may POST here, so `trustedOrigins` is empty and stays empty until somebody can name a domain. `version.name` is the commit hash — deterministic, so two builds of the same code do not tell every open tab to reload for nothing — and `pollInterval` lets an open sheet notice a deploy and offer a reload while its edits are still saved.'
+				text: 'Nobody else may POST here, so `trustedOrigins` is empty and stays empty until somebody can name a domain. `version.name` is the commit hash — deterministic, so two builds of the same code do not tell every open tab to reload for nothing — and `pollInterval` lets an open sheet notice a deploy and offer a reload while its edits are still saved. `output.bundleStrategy: \'split\'` is SvelteKit’s default too, spelled out like the prerender options: the app is split into many JavaScript and CSS files that load as a person moves around it, rather than one bundle for everything (`\'single\'`) or everything inlined into the HTML (`\'inline\'`).'
 			},
 
 			{ type: 'h3', id: 'router', text: 'The new one: server-side route resolution' },
-			code('vite.config.ts', 163, 181, { partial: true }),
+			code('vite.config.ts', 171, 189, { partial: true }),
 			{
 				type: 'p',
 				text: 'The other six projects resolve routes on the client: the route manifest ships to the browser and a click is matched locally. This one asks the server — `router.resolution: \'server\'` — which is the other half of the trade and worth seeing once. The manifest stays off the wire, and an unvisited path costs a round trip to resolve, which `data-sveltekit-preload-data="hover"` on the body hides for anything a pointer reaches first. The end-to-end suite has a test that navigates from the landing page to the templates page and asserts what it finds, which is the test that would fail if this option broke.'
 			},
 
 			{ type: 'h3', id: 'vite', text: 'Vite: workers, native modules, tests' },
-			code('vite.config.ts', 183, 211, { partial: true }),
+			code('vite.config.ts', 191, 219, { partial: true }),
 			{
 				type: 'p',
 				text: 'Three things that are Vite’s business rather than SvelteKit’s. The Phosphor plugin must come *after* `sveltekit()` because it parses its input as JavaScript and would die on the first `<h1>`. Workers are built as ES modules so the CSV importer can share the parser with the main thread instead of bundling a second copy. And libSQL is a native addon — a compiled `.node` binary — so it is kept out of the server bundle, where a bundler could inline the JavaScript that goes looking for it but not the binary.'
 			},
-			code('vite.config.ts', 213, 258, { partial: true }),
+			code('vite.config.ts', 221, 270, { partial: true }),
 			{
 				type: 'p',
-				text: 'Two Vitest projects. `client` is a real Chromium, because the grid virtualises on measured sizes and jsdom has none. `server` is plain Node with `fileParallelism: false`, because SQLite allows exactly one writer and two spec files seeding the same file meet `SQLITE_BUSY` as a dozen unrelated failures.'
+				text: 'Two Vitest projects. `client` is a real Chromium, because the grid virtualises on measured sizes and jsdom has none. `server` is plain Node with `fileParallelism: false`, because SQLite allows exactly one writer and two spec files seeding the same file meet `SQLITE_BUSY` as a dozen unrelated failures. Neither has an `extends` line: since Vitest 5 an inline project inherits the config that declares it — the SvelteKit plugin, `#lib`, the `ssr` externals — and naming this file again would load the Svelte plugin twice.'
 			},
-			code('vite.config.ts', 262, 277),
+			code('vite.config.ts', 274, 289),
 			{
 				type: 'checkpoint',
 				items: [
@@ -190,7 +195,7 @@ export const part0 = [
 		slug: 'the-map',
 		title: 'The map: every feature, and where it earns its place',
 		summary:
-			'A list of everything in Svelte 5 and SvelteKit 3 that Abacus uses — runes, snippets, attachments, remote functions, live queries, hooks, the environment layer, the September 2026 additions — and the chapter where each one is for something.',
+			'A list of everything in Svelte 5 and SvelteKit 3 that Abacus uses — runes, snippets, attachments, remote functions, live queries, hooks, the environment layer, the September and October 2026 additions — and the chapter where each one is for something.',
 		goal: 'Have a map of the framework as this project uses it, so you can read the course in any order and know what you are looking at.',
 		blocks: [
 			{
@@ -202,18 +207,18 @@ export const part0 = [
 			{
 				type: 'ul',
 				items: [
-					'**`$state`** — the sheet’s selection, title, version and editing state (ch. 15); toasts; every page’s local state. **`$state.eager`** is not used: nothing here reads a state in the same tick it was written and needs the old value.',
-					'**`$derived` and `$derived.by`** — the grid’s geometry from scroll position and sizes (ch. 19); the formula bar’s coloured segments, the syntax error, the completion list (ch. 21); and, as *fields of a class*, the nine cells of the reactivity lesson (ch. 17). A `$derived` that a handler assigns to — the completion highlight, the find index — as a reset without an effect.',
-					'**`$effect`** — exactly where a side effect is the point: scrolling the active cell into view, clearing flash highlights after a timer, applying a live message when `stream.current` changes, and tearing the live connection down (ch. 19, 33).',
-					'**`$props` and `$bindable`** — every component; `bind:this` on a component to call its exported `insertAtCaret` (ch. 21).',
-					'**Snippets with parameters** — the grid renders one `cell` snippet in five layers: the body, frozen rows, frozen columns, the frozen corner (ch. 19). `{@render extra?.()}` lets a page put its own buttons in the toolbar.',
+					'**`$state`** — the sheet’s selection, title, version and editing state (ch. 15); toasts; every page’s local state. **`$state.raw`** — a value that is replaced and never changed inside: the live connection’s status, a small tagged union (ch. 28). **`$state.eager`** — once, in the header: with async Svelte a navigation’s updates wait for the new page’s `await`s, and the current-link highlight reads the *incoming* pathname eagerly so the link somebody just clicked lights up at once (ch. 30).',
+					'**`$derived` and `$derived.by`** — the grid’s geometry from scroll position and sizes (ch. 19); the formula bar’s coloured segments, the syntax error, the completion list (ch. 21); and, as *fields of a class*, the nine cells of the reactivity lesson and whether each one is on a cycle (ch. 17). A `$derived` that a handler assigns to — the completion highlight, the find index — as a reset without an effect.',
+					'**`$effect`** — exactly where a side effect is the point: scrolling the active cell into view, clearing flash highlights after a timer, following the live query for as long as its stream lasts, and tearing the live connection down (ch. 19, 33).',
+					'**`$props`** — every component. **`$props.id()`** — the ids the formula bar’s combobox points at, unique per instance and the same on the server and in the browser (ch. 21). `bind:this` on a component to call its exported `insertAtCaret` (ch. 21). `$bindable` is not used: no component here offers two-way binding as its API.',
+					'**Snippets with parameters** — the grid renders one `cell` snippet in four layers: the body, frozen rows, frozen columns, the frozen corner (ch. 19). `{@render extra?.()}` lets a page put its own buttons in the toolbar.',
 					'**Attachments** — `{@attach cinematic()}` on the landing page (ch. 31); focusing an input on mount in the cell editor and find bar (ch. 21, 22).',
 					'**Function bindings** — `bind:textContent={get, set}` on the editable title (ch. 32).',
 					'**`bind:files`** with a `DataTransfer` to clear a file input so the same file can be chosen twice (ch. 22).',
-					'**`<svelte:boundary>`** with `pending` and `failed` — around every `await` in markup, and around each reactive cell in the lesson so a cycle throws into a boundary instead of the page (ch. 17, 34).',
-					'**`await` in markup and `{const x = $derived(await …)}`** — the workspace list, the settings profile, “who am I” in the header (ch. 30, 34).',
+					'**`<svelte:boundary>`** around every `await` in markup, with `pending` for the first load and `failed` wherever a failure should stay where it happened: the workspace list and the passkey list say what went wrong and offer Try again, the header falls back to a Sign in chip, the profile offers Try again, the local sheet keeps its sign-in link, and the template page’s save button simply does not appear (ch. 30, 31, 32, 34). `failed` is handed the `App.Error` that `handleError` made rather than whatever was thrown, and `failureOf` reads it (ch. 29). The stored sheet’s own `await getSheet(…)` has no boundary on purpose: without the record there is no page, and `+error.svelte` is the right answer (ch. 33). And one place there is deliberately none: a reactive cell in the lesson, because an exception inside a `$derived` goes to the boundary of the effect that created it (ch. 17).',
+					'**Declaration tags** — a plain `{const spec = FUNCTIONS.get(name)}` where the value is fixed for as long as its block lives: the lesson’s cell names, a `.for(id)` form per card, a function’s description per suggestion, the cell editor’s session. `{const x = $derived(…)}` where it must follow state: the grid’s cells, and every `await` in markup — the workspace list, the settings profile, “who am I” in the header (ch. 19, 30, 34).',
 					'**`SvelteMap`/`SvelteSet`** — column widths, row heights and flash highlights, where fine-grained reactivity is wanted; a plain `Map` in the engine, where it is not (ch. 15).',
-					'**`untrack`** — reading the initial `data` once so a later change cannot throw away edits (ch. 33).',
+					'**`untrack`** — reading the initial `data` once so a later change cannot throw away edits (ch. 33); starting the live loop without making its effect depend on every message (ch. 28); the scroll position the active-cell effect is about to change (ch. 19).',
 					'**`hydratable`** — the landing page’s random dots, computed once on the server and reused by the client so hydration does not repaint them (ch. 31).',
 					'**`createSubscriber`** is not used; the live connection is a `query.live`, which does that job.'
 				]
@@ -223,9 +228,11 @@ export const part0 = [
 			{
 				type: 'ul',
 				items: [
-					'**The environment layer** — `defineEnvVars` in `src/env.ts`, with valibot schemas, a `public` flag you have to type, and a `static` variable that is inlined at build time (this chapter, below).',
-					'**Remote functions** — `query` for reads, `form` for anything a page without JavaScript must still be able to do, `command` for everything else, and `query.live` for the collaboration stream (ch. 26–28). `requested(q, n).refreshAll()`, `withOverride`, `.for(id)`, `.preflight()`, `.enhance()`, `invalid(issue.field(…))`, and `redirect` from inside a form handler all appear where they are needed (ch. 27, 34).',
-					'**Hooks from `@sveltejs/kit/hooks`** — `sequence`, a `preload` filter that names font files by source `filename`, a per-route Content Security Policy swap, `handleFetch`, `handleError` told apart by `kind`, `init`, `transport` (ch. 29).',
+					'**The environment layer** — `defineEnvVars` in `src/env.ts`, with valibot schemas, a `public` flag you have to type, and a `static` variable that is inlined at build time; a declared variable is imported from `$app/env/private` or `$app/env/public` (this chapter, below).',
+					'**`#lib`** — every import of the project’s own code: Node’s subpath imports, declared in `package.json`, with the file’s real extension (this chapter, below).',
+					'**Remote functions** — `query` for reads, `form` for anything a page without JavaScript must still be able to do, `command` for everything else, and `query.live` for the collaboration stream, iterated with `for await` (ch. 26–28). `requested(q, n).refreshAll()`, `withOverride`, `.for(id)`, `.preflight()`, `.enhance()`, `invalid(issue.field(…))`, and `redirect` from inside a form handler all appear where they are needed (ch. 27, 34).',
+					'**Hooks from `@sveltejs/kit/hooks`** — `sequence`, a `preload` filter that names font files by source `filename`, a per-route Content Security Policy swap, `handleFetch`, `handleError` told apart by `kind` on the server and in the browser, `init`, `transport` (ch. 29).',
+					'**Two shapes of client error** — a remote call awaited in a handler rejects with an `HttpError` whose sentence is `body.message`, and `messageOf` reads it for every toast; a boundary is handed an `App.Error`, read as `error.message` (ch. 29, 34).',
 					'**Universal `load` that calls remote queries** — the sheet page (ch. 33); `csr = false` pages that ship no JavaScript (ch. 35); `prerender` with `entries()` for the templates (ch. 31).',
 					'**A layout reset** — `+page@.svelte` for the embed, which must not inherit the app shell (ch. 35).',
 					'**`+server.ts` handlers** — a streamed CSV response, a `QUERY` handler, a health check (ch. 35).',
@@ -238,12 +245,27 @@ export const part0 = [
 			{
 				type: 'ul',
 				items: [
-					'**`router.resolution: \'server\'`** — the config, and the navigation test that proves it (ch. 02, 37).',
+					'**`router.resolution: \'server\'`** — the config (ch. 02), and the navigation test that proves it (ch. 37).',
 					'**Fonts in the `preload` filter with their source `filename`** — `hooks.server.ts` names the two files the first paint needs (ch. 29).',
 					'**`handleError` with `kind` and `issues`** — a validation failure logs the field path and answers with a plain message; only an `unknown` error gets a correlation id (ch. 29).',
-					'**Hook types from `@sveltejs/kit/hooks`** — every hook file imports them from there, and the comment in `hooks.server.ts` says what silently goes wrong if you import them from `@sveltejs/kit` instead (ch. 29).',
-					'**`query.live`** with `.current`, `.connected` and `.reconnect()` — the whole of chapter 28, and the reconnect button on the sheet page (ch. 33).',
+					'**Hook types from `@sveltejs/kit/hooks`** — every hook file imports them from there, and the comment in `hooks.server.ts` says what the old import from `@sveltejs/kit` does now: a type error for every name (ch. 29).',
+					'**`query.live`** with `.current`, `.connected`, `.reconnect()` and `for await` — the whole of chapter 28, and the reconnect button on the sheet page (ch. 33).',
 					'**`requested(q, n).refreshAll()`** in a form handler — deleting a sheet from the workspace (ch. 27).'
+				]
+			},
+
+			{ type: 'h3', id: 'october', text: 'What the October 2026 release — SvelteKit 3.0 — changed, and where' },
+			{
+				type: 'ul',
+				items: [
+					'**`#lib` instead of `$lib`** — the alias for `src/lib` is now Node’s own subpath imports, declared in `package.json` and resolved natively by Vite and TypeScript, with the file’s real extension (this chapter, below).',
+					'**`$app/env/private` and `$app/env/public`** — every environment variable is declared once in `src/env.ts` and imported from one of these, in place of the four deprecated `$env/…` modules (this chapter, below).',
+					'**`resolve()` on every link, with a route id** — `/(app)/sheets`, layout group included; a renamed folder is a type error in every link to it, and `no-navigation-without-resolve` keeps it that way (ch. 30). Pathnames lost their leading slash, which is why the project uses route ids only.',
+					'**`match()` before `goto()`** — SvelteKit 3’s `goto` rejects a URL that is not a route, so the sign-in page asks the router about `?next=` first and falls back to the workspace (ch. 34).',
+					'**`Response.json(…)`** — the platform’s own, in place of the deprecated `json()` helper; the API and the health check (ch. 35).',
+					'**Vitest 5** — an inline project inherits the config that declares it, so the two projects lost their `extends` lines (ch. 02, 36).',
+					'**adapter-node 6.0** — static assets are served from a list recorded at build time, with content-hash `ETag`s and no `Last-Modified`, and only to `GET` and `HEAD`; a file dropped into `build/client` after the build is not served, which is the right answer for an image that is built once (ch. 38).',
+					'**pnpm 12** — a release-age delay before a freshly published version is installed; `pnpm-workspace.yaml` records the ones taken early, and says why (ch. 38).'
 				]
 			},
 
@@ -258,17 +280,37 @@ export const part0 = [
 				type: 'p',
 				text: 'Environment variables are always strings, and the place to turn one into a number is here — once — rather than in every file that reads it with a `Number()` and a hopeful default. The bounds are opinions with reasons attached, which is what a bound should be.'
 			},
+			code('src/lib/server/sheets.ts', 10, 18),
+			{
+				type: 'p',
+				text: 'This is what using one looks like: the top of the module that stores sheets. `CELL_LIMIT` arrives from `$app/env/private` already a number, already checked. `private` is the half the browser can never import — a client file that tries is a build error — and `$app/env/public` is the other half, for variables declared with `public: true`. The same block shows the other convention you will meet in every file: the project’s own modules are imported as `#lib/sheet/apply.ts`, with the real extension.'
+			},
+			{
+				type: 'why',
+				title: 'Why the environment is imported from $app/env and not $env',
+				text: 'SvelteKit 2 had four magic modules — `$env/static/private`, `$env/static/public`, `$env/dynamic/private`, `$env/dynamic/public` — and you chose one by asking two questions at every import: is it secret, and is it known at build time? The answers were scattered across the codebase, and a variable nobody declared was simply `undefined` until it mattered. SvelteKit 3 asks both questions once, in `src/env.ts`: `public: true` answers the first, `static: true` the second, and the schema says what a valid value is. The import is then only `$app/env/private` or `$app/env/public`, and an undeclared name is a type error. The `$env/…` modules still exist, deprecated; this project does not use them.'
+			},
 
 			{ type: 'h3', id: 'tooling', text: 'The toolchain' },
+			code('package.json', 66, 69),
+			{
+				type: 'p',
+				text: 'Every `#lib/…` import in the project resolves through these two lines. A specifier starting with `#` is a *subpath import*: Node’s own way for a package to give its internal folders a name, declared in its `package.json` and private to it. `#lib/sheet/apply.ts` means `./src/lib/sheet/apply.ts`, and Vite, TypeScript and Node all read the declaration themselves — no plugin, no `paths` in `tsconfig.json`. The bare `#lib` line points at an `index.js` this project does not have, because nothing imports the folder itself; it is the line SvelteKit’s migration guide gives, and it costs nothing until somebody does.'
+			},
+			{
+				type: 'why',
+				title: 'Why #lib, and why the imports name .ts files',
+				text: 'Until SvelteKit 3 the alias was `$lib`, and SvelteKit configured it behind your back — which meant every tool that was not SvelteKit, from a test runner to a script run with plain `node`, needed telling about it separately. `#lib` is a Node feature, so every tool that understands Node packages understands it already: from the project folder, plain `node` with no flags and no configuration runs `import(\'#lib/sheet/templates.ts\')` and gets the same module the app does. The extension is written out because that is what the file is called. Node runs TypeScript directly now and resolves paths exactly; a guess from `apply` to `apply.ts` or `apply/index.ts` is a bundler’s habit, and code that relies on it only runs inside the bundler.'
+			},
 			code('package.json', 11, 30),
 			{
 				type: 'p',
 				text: '`check` type-checks the app *and* the worker — the CSV importer runs where `window` does not exist, so it has its own `tsconfig.worker.json` with the WebWorker library instead of the DOM one. `verify` is the gate: type-check, lint, unit and browser tests, build, and the end-to-end suite on a desktop and a phone profile. Everything in this course passed it.'
 			},
-			code('tsconfig.json', 5, 33),
+			code('tsconfig.json', 2, 33),
 			{
 				type: 'p',
-				text: '`noUncheckedIndexedAccess` is the flag this project would choose if it could choose one. A spreadsheet is a grid of maybes — a row that may not exist, a token after the last token — and every one of those is a crash at runtime or a red squiggle now.'
+				text: '`extends` names `$app/tsconfig`, the base config SvelteKit regenerates on every `svelte-kit sync` — module resolution, the DOM libraries, the route types — so this file says only what is specific to the project. `noUncheckedIndexedAccess` is the flag this project would choose if it could choose one. A spreadsheet is a grid of maybes — a row that may not exist, a token after the last token — and every one of those is a crash at runtime or a red squiggle now.'
 			},
 			{
 				type: 'checkpoint',

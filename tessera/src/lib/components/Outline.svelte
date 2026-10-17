@@ -46,7 +46,7 @@
 	{:else}
 		<ul class="outline__list" role="tree" aria-label={t.a11y.outline}>
 			{#each roots as node (node.id)}
-				{@const children = childrenOf(node)}
+				{const children = $derived(childrenOf(node))}
 				<li
 					role="treeitem"
 					aria-selected={editor.selection.has(node.id)}
@@ -54,8 +54,7 @@
 				>
 					<button
 						type="button"
-						class="outline__item"
-						class:outline__item--selected={editor.selection.has(node.id)}
+						class={['outline__item', { 'outline__item--selected': editor.selection.has(node.id) }]}
 						style="--hue: var(--fill-{node.fill}-h)"
 						onclick={() => focus(node)}
 					>
@@ -70,8 +69,11 @@
 								<li role="treeitem" aria-selected={editor.selection.has(child.id)}>
 									<button
 										type="button"
-										class="outline__item outline__item--child"
-										class:outline__item--selected={editor.selection.has(child.id)}
+										class={[
+											'outline__item',
+											'outline__item--child',
+											{ 'outline__item--selected': editor.selection.has(child.id) }
+										]}
 										style="--hue: var(--fill-{child.fill}-h)"
 										onclick={() => focus(child)}
 									>

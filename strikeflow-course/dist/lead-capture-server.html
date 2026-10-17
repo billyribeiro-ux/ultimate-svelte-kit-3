@@ -43,21 +43,28 @@
 		<span class="code__file">src/lib/server/leads.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">export interface Lead {
+	<pre><code class="lang-ts">/** A captured lead. */
+export interface Lead {
 	readonly email: string;
+	/** Self-reported experience, used for list segmentation. */
 	readonly experience: ExperienceLevel;
 	readonly consentedToMarketing: boolean;
+	/** ISO 8601 timestamp of capture. */
 	readonly capturedAt: string;
+	/** Which page or campaign produced the signup. */
 	readonly source: string;
 }
 
+export type ExperienceLevel = 'new' | 'some' | 'experienced' | 'professional';
+// …
 export interface LeadStore {
+	/** Persist a lead. Must be idempotent-safe: the same email may arrive twice. */
 	save(lead: Lead): Promise&lt;void&gt;;
+	/** Has this address already signed up? Used to avoid duplicate welcome emails. */
 	has(email: string): Promise&lt;boolean&gt;;
 }
 
-// …a file-backed implementation…
-
+// …
 export const leadStore: LeadStore = new FileLeadStore();</code></pre>
 </figure>
 
@@ -65,7 +72,7 @@ export const leadStore: LeadStore = new FileLeadStore();</code></pre>
 	<h4>Why an interface when there is only one implementation?</h4>
 	<p>Because there will not be for long. A real deployment sends these to Mailchimp, ConvertKit, HubSpot or a Postgres table. When that day comes you write a second implementation and change <strong>one line</strong> — you do not go hunting through form handlers for <code>fs.appendFile</code> calls. That is the difference between a two-hour change and a two-day one, and it costs about fifteen lines today.</p>
 </aside>
-<p>The default implementation appends newline-delimited JSON to a file. Zero dependencies, zero infrastructure, and you can read the output with <code>cat</code>.</p>
+<p>The second <code>// …</code> in that listing stands for the default implementation — a small <code>FileLeadStore</code> class, the path it writes to, and the <code>normaliseEmail()</code> helper it uses (the first is a doc comment). It appends newline-delimited JSON to a file. Zero dependencies, zero infrastructure, and you can read the output with <code>cat</code>.</p>
 <aside class="callout callout--note"><p>JSONL beats a single JSON array here for one specific reason: appending is a pure append. A JSON array would require reading the whole file, parsing it, pushing and rewriting — O(n) per signup, and you lose everything if the process dies mid-write.</p></aside>
 <aside class="callout callout--warn"><p>Do <strong>not</strong> strip Gmail-style dots or <code>+tags</code> when normalising an email. <code>a+news@gmail.com</code> is a legitimate address someone chose in order to filter your mail. Silently rewriting it is both rude and, under GDPR, arguably processing you did not disclose. Lowercase and trim; nothing more.</p></aside>
 <h3 id="tokens">Signed download tokens</h3>
@@ -82,22 +89,36 @@ export const leadStore: LeadStore = new FileLeadStore();</code></pre>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
+import * as v from 'valibot';
 import { EBOOK_TOKEN_SECRET } from '$app/env/private';
 
 // …
 const secret: string = EBOOK_TOKEN_SECRET ?? randomBytes(32).toString('hex');
 
-// …a boot-time console.warn if EBOOK_TOKEN_SECRET is unset…
+if (!EBOOK_TOKEN_SECRET) {
+	console.warn(
+		'[tokens] EBOOK_TOKEN_SECRET is not set — using an ephemeral key.\n' +
+			'         Download links will stop working when the server restarts.\n' +
+			'         Set it in .env before deploying. See .env.example.'
+	);
+}
 
 /** How long a download link stays valid. Long enough to be useful; short enough to matter. */
 const TTL_MS = 1000 * 60 * 60 * 24; // 24 hours
 
-interface TokenPayload {
+/**
+ * What a token carries, as a schema rather than a bare interface — because on the
+ * way back in, the payload is parsed from a string and has to be CHECKED, not
+ * assumed. The type is inferred from the schema, so the two cannot drift.
+ */
+const TokenPayloadSchema = v.object({
 	/** Who it was issued to. Lets us attribute a download without a database lookup. */
-	email: string;
+	email: v.string(),
 	/** Expiry, as epoch milliseconds. */
-	exp: number;
-}
+	exp: v.number()
+});
+
+type TokenPayload = v.InferOutput&lt;typeof TokenPayloadSchema&gt;;
 
 // …
 function encode(value: string): string {
@@ -123,6 +144,7 @@ export function createDownloadToken(email: string): string {
 	return `${encoded}.${sign(encoded)}`;
 }</code></pre>
 </figure>
+<p>If <code>EBOOK_TOKEN_SECRET</code> is unset, the module makes up a random key when the server starts and says so in the console. The project runs with zero setup, at the cost of every outstanding link dying on restart — a deliberately visible symptom, so it gets fixed before deploy rather than running on a default key in production.</p>
 <aside class="callout callout--note"><p><code>base64url</code> is the URL-safe variant of base64: it swaps <code>+</code>, <code>/</code> and <code>=</code> for <code>-</code>, <code>_</code> and nothing. Standard base64 in a query string needs escaping, and breaks when copied out of an email client.</p></aside>
 <h3 id="verify">Verifying — and the line that matters most</h3>
 
@@ -142,7 +164,8 @@ export function createDownloadToken(email: string): string {
 
 	const expected = sign(encoded);
 
-	/* …why timingSafeEqual and the length pre-check — see the warning below… */
+
+	// …
 	const expectedBuffer = Buffer.from(expected);
 	const providedBuffer = Buffer.from(signature);
 
@@ -154,17 +177,20 @@ export function createDownloadToken(email: string): string {
 		return { valid: false, reason: 'bad-signature' };
 	}
 
-	// Only now, with the signature proven, do we trust the payload's contents.
-	let payload: TokenPayload;
+	// Only now, with the signature proven, do we trust the payload's contents — and
+	// even then we check its shape rather than assert it. `JSON.parse` returns `any`,
+	// and `as TokenPayload` would wave a wrong shape (a token from an older format,
+	// say) straight through to the code below.
+	let json: unknown;
 	try {
-		payload = JSON.parse(decode(encoded)) as TokenPayload;
+		json = JSON.parse(decode(encoded));
 	} catch {
 		return { valid: false, reason: 'malformed' };
 	}
 
-	if (typeof payload.exp !== 'number' || typeof payload.email !== 'string') {
-		return { valid: false, reason: 'malformed' };
-	}
+	const parsed = v.safeParse(TokenPayloadSchema, json);
+	if (!parsed.success) return { valid: false, reason: 'malformed' };
+	const payload = parsed.output;
 
 	if (Date.now() &gt; payload.exp) {
 		return { valid: false, reason: 'expired' };
@@ -173,8 +199,13 @@ export function createDownloadToken(email: string): string {
 	return { valid: true, email: payload.email };
 }</code></pre>
 </figure>
-<aside class="callout callout--warn"><p><strong><code>timingSafeEqual</code>, not <code>===</code>.</strong> A normal string comparison returns as soon as it finds a differing character. That means comparing <code>&quot;aaaa&quot;</code> takes fractionally longer than <code>&quot;zaaa&quot;</code> when the real signature starts with <code>&quot;a&quot;</code> — and an attacker who can measure that difference can recover the signature one character at a time. It is called a timing attack and it is practical over a local network. <code>timingSafeEqual</code> always compares the full length.</p></aside>
+<aside class="callout callout--warn"><p><strong><code>timingSafeEqual</code>, not <code>===</code>.</strong> A normal string comparison returns as soon as it finds a differing character. That means comparing <code>&quot;aaaa&quot;</code> takes fractionally longer than <code>&quot;zaaa&quot;</code> when the real signature starts with <code>&quot;a&quot;</code> — and an attacker who can measure that difference can recover the signature one character at a time. It is called a timing attack and it is practical over a local network. <code>timingSafeEqual</code> always compares the full length. It needs two buffers of equal length, so we check the lengths first — safe to short-circuit, because the length of a signature is not a secret. (The <code>// …</code> in the listing is the comment in the real file that says all of this.)</p></aside>
 <aside class="callout callout--note"><p>The function returns a <strong>discriminated union</strong> rather than throwing. That forces the caller to handle failure, and lets them tell &quot;expired&quot; (offer a re-send) apart from &quot;bad signature&quot; (someone is poking at it).</p></aside>
+
+<aside class="callout callout--why">
+	<h4>Why the payload is checked with a schema, not a cast</h4>
+	<p><code>JSON.parse</code> returns <code>any</code>, and the tempting next line is <code>JSON.parse(…) as TokenPayload</code>. A cast checks nothing: it tells the compiler to believe you, so if the shape were ever wrong, the code below would read <code>payload.exp</code> as <code>undefined</code> and compare dates with it, and nothing would complain. A valid signature only proves <em>our server</em> wrote the payload — and &quot;our server&quot; includes last year's version of it, with last year's payload format. So the payload's shape is a valibot schema, <code>TokenPayloadSchema</code>, and <code>v.safeParse</code> checks the parsed value against it; anything that does not fit is <code>malformed</code>. The <code>TokenPayload</code> type is inferred from the schema with <code>v.InferOutput</code>, so the type and the check can never drift apart. It is the same valibot that validates the signup form, used for the same reason: data from outside the type system gets checked at the border.</p>
+</aside>
 <h3 id="ratelimit">Rate limiting</h3>
 <p>A public form with no rate limit is an open invitation. Within a week of going live you will have thousands of junk signups, and if the form ever triggers an email you are now a spam relay with your domain reputation attached.</p>
 
@@ -191,8 +222,20 @@ export function createDownloadToken(email: string): string {
 
 const buckets = new Map&lt;string, Bucket&gt;();
 
-// …the sweep() helper that deletes expired buckets…
+/**
+ * Reclaim memory from expired buckets.
+ *
+ * Without this the Map grows forever — one entry per unique IP, never removed. On a
+ * long-running server that is a slow memory leak, and &quot;slow memory leak&quot; is how you
+ * get paged at 4am six months from now.
+ */
+function sweep(now: number): void {
+	for (const [key, bucket] of buckets) {
+		if (bucket.resetAt &lt;= now) buckets.delete(key);
+	}
+}
 
+// …
 export function rateLimit(key: string, options: RateLimitOptions = {}): RateLimitResult {
 	const { limit = 5, windowMs = 60_000 } = options;
 	const now = Date.now();
@@ -220,6 +263,7 @@ export function rateLimit(key: string, options: RateLimitOptions = {}): RateLimi
 </figure>
 <aside class="callout callout--warn"><p><strong>Be honest about what this is.</strong> The state lives in one process's memory. It resets on deploy, it does not work across multiple instances (four containers behind a load balancer gives an attacker 4× the limit), and it does nothing against a distributed attack. For a single-instance marketing site it is genuinely adequate. The moment you scale horizontally, move it to Redis — <code>INCR</code> plus <code>EXPIRE</code> is the same algorithm — or use your CDN's rate limiting, which sees the traffic before it reaches you and is the better answer anyway.</p></aside>
 <aside class="callout callout--note"><p>The <code>sweep()</code> function is not optional. Without it the Map grows forever, one entry per unique IP, never removed. On a long-running server that is a slow memory leak — and a slow memory leak is how you get paged at 4am six months from now.</p></aside>
+<aside class="callout callout--note"><p>The key is only as good as the address in it. In the next chapter the form keys on <code>event.getClientAddress()</code>, which is the address of whatever connected to the server — and behind a hosting platform's proxy, that is the proxy, for every visitor alike. Chapter 37 shows the two environment variables that fix it before you deploy.</p></aside>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>

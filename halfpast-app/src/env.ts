@@ -21,10 +21,32 @@
  * variable that is genuinely optional.
  */
 import { defineEnvVars } from '@sveltejs/kit/env';
+import { building } from '$app/env';
 import * as v from 'valibot';
 
 /** A non-empty string, with surrounding whitespace stripped. */
 const required = v.pipe(v.string(), v.trim(), v.minLength(1));
+
+/**
+ * Required when the server starts; allowed to be missing while it is built.
+ *
+ * SvelteKit validates every variable in this file during `vite build` too,
+ * because it analyses the app by running it, and the SvelteKit docs give the
+ * opt-out in the same breath: `building` from `$app/env`, with a schema that
+ * accepts a missing value — `building ? v.optional(…) : …`. That is what this
+ * is, for the three private, dynamic variables. None of them is inlined into
+ * the bundle, the build has no use for any of them, and so a CI job can build
+ * the app knowing nothing secret and pointing at no database. When the server
+ * starts, `building` is `false`, and a missing or bad value stops it at once.
+ *
+ * The cost is in the types: each of the three imports as `string | undefined`,
+ * because at build time it can be. The two modules that read them,
+ * `#lib/server/db/index.ts` and `#lib/server/auth.ts`, check `building`
+ * themselves and say why.
+ */
+function neededAtRuntime<Schema extends v.GenericSchema<string, string>>(schema: Schema) {
+	return building ? v.optional(schema) : schema;
+}
 
 /**
  * An absolute origin with no trailing slash: `https://halfpast.app`.
@@ -62,8 +84,8 @@ export const variables = defineEnvVars({
 
 	DATABASE_URL: {
 		description:
-			'libSQL connection string. `file:local.db` in development, a `libsql://…` Turso URL in production.',
-		schema: required
+			'libSQL connection string. `file:local.db` in development, a `libsql://…` Turso URL in production. Not needed to build.',
+		schema: neededAtRuntime(required)
 	},
 
 	DATABASE_AUTH_TOKEN: {
@@ -76,16 +98,18 @@ export const variables = defineEnvVars({
 
 	ORIGIN: {
 		description:
-			'The absolute origin the server believes it is serving from, e.g. `http://localhost:5173`. Better Auth signs cookies against this and adapter-node uses it to build absolute URLs.',
-		schema: origin
+			'The absolute origin the server believes it is serving from, e.g. `http://localhost:5173`. Better Auth signs cookies against this. adapter-node 6 no longer reads it: the origin SvelteKit trusts for CSRF is `paths.origin` in vite.config.ts, fed from `PUBLIC_ORIGIN` at build time. Not needed to build.',
+		schema: neededAtRuntime(origin)
 	},
 
 	BETTER_AUTH_SECRET: {
 		description:
-			'Signing key for session tokens. Generate with `openssl rand -base64 32`. See https://www.better-auth.com/docs/installation.',
-		schema: v.pipe(
-			required,
-			v.minLength(32, 'BETTER_AUTH_SECRET must be at least 32 characters of high entropy')
+			'Signing key for session tokens. Generate with `openssl rand -base64 32`. See https://www.better-auth.com/docs/installation. Not needed to build.',
+		schema: neededAtRuntime(
+			v.pipe(
+				required,
+				v.minLength(32, 'BETTER_AUTH_SECRET must be at least 32 characters of high entropy')
+			)
 		)
 	},
 

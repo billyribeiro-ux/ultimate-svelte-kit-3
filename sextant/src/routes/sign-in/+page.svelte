@@ -26,7 +26,7 @@
 				 * default clears the whole form, which on a failed sign-in means
 				 * retyping an email address that was correct.
 				 *
-				 * `navigate` is deliberately left alone. SvelteKit 3.0.0-next.17 made
+				 * `navigate` is deliberately left alone. SvelteKit 3 made
 				 * `update` follow the browser and navigate to the page a submission
 				 * lands on — on failure as well as success — which is a breaking change
 				 * for any form whose action is on a different route. This one posts to

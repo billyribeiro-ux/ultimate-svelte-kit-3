@@ -61,6 +61,14 @@
 	const HEADER_HEIGHT = 26;
 	const HEADER_WIDTH = 52;
 
+	/*
+	 * Three handles used from handlers and the scroll effect, after mount: the
+	 * viewport is measured and scrolled, the grid takes focus back, and the
+	 * editor's exported `insertAtCaret` is called on a click mid-formula.
+	 * `bind:this` is the API for a handle like that — the last one is a
+	 * component, which no attachment can reach — so the autofixer's suggestion
+	 * to use attachments instead is declined here.
+	 */
 	let viewport = $state<HTMLDivElement>();
 	let grid = $state<HTMLDivElement>();
 	let editor = $state<CellEditor>();
@@ -149,14 +157,25 @@
 		return h;
 	}
 
-	/** Cells somebody else changed flash for a moment, then the set is cleared. */
+	/**
+	 * Cells somebody else changed flash for a moment, then the set is cleared.
+	 * An effect because the clearing is driven by a clock, not by state — there
+	 * is nothing to derive it from — and the cleanup cancels the timer if the
+	 * set changes first.
+	 */
 	$effect(() => {
 		if (sheet.flashes.size === 0) return;
 		const timer = setTimeout(() => sheet.flashes.clear(), 900);
 		return () => clearTimeout(timer);
 	});
 
-	/** Keep the active cell on screen. */
+	/**
+	 * Keep the active cell on screen, and tell whoever is listening where it
+	 * is. Both are side effects on things outside Svelte — the element's scroll
+	 * position, and (on a stored sheet) the network — which is what `$effect`
+	 * is for; neither writes state another rune could derive. `untrack` keeps
+	 * the effect from depending on the scroll position it is about to change.
+	 */
 	$effect(() => {
 		const { row, col } = sheet.anchor;
 		const el = untrack(() => viewport);
@@ -289,29 +308,30 @@
 				return;
 			case 'Escape':
 				return sheet.select(sheet.anchor);
+			// The three shortcuts are letters, and without Ctrl or Cmd a letter is
+			// somebody starting to type — so each one `break`s to the code below
+			// rather than returning, or "apple" would arrive as "pple".
 			case 'a':
-			case 'A':
-				if (mod) {
-					event.preventDefault();
-					const extent = sheet.engine.extent();
-					sheet.select({ row: 0, col: 0 }, { row: extent?.row ?? 0, col: extent?.col ?? 0 });
-				}
+			case 'A': {
+				if (!mod) break;
+				event.preventDefault();
+				const extent = sheet.engine.extent();
+				sheet.select({ row: 0, col: 0 }, { row: extent?.row ?? 0, col: extent?.col ?? 0 });
 				return;
+			}
 			case 'z':
 			case 'Z':
-				if (mod) {
-					event.preventDefault();
-					if (readonly) return;
-					if (shift) sheet.redo();
-					else sheet.undo();
-				}
+				if (!mod) break;
+				event.preventDefault();
+				if (readonly) return;
+				if (shift) sheet.redo();
+				else sheet.undo();
 				return;
 			case 'y':
 			case 'Y':
-				if (mod) {
-					event.preventDefault();
-					if (!readonly) sheet.redo();
-				}
+				if (!mod) break;
+				event.preventDefault();
+				if (!readonly) sheet.redo();
 				return;
 		}
 
@@ -365,9 +385,9 @@
 	/* Pointer                                                           */
 	/* ---------------------------------------------------------------- */
 
-	/** The cell under a pointer, accounting for headers, scrolling and frozen panes. */
 	/**
-	 * The cell under a pointer. The scroll offsets are read from the element,
+	 * The cell under a pointer, accounting for headers, scrolling and frozen
+	 * panes. The scroll offsets are read from the element,
 	 * not from the `scrollTop`/`scrollLeft` state: `scroll` events arrive a
 	 * frame after the scroll, and a pointer can land in that frame — the phone
 	 * profile of the end-to-end suite did exactly that, and typed into B2.
@@ -393,8 +413,8 @@
 	let drag = $state<Drag | null>(null);
 
 	function pointerdown(event: PointerEvent) {
-		if (event.button !== 0) return;
-		const target = event.target as HTMLElement;
+		if (event.button !== 0 || !(event.target instanceof Element)) return;
+		const target = event.target;
 
 		const handle = target.closest<HTMLElement>('[data-resize]');
 		if (handle) {
@@ -523,8 +543,9 @@
 	}
 
 	function dblclick(event: MouseEvent) {
-		if (readonly) return;
-		if ((event.target as HTMLElement).closest('[data-resize]')) return;
+		// An open edit keeps its double-click: a word selected, or a reference in a formula.
+		if (readonly || sheet.editing) return;
+		if (event.target instanceof Element && event.target.closest('[data-resize]')) return;
 		const cell = cellAt(event.clientX, event.clientY);
 		if (!cell) return;
 		sheet.select(cell);
@@ -594,15 +615,16 @@
 			style:height="{HEADER_HEIGHT + totalHeight}px"
 		>
 			{#snippet cell(r: number, c: number, top: number, left: number)}
-				{@const k = key(r, c)}
-				{@const value = sheet.value(r, c)}
-				{@const selected = inRect(selection, { row: r, col: c })}
-				{@const anchor = sheet.anchor.row === r && sheet.anchor.col === c}
-				{@const highlight = highlights.find((h) => inRect(h.rect, { row: r, col: c }))}
-				{@const cursor = cursorsByCell.get(k)}
-				{@const editing = sheet.editing?.row === r && sheet.editing.col === c}
-				{@const filling =
-					fillTarget !== null && inRect(fillTarget, { row: r, col: c }) && !selected}
+				{const k = $derived(key(r, c))}
+				{const value = $derived(sheet.value(r, c))}
+				{const selected = $derived(inRect(selection, { row: r, col: c }))}
+				{const anchor = $derived(sheet.anchor.row === r && sheet.anchor.col === c)}
+				{const highlight = $derived(highlights.find((h) => inRect(h.rect, { row: r, col: c })))}
+				{const cursor = $derived(cursorsByCell.get(k))}
+				{const editing = $derived(sheet.editing?.row === r && sheet.editing.col === c)}
+				{const filling = $derived(
+					fillTarget !== null && inRect(fillTarget, { row: r, col: c }) && !selected
+				)}
 				<div
 					id="cell-{r}-{c}"
 					class={[

@@ -25,9 +25,25 @@ const Credentials = v.object({
 	password: v.pipe(v.string(), v.minLength(1, 'Enter your password.'))
 });
 
+/**
+ * Only a path on this site, never a URL somebody else wrote.
+ *
+ * `?next=` is the classic open redirect: a sign-in link that forwards to
+ * `https://evil.example` after a successful login is a phishing page with our
+ * domain in the address bar. SvelteKit 3 closes that hole at the framework
+ * level — `redirect()` refuses an external location unless the call opts in with
+ * `{ external: true }` — but "refuses" means a 500 for the person who followed
+ * a bad link, and a rule stated here is a rule a reader can see. One leading `/`
+ * and not two: `//evil.example` is a scheme-relative URL that resolves to
+ * another host.
+ */
+function safeNext(value: string | null): string {
+	return value && value.startsWith('/') && !value.startsWith('//') ? value : '/';
+}
+
 export const load: PageServerLoad = async ({ locals, url }) => {
 	// Already signed in: go where they were heading, or to the front door.
-	if (locals.user) redirect(303, url.searchParams.get('next') ?? '/');
+	if (locals.user) redirect(303, safeNext(url.searchParams.get('next')));
 	return {};
 };
 

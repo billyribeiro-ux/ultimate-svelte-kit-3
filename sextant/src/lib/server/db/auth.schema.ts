@@ -1,5 +1,20 @@
+/**
+ * Better Auth's four tables, in the shape Better Auth 1.7.7 expects.
+ *
+ * `pnpm run auth:schema` wrote the first version of this file from `auth.ts`;
+ * it is kept by hand so the column names follow the same `snake_case` as the
+ * rest of the schema — and so that a change *under* the app has somewhere to
+ * be explained. There was one. Better Auth 1.7.0 added a required `issuer`
+ * column to `account` (who vouches for the account: an OAuth provider's URL,
+ * or `local:credential` for a password) with a unique index on
+ * `(issuer, account_id)`, and this file carried both. 1.7.3 withdrew it, so
+ * 1.7.7 never writes the column — and a `NOT NULL` column nothing writes is a
+ * sign-up that fails on its insert, which is how the seed found it the first
+ * time it ran against the new library. Migration `0001` drops the index and
+ * then the column, which is why `account` below looks like 1.6's again.
+ */
 import { relations, sql } from 'drizzle-orm';
-import { sqliteTable, text, integer, index, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
 
 export const user = sqliteTable('user', {
 	id: text('id').primaryKey(),
@@ -41,7 +56,6 @@ export const account = sqliteTable(
 	'account',
 	{
 		id: text('id').primaryKey(),
-		issuer: text('issuer').notNull(),
 		accountId: text('account_id').notNull(),
 		providerId: text('provider_id').notNull(),
 		userId: text('user_id')
@@ -65,10 +79,7 @@ export const account = sqliteTable(
 			.$onUpdate(() => /* @__PURE__ */ new Date())
 			.notNull()
 	},
-	(table) => [
-		uniqueIndex('account_issuer_accountId_uidx').on(table.issuer, table.accountId),
-		index('account_userId_idx').on(table.userId)
-	]
+	(table) => [index('account_userId_idx').on(table.userId)]
 );
 
 export const verification = sqliteTable(

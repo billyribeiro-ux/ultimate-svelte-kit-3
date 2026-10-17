@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { beforeNavigate } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { page, updated } from '$app/state';
+	import { prefersReducedMotion } from 'svelte/motion';
 	import { fly } from 'svelte/transition';
 	import Logo from '#lib/components/Logo.svelte';
 	import { whoAmI } from '#lib/remote/artist.remote.ts';
@@ -18,12 +20,16 @@
 
 	let { children } = $props();
 
+	/*
+	 * Every internal link is `resolve(routeId)`: the route table checks it at
+	 * build time, and a base path, if the app ever has one, is added for free.
+	 */
 	const links = [
-		{ href: '/studio', label: 'Studio' },
-		{ href: '/gallery', label: 'Gallery' },
-		{ href: '/jam/lobby', label: 'Jam' },
-		{ href: '/embed', label: 'Embed' }
-	] as const;
+		{ href: resolve('/(app)/studio'), label: 'Studio' },
+		{ href: resolve('/(app)/gallery'), label: 'Gallery' },
+		{ href: resolve('/(app)/jam/[room]', { room: 'lobby' }), label: 'Jam' },
+		{ href: resolve('/(app)/embed'), label: 'Embed' }
+	];
 
 	/**
 	 * THE CURRENT PATH, EAGERLY
@@ -49,7 +55,15 @@
 	 * gives the person the choice to do that now; this makes sure it happens
 	 * anyway.
 	 */
-	beforeNavigate(({ willUnload, to }) => {
+	// The banner's entrance asks for itself: Svelte transitions run on the Web
+	// Animations API, which the stylesheet's reduced-motion rule cannot reach.
+	const flyDuration = $derived(prefersReducedMotion.current ? 0 : 240);
+
+	beforeNavigate(({ willUnload, to, shallow }) => {
+		// Not for a shallow navigation: it never asks the server for a file, so
+		// a new deployment is no reason to reload the studio out from under a
+		// panel that is being opened.
+		if (shallow) return;
 		if (updated.current && !willUnload && to?.url) {
 			location.href = to.url.href;
 		}
@@ -64,14 +78,16 @@
 <a class="skip visually-hidden-focusable" href="#main">Skip to content</a>
 
 {#if updated.current}
-	<div class="updated" role="status" transition:fly={{ y: -16, duration: 240 }}>
+	<div class="updated" role="status" transition:fly={{ y: -16, duration: flyDuration }}>
 		<span>A new version of Ostinato is ready.</span>
+		<!-- The address already in the bar, reloaded for real; there is no route to resolve. -->
+		<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
 		<a class="btn btn--sm btn--primary" href={page.url.href} data-sveltekit-reload>Reload</a>
 	</div>
 {/if}
 
 <header class="topbar">
-	<a class="brand" href="/" aria-label="Ostinato home">
+	<a class="brand" href={resolve('/(app)')} aria-label="Ostinato home">
 		<Logo />
 		<span class="brand__name">Ostinato</span>
 	</a>
@@ -106,7 +122,9 @@
 		<svelte:boundary>
 			{const me = $derived(await whoAmI())}
 			{#if me}
-				<a class="chip chip--on" href="/gallery#yours">@{me.handle}</a>
+				<a class="chip chip--on handle" href={resolve('/(app)/gallery#yours')} title="@{me.handle}"
+					>@{me.handle}</a
+				>
 			{:else}
 				<span class="chip" title="Choose a handle when you publish">not signed in</span>
 			{/if}
@@ -202,8 +220,30 @@
 		color: var(--text);
 	}
 
+	/*
+	 * A flex item will not shrink below its content unless it is told it may.
+	 * Without these two, a long handle in the chip on the right pushed the
+	 * header — and with it the whole page — wider than a phone, and the page
+	 * scrolled sideways under the person's thumb. Now the list of links
+	 * scrolls inside itself, as it was meant to, and the handle is cut short.
+	 */
+	nav,
+	.topbar__end {
+		min-width: 0;
+	}
+
 	.topbar__end {
 		margin-inline-start: auto;
+	}
+
+	/* Up to twenty characters; on a phone the end is an ellipsis, and `title` has it all. */
+	.handle {
+		display: block;
+		max-width: 8rem;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		line-height: calc(1.75rem - 2px);
 	}
 
 	main {
@@ -213,6 +253,10 @@
 	@media (min-width: 40rem) {
 		.brand__name {
 			display: inline;
+		}
+
+		.handle {
+			max-width: none;
 		}
 	}
 </style>

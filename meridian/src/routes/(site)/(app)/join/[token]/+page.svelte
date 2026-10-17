@@ -1,11 +1,13 @@
 <script lang="ts">
-	import { page } from '$app/state';
 	import { m } from '#lib/paraglide/messages.js';
-	import { getLocale, localizeHref } from '#lib/paraglide/runtime.js';
+	import { href } from '#lib/href.ts';
+	import { getLocale } from '#lib/paraglide/runtime.js';
 	import { formatRange } from '#lib/domain/dates.ts';
 	import { acceptInvite, inviteByToken } from '#lib/remote/invites.remote.ts';
+	import type { PageProps } from './$types';
 
-	const token = $derived(page.params.token ?? '');
+	let { params }: PageProps = $props();
+	const token = $derived(params.token);
 	const locale = getLocale();
 </script>
 
@@ -19,7 +21,7 @@
 	whether the link still works; one remote form accepts it — a real form,
 	so the button works on a phone that has not finished loading the script.
 -->
-{const invite = await inviteByToken(token)}
+{const invite = $derived(await inviteByToken(token))}
 
 <section class="container join">
 	<div class="card card--pad stack">
@@ -29,7 +31,9 @@
 
 		{#if invite.alreadyMember}
 			<p>{m.join_already()}</p>
-			<a class="btn btn--primary" href={localizeHref(`/t/${invite.trip.slug}`)}>{m.join_open()}</a>
+			<a class="btn btn--primary" href={href('/(site)/t/[slug=slug]', { slug: invite.trip.slug })}>
+				{m.join_open()}
+			</a>
 		{:else if invite.used}
 			<p class="issue">{m.join_used()}</p>
 		{:else if invite.expired}
@@ -48,6 +52,6 @@
 <style>
 	.join {
 		max-width: 30rem;
-		padding-block: var(--space-7);
+		padding-block: var(--section);
 	}
 </style>

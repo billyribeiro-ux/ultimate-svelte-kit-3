@@ -58,7 +58,7 @@
 </figure>
 <p>One command. If <code>pnpm run verify</code> is green, the thing is deployable; if it is not, nothing else matters. Put it in CI and make it required.</p>
 <h3 id="origin">2. The adapter setting that ruins your day</h3>
-<aside class="callout callout--warn"><p><code>@sveltejs/adapter-node</code> v6 no longer reads an <code>ORIGIN</code> environment variable at runtime. The trusted origin is baked in at <strong>build time</strong> from <code>kit.paths.origin</code>, and the header fallback assumes <code>https</code>. Deploy behind a proxy that terminates TLS and forwards plain HTTP without the right headers, and every form post returns 403 &quot;Cross-site remote requests are forbidden&quot; — with a perfectly healthy-looking app behind it.</p></aside>
+<aside class="callout callout--warn"><p>Up to v5, <code>@sveltejs/adapter-node</code> read the trusted origin from an <code>ORIGIN</code> environment variable at runtime. v6, the adapter for SvelteKit 3, no longer does: the origin is baked in at <strong>build time</strong> from <code>paths.origin</code> in the <code>sveltekit()</code> options. Leave that unset and the adapter rebuilds the origin from request headers, assuming <code>https</code> unless <code>PROTOCOL_HEADER</code> says otherwise. Serve the built server over plain HTTP — <code>node build</code> on localhost, a container on a private network — and it computes <code>https://…</code> while the browser sends <code>http://…</code>, so every form post and remote call returns 403 &quot;Cross-site remote requests are forbidden&quot;, from a perfectly healthy-looking app. Behind a proxy that terminates TLS, setting <code>PROTOCOL_HEADER=x-forwarded-proto</code> and <code>HOST_HEADER=x-forwarded-host</code> is the other way out.</p></aside>
 
 <figure class="code">
 	<figcaption>
@@ -72,8 +72,26 @@
 }),</code></pre>
 </figure>
 <p>Because it is baked in at build time, <code>PUBLIC_ORIGIN</code> must be correct <strong>when you build</strong>, not when you start. That catches people whose CI builds an artefact and whose deploy step sets the environment.</p>
+<p>And <code>PUBLIC_ORIGIN</code> is, with <code>PUBLIC_DEFAULT_TIME_ZONE</code>, all the build needs to know. SvelteKit validates every variable in <code>src/env.ts</code> when you build, because it analyses the app by running it, and the two <code>static: true</code> ones have to be real: &quot;the build time value is inlined into the bundle&quot;. The three private, dynamic ones — <code>DATABASE_URL</code>, <code>ORIGIN</code> and <code>BETTER_AUTH_SECRET</code> — are read from the environment when the server starts, and chapter 15 used the docs' own opt-out, <code>building</code> from <code>$app/env</code>, so that they may be missing while building and are required the moment the server boots.</p>
+<p>The two modules that read them honour the same flag. The database module opens an in-memory database while building and skips its pragmas, and <code>auth.ts</code> hands Better Auth a throwaway secret; neither reaches anything real. So the build command names what the build uses, and nothing else:</p>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>PUBLIC_ORIGIN=https://halfpast.example \
+PUBLIC_DEFAULT_TIME_ZONE=Europe/London \
+pnpm run build</code></pre>
+</figure>
+<p>We ran exactly that, in a copy of the project with no <code>.env</code> and none of the private variables set: the build finished, and no database file appeared. Better Auth prints one warning on the way, that its base URL is not set, which is true while building and stops being true when the server starts with <code>ORIGIN</code>. Starting the result the same way, without the private variables, stops at once with SvelteKit's <code>env_invalid</code> naming all three — the check has moved to where it belongs, not gone.</p>
+
+<aside class="callout callout--why">
+	<h4>Why not hand the build placeholders</h4>
+	<p>That was this chapter's first answer, and it is still the one you will find in a great many projects. Without the opt-out, a build given only the public variables stopped at <code>Analysing routes</code> with <code>env_invalid</code>, so the recipe fed it <code>DATABASE_URL=:memory:</code>, a dummy <code>ORIGIN</code> and a made-up secret. Each placeholder had a trap. <code>DATABASE_URL=placeholder</code> got past validation and then failed the build with <code>LibsqlError: URL_INVALID</code> from a generated chunk, because the database module handed it to <code>createClient</code> the moment it loaded. And a URL libSQL could parse was used, not merely checked: a <code>file:</code> URL created the file, and a remote one was sent the WAL pragma, so a build run with production's environment loaded talked to production. Placeholders made the build need to know about variables it has no use for. <code>building</code> makes it not need them.</p>
+</aside>
 <h3 id="deps">3. Dependencies versus devDependencies</h3>
-<p>Vite bundles <code>devDependencies</code> into the server build. <code>@libsql/client</code> loads a native binary at runtime and cannot be bundled.</p>
+<p><code>adapter-node</code> bundles <code>devDependencies</code> into the server build, with Rolldown since v6, and leaves <code>dependencies</code> to be installed beside it. <code>@libsql/client</code> loads a native binary at runtime and cannot be bundled.</p>
 
 <figure class="code">
 	<figcaption>
@@ -82,9 +100,9 @@
 	</figcaption>
 	<pre><code class="lang-json">&quot;dependencies&quot;: {
 	…
-	&quot;@libsql/client&quot;: &quot;^0.17.4&quot;,
-	&quot;better-auth&quot;: &quot;^1.7.2&quot;,
-	&quot;drizzle-orm&quot;: &quot;^0.45.2&quot;,
+	&quot;@libsql/client&quot;: &quot;^0.18.0&quot;,
+	&quot;better-auth&quot;: &quot;^1.7.7&quot;,
+	&quot;drizzle-orm&quot;: &quot;^0.45.4&quot;,
 	…
 }</code></pre>
 </figure>
@@ -108,9 +126,9 @@
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-json">&quot;engines&quot;: {
-	&quot;node&quot;: &quot;&gt;=24.20.0&quot;
+	&quot;node&quot;: &quot;&gt;=24.21.0&quot;
 },
-&quot;packageManager&quot;: &quot;pnpm@11.24.0&quot;,</code></pre>
+&quot;packageManager&quot;: &quot;pnpm@12.10.1&quot;,</code></pre>
 </figure>
 
 <figure class="code">
@@ -118,7 +136,7 @@
 		<span class="code__file">.nvmrc</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-text">24.20.0</code></pre>
+	<pre><code class="lang-text">24.21.0</code></pre>
 </figure>
 <p>This app depends on the runtime's time zone database and on <code>Intl</code>, so &quot;whatever Node the host feels like&quot; is a real risk. Pinning also makes the ICU-version problem from chapter 32 a decision you make rather than one that happens to you.</p>
 <h3 id="migrations">Migrations on deploy</h3>

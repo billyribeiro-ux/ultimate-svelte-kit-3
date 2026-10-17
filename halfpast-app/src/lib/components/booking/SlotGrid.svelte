@@ -1,3 +1,25 @@
+<script module lang="ts">
+	export interface SlotOption {
+		/** The instant this appointment starts. Unique within the grid. */
+		start: number;
+		/** Which staff can take it. More than one when the customer said "anyone". */
+		staffIds: string[];
+	}
+
+	/**
+	 * One radio value carries both the time and the person: `1786780800000.<uuid>`.
+	 *
+	 * Fusing them is what lets the form submit a complete choice with no
+	 * JavaScript. The alternative — a hidden `staffId` field kept in step by an
+	 * event handler — is a form that silently posts an incomplete selection the
+	 * moment scripting is unavailable.
+	 *
+	 * Exported from the module script so the page can ask "is the chosen value
+	 * still on offer?" in exactly the terms the grid wrote it.
+	 */
+	export const slotValue = (slot: SlotOption) => `${slot.start}.${slot.staffIds[0]}`;
+</script>
+
 <script lang="ts">
 	import { tick } from 'svelte';
 	// `RemoteFormField` is exported from `$app/server`, not `@sveltejs/kit` — it
@@ -34,13 +56,6 @@
 	 * invisible.
 	 */
 
-	export interface SlotOption {
-		/** The instant this appointment starts. Unique within the grid. */
-		start: number;
-		/** Which staff can take it. More than one when the customer said "anyone". */
-		staffIds: string[];
-	}
-
 	let {
 		slots,
 		zone,
@@ -54,19 +69,14 @@
 		showZone?: boolean;
 	} = $props();
 
-	/**
-	 * One radio value carries both the time and the person: `1786780800000.<uuid>`.
-	 *
-	 * Fusing them is what lets the form submit a complete choice with no
-	 * JavaScript. The alternative — a hidden `staffId` field kept in step by an
-	 * event handler — is a form that silently posts an incomplete selection the
-	 * moment scripting is unavailable.
+	/*
+	 * `bind:this`, not an attachment, and the autofixer's suggestion to swap them
+	 * is declined on purpose. FLIP has to measure the grid *before* Svelte
+	 * changes it, in the `$effect.pre` below. An attachment runs after its
+	 * element is in the DOM and after each update it reacts to — one step too
+	 * late for the "First" measurement. So the pre-effect needs the element in
+	 * hand, which is what this reference is.
 	 */
-	const valueOf = (slot: SlotOption) => `${slot.start}.${slot.staffIds[0]}`;
-
-	/** The field is the single source of truth for what is selected. */
-	const selectedValue = $derived(field.value());
-
 	let grid = $state<HTMLElement | null>(null);
 
 	const flip = createFlip(() => (grid ? Array.from(grid.querySelectorAll('.slot')) : []));
@@ -123,9 +133,13 @@
 {:else}
 	<div class="grid" bind:this={grid}>
 		{#each slots as slot (slot.start)}
-			{@const value = valueOf(slot)}
-			<label class="slot" class:selected={selectedValue === value}>
-				<input {...field.as('radio', value)} />
+			<!--
+				No `selected` class. The label is styled from its radio's own state,
+				`:has(input:checked)`, so the chosen time looks chosen with or without
+				JavaScript, and the look can never disagree with what the form posts.
+			-->
+			<label class="slot">
+				<input {...field.as('radio', slotValue(slot))} />
 				<span>{labelFor(slot)}</span>
 			</label>
 		{/each}
@@ -169,12 +183,12 @@
 			color var(--dur-fast) var(--ease-standard);
 	}
 
-	.slot:hover:not(.selected) {
+	.slot:hover:not(:has(input:checked)) {
 		border-color: var(--accent);
 		background: var(--accent-soft);
 	}
 
-	.selected {
+	.slot:has(input:checked) {
 		background: var(--accent);
 		border-color: var(--accent);
 		color: var(--on-accent);

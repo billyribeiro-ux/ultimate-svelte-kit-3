@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Hooks: auth, security, `handleFetch`, `handleError` and `init` — Building Sextant</title>
-<meta name="description" content="Five hooks, what each is genuinely for, and the one that turns a broken deploy into a process that never claims to be healthy.">
+<meta name="description" content="Five server hooks and one in the browser, what each is genuinely for, and the one that turns a broken deploy into a process that never claims to be healthy.">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -33,7 +33,7 @@
 		<article>
 			<p class="eyebrow">Chapter 41</p>
 			<h1>Hooks: auth, security, `handleFetch`, `handleError` and `init`</h1>
-			<p class="lede">Five hooks, what each is genuinely for, and the one that turns a broken deploy into a process that never claims to be healthy.</p>
+			<p class="lede">Five server hooks and one in the browser, what each is genuinely for, and the one that turns a broken deploy into a process that never claims to be healthy.</p>
 			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Wire the request lifecycle, and put each concern where it can only be applied once.</p></aside>
 			
 <figure class="code">
@@ -109,7 +109,7 @@ import { auth } from '#lib/server/auth.ts';</code></pre>
 $ grep -rl &quot;/fonts/&quot; .svelte-kit/output/client
   (nothing)                                     ← what was preloaded</code></pre>
 </figure>
-<p>It could not be fixed before, and that is the point. A bundled font’s URL carries a content hash, so a filter could only match a path nobody can predict. SvelteKit 3.0.0-next.24 gives a <code>font</code> input a <strong><code>filename</code></strong> — the source path relative to the project root, before hashing — and matching on that is exact, survives every rebuild, and lets the fonts stay bundled.</p>
+<p>It could not be fixed before, and that is the point. A bundled font’s URL carries a content hash, so a filter could only match a path nobody can predict. SvelteKit 3 gives a <code>font</code> input a <strong><code>filename</code></strong> — the source path relative to the project root, before hashing — and matching on that is exact, survives every rebuild, and lets the fonts stay bundled.</p>
 
 <figure class="code">
 	<figcaption>
@@ -265,6 +265,52 @@ export const handleError: HandleServerError = ({ error, event, kind }) =&gt; {
 };</code></pre>
 </figure>
 <p>SvelteKit distinguishes a 404, a thrown <code>error()</code>, a validation failure and something genuinely broken. Only the last is worth a log line and a correlation id — writing an id for every 404 buries the one that matters, which is the precise mechanism by which teams stop reading their own error logs.</p>
+<h3 id="handleerror-client">And <code>handleError</code> in the browser</h3>
+<p>The same hook can live in <code>src/hooks.client.ts</code>, typed <code>HandleClientError</code>, and it sees what goes wrong in the browser: a render that throws, and a remote call that fails before any server could shape the error. That second case is the one this project needed it for. Drop the connection and press Run, and the explore page used to say “Internal Error”. The query never reached the server, and the sentence blamed it anyway — SvelteKit’s default for <code>kind: 'unknown'</code> is a 500 that reads exactly that.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/hooks.client.ts<span class="code__lines">:11-46</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * What `fetch` rejects with when no response came back at all.
+ *
+ * A `TypeError`, which is also what a bug throws, so the type alone cannot tell
+ * &quot;the server never answered&quot; from &quot;this code read a property of `undefined`&quot;.
+ * The messages can. There is one per engine — Chromium, Firefox, WebKit — and
+ * they have been stable for years, which is the most a message can promise. A
+ * new wording would fall through to SvelteKit's own default, &quot;Internal Error&quot;:
+ * less helpful, never wrong in a misleading direction.
+ */
+const NO_RESPONSE = new Set([
+	'Failed to fetch',
+	'NetworkError when attempting to fetch resource.',
+	'Load failed'
+]);
+
+/**
+ * A request that never reached the server says so.
+ *
+ * Without this, SvelteKit's default for `kind: 'unknown'` stands: a 500 that
+ * reads &quot;Internal Error&quot;. For a dropped connection that is the wrong story —
+ * it tells somebody the server broke, when the server never heard from them,
+ * and the one thing worth doing, trying again once the connection is back, is
+ * exactly what the sentence does not suggest. The explore page's &quot;Try again&quot;
+ * exists for this case, and now its refusal names it.
+ *
+ * Everything else passes through. &quot;Errors that were already transformed by the
+ * server-side hook are not passed to the client-side hook a second time&quot;, so a
+ * refusal arrives here only if no server shaped it, and returning nothing keeps
+ * SvelteKit's default: an `app` error's own body, a `framework` error's safe
+ * message.
+ */
+export const handleError: HandleClientError = ({ kind, error }) =&gt;
+	kind === 'unknown' &amp;&amp; error instanceof TypeError &amp;&amp; NO_RESPONSE.has(error.message)
+		? { message: 'Sextant could not be reached. Check your connection, then try again.' }
+		: undefined;</code></pre>
+</figure>
+<p>A failed <code>fetch</code> rejects with a <code>TypeError</code>, and so does a bug, so the check reads the message as well, and the three browser engines each have one wording for “no response at all”. Anything it does not recognise passes through to SvelteKit’s default, and a refusal the server already shaped never reaches this hook: “errors that were already transformed by the server-side hook are not passed to the client-side hook a second time”. Chapter 39 has the test, which cuts the connection under a live page and then lets “Try again” put it right.</p>
 <h3 id="init"><code>init</code>, and an honest limitation</h3>
 
 <figure class="code">
@@ -317,7 +363,7 @@ export const init: ServerInit = async () =&gt; {
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>
-	<ul><li>Every authenticated response carries <code>Vary: Cookie</code>.</li><li>A server-side <code>fetch</code> that hangs is cut off rather than hanging the request.</li><li>A broken database means the process never starts.</li></ul>
+	<ul><li>Every authenticated response carries <code>Vary: Cookie</code>.</li><li>A server-side <code>fetch</code> that hangs is cut off rather than hanging the request.</li><li>A broken database means the process never starts.</li><li>A query lost to a dropped connection says that, not “Internal Error”.</li></ul>
 </aside>
 		</article>
 

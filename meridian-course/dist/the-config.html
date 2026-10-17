@@ -39,7 +39,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:33-57</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:38-74</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">export default defineConfig(({ mode }) =&gt; {
@@ -65,16 +65,28 @@
 				 * HTTP behind a proxy does not reconstruct `https://…` from headers
 				 * and reject every POST as cross-site. Better Auth uses the same value
 				 * as its `baseURL` (see `src/lib/server/auth.ts`).
+				 *
+				 * `relative: false`, because every link goes through `href()` and
+				 * Paraglide. With the default, `true`, `resolve()` answers a server
+				 * render with a path relative to the page — `./trips`, `../trips` —
+				 * so the HTML is portable to a subdirectory; Paraglide's
+				 * `localizeHref` then resolves that against an origin and hands back
+				 * a whole URL, `http://localhost:4173/trips`. Every link in the
+				 * server's HTML, and in every prerendered guide, carried the
+				 * build's origin, and the header could never mark the current page:
+				 * it compares a pathname with an `href`, and a URL is never equal to
+				 * a pathname. Root-relative paths are what the browser's half
+				 * already produced, so now both halves write `/de/trips`.
 				 */
-				paths: { origin: env.PUBLIC_ORIGIN },</code></pre>
+				paths: { origin: env.PUBLIC_ORIGIN, relative: false },</code></pre>
 </figure>
-<p><code>defineConfig</code> comes from <code>vitest/config</code> rather than <code>vite</code>, so the <code>test</code> block at the bottom type-checks; <code>loadEnv</code> still comes from Vite because Vitest does not re-export it. The config is a <strong>function</strong> because it reads the environment before the build starts: <code>paths.origin</code> is the value adapter-node bakes into the server, and it is read from <code>PUBLIC_ORIGIN</code> here and validated by <code>src/env.ts</code> (chapter 14) as <code>static: true</code> so the same value reaches Better Auth.</p>
+<p><code>defineConfig</code> comes from <code>vitest/config</code> rather than <code>vite</code>, so the <code>test</code> block at the bottom type-checks; <code>loadEnv</code> still comes from Vite because Vitest does not re-export it. The config is a <strong>function</strong> because it reads the environment before the build starts: <code>paths.origin</code> is the value adapter-node bakes into the server, and it is read from <code>PUBLIC_ORIGIN</code> here and validated by <code>src/env.ts</code> (chapter 14) as <code>static: true</code> so the same value reaches Better Auth. <code>relative: false</code> beside it is a link decision, not a deployment one: every internal link goes through <code>href()</code>, and with SvelteKit’s default a server render’s links came out as whole URLs at the build’s origin. Chapter 23 tells that story where the links are written.</p>
 <aside class="callout callout--warn"><p><code>enhancedImages()</code> must come before <code>sveltekit()</code>. It is a preprocessor that rewrites <code>&lt;enhanced:img&gt;</code> into a <code>&lt;picture&gt;</code> element, and the Svelte compiler has to see the rewritten markup, not the original. Put it second and the build fails with an unhelpful message about an unknown element. The other ordering rule is at the bottom of the plugin list, and it is the opposite way round.</p></aside>
 <h3 id="markdown-and-elements">Markdown components and a folder of custom elements</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:59-93</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:76-116</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/*
@@ -98,28 +110,34 @@ extensions: ['.svelte', '.svx'],
  * =============================
  *
  * `src/lib/embed` holds `&lt;meridian-route&gt;`, which is compiled as a
- * custom element — `customElements.define`, a shadow root — rather
- * than as an ordinary component. That is a per-file compiler option,
- * and `dynamicCompileOptions` is how a per-file option is set.
+ * custom element — a class the browser can register, with a shadow
+ * root — rather than as an ordinary component. That is a per-file
+ * compiler option, and `dynamicCompileOptions` is how a per-file
+ * option is set.
  *
  * `environment.name === 'client'` because a custom element has no
- * server-rendered form: it registers itself with the browser and is
- * imported on mount. The server build compiles the same file as a
- * plain component it never renders.
+ * server-rendered form: `src/lib/embed/element.ts` registers it with
+ * the browser, and is imported on mount. The server build compiles
+ * the same file as a plain component it never renders.
+ *
+ * The test is the folder `src/lib/embed`, not any folder called
+ * `embed`: the frame page at `src/routes/embed/[slug]` is an ordinary
+ * page, and compiled as a custom element its styles went into a
+ * shadow root that never exists — the frame rendered unstyled.
  */
 dynamicCompileOptions({ filename, environment }) {
 	if (environment.name !== 'client') return {};
-	if (filename.split(/[/\\]/).includes('embed')) return { customElement: true };
+	if (/[/\\]src[/\\]lib[/\\]embed[/\\]/.test(filename)) return { customElement: true };
 	return {};
 },</code></pre>
 </figure>
 <p>Two per-file behaviours. <code>preprocess</code> and <code>extensions</code> are what make a <code>.svx</code> file a component: mdsvex runs first, turns Markdown into markup and frontmatter into a <code>metadata</code> export, and the compiler takes it from there; <code>extensions</code> tells SvelteKit that <code>.svx</code> files under <code>src/routes</code> and in imports are components too. Chapter 34 writes the guides that use it.</p>
-<p><code>dynamicCompileOptions</code> is newer and subtler: a function called once per file, returning compiler options for that file only. The custom element in <code>src/lib/embed</code> has to be compiled with <code>customElement: true</code> — a different output altogether, with <code>customElements.define</code> and a shadow root — and nothing else in the project may be. The <code>environment.name === &quot;client&quot;</code> guard is the part people miss: the server build compiles the same file, and a custom element has no server-rendered form, so the server gets a plain component it never renders. Chapter 36 builds the element.</p>
+<p><code>dynamicCompileOptions</code> is newer and subtler: a function called once per file, returning compiler options for that file only. The custom element in <code>src/lib/embed</code> has to be compiled with <code>customElement: true</code> — a different output altogether, a class the browser can register as an element, with a shadow root — and nothing else in the project may be, which is why the test is the path <code>src/lib/embed</code> and not any folder called <code>embed</code>: the frame page lives in <code>src/routes/embed</code>, and the looser test once compiled it as a custom element too, so its styles went into a shadow root that never existed. The <code>environment.name === &quot;client&quot;</code> guard is the part people miss: the server build compiles the same file, and a custom element has no server-rendered form, so the server gets a plain component it never renders. Chapter 36 builds the element.</p>
 <h3 id="compiler">The compiler options</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:95-111</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:118-135</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">compilerOptions: {
@@ -134,18 +152,19 @@ dynamicCompileOptions({ filename, environment }) {
 	 * snippets, `$effect.pending()`, `settled()` and `fork()`.
 	 *
 	 * A trip planner is full of it: the globe is a three-hundred-kilobyte
-	 * import that loads when a person asks for it, a place search is a
-	 * request per keystroke, and opening a trip is &quot;wait, then draw&quot;.
+	 * import that loads when a person asks for it, the explore page
+	 * awaits the gazetteer at the top of its script, and opening a trip
+	 * is &quot;wait, then draw&quot;.
 	 */
 	experimental: { async: true }
 },</code></pre>
 </figure>
-<p><code>runes</code> is a function so that a dependency written in Svelte 4 style keeps compiling — several libraries in this project ship <code>.svelte</code> files, and the compiler decides per file. <code>experimental.async</code> is the one that changes how you write components: <code>await</code> at the top level of a <code>&lt;script&gt;</code>, inside <code>$derived</code>, and directly in markup, with <code>&lt;svelte:boundary&gt;</code> and its <code>pending</code> snippet to catch the wait. This project has more of it than any before: the globe is an <code>await import()</code> in markup, the place search is an <code>await</code> per keystroke inside a <code>$derived</code>, and opening a trip is <code>{const initial = await tripBySlug(slug)}</code> on the page.</p>
+<p><code>runes</code> is a function so that a dependency written in Svelte 4 style keeps compiling — several libraries in this project ship <code>.svelte</code> files, and the compiler decides per file. <code>experimental.async</code> is the one that changes how you write components: <code>await</code> at the top level of a <code>&lt;script&gt;</code>, inside <code>$derived</code>, and directly in markup, with <code>&lt;svelte:boundary&gt;</code> and its <code>pending</code> snippet to catch the wait. This project has more of it than any before: the globe is an <code>await import()</code> in markup, the explore page and the new-trip form <code>await places()</code> at the top of their scripts — one prerendered list, waited for once, before the first render — and opening a trip is <code>{const initial = $derived(await tripBySlug(slug))}</code> on the page.</p>
 <h3 id="adapter-and-experiments">The adapter, remote functions, and one experiment left off</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:113-140</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:137-164</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/*
@@ -181,7 +200,7 @@ experimental: {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:142-161</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:166-185</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/*
@@ -210,7 +229,7 @@ prerender: {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:163-209</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:187-233</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/*
@@ -267,7 +286,7 @@ csrf: { trustedOrigins: [] },</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:211-227</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:235-251</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/*
@@ -282,18 +301,18 @@ csrf: { trustedOrigins: [] },</code></pre>
  * `name` is the commit, because it has to be deterministic.
  */
 version: {
-	name: commitHash() ?? packageVersion,
+	name: commitHash() ?? pkg.version,
 	pollInterval: 60_000
 },
 
 output: { bundleStrategy: 'split' }</code></pre>
 </figure>
 <p><code>version.name</code> is the commit hash, computed by <code>commitHash()</code> below with a fallback to the package version, because a Docker build context has no <code>.git</code>. <code>pollInterval</code> makes the client check for a new version once a minute; <code>updated.current</code> in the root layout flips, a banner offers a reload, and the next navigation becomes a full page load so no chunk from the old build is ever requested. <code>bundleStrategy: &quot;split&quot;</code> is the default and is named here because chapter 36 builds the one thing that must *not* be split.</p>
-<h3 id="paraglide-and-icons">Two plugins that are not SvelteKit</h3>
+<h3 id="paraglide-and-icons">Three plugins that are not SvelteKit</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:230-264</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:254-291</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/*
@@ -330,14 +349,17 @@ paraglideVitePlugin({
  * parses its input as JavaScript, so putting it first hands it raw `.svelte`
  * source and it dies on the first `&lt;h1&gt;`.
  */
-sveltePhosphorOptimize()</code></pre>
+sveltePhosphorOptimize(),
+
+// What went into each browser chunk, for `scripts/bundle-guard.ts`. See the function below.
+bundleStats()</code></pre>
 </figure>
-<p>Paraglide is a Vite plugin in its own right: it watches <code>messages/*.json</code>, compiles them into <code>src/lib/paraglide</code>, and does so with a <code>strategy</code> list that is the order the locale is decided in. Chapter 20 is entirely about it. The phosphor plugin is the second ordering rule: it rewrites <code>import { PlusIcon } from &quot;phosphor-svelte&quot;</code> into a deep import so the dev server does not crawl a barrel of thousands of icons, and it must run *after* the Svelte compiler because it parses JavaScript. Put it first and it dies on the first <code>&lt;h1&gt;</code>.</p>
+<p>Paraglide is a Vite plugin in its own right: it watches <code>messages/*.json</code>, compiles them into <code>src/lib/paraglide</code>, and does so with a <code>strategy</code> list that is the order the locale is decided in. Chapter 20 is entirely about it. The phosphor plugin is the second ordering rule: it rewrites <code>import { PlusIcon } from &quot;phosphor-svelte&quot;</code> into a deep import so the dev server does not crawl a barrel of thousands of icons, and it must run *after* the Svelte compiler because it parses JavaScript. Put it first and it dies on the first <code>&lt;h1&gt;</code>. The third, <code>bundleStats()</code>, is this project’s own and runs only in a build: at the end of the browser build it writes down which modules went into which chunk, so that a script can hold the bundle to a budget afterwards. A chunk’s file name is a hash and changes with every edit; the bundler is the one place that knows what a chunk *is*. Chapter 42 is where that script runs, and why it exists.</p>
 <h3 id="the-rest">The native addon, and the two test projects</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:267-274</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:294-301</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/*
@@ -352,7 +374,7 @@ ssr: { external: ['@libsql/client', 'libsql'] },</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:276-342</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:303-377</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">test: {
@@ -367,8 +389,13 @@ ssr: { external: ['@libsql/client', 'libsql'] },</code></pre>
 			 * and `getBoundingClientRect`, and the itinerary animates with
 			 * `animate:flip`. jsdom has none of those and would pass every test
 			 * you thought to write while doing nothing.
+			 *
+			 * No `extends` line. Since Vitest 5 an inline project inherits the
+			 * config that declares it — the plugins, `#lib`, Paraglide — so
+			 * naming this file again would load the Svelte plugin twice and
+			 * earn a warning. `extends: false` is the only thing left to say,
+			 * and it would be wrong here.
 			 */
-			extends: './vite.config.ts',
 			/*
 			 * The icons the tested components use, pre-bundled before the first
 			 * test runs. `sveltePhosphorOptimize()` rewrites `phosphor-svelte`
@@ -380,6 +407,9 @@ ssr: { external: ['@libsql/client', 'libsql'] },</code></pre>
 			optimizeDeps: {
 				include: [
 					'phosphor-svelte/lib/BedIcon',
+					'phosphor-svelte/lib/CalendarBlankIcon',
+					'phosphor-svelte/lib/CaretLeftIcon',
+					'phosphor-svelte/lib/CaretRightIcon',
 					'phosphor-svelte/lib/DotsSixVerticalIcon',
 					'phosphor-svelte/lib/ForkKnifeIcon',
 					'phosphor-svelte/lib/LightbulbIcon',
@@ -403,8 +433,8 @@ ssr: { external: ['@libsql/client', 'libsql'] },</code></pre>
 		},
 		{
 			// Pure logic — plain Node, no browser, fast. Splits, ordering, dates,
-			// schemas, the geodata build, the identity helpers.
-			extends: './vite.config.ts',
+			// schemas, the geodata build, the identity helpers. Inherits this
+			// config like the project above, for the same reason.
 			test: {
 				name: 'server',
 				environment: 'node',
@@ -423,11 +453,11 @@ ssr: { external: ['@libsql/client', 'libsql'] },</code></pre>
 	]
 }</code></pre>
 </figure>
-<p>Two Vitest projects in one config, extending it: <code>client</code> runs <code>*.svelte.test.ts</code> in a real Chromium through Playwright, because the components under test need WebGL, pointer events and layout; <code>server</code> runs everything else in Node, one file at a time because SQLite has one writer. The <code>optimizeDeps.include</code> list is the fix for a real failure: the phosphor plugin rewrites imports during transform, after Vite’s dependency scan, so on a cold cache Vite discovered the icons mid-test, re-bundled, and reloaded the test inside itself. Naming them is what Vitest’s own warning asks for. Chapter 41 runs both projects.</p>
+<p>Two Vitest projects in one config — and no <code>extends</code> line on either, because since Vitest 5 an inline project inherits the config that declares it, plugins and <code>#lib</code> included, unless it says <code>extends: false</code>: <code>client</code> runs <code>*.svelte.test.ts</code> in a real Chromium through Playwright, because the components under test need WebGL, pointer events and layout; <code>server</code> runs everything else in Node, one file at a time because SQLite has one writer. The <code>optimizeDeps.include</code> list is the fix for a real failure: the phosphor plugin rewrites imports during transform, after Vite’s dependency scan, so on a cold cache Vite discovered the icons mid-test, re-bundled, and reloaded the test inside itself. Naming them is what Vitest’s own warning asks for. Chapter 41 runs both projects.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:346-381</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:381-416</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**

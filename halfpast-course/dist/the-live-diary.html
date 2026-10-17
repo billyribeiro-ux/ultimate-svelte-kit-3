@@ -50,8 +50,12 @@
 	{/if}
 &lt;/header&gt;
 
+&lt;!-- … --&gt;
+
 {#if result.entries.length === 0}
 	&lt;p class=&quot;empty&quot;&gt;Nothing booked. Enjoy it.&lt;/p&gt;
+{:else}
+	&lt;!-- … --&gt;
 {/if}</code></pre>
 </figure>
 <p>The &quot;Live&quot; badge is not decoration either. A screen that changes on its own is unsettling unless the person knows it does; a small word in the corner is the difference between &quot;that is odd&quot; and &quot;ah, a booking came in&quot;.</p>
@@ -85,26 +89,40 @@
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;li class=&quot;entry&quot; style=&quot;--hue: {entry.colourHue}&quot;&gt;
 	&lt;!-- … --&gt;
-	&lt;p class=&quot;who&quot;&gt;
-		&lt;strong&gt;{entry.customerName}&lt;/strong&gt;
-		&lt;!-- … --&gt;
-	&lt;/p&gt;
 
-	&lt;p class=&quot;with text-muted&quot;&gt;
-		with {entry.staffName}
+	&lt;div class=&quot;body&quot;&gt;
+		&lt;p class=&quot;who&quot;&gt;
+			&lt;strong&gt;{entry.customerName}&lt;/strong&gt;
+			&lt;span class=&quot;text-muted&quot;&gt; · {entry.serviceName}&lt;/span&gt;
+		&lt;/p&gt;
+
+		&lt;p class=&quot;with text-muted&quot;&gt;
+			with {entry.staffName} ·
+			&lt;!-- … --&gt;
+		&lt;/p&gt;
+
 		&lt;!-- … --&gt;
-	&lt;/p&gt;
+	&lt;/div&gt;
+
 	&lt;!-- … --&gt;
 &lt;/li&gt;</code></pre>
 </figure>
+<p>And in the same component's <code>&lt;style&gt;</code> block:</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">and in the stylesheet</span>
+		<span class="code__file">src/routes/manage/[slug]/+page.svelte</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-css">.entry {
+	/* … */
+	/*
+	 * The staff member's colour, as a stripe rather than a background. A tinted
+	 * card would put text on an arbitrary hue and lose the contrast guarantee;
+	 * a stripe carries the same information and costs nothing in legibility.
+	 */
 	border-inline-start: 4px solid oklch(60% 0.14 var(--hue));
+	/* … */
 }</code></pre>
 </figure>
 <p>One custom property carries the staff member's hue into the CSS, and because every staff colour shares one hard-coded lightness in oklch, they are legible at a glance and equally weighted regardless of hue. <strong>And the name is always there too</strong> — <code>.who</code> names the customer, <code>.with</code> names the staff member, and colour alone excludes roughly one man in twelve.</p>
@@ -117,10 +135,14 @@
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;nav class=&quot;tabs&quot; aria-label=&quot;Dashboard sections&quot;&gt;
 	&lt;div class=&quot;tabs-inner container&quot;&gt;
-		{#each visible as section (section.path)}
-			{@const Icon = section.icon}
-			{@const active = activePath === section.path}
-			&lt;a class=&quot;tab&quot; class:active href=&quot;{base}{section.path}&quot; aria-current={active ? 'page' : undefined}&gt;
+		{#each visible as section (section.route)}
+			{const Icon = $derived(section.icon)}
+			{const active = $derived(page.route.id === section.route)}
+			&lt;a
+				class={['tab', { active }]}
+				href={resolve(section.route, { slug: params.slug })}
+				aria-current={active ? 'page' : undefined}
+			&gt;
 				&lt;Icon weight={active ? 'fill' : 'regular'} aria-hidden=&quot;true&quot; /&gt;
 				{section.label}
 			&lt;/a&gt;
@@ -130,6 +152,12 @@
 </figure>
 <p>A horizontal scroller rather than a menu behind a button. Five short labels fit in a swipe; a hamburger costs a tap on every navigation and hides the shape of the app from somebody who has never seen it before.</p>
 <p><code>aria-current=&quot;page&quot;</code> is what tells a screen reader which tab is the current one. The colour and the filled icon say it to everybody else.</p>
+<p>Each section is named by its <strong>route ID</strong> — <code>/manage/[slug]/hours</code> — and that one name does two jobs. <code>resolve(section.route, { slug: params.slug })</code> turns it into the link, with <code>slug</code> filled in and type-checked, so renaming the <code>hours</code> folder fails svelte-check here rather than shipping a tab that 404s. And <code>page.route.id</code>, from <code>$app/state</code>, is the route ID of the page on screen, so the active tab is a single comparison.</p>
+
+<aside class="callout callout--why">
+	<h4>Why not a base URL and a suffix</h4>
+	<p>The tabs used to be <code>href=&quot;{base}{section.path}&quot;</code>, with <code>base</code> the resolved <code>/manage/willow-lane</code> and each section a suffix such as <code>/hours</code>, and the active tab found by a longest-prefix search over the pathname. It worked, and it was the one place in the app that built links by gluing strings together, against the root layout's rule that every link goes through <code>resolve()</code> with a route ID. It also read, to anybody who knew SvelteKit 2, like the <code>base</code> export from <code>$app/paths</code>, which SvelteKit 3 removed. Route IDs make the link and the active test use the same name the router does.</p>
+</aside>
 <h3 id="owner-only">Hiding doors, and locking them</h3>
 
 <figure class="code">
@@ -138,11 +166,11 @@
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">const SECTIONS = [
-	{ path: '', label: 'Diary', icon: CalendarDotsIcon, ownerOnly: false },
-	{ path: '/services', label: 'Services', icon: ScissorsIcon, ownerOnly: true },
-	{ path: '/hours', label: 'Hours', icon: ClockIcon, ownerOnly: false },
-	{ path: '/team', label: 'Team', icon: UsersThreeIcon, ownerOnly: true },
-	{ path: '/settings', label: 'Settings', icon: GearIcon, ownerOnly: true }
+	{ route: '/manage/[slug]', label: 'Diary', icon: CalendarDotsIcon, ownerOnly: false },
+	{ route: '/manage/[slug]/services', label: 'Services', icon: ScissorsIcon, ownerOnly: true },
+	{ route: '/manage/[slug]/hours', label: 'Hours', icon: ClockIcon, ownerOnly: false },
+	{ route: '/manage/[slug]/team', label: 'Team', icon: UsersThreeIcon, ownerOnly: true },
+	{ route: '/manage/[slug]/settings', label: 'Settings', icon: GearIcon, ownerOnly: true }
 ] as const;
 
 const visible = $derived(
@@ -153,7 +181,7 @@ const visible = $derived(
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>
-	<p>Sign in as the staff member: three tabs are missing, and typing their URLs directly returns 403. Sign in as the owner and book something from another window: it appears in the diary without a reload.</p>
+	<p>Sign in as the staff member: three tabs are missing, and typing their URLs directly returns 403 with a page headed &quot;That did not work&quot;. Sign in as the owner, step the diary to a day with free times, and book one of them from another window: it appears in the diary without a reload.</p>
 </aside>
 		</article>
 

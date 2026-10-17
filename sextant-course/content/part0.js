@@ -260,9 +260,13 @@ from spans | where duration > 2s         ← also fine`
 			{
 				type: 'terminal',
 				code: `
-pnpm create svelte@next sextant
+pnpm dlx sv create sextant
 cd sextant
 pnpm install`
+			},
+			{
+				type: 'note',
+				text: 'The versions this course was built and verified against: SvelteKit 3.0.1, Svelte 5.57, Vite 8.3, Vitest 5.0, Playwright 1.64, TypeScript 6.0, Node 24.21 (the current LTS) and pnpm 12.10. Two of those are not dependencies, and three settings look after them. `packageManager` in `package.json` records the exact pnpm the lockfile was written with, and both pnpm and Corepack read it. `engines.node` is the floor, and it is the check that runs at `pnpm install`: pnpm refuses an older Node there rather than three chapters in. `.nvmrc` holds the exact Node this was verified on, for version managers such as nvm and fnm; pnpm never reads it.'
 			},
 			{
 				type: 'p',
@@ -312,7 +316,11 @@ pnpm install`
 				type: 'p',
 				text: 'A real Chromium for component tests, not a DOM emulator, and the reason is specific: the virtualizer in chapter 28 measures rows with `getBoundingClientRect()`. jsdom has no layout, so every element is 0×0 — a virtualizer under jsdom renders zero rows and passes every assertion you thought to write.'
 			},
-			code('vite.config.ts', 205, 228, { partial: true }),
+			code('vite.config.ts', 205, 233, { partial: true }),
+			{
+				type: 'note',
+				text: 'No `extends` line on either project. Vitest 5 made an inline project inherit the config that declares it — the plugins, `ssr.external`, the `#lib` imports — so naming this file again, as Vitest 4 required, would load the SvelteKit plugin twice and earn a warning. The only thing left to say is `extends: false`, and it would be wrong here.'
+			},
 			{
 				type: 'p',
 				text: 'And the server project runs one file at a time. SQLite allows exactly one writer; two specs that both seed rows meet `SQLITE_BUSY` in parallel, and the symptom is a dozen unrelated assertions failing at random in whichever file lost the race.'
@@ -392,6 +400,10 @@ pnpm install`
 cp .env.example .env
 # fill in BETTER_AUTH_SECRET with: openssl rand -base64 32
 pnpm db:push`
+			},
+			{
+				type: 'note',
+				text: '`db:push` writes the *current* schema, so a fresh database never sees the one column this project has lost: Better Auth 1.7.0 added a required `issuer` to `account`, 1.7.3 withdrew it, and 1.7.7 never writes it — a `NOT NULL` nothing fills, which fails every sign-up on its insert. `src/lib/server/db/auth.schema.ts` explains it. A database made with `pnpm db:push` before the change is mended the same way it was made: run `pnpm db:push` again, and it compares the schema with the database and drops the column, asking first, because `strict` is on. `drizzle/0001_drop_account_issuer.sql` is for the other kind of database, one built with `pnpm db:migrate` from the start. `db:push` records no migration history, so `db:migrate` on a pushed database starts again from the first migration and stops at its first `CREATE TABLE`, on a table that is already there.'
 			},
 
 			{

@@ -18,8 +18,10 @@ declare global {
 			 * A correlation id for an unexpected failure.
 			 *
 			 * Optional, and it has to be. A required property here removes the
-			 * `error(404, 'Not found')` shorthand from the entire codebase — the
-			 * string overload only exists while `App.Error` is `{ message }`.
+			 * `error(404, 'Not found')` shorthand from the entire codebase — SvelteKit
+			 * 3 offers the two-argument form only while every extra property of
+			 * `App.Error` is optional; otherwise each call must pass them as a third
+			 * argument, `error(status, message, { id, issues })`.
 			 */
 			id?: string;
 			/** Field-level detail from a rejected ingest batch. See the ingest route. */

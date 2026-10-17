@@ -65,8 +65,8 @@
 	 * and does not exist in an IIFE.)
 	 */
 	const scriptSource =
-		typeof document !== 'undefined'
-			? (document.currentScript as HTMLScriptElement | null)?.src
+		typeof document !== 'undefined' && document.currentScript instanceof HTMLScriptElement
+			? document.currentScript.src
 			: undefined;
 	const scriptOrigin = scriptSource
 		? new URL(scriptSource).origin
@@ -101,9 +101,23 @@
 	let artist = $state('');
 	let error = $state<string | null>(null);
 
-	const scheduler = new Scheduler(engine, () => loaded!, {
+	// `loaded` is `null` while a pattern is on its way, and the scheduler is
+	// told so rather than promised otherwise with a `!`.
+	const scheduler = new Scheduler(engine, () => loaded, {
 		output: (track) => engine.channel(track).input,
 		sample: () => undefined
+	});
+
+	/**
+	 * What `/api/patterns/<id>` answers, checked on arrival. This element runs
+	 * on other people's pages against whatever `src` they gave it, so the body
+	 * is as untrusted as any request — and the pattern inside it gets the same
+	 * schema the server stores it with.
+	 */
+	const PatternResponse = v.object({
+		title: v.string(),
+		artist: v.string(),
+		pattern: PatternDtoSchema
 	});
 
 	/**
@@ -136,17 +150,19 @@
 		fetch(new URL(`/api/patterns/${id}`, base))
 			.then(async (response) => {
 				if (!response.ok) throw new Error(`No pattern ${id} (${response.status})`);
-				const body = await response.json();
+				const body = v.parse(PatternResponse, await response.json());
 				if (cancelled) return;
 				title = body.title;
 				artist = body.artist;
-				loaded = fromDto(v.parse(PatternDtoSchema, body.pattern));
+				loaded = fromDto(body.pattern);
 				announce('ready', { id, title: body.title });
 			})
-			.catch((e: Error) => {
+			.catch((e: unknown) => {
 				if (cancelled) return;
-				error = e.message;
-				announce('error', e.message);
+				// A rejected `fetch` and a failed schema are both `Error`s; anything
+				// else thrown at this point is not, and gets a sentence of its own.
+				error = e instanceof Error ? e.message : `Pattern ${id} could not be read`;
+				announce('error', error);
 			});
 
 		return () => {
@@ -155,8 +171,14 @@
 	});
 
 	// The `playing` prop drives the transport; the transport reports back.
+	// No pattern — the host page has just swapped `pattern` and the new one is
+	// still on its way — means no sound until it arrives; `playing` is left as
+	// the host set it, so the new pattern starts by itself.
 	$effect(() => {
-		if (!loaded) return;
+		if (!loaded) {
+			scheduler.stop();
+			return;
+		}
 		if (playing && !scheduler.playing) {
 			void scheduler.start().then(() => announce('play'));
 		} else if (!playing && scheduler.playing) {

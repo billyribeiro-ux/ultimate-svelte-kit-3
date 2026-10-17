@@ -54,7 +54,7 @@ export const prerender = true;</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/+page.svelte<span class="code__lines">:9-37</span></span>
+		<span class="code__file">src/routes/(app)/+page.svelte<span class="code__lines">:10-38</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/**
@@ -95,7 +95,7 @@ const words = 'A groovebox in your browser.'.split(' ');</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/+page.svelte<span class="code__lines">:48-89</span></span>
+		<span class="code__file">src/routes/(app)/+page.svelte<span class="code__lines">:49-94</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;section class=&quot;hero page&quot; {@attach cinematic()}&gt;
@@ -122,8 +122,12 @@ const words = 'A groovebox in your browser.'.split(' ');</code></pre>
 	&lt;/p&gt;
 
 	&lt;div class=&quot;hero__actions cluster&quot; data-rise&gt;
-		&lt;a class=&quot;btn btn--primary btn--lg&quot; href=&quot;/studio?preset=four-on-the-floor&quot;&gt;Open the studio&lt;/a&gt;
-		&lt;a class=&quot;btn btn--lg&quot; href=&quot;/jam/lobby&quot;&gt;Join the lobby jam&lt;/a&gt;
+		&lt;a class=&quot;btn btn--primary btn--lg&quot; href={resolve('/(app)/studio?preset=four-on-the-floor')}
+			&gt;Open the studio&lt;/a
+		&gt;
+		&lt;a class=&quot;btn btn--lg&quot; href={resolve('/(app)/jam/[room]', { room: 'lobby' })}
+			&gt;Join the lobby jam&lt;/a
+		&gt;
 	&lt;/div&gt;
 
 	&lt;div class=&quot;demo&quot; aria-hidden=&quot;true&quot;&gt;
@@ -144,7 +148,7 @@ const words = 'A groovebox in your browser.'.split(' ');</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/+page.svelte<span class="code__lines">:232-263</span></span>
+		<span class="code__file">src/routes/(app)/+page.svelte<span class="code__lines">:237-268</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">.demo__pad {
@@ -252,7 +256,7 @@ const words = 'A groovebox in your browser.'.split(' ');</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/+page.svelte<span class="code__lines">:91-121</span></span>
+		<span class="code__file">src/routes/(app)/+page.svelte<span class="code__lines">:96-126</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;div class=&quot;page&quot;&gt;
@@ -282,7 +286,7 @@ const words = 'A groovebox in your browser.'.split(' ');</code></pre>
 						&gt;Try again&lt;/button
 					&gt;
 				&lt;/p&gt;
-				&lt;p class=&quot;hint&quot;&gt;{(error as Error).message}&lt;/p&gt;
+				&lt;p class=&quot;hint&quot;&gt;{(error as App.Error).message}&lt;/p&gt;
 			{/snippet}
 		&lt;/svelte:boundary&gt;
 	&lt;/Section&gt;</code></pre>
@@ -291,7 +295,7 @@ const words = 'A groovebox in your browser.'.split(' ');</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/components/PatternCard.svelte<span class="code__lines">:7-27</span></span>
+		<span class="code__file">src/lib/components/PatternCard.svelte<span class="code__lines">:8-32</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/**
@@ -302,24 +306,28 @@ const words = 'A groovebox in your browser.'.split(' ');</code></pre>
 let {
 	published,
 	counts,
-	href = `/p/${published.id}`,
 	actions,
 	grid,
 	onopen
 }: {
 	published: Published;
 	counts?: { plays: number; likes: number };
-	href?: string;
 	actions?: Snippet;
 	/** Replaces the default picture — the gallery uses it to crossfade into a preview. */
 	grid?: Snippet&lt;[Pattern]&gt;;
 	onopen?: (event: MouseEvent) =&gt; void;
-} = $props();</code></pre>
+} = $props();
+
+/*
+ * A route id and its params, not a string: rename the `p/[id]` folder and
+ * this stops compiling instead of linking to a 404.
+ */
+const href = $derived(resolve('/(app)/p/[id]', { id: published.id }));</code></pre>
 </figure>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/components/PatternCard.svelte<span class="code__lines">:30-50</span></span>
+		<span class="code__file">src/lib/components/PatternCard.svelte<span class="code__lines">:35-55</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;article class=&quot;card pattern-card&quot;&gt;
@@ -344,7 +352,7 @@ let {
 	{/if}
 &lt;/article&gt;</code></pre>
 </figure>
-<p>A card takes two optional snippets: <code>actions</code>, where a gallery puts its delete form, and <code>grid</code>, which replaces the picture — the gallery uses it to crossfade the picture into a preview (ch. 30). <code>Snippet&lt;[Pattern]&gt;</code> is a snippet that takes one argument. The card knows nothing about either use.</p>
+<p>A card takes two optional snippets: <code>actions</code>, where a gallery puts its delete form, and <code>grid</code>, which replaces the picture — the gallery uses it to crossfade the picture into a preview (ch. 30). <code>Snippet&lt;[Pattern]&gt;</code> is a snippet that takes one argument. The card knows nothing about either use. Its link is <code>resolve(&quot;/(app)/p/[id]&quot;, { id })</code> in a <code>$derived</code>, not a prop defaulting to a template string: a default is read once, when the component is created, and a route id is checked at build time (ch. 27).</p>
 
 <figure class="code">
 	<figcaption>
@@ -368,7 +376,7 @@ let {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/components/MiniGrid.svelte<span class="code__lines">:18-45</span></span>
+		<span class="code__file">src/lib/components/MiniGrid.svelte<span class="code__lines">:18-46</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;svg
@@ -379,7 +387,8 @@ let {
 &gt;
 	{#each pattern.tracks as track, row (track.id)}
 		{#each track.steps as step, column (column)}
-			{const on = step.velocity &gt; 0}
+			&lt;!-- `$derived`: the embed swaps patterns under a grid that stays mounted. --&gt;
+			{const on = $derived(step.velocity &gt; 0)}
 			&lt;rect
 				x={column * (cell + gap)}
 				y={row * (cell + gap)}
@@ -400,7 +409,7 @@ let {
 	{/each}
 &lt;/svg&gt;</code></pre>
 </figure>
-<p>The picture is an SVG so that it scales to a card, a hero and a share image from the same markup. A <code>{const}</code> inside a nested <code>{#each}</code> computes <code>on</code> once per cell, and the <code>class</code> array reads it three times.</p>
+<p>The picture is an SVG so that it scales to a card, a hero and a share image from the same markup. A declaration inside the nested <code>{#each}</code> names each cell’s state once, and the <code>class</code> array reads it three times. It is <code>{const on = $derived(…)}</code> and not a plain <code>{const on = …}</code>, because a plain declaration is worked out once, when the cell is created (ch. 16). The cells are keyed by column, so they are reused rather than recreated when the steps under them change — and in the embeddable player (ch. 33) the whole pattern under a mounted grid is replaced when the host page swaps the <code>pattern</code> attribute.</p>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>

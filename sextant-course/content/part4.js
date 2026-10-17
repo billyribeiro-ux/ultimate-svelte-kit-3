@@ -347,21 +347,21 @@ symptom:        every series for a metric collapses into ONE row.
 			},
 
 			{ type: 'h3', id: 'filter-on-the-server', text: 'The filter runs on the server' },
-			code('src/routes/api/tail/+server.ts', 119, 142, { partial: true }),
+			code('src/routes/api/tail/+server.ts', 117, 140, { partial: true }),
 			{
 				type: 'p',
 				text: 'Sending everything and filtering in the browser would be simpler and would send a tenant’s entire firehose to every open tab. That is a bandwidth problem and, more seriously, a permissions one: a viewer scoped to one service would receive every other service’s log lines and be trusted not to look.'
 			},
 
 			{ type: 'h3', id: 'refusals', text: 'What a tail refuses' },
-			code('src/routes/api/tail/+server.ts', 76, 88),
+			code('src/routes/api/tail/+server.ts', 76, 86),
 			{
 				type: 'p',
 				text: 'There is no meaningful streaming answer to "the p95 so far" that is not either wrong or a different feature. Refusing with a sentence that says what to do instead is better than streaming something that looks like an answer.'
 			},
 
 			{ type: 'h3', id: 'the-headers', text: 'Two headers and a ping' },
-			code('src/routes/api/tail/+server.ts', 175, 191, { partial: true }),
+			code('src/routes/api/tail/+server.ts', 173, 189, { partial: true }),
 			{
 				type: 'p',
 				text: '`no-transform` as well as `no-store`, because without it a reverse proxy will happily buffer the whole stream and deliver it when the connection closes — which for an endless stream is never. The symptom is a tail that works locally and is dead behind nginx, and `x-accel-buffering` is the same instruction said again in the dialect nginx reads.'

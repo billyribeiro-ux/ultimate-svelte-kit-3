@@ -1,7 +1,9 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { CloudArrowUpIcon } from 'phosphor-svelte';
+	import { messageOf } from '#lib/errors.ts';
 	import Workbench from '#lib/grid/Workbench.svelte';
 	import { whoAmI } from '#lib/remote/auth.remote.ts';
 	import { create, getPublished } from '#lib/remote/sheets.remote.ts';
@@ -27,9 +29,6 @@
 	let storage = $state<'opfs' | 'storage' | 'none' | null>(null);
 	let ready = $state(false);
 
-	const tab = tabId();
-	const channel = openTabChannel(tab);
-
 	let saveTimer: ReturnType<typeof setTimeout> | null = null;
 	function scheduleSave() {
 		if (saveTimer) clearTimeout(saveTimer);
@@ -40,12 +39,19 @@
 		}, 400);
 	}
 
-	sheet.onop = (op) => {
-		channel.post(op);
-		scheduleSave();
-	};
-
+	/*
+	 * Everything that belongs to the browser starts here, not at the top of
+	 * the script. A component's `<script>` runs on the server too, for the
+	 * first render, and Node 24 has a `BroadcastChannel` of its own: opened up
+	 * there, a channel would be held open by every server render and closed by
+	 * none, because `onMount` — and its cleanup — never run on the server.
+	 */
 	onMount(() => {
+		const channel = openTabChannel(tabId());
+		sheet.onop = (op) => {
+			channel.post(op);
+			scheduleSave();
+		};
 		sheet.locale = navigator.language;
 
 		const template = page.url.searchParams.get('template');
@@ -65,7 +71,9 @@
 					sheet.load(saved ?? emptyDocument('My sheet'));
 				}
 			} catch (e) {
-				toast((e as Error).message, 'error');
+				// `getPublished` is awaited here, not in markup, so a 404 rejects
+				// with an `HttpError` and its sentence is in `body.message`.
+				toast(messageOf(e, 'Could not open that sheet'), 'error');
 				sheet.load(emptyDocument('My sheet'));
 			}
 			ready = true;
@@ -78,6 +86,9 @@
 		return () => {
 			stop();
 			channel.close();
+			// A save still waiting on its timer is left to run: leaving the page
+			// is no reason to lose the last thing typed.
+			sheet.onop = null;
 		};
 	});
 
@@ -129,10 +140,18 @@
 						</button>
 					</form>
 				{:else}
-					<a class="btn btn--sm" href="/signin?next=/sheet/local">Sign in to save it</a>
+					<a class="btn btn--sm" href={resolve('/(app)/signin?next=/sheet/local')}
+						>Sign in to save it</a
+					>
 				{/if}
 				{#snippet pending()}
 					<span class="chip">…</span>
+				{/snippet}
+				<!-- Nobody could be asked; the sheet is still here, and signing in is still the way to save it. -->
+				{#snippet failed()}
+					<a class="btn btn--sm" href={resolve('/(app)/signin?next=/sheet/local')}
+						>Sign in to save it</a
+					>
 				{/snippet}
 			</svelte:boundary>
 		{/snippet}

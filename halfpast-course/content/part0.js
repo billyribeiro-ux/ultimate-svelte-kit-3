@@ -59,7 +59,7 @@ if (clash.length === 0) {
 			{
 				type: 'why',
 				title: 'Why we cannot just be careful',
-				text: 'There is no amount of careful ordering that closes a check-then-act race. The fix is structural: make the check and the act the *same operation*, and let the database — which is genuinely good at this — be the one that says no. Chapter 17 does exactly that.'
+				text: 'There is no amount of careful ordering that closes a check-then-act race. The fix is structural: make the check and the act the *same operation*, and let the database — which is genuinely good at this — be the one that says no. Chapter 12 does exactly that.'
 			},
 
 			{ type: 'h3', id: 'problem-two', text: 'Problem two: time is not what you think' },
@@ -109,8 +109,8 @@ if (clash.length === 0) {
 			{
 				type: 'ul',
 				items: [
-					'**Node 24.20.0** or newer — the current LTS. Chapter 3 covers installing it.',
-					'**pnpm 11** — installed with `npm i -g pnpm`.',
+					'**Node 24.21.0** or newer — the current LTS. Chapter 3 covers installing it.',
+					'**pnpm 12** — installed with `npm i -g pnpm`.',
 					'A terminal, an editor, and a browser. No database server: SQLite lives in a file.'
 				]
 			},
@@ -226,7 +226,7 @@ if (clash.length === 0) {
 			},
 			{
 				type: 'p',
-				text: 'This project targets **Node 24.20.0**, codename Krypton, the active LTS line. Check what you have:'
+				text: 'This project targets **Node 24.21.0**, codename Krypton, the active LTS line. Check what you have:'
 			},
 			{ type: 'terminal', code: 'node --version' },
 			{
@@ -235,9 +235,9 @@ if (clash.length === 0) {
 			},
 			{
 				type: 'terminal',
-				code: `nvm install 24.20.0
-nvm use 24.20.0
-node --version   # v24.20.0`
+				code: `nvm install 24.21.0
+nvm use 24.21.0
+node --version   # v24.21.0`
 			},
 			{
 				type: 'note',
@@ -255,44 +255,58 @@ node --version   # v24.20.0`
 				lang: 'json',
 				code: `
 {
+	// …
 	"engines": {
-		"node": ">=24.20.0"
-	}
+		"node": ">=24.21.0"
+	},
+	"packageManager": "pnpm@12.10.1",
+	// …
 }`
 			},
 			{
-				type: 'code',
-				file: '.npmrc',
-				lang: 'ini',
-				code: `engine-strict=true`
+				type: 'p',
+				text: '`engines` says which Node the project needs. `packageManager` does the same job for the package manager: pnpm reads it and switches to exactly 12.10.1 in this folder, whatever version is installed globally.'
 			},
 			{
 				type: 'p',
-				text: 'On its own, `engines` is advisory. What `engine-strict=true` buys you depends on which tool reads it: **npm** turns the mismatch into a refusal, while **pnpm 11** — what this project actually installs with — still carries on, but complains loudly. Run `pnpm install` under Node 22 and you get:'
+				text: 'On its own, `engines` is advisory: a statement of what the project needs, which nothing enforces. Making pnpm enforce it is one line, and it goes in `pnpm-workspace.yaml`, because that is where pnpm 12 reads its settings from:'
+			},
+			{
+				type: 'code',
+				file: 'pnpm-workspace.yaml',
+				lang: 'yaml',
+				code: `engineStrict: true`
+			},
+			{
+				type: 'p',
+				text: 'Now run `pnpm install` under Node 22, the LTS line before this one, and it stops before touching a single package:'
 			},
 			{
 				type: 'terminal',
-				code: ` WARN  Unsupported engine: wanted: {"node":">=24.20.0"} (current: {"node":"v22.11.0","pnpm":"11.24.0"})`
+				code: `Error: ERR_PNPM_UNSUPPORTED_ENGINE
+
+  × Unsupported engine for /home/you/halfpast-app: wanted:
+  │ {"node":">=24.21.0"} (current: {"node":"22.22.0"})`
 			},
 			{
-				type: 'p',
-				text: 'If you want pnpm to refuse outright rather than warn, set `engineStrict: true` in `pnpm-workspace.yaml`. Then the same install stops dead with `ERR_PNPM_UNSUPPORTED_ENGINE  Unsupported environment (bad pnpm and/or Node.js version)` before touching a single package.'
+				type: 'warn',
+				text: 'You will see `engine-strict=true` in an `.npmrc` in a great many projects, and this one had it too. That is npm\'s spelling of the setting, and pnpm 12 does not read it. We checked rather than assumed: with only the `.npmrc` line, the same install under Node 22 printed `Done in 25ms using pnpm v12.10.1` and exited 0, with no warning of any kind, and `pnpm config get engine-strict` answered `undefined`. A guard that does nothing is worse than no guard, because everybody believes it is there. So the line moved to `pnpm-workspace.yaml` and the `.npmrc` went.'
 			},
 			{
 				type: 'why',
 				title: 'Why this is worth the friction',
-				text: 'Because the alternative is a colleague installing on Node 20, everything appearing to work, and a subtly different result appearing in production three weeks later. A loud complaint on day one — or better, a refusal — is cheaper than a quiet failure on day twenty-one.'
+				text: 'Because the alternative is a colleague still on Node 20, which reached end of life in April 2026, everything appearing to work, and a subtly different result appearing in production three weeks later. A refusal on day one is cheaper than a quiet failure on day twenty-one — and it is only a refusal if the tool you install with actually reads the setting, which is why the setting lives where pnpm looks.'
 			},
 			{
 				type: 'p',
 				text: 'Add an `.nvmrc` too, so `nvm use` in the project folder picks the right one with no arguments:'
 			},
-			{ type: 'code', file: '.nvmrc', lang: 'text', code: '24.20.0' },
+			{ type: 'code', file: '.nvmrc', lang: 'text', code: '24.21.0' },
 
 			{ type: 'h3', id: 'icu', text: 'A version really can change behaviour' },
 			{
 				type: 'p',
-				text: 'It is tempting to treat the Node version as bookkeeping. Here is a real example from this project, discovered while moving from 22 to 24.'
+				text: 'It is tempting to treat the Node version as bookkeeping. Here is a real example from this project, discovered while moving it from Node 22, the previous LTS line, to Node 24.'
 			},
 			{
 				type: 'code',
@@ -306,8 +320,8 @@ new Intl.NumberFormat('en-US', {
 	maximumFractionDigits: 2
 }).format(5600);
 
-// Node 22 (ICU 78.2) → "$5.60K"
-// Node 24 (ICU 78.3) → "$5.6K"`
+// Node 22.22 (ICU 77.1) → "$5.60K"
+// Node 24.21 (ICU 78.3) → "$5.6K"`
 			},
 			{
 				type: 'p',
@@ -319,10 +333,10 @@ new Intl.NumberFormat('en-US', {
 			},
 
 			{ type: 'h3', id: 'pnpm', text: 'pnpm' },
-			{ type: 'terminal', code: 'npm install -g pnpm\npnpm --version   # 11.x' },
+			{ type: 'terminal', code: 'npm install -g pnpm\npnpm --version   # 12.x' },
 			{
 				type: 'checkpoint',
-				text: '`node --version` reports 24.20.0 or newer, and `pnpm --version` reports 11 or newer.'
+				text: '`node --version` reports 24.21.0 or newer, and `pnpm --version` reports 12 or newer.'
 			}
 		]
 	},
@@ -339,7 +353,7 @@ new Intl.NumberFormat('en-US', {
 			},
 			{
 				type: 'terminal',
-				code: `npx -y sv@next create halfpast-app \\
+				code: `npx -y sv create halfpast-app \\
   --template minimal --types ts \\
   --add prettier eslint "vitest=usages:unit,component" playwright \\
         "sveltekit-adapter=adapter:node" \\

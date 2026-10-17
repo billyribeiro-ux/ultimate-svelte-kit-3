@@ -66,6 +66,34 @@ test('the brush is a radio group, and the erase brush erases', async ({ page }) 
 	await expect(kickStep(page, 2)).toHaveAttribute('aria-pressed', 'true');
 });
 
+test('the row checkbox follows the steps, however they change', async ({ page }) => {
+	await page.goto('/studio?preset=four-on-the-floor');
+	const all = page
+		.locator('.track')
+		.first()
+		.getByRole('checkbox', { name: /All steps/ });
+
+	// Four kicks of sixteen: partly on.
+	await expect(all).toHaveJSProperty('indeterminate', true);
+	await expect(all).not.toBeChecked();
+
+	// Every step painted from the pads, the box never touched: all on. A click
+	// on the box would clear `indeterminate` by itself, so the box is left
+	// alone — what it shows has to come from the steps.
+	for (let n = 1; n <= 16; n += 1) {
+		const pad = kickStep(page, n);
+		if ((await pad.getAttribute('aria-pressed')) === 'false') await pad.click();
+	}
+	await expect(all).toBeChecked();
+	await expect(all).toHaveJSProperty('indeterminate', false);
+
+	// And every step erased: off, and not partly.
+	await page.locator('label.chip', { hasText: 'Erase' }).click();
+	for (let n = 1; n <= 16; n += 1) await kickStep(page, n).click();
+	await expect(all).not.toBeChecked();
+	await expect(all).toHaveJSProperty('indeterminate', false);
+});
+
 test('plays, counts bars, and stops', async ({ page }) => {
 	await page.goto('/studio?preset=four-on-the-floor');
 
@@ -99,6 +127,23 @@ test('the share link is the pattern', async ({ page }) => {
 	await page.goto(link);
 	await expect(page.getByLabel('Pattern title')).toHaveValue('Boom bap');
 	await expect(kickStep(page, 2)).toHaveAttribute('aria-pressed', 'true');
+});
+
+test('closing a panel keeps what was changed in it', async ({ page }) => {
+	await page.goto('/studio?preset=four-on-the-floor');
+	await page.getByRole('button', { name: 'Sound settings for Kick' }).click();
+	const dialog = page.getByRole('dialog', { name: 'Sound: Kick' });
+	await dialog.getByLabel('Instrument').selectOption('snare');
+
+	// Closing is `history.back()` to the studio's own entry, and the snapshot
+	// helper restores what that entry captured — the pattern as it was when
+	// the panel opened. The studio must know it already holds something newer.
+	await page.keyboard.press('Escape');
+	await expect(dialog).not.toBeVisible();
+	await expect(page.getByRole('button', { name: 'Undo' })).toBeEnabled();
+
+	await page.getByRole('button', { name: 'Sound settings for Kick' }).click();
+	await expect(dialog.getByLabel('Instrument')).toHaveValue('snare');
 });
 
 test('a damaged link opens a fresh pattern with a message', async ({ page }) => {

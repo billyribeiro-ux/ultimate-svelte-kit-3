@@ -1,4 +1,3 @@
-import { json } from '@sveltejs/kit';
 import { version } from '$app/env';
 import type { RequestHandler } from './$types';
 import { client } from '#lib/server/db/index.ts';
@@ -15,6 +14,11 @@ import { client } from '#lib/server/db/index.ts';
  * `version` is the commit the build was made from (see `vite.config.ts`), so
  * "which version is live?" is one request. `no-store`, because a cached
  * "healthy" is worse than none.
+ *
+ * `Response.json(...)`, not Kit's `json(...)`: SvelteKit 3 deprecated its
+ * `json` and `text` helpers because the platform grew the same thing. The
+ * static method sets `content-type: application/json` and takes the same
+ * `{ status, headers }` the helper did, so nothing else changes.
  */
 const startedAt = Date.now();
 
@@ -23,9 +27,9 @@ export const GET: RequestHandler = async () => {
 	try {
 		await client.execute('select 1');
 	} catch {
-		return json({ ok: false, version }, { status: 503, headers });
+		return Response.json({ ok: false, version }, { status: 503, headers });
 	}
-	return json(
+	return Response.json(
 		{ ok: true, version, uptimeSeconds: Math.round((Date.now() - startedAt) / 1000) },
 		{ headers }
 	);

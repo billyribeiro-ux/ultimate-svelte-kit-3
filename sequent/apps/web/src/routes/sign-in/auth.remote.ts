@@ -1,5 +1,5 @@
 import * as v from 'valibot';
-import { error, redirect } from '@sveltejs/kit';
+import { invalid, redirect } from '@sveltejs/kit';
 import { form, getRequestEvent } from '$app/server';
 import { verifySecret } from '@sequent/store';
 import { db } from '#lib/server/db.ts';
@@ -11,7 +11,17 @@ const HOME = '/terminal';
 export const signIn = form(
 	v.object({
 		email: v.pipe(v.string(), v.trim(), v.email('Enter the email you signed up with')),
-		password: v.pipe(v.string(), v.minLength(1, 'Enter your password')),
+		/*
+		 * `_password`, and the underscore is the security control.
+		 *
+		 * A form submitted without JavaScript that fails — a schema issue or an
+		 * `invalid` below — is answered with the page again, and SvelteKit puts
+		 * what was typed back into the fields so nobody fills the form out twice.
+		 * It holds back exactly one kind of field: a name that starts with `_`.
+		 * Without it, every mistyped password went back to the browser in plain
+		 * text, in the input's `value` and again in the page's hydration data.
+		 */
+		_password: v.pipe(v.string(), v.minLength(1, 'Enter your password')),
 		redirectTo: v.optional(
 			v.pipe(
 				v.string(),
@@ -38,12 +48,19 @@ export const signIn = form(
 		 *
 		 * Distinguishing them turns this form into a tool for discovering which
 		 * firms are members of the venue.
+		 *
+		 * `invalid`, not `error`. An `error(401, …)` thrown from a form handler
+		 * renders the error page in place of the form, so a mistyped password
+		 * cost the person the form itself. `invalid` with a plain string is an
+		 * issue for the form as a whole: it comes back in `fields.allIssues()`,
+		 * which the page already shows above the fields, with the email still
+		 * filled in.
 		 */
 		if (!row || Number(row['is_active']) !== 1) {
-			error(401, 'That email and password do not match an account.');
+			invalid('That email and password do not match an account.');
 		}
-		if (!verifySecret(data.password, String(row['password_hash']))) {
-			error(401, 'That email and password do not match an account.');
+		if (!verifySecret(data._password, String(row['password_hash']))) {
+			invalid('That email and password do not match an account.');
 		}
 
 		const sessionId = crypto.randomUUID();

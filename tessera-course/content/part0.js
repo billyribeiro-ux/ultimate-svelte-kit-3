@@ -125,9 +125,9 @@ export const part0 = [
 			{
 				type: 'ul',
 				items: [
-					'**SvelteKit 3** with **Svelte 5** — runes, remote functions, universal hooks, `defineParams`, and no `svelte.config.js`.',
+					'**SvelteKit 3** with **Svelte 5** — runes, remote functions, universal hooks, `defineParams`, and no `svelte.config.js`: SvelteKit 2 kept the framework’s options there, and SvelteKit 3 moved them into `vite.config.ts`.',
 					'**TypeScript**, strict, with `noUncheckedIndexedAccess` on. In a codebase full of array indexing into shared state, that flag earns its keep on the first day.',
-					'**Vite 8** and **Vitest 4** — unit tests in Node, component tests in a real Chromium.',
+					'**Vite 8** and **Vitest 5** — unit tests in Node, component tests in a real Chromium.',
 					'**valibot** for every schema: environment variables, route parameters, form fields, and the sync wire format.',
 					'**Drizzle** over **libSQL**, and **Better Auth** for sessions.',
 					'**Playwright** for the end-to-end suite, which runs two browser contexts against one board because that is the only way to test the thing this application is *for*.',
@@ -241,8 +241,8 @@ export const part0 = [
 					'To decide a winner without asking anybody, every edit needs a **timestamp that is comparable across machines** and never ties. Wall clocks are not that. Chapter 06.',
 					'To know what a replica already has, we need a compact summary of "everything I have seen". Chapter 07.',
 					'To keep an ordering stable when two people insert in the same gap, positions must be **densely orderable** — there must always be a value between any two. Chapter 08.',
-					'Each kind of state needs its own type: a set for shapes, registers for fields, a sequence for text. Chapters 10 to 12.',
-					'And all of it needs to be tested against a network that behaves as badly as a real one, which turns out to be a *property* test rather than an example. Chapter 09.'
+					'Each kind of state needs its own type: a set for shapes, registers for fields, a sequence for text. Chapters 09 to 11.',
+					'And all of it needs to be tested against a network that behaves as badly as a real one, which turns out to be a *property* test rather than an example. Chapter 12.'
 				]
 			},
 			{
@@ -270,17 +270,18 @@ export const part0 = [
 		blocks: [
 			{
 				type: 'p',
-				text: 'Check your Node. This project needs 24.20 or newer, which is the current LTS at the time of writing.'
+				text: 'Check your Node. This project needs 24.21 or newer, which is the current LTS at the time of writing. pnpm comes through Corepack, the package-manager manager that ships with Node: `corepack enable` puts a `pnpm` on your path, and `corepack install -g` decides which version it is when you are not inside a project. Outside one, there is nothing to pin the version to — Corepack would otherwise use its own idea of the latest — so ask for this course’s version by name.'
 			},
 			{
 				type: 'terminal',
 				code: `
 node --version
-# v24.20.0
+# v24.21.0
 
-npm install -g pnpm
+corepack enable
+corepack install -g pnpm@12.10.1
 pnpm --version
-# 11.24.0`
+# 12.10.1`
 			},
 			{
 				type: 'note',
@@ -291,9 +292,17 @@ pnpm --version
 			{
 				type: 'terminal',
 				code: `
-pnpm create svelte@next tessera
+pnpm dlx sv create --template minimal --types ts --no-add-ons --no-install tessera
 cd tessera
-pnpm install`
+corepack use pnpm@12.10.1`
+			},
+			{
+				type: 'p',
+				text: '`sv` is the Svelte CLI, and `pnpm dlx` runs its latest release without installing it. `--template minimal --types ts` gives a bare SvelteKit 3 project in TypeScript. `--no-add-ons` skips the interactive add-on prompt, because everything else in this project is configured by hand, and `--no-install` leaves the dependencies until you are inside the folder.'
+			},
+			{
+				type: 'p',
+				text: '`corepack use pnpm@12.10.1` is the line that pins the project. It writes `"packageManager": "pnpm@12.10.1"` into `package.json` and then installs, so from now on anybody with Corepack enabled who types `pnpm` in this folder gets exactly that version, whatever is installed globally on their machine — which is what makes a lockfile mean the same thing on every machine that reads it.'
 			},
 			{
 				type: 'p',
@@ -364,7 +373,7 @@ sveltekit({
 			{
 				type: 'why',
 				title: 'The 403 that looks like a bug in your form',
-				text: 'That comment is a scar. `adapter-node` v6 moved the trusted origin from a runtime `ORIGIN` variable to build-time `paths.origin`. Leave it unset and the adapter reconstructs the origin from request headers, assuming `https` unless told otherwise. Your server on plain HTTP computes `https://localhost:4173`, the browser sends `http://localhost:4173`, and every POST — every form, every remote command — comes back `403 Cross-site remote requests are forbidden`, in an application whose GET requests all work perfectly.'
+				text: 'That comment is a scar. Up to SvelteKit 2, `adapter-node` read the trusted origin from a runtime `ORIGIN` variable; v6, the adapter’s SvelteKit 3 release, removed it in favour of build-time `paths.origin`. Leave it unset and the adapter reconstructs the origin from request headers, assuming `https` unless told otherwise. Your server on plain HTTP computes `https://localhost:4173`, the browser sends `http://localhost:4173`, and every POST — every form, every remote command — comes back `403 Cross-site remote requests are forbidden`, in an application whose GET requests all work perfectly.'
 			},
 			{
 				type: 'code',
@@ -533,7 +542,14 @@ prerender: {
 		// Unused locals and parameters are errors. Dead code in a merge function is
 		// usually half of a case somebody stopped writing.
 		"noUnusedLocals": true,
-		"noUnusedParameters": true
+		"noUnusedParameters": true,
+
+		// Only TypeScript that can be erased: no \`enum\`, no namespaces with code in
+		// them, no parameter properties. Node runs \`scripts/seed.ts\` by stripping
+		// types, which fails at runtime on anything that needs emitting, and the
+		// Svelte compiler strips types the same way. \`crdt/clock.ts\` explains the
+		// rule; this makes the compiler hold it.
+		"erasableSyntaxOnly": true
 	},
 
 	// SvelteKit 3 requires these to be explicit. Without them \`svelte-check\` will
@@ -549,28 +565,34 @@ prerender: {
 		"*.config.js"
 	],
 	/*
-	 * The service worker is excluded here and checked by \`tsconfig.service-worker.json\`.
+	 * The service worker is excluded here and checked by its own
+	 * \`src/service-worker/tsconfig.json\`.
 	 *
 	 * It runs in a \`ServiceWorkerGlobalScope\`, not a window: \`self\` is a different
 	 * type, \`document\` does not exist, and the DOM lib actively lies about both.
 	 * SvelteKit says so on every \`sync\` — "src/service-worker should be added to
 	 * the exclude array" — and the cost of ignoring it is a file that type-checks
 	 * against an environment it will never run in.
+	 *
+	 * The whole directory, not one file. SvelteKit 3 documents the worker as
+	 * \`src/service-worker/index.ts\` with its config beside it, so excluding the
+	 * directory is what keeps both the worker and its \`tsconfig.json\` out of the
+	 * DOM-typed project — and it is the spelling \`svelte-kit sync\` asks for.
 	 */
-	"exclude": ["node_modules", "build", ".svelte-kit", "static", "drizzle", "src/service-worker.ts"]
+	"exclude": ["node_modules", "build", ".svelte-kit", "static", "drizzle", "src/service-worker"]
 }`
 			},
 			{
 				type: 'p',
-				text: 'Two of those flags do most of the work. `noUncheckedIndexedAccess` makes `array[i]` have type `T | undefined`, which is *true* and which most codebases turn off within a week. Keep it: this project indexes into shared, concurrently-modified state constantly, and the one place it is genuinely annoying — array access you have just bounds-checked — is exactly the place a future edit will break.'
+				text: 'Two flags do most of the work, and only one of them is written in this file. `noUncheckedIndexedAccess` makes `array[i]` have type `T | undefined`, which is *true* and which most codebases turn off within a week. Keep it: this project indexes into shared, concurrently-modified state constantly, and the one place it is genuinely annoying — array access you have just bounds-checked — is exactly the place a future edit will break.'
 			},
 			{
 				type: 'p',
-				text: '`verbatimModuleSyntax` forces `import type` where you mean a type. That matters because the runtime here is Node’s type-stripping mode, which erases annotations without understanding them: it cannot know that an import is only used as a type, so it leaves the import in, and you get a runtime error importing a module that only exists at compile time.'
+				text: 'The other is `verbatimModuleSyntax`, which you will not find above because `$app/tsconfig` already sets it (alongside `isolatedModules`). It forces `import type` where you mean a type. That matters because the runtime here is Node’s type-stripping mode, which erases annotations without understanding them: it cannot know that an import is only used as a type, so it leaves the import in, and you get a runtime error importing a module that only exists at compile time.'
 			},
 			{
 				type: 'warn',
-				text: 'Node’s strip-only TypeScript has a second consequence that will bite you within an hour: **no parameter properties**. `constructor(private readonly db: Client) {}` is a syntax error at runtime, because stripping the types leaves a constructor that assigns nothing. Declare the field and assign it. Relative imports also need their file extensions — `./clock.ts`, not `./clock`.'
+				text: 'Node’s strip-only TypeScript has a second consequence that will bite you within an hour: **no parameter properties**. `constructor(private readonly db: Client) {}` is refused at runtime with `ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX`, because stripping the types would leave a constructor that assigns nothing. Declare the field and assign it. `erasableSyntaxOnly`, the last flag in the file above, is what turns that from a runtime surprise into a `pnpm check` error — it refuses `enum`, namespaces with code in them and parameter properties, the three constructs that need emitting rather than erasing. Relative imports also need their file extensions — `./clock.ts`, not `./clock`.'
 			},
 
 			{
@@ -597,7 +619,7 @@ prerender: {
 			},
 			{
 				type: 'p',
-				text: 'SvelteKit 3 replaced all four with one file.'
+				text: 'SvelteKit 3 deprecates all four — they still work, and they go in SvelteKit 4 — in favour of one file.'
 			},
 			{
 				type: 'code',
@@ -607,7 +629,9 @@ prerender: {
 /**
  * Every environment variable this app reads, declared once.
  *
- * SvelteKit 3 replaced the \`$env/*\` magic modules with this file. A variable not
+ * SvelteKit 3 deprecated the \`$env/*\` modules in favour of this file — they
+ * still work, and are removed in SvelteKit 4 — and every variable it declares is
+ * imported from \`$app/env/private\` or \`$app/env/public\`. A variable not
  * declared here cannot be imported — a type error at build time rather than an
  * \`undefined\` that surfaces in production three weeks later — and \`public: true\`
  * is something you have to type, so a secret cannot reach the browser by
@@ -628,6 +652,10 @@ export const variables = defineEnvVars({
 			{
 				type: 'p',
 				text: 'A variable not in this file **cannot be imported**. Not "imports as nothing" — the import does not typecheck. That single change moves a whole category of production incident to the moment you type the wrong name.'
+			},
+			{
+				type: 'note',
+				text: 'The values themselves are imported from `$app/env/private` and `$app/env/public` — `import { DATABASE_URL } from \'$app/env/private\'` — and only names declared here exist in those modules. An older project will still be full of `$env/static/private`. That is not a bug: the four old modules are deprecated in SvelteKit 3, still work, and are removed in SvelteKit 4. It is a migration still to do.'
 			},
 
 			{ type: 'h3', id: 'the-flags', text: 'What you declare, and why' },
@@ -668,7 +696,7 @@ BETTER_AUTH_SECRET: {`
 				items: [
 					'**`schema`** — a valibot schema, run once at boot against the real environment. `DATABASE_URL=""` stops the server starting with a clear message instead of producing an unopenable database three layers down.',
 					'**`public: true`** — allowed in the browser. Absent by default, so a secret reaching the client requires somebody to *type the word public*. That is a much better failure surface than a naming convention.',
-					'**`static: true`** — inlined at build time rather than read from `process.env` per request. `PUBLIC_ORIGIN` has to be static: `vite.config.ts` reads the same variable during the build, and a value that could differ between build and run would make the CSRF check compare two different origins.'
+					'**`static: true`** — inlined at build time rather than read from the environment when the server starts. `PUBLIC_ORIGIN` has to be static: `vite.config.ts` reads the same variable during the build, and a value that could differ between build and run would make the CSRF check compare two different origins.'
 				]
 			},
 			{
@@ -718,14 +746,15 @@ BETTER_AUTH_SECRET: {`
 			{ type: 'h3', id: 'using-them', text: 'Reading them' },
 			{
 				type: 'code',
+				file: 'src/lib/server/auth.ts',
 				lang: 'ts',
 				code: `
-import { DATABASE_URL } from '$env/private';
-import { PUBLIC_ORIGIN } from '$env/public';`
+import { BETTER_AUTH_SECRET } from '$app/env/private';
+import { PUBLIC_ORIGIN } from '$app/env/public';`
 			},
 			{
 				type: 'p',
-				text: 'Two modules, typed from your declarations. Import a private variable in a file that reaches the browser and the build fails, naming the file and the import chain that got it there.'
+				text: 'Two modules, typed from your declarations — here at the top of the authentication module, which needs one of each. Private variables come from `$app/env/private`, and anything declared `public: true` from `$app/env/public`. Both sit under `$app/env`, beside `browser`, `building`, `dev` and `version`, which SvelteKit 3 moved there from the old `$app/environment`. Import a private variable in a file that reaches the browser and the build fails, naming the file and the import chain that got it there.'
 			},
 			{
 				type: 'terminal',
@@ -733,7 +762,12 @@ import { PUBLIC_ORIGIN } from '$env/public';`
 # .env — never committed
 DATABASE_URL=file:local.db
 PUBLIC_ORIGIN=http://localhost:5173
-BETTER_AUTH_SECRET=$(openssl rand -base64 32)`
+# paste the output of: openssl rand -base64 32
+BETTER_AUTH_SECRET=`
+			},
+			{
+				type: 'p',
+				text: 'Run `openssl rand -base64 32` in your shell and paste what it prints after `BETTER_AUTH_SECRET=`. Do not put the command itself in the file. `.env` is read as plain `NAME=value` lines, not run as a shell script, so `$(openssl rand -base64 32)` would arrive as those 26 characters of literal text, and the schema above, which wants at least 32, would refuse to start the server. Left empty, it refuses too, with a message naming the variable. That is this chapter working as intended.'
 			},
 
 			{
@@ -782,7 +816,8 @@ src/
   hooks.client.ts
   params.ts      route parameter matchers.
   env.ts         environment variables.
-  service-worker.ts`
+  service-worker/
+    index.ts     the offline shell. its own tsconfig.json sits beside it.`
 			},
 
 			{ type: 'h3', id: 'the-layers', text: 'Four layers, and the rule' },
@@ -808,9 +843,9 @@ src/
 			{ type: 'h3', id: 'imports', text: 'The import style' },
 			{
 				type: 'code',
-				lang: 'ts',
+				file: 'package.json',
+				lang: 'json',
 				code: `
-// package.json
 "imports": {
 	"#lib": "./src/lib/index.js",
 	"#lib/*": "./src/lib/*"
@@ -818,15 +853,19 @@ src/
 			},
 			{
 				type: 'p',
-				text: 'Node subpath imports rather than a bundler alias, so the same specifier works in Vite, in Vitest, and in a plain `node` process running a script. Every import carries its extension:'
+				text: 'Node subpath imports rather than a bundler alias, so the same specifier works in Vite, in Vitest, and in a plain `node` process running a script. This is also how SvelteKit 3 wants it: the framework no longer generates the old `$lib` alias, and the `imports` field in `package.json` is where `#lib` is declared instead. Every import carries its extension — here is the top of the server’s version-history module, which reaches into three other folders under `lib/` and one of its own:'
 			},
 			{
 				type: 'code',
+				file: 'src/lib/server/history.ts',
 				lang: 'ts',
 				code: `
-import { Clock } from '#lib/crdt/clock.ts';
-import Board from '#lib/components/Board.svelte';
-import { boardOps } from '#lib/board/index.ts';`
+import { BoardDocument, emptySnapshot, parseSnapshot, type Operation } from '#lib/board/index.ts';
+import type { EdgeFields, NodeFields } from '#lib/board/index.ts';
+import { Clock, newActorId, type ActorId } from '#lib/crdt/index.ts';
+import { BoardRevision } from '#lib/history/revision.ts';
+import { db } from './db/index.ts';
+import { board, checkpoint, operation, user } from './db/schema.ts';`
 			},
 			{
 				type: 'warn',
@@ -855,7 +894,7 @@ routes/
 			},
 			{
 				type: 'p',
-				text: 'There are exactly two API routes, and both exist because they are *streams or documents*, not function calls. Everything else that would have been an endpoint is a remote function, which we get to in part 6.'
+				text: 'There are exactly two API routes, and both exist because they are *streams or documents*, not function calls. Everything else that would have been an endpoint is a remote function, which we get to in chapter 30.'
 			},
 
 			{

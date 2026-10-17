@@ -47,7 +47,7 @@
 <p>SQLite allows exactly one writer at a time across the whole file. Two write transactions in the same process collide, and the second is told to go away.</p>
 <h3 id="the-trap">The obvious fix, and why it is worse</h3>
 <p>Every search result says: raise <code>PRAGMA busy_timeout</code>. A blocked writer then waits instead of failing.</p>
-<aside class="callout callout--warn"><p>In Node this is actively dangerous. The local SQLite driver is <strong>synchronous</strong> underneath its promises. A waiting writer blocks the one and only thread — including the thread the *first* transaction needs in order to finish and release the lock. The two wait for each other until the timeout expires. A deadlock with a stopwatch on it is still a deadlock, and it fails five seconds later instead of instantly, which is worse for everyone.</p></aside>
+<aside class="callout callout--warn"><p>In Node this is actively dangerous. The local SQLite driver is <strong>synchronous</strong> underneath its promises. A waiting writer blocks the one and only thread — including the thread the <em>first</em> transaction needs in order to finish and release the lock. The two wait for each other until the timeout expires. A deadlock with a stopwatch on it is still a deadlock, and it fails five seconds later instead of instantly, which is worse for everyone.</p></aside>
 <h3 id="the-queue">Queue in JavaScript instead</h3>
 <p>Writers should wait at an <code>await</code>, where the event loop is free to run the work that releases the lock.</p>
 
@@ -105,7 +105,7 @@ export const writeQueue = new WriteQueue();</code></pre>
 
 <aside class="callout callout--why">
 	<h4>A promise chain, not a list of waiters</h4>
-	<p>There is no array, no <code>shift()</code>, no timers, and no way to lose a waiter or leak one. The queue *is* the promise chain. Nine lines of logic that need no maintenance is a better shape than forty lines that need care.</p>
+	<p>There is no array, no <code>shift()</code>, no timers, and no way to lose a waiter or leak one. The queue <em>is</em> the promise chain. Nine lines of logic that need no maintenance is a better shape than forty lines that need care.</p>
 </aside>
 <h3 id="not-the-guarantee">What this is not</h3>
 <aside class="callout callout--warn"><p>The queue is <strong>one process's politeness</strong>. It evaporates the moment the app runs on two instances or moves to a hosted libSQL. It exists so that the normal case is a clean error instead of a lock timeout. The guarantee that two customers cannot take the same slot lives in the primary key on <code>slot_claim</code> and nowhere else.</p></aside>
@@ -142,7 +142,7 @@ export const writeQueue = new WriteQueue();</code></pre>
 });</code></pre>
 </figure>
 <p>The last two assertions are the ones people leave out. &quot;Exactly one winner&quot; can be true while the database is full of orphaned claim rows from the nine rolled-back transactions. Counting exactly twelve claims — the winner's block on the grid and nobody else's — is what proves the rollback actually rolled back.</p>
-<p>What the losers were *told* is checked in a separate test, and it deliberately accepts either <code>slot_taken</code> or <code>slot_not_offered</code>. Depending on timing, the pre-flight availability check may catch the clash before the claim does — the slot was already gone by the time that request read the diary. Both are honest answers; what matters is that no loser sees a 500.</p>
+<p>What the losers were <em>told</em> is checked in a separate test, and it deliberately accepts either <code>slot_taken</code> or <code>slot_not_offered</code>. Depending on timing, the pre-flight availability check may catch the clash before the claim does — the slot was already gone by the time that request read the diary. Both are honest answers; what matters is that no loser sees a 500.</p>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>

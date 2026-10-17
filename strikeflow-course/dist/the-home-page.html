@@ -63,7 +63,7 @@
 	import FeatureGrid from '#lib/components/marketing/FeatureGrid.svelte';
 	import StatStrip from '#lib/components/marketing/StatStrip.svelte';
 	import CtaBand from '#lib/components/marketing/CtaBand.svelte';
-	// …the motion imports (heroSequence, parallax, reveal, revealGroup) are built in part 4…
+	import { heroSequence, parallax, reveal, revealGroup } from '#lib/motion/index.ts';
 
 	const stats = [
 		{ value: '&lt;250ms', label: 'Tape to screen', note: 'Median, Pro and Desk plans' },
@@ -72,7 +72,23 @@
 		{ value: '7 yrs', label: 'Tick history', note: 'Back to January 2019' }
 	];
 
-	// …the `steps` data for the how-it-works section…
+	const steps = [
+		{
+			icon: DatabaseIcon,
+			title: 'We take the whole tape',
+			body: 'Direct OPRA ingest across all sixteen US options exchanges, plus FINRA dark pool reporting. No aggregator in the middle adding seconds and dropping fields.'
+		},
+		{
+			icon: StrategyIcon,
+			title: 'We work out what it means',
+			body: 'Every print is matched against the quote at execution to find the aggressor, stitched back together with its other legs, and scored against that contract’s own ninety-day baseline.'
+		},
+		{
+			icon: BroadcastIcon,
+			title: 'You see intent, not noise',
+			body: 'What reaches your screen is a classified, deduplicated stream you can filter and set rules on — rather than a wall of prints you have to interpret yourself.'
+		}
+	];
 &lt;/script&gt;
 
 &lt;Seo
@@ -142,7 +158,7 @@
 	&lt;/div&gt;
 &lt;/section&gt;</code></pre>
 </figure>
-<aside class="callout callout--note"><p>The <code>{@attach heroSequence()}</code> and <code>{@attach reveal(…)}</code> attributes, the <code>data-hero</code>/<code>data-reveal</code> markers, the <code>pull</code> prop on the primary button and the <code>animated</code> flag on <code>StatStrip</code> are all hooks for the motion system — we build every piece of it in part 4 (chapters 31–34). They are shown here so the markup matches the finished project; everything else on this page works without them.</p></aside>
+<aside class="callout callout--note"><p>The <code>#lib/motion/index.ts</code> import at the top of the script, the <code>{@attach heroSequence()}</code>, <code>{@attach parallax(0.12)}</code> and <code>{@attach reveal(…)}</code> attributes, the <code>data-hero</code>/<code>data-reveal</code> markers, the <code>pull</code> prop on the primary button and the <code>animated</code> flag on <code>StatStrip</code> are all hooks for the motion system — we build every piece of it in part 4 (chapters 31–34). They are shown here so the code matches the finished project; until you build that folder, leave the import and every one of those hooks out — everything else on this page works without them. (The import also brings in <code>revealGroup</code>, which the sections further down the real file attach in the same way; leave those attachments out too.)</p></aside>
 
 <aside class="callout callout--why">
 	<h4>About that headline</h4>

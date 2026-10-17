@@ -246,6 +246,38 @@ export const SOURCE_NAMES: readonly string[] = SOURCES;</code></pre>
 	<h4>Fuzzy matching is wonderful in a file finder and wrong here</h4>
 	<p>In a file finder you know the answer and are recalling it, so <code>dur</code> matching <code>p95_duration_ms</code> is a shortcut. In a schema you are still learning, it puts things you have never heard of at the top of the list, and you cannot tell whether they are relevant or noise. Prefix beats substring, shorter beats longer, alphabetical breaks the tie.</p>
 </aside>
+<h3 id="the-highlight">Which suggestion is highlighted</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/QueryEditor.svelte<span class="code__lines">:105-122</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">const suggestions = $derived.by(() =&gt; {
+	if (!open) return { from: caret, to: caret, prefix: '', items: [] as Completion[] };
+	return completionsAt(value, caret, catalogue);
+});
+
+/**
+ * Which suggestion is highlighted: the first whenever the list changes —
+ * `-1`, none, while it is empty — and wherever the arrow keys move it in
+ * between.
+ *
+ * A `$derived` that the arrow keys overwrite, rather than `$state` that an
+ * `$effect` kept in range. Deriveds can be reassigned since Svelte 5.25, and
+ * the documentation names the effect version as the thing not to do: an
+ * effect that synchronises state runs after the change, so for a moment the
+ * highlight pointed past the end of a list that had just shrunk. A derived is
+ * recomputed from the list it indexes before anything reads it.
+ */
+let active = $derived(suggestions.items.length &gt; 0 ? 0 : -1);</code></pre>
+</figure>
+<p>The highlighted suggestion is derived from the list it indexes — the first one, or none while the list is empty — and the arrow keys assign to it in between. That is a <code>$derived</code> being written to, which Svelte has allowed since 5.25: “you can temporarily override their values by reassigning them”, and the next change to the list recomputes it from scratch.</p>
+
+<aside class="callout callout--why">
+	<h4>Why not <code>$state</code> and an effect that keeps it in range</h4>
+	<p>Because that is the version the documentation asks you not to write. An effect that synchronises one piece of state from another runs after the change has happened, so for a moment the highlight pointed past the end of a list that had just shrunk, and the code had two places that could disagree. “If you’re using an effect because you want to be able to reassign the derived value (to build an optimistic UI, for example) note that deriveds can be directly overridden as of Svelte 5.25.” A derived is recomputed before anything reads it, so the index is never out of step with its list, and the two <code>active = 0</code> lines that typing and Ctrl+Space used to need went with the effect.</p>
+</aside>
 <h3 id="the-hyphen">The hyphen that broke the replacement range</h3>
 <p>The first version found the word under the caret by walking backwards over <code>[A-Za-z0-9_.]</code>. Inside a string that is wrong, and the failure is specific:</p>
 

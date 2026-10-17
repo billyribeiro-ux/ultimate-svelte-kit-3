@@ -164,8 +164,56 @@ export function loadMotion(): Promise&lt;Motion | null&gt; {
 </figure>
 <p><code>{@attach}</code> replaces <code>use:</code>. The difference that matters here: an attachment is a plain function you can compose, parameterise and return from another function, and its teardown is just the returned closure.</p>
 <p>Two details in that code are the difference between an animation and a bug. <code>gsap.from</code> animates <strong>towards</strong> the DOM's real state, so if the tween never runs — blocked script, failed chunk, reduced motion — the element is already where it belongs. The opposite pattern (hide it in CSS, reveal it with JavaScript) means a failed script leaves a blank page. And <code>clearProps</code> hands layout back to CSS at the end, rather than leaving the element pinned by an inline matrix that a later resize cannot move.</p>
+<h3 id="once">An entrance that plays once</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/booking/[token]/+page.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;article class={['card', { dim: cancelled }]} {@attach justBooked &amp;&amp; celebrate}&gt;</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/booking/[token]/+page.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">const celebrate: Attachment&lt;HTMLElement&gt; = (node) =&gt; {
+	let cancelled = false;
+
+	void loadMotion().then((motion) =&gt; {
+		if (!motion || cancelled) return;
+		motion.gsap
+			.timeline()
+			.from(node, { y: 24, opacity: 0, duration: 0.6, ease: 'power3.out' })
+			.from(
+				node.querySelectorAll('.detail'),
+				{
+					y: 10,
+					opacity: 0,
+					duration: 0.4,
+					stagger: 0.06,
+					ease: 'power2.out',
+					clearProps: 'all'
+				},
+				'-=0.3'
+			);
+	});
+
+	return () =&gt; {
+		cancelled = true;
+	};
+};</code></pre>
+</figure>
+<p>The confirmation card lifts into place when a booking is new, and only then. <code>justBooked &amp;&amp; celebrate</code> is either the attachment or <code>false</code>, and a falsy value attaches nothing, which is the &quot;only when new&quot; half. The &quot;only once&quot; half comes from how attachments re-run: when their element mounts, and again only if state <em>read inside the function</em> changes. <code>celebrate</code> reads none — the element is all it needs — so cancelling the booking, which refreshes the query and dims the card, does not replay the entrance.</p>
+
+<aside class="callout callout--why">
+	<h4>Why not bind:this and an effect</h4>
+	<p>That was the first version: <code>bind:this={card}</code> into a <code>$state</code>, an <code>$effect</code> that waited for the element, and a <code>celebrated</code> flag so the effect would not fire twice — three moving parts, justified by a comment saying an attachment &quot;would replay it every time the query refreshed&quot;. The Svelte docs say otherwise: an attachment runs &quot;when an element is mounted to the DOM or when state read inside the function updates&quot;, and this one reads nothing. Whenever an action, or <code>bind:this</code> plus an effect, looks like the answer, an attachment usually is.</p>
+</aside>
 <h3 id="restraint">What is deliberately not animated</h3>
-<ul><li><strong>Page transitions.</strong> A crossfade between routes delays every navigation by 300ms to say nothing. The dashboard is used forty times a day.</li><li><strong>Buttons.</strong> A press has instant visual feedback from <code>:active</code>. Animating it makes the app feel *slower*, because the feedback arrives after the tap.</li><li><strong>Numbers counting up.</strong> The diary shows how many appointments there are today. Rolling that number from zero is a small lie about when we knew.</li></ul>
+<ul><li><strong>Page transitions.</strong> A crossfade between routes delays every navigation by 300ms to say nothing. The dashboard is used forty times a day.</li><li><strong>Buttons.</strong> A press has instant visual feedback from <code>:active</code>. Animating it makes the app feel <em>slower</em>, because the feedback arrives after the tap.</li><li><strong>Numbers counting up.</strong> The diary shows how many appointments there are today. Rolling that number from zero is a small lie about when we knew.</li></ul>
 
 <aside class="callout callout--why">
 	<h4>The test for whether an animation earns its place</h4>

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The schema, and migrations instead of push — Building Abacus</title>
-<meta name="description" content="Five tables. A sheet is one JSON document with a version number; passkeys are public keys in `credentials`; one-time `challenges` expire. Migrations are files in `drizzle/`, applied by a script the Dockerfile runs before the server listens.">
+<meta name="description" content="Five tables. A sheet is one JSON document with a version number; passkeys are public keys in credentials; one-time challenges expire. Migrations are files in drizzle/, applied by a script the Dockerfile runs before the server listens.">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -123,7 +123,7 @@ export const challenges = sqliteTable('challenges', {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/server/db/schema.ts<span class="code__lines">:72-121</span></span>
+		<span class="code__file">src/lib/server/db/schema.ts<span class="code__lines">:72-127</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">export const sheets = sqliteTable(
@@ -170,6 +170,12 @@ export const ops = sqliteTable(
 		/** The sheet version this op produced. */
 		version: integer('version').notNull(),
 		userId: text('user_id'),
+		/**
+		 * The tab that sent it, so a tab catching up after a dropped connection
+		 * can tell its own operations from everybody else's. `null` on rows
+		 * written before it was recorded.
+		 */
+		client: text('client'),
 		/** `CellOp[]` as JSON. */
 		payload: text('payload').notNull(),
 		createdAt: integer('created_at').notNull().default(now)
@@ -177,7 +183,7 @@ export const ops = sqliteTable(
 	(table) =&gt; [index('ops_sheet_version').on(table.sheetId, table.version)]
 );</code></pre>
 </figure>
-<p>A sheet has <code>access</code> — private, or anybody signed in who has the link — a <code>version</code> that goes up by one per write, so a stale write can be refused, and a <code>published</code> copy frozen at <code>publishedAt</code>. The <code>ops</code> table is the log the live query replays to a browser that joins late.</p>
+<p>A sheet has <code>access</code> — private, or anybody signed in who has the link — a <code>version</code> that goes up by one per write, so a stale write can be refused, and a <code>published</code> copy frozen at <code>publishedAt</code>. The <code>ops</code> table is the log the live query replays to a browser that joins late: each row is one batch, with the version it produced and the tab that sent it, which is what lets a browser that reconnects skip what it already has (ch. 28).</p>
 
 <figure class="code">
 	<figcaption>
@@ -272,7 +278,16 @@ client.close();</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">scripts/prepare-e2e-db.js<span class="code__lines">:1-30</span></span>
+		<span class="code__file">drizzle/0001_op_client.sql<span class="code__lines">:1-1</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">ALTER TABLE `ops` ADD `client` text;</code></pre>
+</figure>
+<p>The project’s second migration, whole. Chapter 28 needed the op log to say which tab sent each batch; the column went into <code>schema.ts</code>, <code>drizzle-kit generate --name op_client</code> wrote this file and its snapshot, and every database that runs <code>migrate()</code> gets it once — the development one, the end-to-end one, and a production one at its next start. Rows written before it have no tab, and the column is nullable to say so honestly rather than inventing one.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">scripts/prepare-e2e-db.js<span class="code__lines">:1-31</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -303,7 +318,8 @@ const env = {
 	DATABASE_URL: `file:${DB}`,
 	PUBLIC_ORIGIN: 'http://localhost:4173',
 	SESSION_SECRET: 'e2e-only-secret-of-at-least-thirty-two-characters',
-	CELL_LIMIT: '50000'
+	// The same values the server gets in `playwright.config.ts`.
+	CELL_LIMIT: '1000'
 };</code></pre>
 </figure>
 

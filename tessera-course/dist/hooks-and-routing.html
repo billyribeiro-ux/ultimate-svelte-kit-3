@@ -122,14 +122,17 @@ const LANGUAGE_LIKE = /^\/([a-z]{2,3})(?:-[A-Za-z]{2,4})?(\/|$)/;
  * and then sat empty while the browser retried a stream that could never exist.
  * Nothing logged an error; the reroute was doing exactly what it was told.
  *
- * Deriving this from the route manifest would be tidier and is not possible: the
- * universal hook runs in the browser too, where the manifest is not available.
- * A short explicit list, next to the code that needs it, is the honest version.
+ * Why not derive it from the routes? Two of the three could be: `$app/manifest`
+ * can be imported anywhere, the browser included, and its `routes` carry the
+ * ids that start `/api` and `/embed`. The third cannot. `b` is not a route at
+ * all — it is this hook's own short-link alias, rewritten below before the
+ * router ever sees it. A list half-derived and half-written is harder to read
+ * than three strings next to the code that needs them, so it stays explicit.
  */
 const RESERVED = new Set(['api', 'b', 'embed']);</code></pre>
 </figure>
 <aside class="callout callout--warn"><p>This is the best bug in the project, because the code was doing exactly what it was told. <code>api</code> is three lowercase letters, which is what a language tag looks like. Every request to <code>/api/boards/…/stream</code> was quietly rewritten to <code>/boards/…/stream</code> and answered 404 — so boards loaded, rendered their chrome, and then sat empty while the browser retried a stream that could never exist. Nothing logged an error anywhere.</p></aside>
-<p>The tidier fix — derive the list from the route manifest — is not possible: the universal hook runs in the browser too, where the manifest is not available. A short explicit list next to the code that needs it is the honest version.</p>
+<p>Could the list be derived instead? Partly. SvelteKit 3’s <code>$app/manifest</code> can be imported anywhere, the browser included — in SvelteKit 2 there was no route list a browser could import at all — and its <code>routes</code> carry every route id, so <code>api</code> and <code>embed</code> could be read off the ids that begin <code>/api</code> and <code>/embed</code>. <code>b</code> could not. It is not a route: it is this hook’s own short-link alias, rewritten to <code>/boards</code> before the router ever sees it. A list half read from the manifest and half typed by hand is harder to follow than three strings next to the code that needs them, so the list is explicit — by choice, now, rather than by necessity.</p>
 <aside class="callout callout--note"><p><code>reroute</code> is allowed to be <code>async</code>. Resist it. Making it so puts a network round trip in front of <strong>every navigation on both sides</strong> — it is a tempting place for a lookup table and a very expensive one. And returning <code>void</code> rather than <code>url.pathname</code> when nothing changes keeps the devtools from showing every navigation as a rewrite.</p></aside>
 <h3 id="params">Matchers are one file now</h3>
 
@@ -192,14 +195,14 @@ export const params = defineParams({
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code>routes/
-  +layout.svelte                        site chrome: header, footer, nav
+  +layout.svelte                        the stylesheet and the live region: every page
   [[lang=locale]]/
-    +layout.svelte                      language context
+    +layout.svelte                      the chrome: logo, nav, language, theme
     boards/+page.svelte                 ← inherits both layouts
-    boards/[board]/+page@.svelte        ← inherits NEITHER</code></pre>
+    boards/[board]/+page@.svelte        ← inherits the root one only</code></pre>
 </figure>
-<p><code>+page@.svelte</code> with a bare <code>@</code> resets layout inheritance to the root. The editor is a full-viewport application: it does not want a site header taking sixty pixels off the top of a canvas, and it does not want the footer at all. Its siblings do.</p>
-<p>The alternative — a <code>hideChrome</code> prop threaded through two layouts — works and puts one route’s special case into the code every other route runs. The <code>@</code> is one character in a filename.</p>
+<p><code>+page@.svelte</code> with a bare <code>@</code> resets layout inheritance to the root: the board page keeps the root layout — the stylesheet, and the one live region every page shares — and skips the chrome. The editor is a full-viewport application, and it does not want a site header taking sixty pixels off the top of a canvas. Its siblings do.</p>
+<p>The alternative — a layout that hides its own header when the URL looks like a board — works, and puts one route’s special case into the code every other route runs. The <code>@</code> is one character in a filename.</p>
 <h3 id="server-hooks">The server side</h3>
 
 <figure class="code">
@@ -224,10 +227,11 @@ export const params = defineParams({
 
 import { building } from '$app/env';
 /*
- * SvelteKit 3 moved every hook type into `@sveltejs/kit/hooks`. Importing them
- * from `@sveltejs/kit` compiles to `any` for each destructured argument — which
- * is not an error, so the file keeps working and every parameter silently loses
- * its type.
+ * SvelteKit 3 moved every hook type into `@sveltejs/kit/hooks`. The old import
+ * from `@sveltejs/kit` still builds and runs, because a type import is erased
+ * before anything executes — but `svelte-check` reports that the module has no
+ * such export, and an implicit `any` for every destructured argument after it.
+ * A green build proves nothing about the types; the type checker is the gate.
  */
 import {
 	sequence,
@@ -239,7 +243,7 @@ import { svelteKitHandler } from 'better-auth/svelte-kit';
 import { auth } from '#lib/server/auth.ts';
 import { DEFAULT_LOCALE, HTML_LANG, isLocale, negotiate, type Locale } from '#lib/i18n/index.ts';</code></pre>
 </figure>
-<aside class="callout callout--warn"><p>SvelteKit 3 moved every hook type into <code>@sveltejs/kit/hooks</code>. Importing them from <code>@sveltejs/kit</code> compiles to <code>any</code> for each destructured argument — which is <strong>not an error</strong>, so the file keeps working and every parameter silently loses its type. That is worth a grep in any project you migrate.</p></aside>
+<aside class="callout callout--warn"><p>SvelteKit 3 moved every hook type into <code>@sveltejs/kit/hooks</code>, and the old import is dangerous precisely because it keeps working. Type imports are erased before anything runs, so <code>import { type Handle } from '@sveltejs/kit'</code> leaves <code>vite dev</code> and <code>vite build</code> perfectly happy. <code>svelte-check</code> is not fooled: it reports <code>Module '&quot;@sveltejs/kit&quot;' has no exported member 'Handle'</code>, then an implicit <code>any</code> for every destructured argument after it. A green build proves nothing about the types — run <code>pnpm check</code> in any project you migrate.</p></aside>
 <p>The order in that comment is the content of the block. Locale first, because everything that renders text needs it — *including error pages*. Get it after auth and an unauthenticated error page renders in English for a French visitor, which is a small thing that reads as carelessness.</p>
 
 <figure class="code">
@@ -258,11 +262,13 @@ export const handleError: HandleServerError = ({ error, event, kind }) =&gt; {
 	/*
 	 * `kind` rather than a status code.
 	 *
-	 * SvelteKit 3 discriminates the three cases that used to be inferred from a
-	 * number: `app` is a deliberate `error(...)` call and already says what it
-	 * means, `framework` is a 404 or a malformed request, and `unknown` is
-	 * something genuinely broken. Only the last is worth a log line and an id —
-	 * writing a correlation id for every 404 buries the one that matters.
+	 * SvelteKit 3 names the cases that used to be inferred from a number. On the
+	 * server there are four: `app` is a deliberate `error(...)` call and already
+	 * says what it means, `framework` is a 404 or a malformed request,
+	 * `validation` is a remote function argument that failed its schema, and
+	 * `unknown` is something genuinely broken. Only the last is worth a log line
+	 * and an id — writing a correlation id for every 404 buries the one that
+	 * matters — so the other three keep SvelteKit's defaults.
 	 */
 	if (kind !== 'unknown') return;
 
@@ -276,7 +282,7 @@ export const handleError: HandleServerError = ({ error, event, kind }) =&gt; {
 };
 </code></pre>
 </figure>
-<p><code>handleError</code> takes <code>{ error, event, kind }</code> in SvelteKit 3, and <code>kind</code> discriminates the three cases that used to be inferred from a status code. <code>app</code> is a deliberate <code>error(...)</code> call and already says what it means. <code>framework</code> is a 404 or a malformed request. <code>unknown</code> is something genuinely broken — and only that one is worth a log line and a correlation id, because writing an id for every 404 buries the one that matters.</p>
+<p><code>handleError</code> takes <code>{ error, event, kind }</code> in SvelteKit 3, and <code>kind</code> names the cases that used to be inferred from a status code. On the server there are four. <code>app</code> is a deliberate <code>error(...)</code> call and already says what it means. <code>framework</code> is a 404 or a malformed request. <code>validation</code> is a remote function argument that failed its schema — what SvelteKit 2 sent to a separate <code>handleValidationError</code> hook. <code>unknown</code> is something genuinely broken, and only that one is worth a log line and a correlation id, because writing an id for every 404 buries the one that matters. <code>kind !== 'unknown'</code> lets the other three keep SvelteKit’s defaults, which is exactly right for all of them. The browser’s <code>handleError</code> in <code>hooks.client.ts</code> makes the same test; no remote function runs there to fail validation, so it only ever sees the other three.</p>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>

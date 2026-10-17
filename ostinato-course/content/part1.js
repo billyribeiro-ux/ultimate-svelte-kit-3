@@ -32,7 +32,7 @@ export const part1 = [
 				title: 'Why immutable, and why that matters for $state',
 				text: 'Svelte’s `$state` makes plain objects and arrays deeply reactive by wrapping them in proxies. It leaves class instances alone. So a `Note` inside a `$state` pattern is not observed *inside* — and because it never changes inside, there is nothing to observe. Replacing it (`step.note = step.note.transpose(1)`) is the change, and replacing a property of a `$state` object is exactly what Svelte does observe. Immutability is what makes “a class inside reactive state” safe rather than a trap.'
 			},
-			code('src/lib/music/note.ts', 77, 113, { partial: true }),
+			code('src/lib/music/note.ts', 70, 113, { partial: true }),
 			{
 				type: 'p',
 				text: '`transpose` returns `this` when nothing changed. That is not an optimisation; it is a correctness detail for reactivity — assigning the same object back to `step.note` is not a change, so nothing re-renders, so holding the up arrow at the top of the range does not repaint a hundred pads for nothing. The test pins it.'
@@ -70,7 +70,7 @@ export const part1 = [
 				type: 'p',
 				text: 'Swing is the one worth reading twice. Straight sixteenths land on an even grid; swing delays every *second* step so a pair becomes long-short. At `amount = 1` the second step lands two thirds of the way through the pair — a full triplet feel. It is returned as an *offset* for the caller to add, so the scheduler keeps one simple, even clock and applies the feel on top. The alternative — shortening the *following* step — sounds identical and is far harder to reason about, because then the length of a step depends on which step it is.'
 			},
-			code('src/lib/music/time.ts', 44, 55),
+			code('src/lib/music/time.ts', 43, 55),
 			{
 				type: 'why',
 				title: 'Why velocity is squared',
@@ -156,8 +156,8 @@ export const part1 = [
 				type: 'p',
 				text: '`Writer` and `Reader` are tiny cursors over a byte array. `Reader.byte()` throws a `RangeError` — "Pattern data ended early" — rather than returning `undefined`, so a truncated link fails with a sentence rather than with `NaN` bpm three functions later.'
 			},
-			code('src/lib/pattern/codec.ts', 92, 121),
-			code('src/lib/pattern/codec.ts', 123, 170),
+			code('src/lib/pattern/codec.ts', 92, 116),
+			code('src/lib/pattern/codec.ts', 118, 167),
 			{
 				type: 'p',
 				text: 'Track ids are not encoded — they are regenerated on decode. They exist only to key an `{#each}` and mean nothing to another browser; encoding them would be twelve bytes per track of nothing.'

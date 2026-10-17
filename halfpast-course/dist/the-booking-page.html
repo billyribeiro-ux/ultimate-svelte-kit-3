@@ -47,29 +47,91 @@
 
 // …
 
-function pickService(slug: string | null) {
-	/*
-	 * `page.url` is a `ReadonlyURL` in SvelteKit 3 — its `searchParams` has no
-	 * `set` or `delete`, and assigning to `pathname` throws. That is a good
-	 * change: mutating the page's URL object never did anything useful and
-	 * silently looked like it might. Copy it through `href` to get a real one.
-	 */
-	const url = new URL(page.url.href);
-	if (slug) url.searchParams.set('service', slug);
-	else url.searchParams.delete('service');
+const staffId = $derived.by(() =&gt; {
+	const asked = page.url.searchParams.get('with');
+	return asked !== null &amp;&amp; offeredBy.some((person) =&gt; person.id === asked) ? asked : null;
+});
 
-	/*
-	 * `reset: false` keeps the scroll position and the focused element.
-	 * SvelteKit 3 replaced the old `noScroll` and `keepFocus` pair with this
-	 * one option, because wanting one without the other was almost always a
-	 * mistake — a page that stays put but throws focus to `&lt;body&gt;` strands a
-	 * keyboard user in a place they cannot see.
-	 */
-	void goto(url, { reset: false });
+// …
+const today = $derived(todayIn(viewerZone));
+const selectedDay = $derived.by(() =&gt; {
+	const asked = parseIsoDate(page.url.searchParams.get('day'));
+	return asked !== null &amp;&amp; asked &gt;= today ? asked : today;
+});
+const weekFrom = $derived(addDays(today, 7 * Math.floor(daysBetween(today, selectedDay) / 7)));</code></pre>
+</figure>
+<p>Every choice before the time itself lives in the query string: <code>?service=cut-and-finish&amp;with=&lt;staff id&gt;&amp;day=2026-10-20</code>. None of it is <code>$state</code>. Each value is <em>derived</em> from <code>page.url</code>, and each is checked on the way in — <code>with</code> must be somebody who offers the service, <code>day</code> must be a real calendar day that is not in the past (<code>parseIsoDate</code>, from the time layer, returns <code>null</code> for anything else) — so a stale or hand-edited link falls back to &quot;anyone&quot; and &quot;today&quot; instead of asking the server for something it will never offer. Even the visible week is derived: weeks are counted in sevens from today, so the strip always contains the chosen day.</p>
+<p>Putting the choices in the URL buys three things for free: a refresh does not lose the customer's place, the salon can link straight to <code>?service=cut-and-finish</code> from Instagram, and a customer can send a friend the exact day they are looking at. It buys a fourth that matters more than all three: every choice is now a plain link, so the page works before its JavaScript arrives, and without it at all.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/book/[slug]/+page.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">function bookingHref(choice: { service?: string; with?: string | null; day?: IsoDate }) {
+	if (!params.slug) return undefined;
+	if (!choice.service) return resolve('/book/[slug]', { slug: params.slug });
+
+	const chosen = Object.entries(choice).filter(
+		(entry): entry is [string, string] =&gt; typeof entry[1] === 'string' &amp;&amp; entry[1] !== ''
+	);
+	const query = new URLSearchParams(chosen).toString();
+
+	return resolve(`/book/[slug]?${query}`, { slug: params.slug });
 }</code></pre>
 </figure>
-<p>Putting the choices in the query string buys three things for free: a refresh does not lose the customer's progress, the salon can link straight to <code>?service=cut-and-finish</code> from Instagram, and a customer can send a friend the exact page they are looking at.</p>
-<aside class="callout callout--note"><p>Two SvelteKit 3 changes are visible in those twenty lines, and the comments explain both. Read them rather than skimming: <code>ReadonlyURL</code> and the merged <code>reset</code> option are the sort of thing that costs an hour when you meet them in an error message instead of in prose.</p></aside>
+<p>Every link on the page comes from here. <code>resolve()</code> takes a route ID with a query string attached, so <code>[slug]</code> is still filled in and type-checked, and <code>URLSearchParams</code> does the encoding. The <code>if (!params.slug)</code> guard has a story of its own in the comment above the function in the real file: during a navigation away, the outgoing page renders once more with the incoming route's props, and <code>resolve()</code> throws on a missing parameter.</p>
+<aside class="callout callout--note"><p>Two SvelteKit 3 changes sit behind these lines, and the comments in the file explain both. <code>page.url</code> is a <code>ReadonlyURL</code> — its <code>searchParams</code> has no <code>set</code>, and assigning to <code>pathname</code> throws — which retires the old habit of copying the URL, poking the query string and handing the copy to <code>goto</code>; building the link from the choices with <code>resolve()</code> is the replacement. And the <code>data-sveltekit-reset=&quot;false&quot;</code> you will see on the day strip below is the link form of the one <code>reset</code> option that replaced SvelteKit 2's <code>noScroll</code> and <code>keepFocus</code> pair, because wanting one without the other was almost always a mistake.</p></aside>
+<h3 id="days">A day is a link</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/book/[slug]/+page.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;DateStrip
+	from={weekFrom}
+	selected={selectedDay}
+	zone={viewerZone}
+	{countFor}
+	hrefFor={(day) =&gt; bookingHref({ service: service.slug, with: staffId, day })}
+/&gt;</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/booking/DateStrip.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;div class=&quot;strip&quot; data-sveltekit-reset=&quot;false&quot; data-sveltekit-replacestate&gt;
+	&lt;!-- … --&gt;
+	&lt;ul class=&quot;days&quot; role=&quot;list&quot; aria-label=&quot;Choose a day&quot;&gt;
+		{#each days as entry (entry.day)}
+			&lt;li&gt;
+				&lt;!-- … --&gt;
+					&lt;a
+						class=&quot;day&quot;
+						href={hrefFor(entry.day)}
+						data-day={entry.day}
+						aria-current={selected === entry.day ? 'true' : undefined}
+					&gt;
+						&lt;!-- … --&gt;
+					&lt;/a&gt;
+				{/if}
+			&lt;/li&gt;
+		{/each}
+	&lt;/ul&gt;
+
+	&lt;!-- … --&gt;
+&lt;/div&gt;</code></pre>
+</figure>
+<p>The strip draws links and owns no state: the page passes the days to show, the one that is chosen, and <code>hrefFor</code>, a function that turns a day into a link with everything else in the URL kept. Its type is <code>(day: IsoDate) =&gt; ResolvedPathname | undefined</code>, and <code>ResolvedPathname</code> is what <code>resolve()</code> returns, so only a link built by <code>resolve()</code> fits — and the <code>svelte/no-navigation-without-resolve</code> lint rule can see that inside the component.</p>
+<p>With JavaScript, SvelteKit turns a click into a client-side navigation, and the two attributes on the strip shape it. <code>data-sveltekit-reset=&quot;false&quot;</code> keeps the scroll position and the focused link, because throwing a keyboard user back to the top of the page for every day they look at would be cruel, and the link they pressed is still there afterwards. <code>data-sveltekit-replacestate</code> replaces the history entry instead of adding one, so Back leaves the time picker rather than replaying every day that was looked at. Without JavaScript both are ignored, the link is a page load, and the server renders that day's times.</p>
+
+<aside class="callout callout--why">
+	<h4>Why links, and not buttons with role=&quot;radio&quot;</h4>
+	<p>The strip used to be a row of <code>&lt;button role=&quot;radio&quot;&gt;</code> inside a <code>role=&quot;radiogroup&quot;</code>, with a comment claiming the role &quot;gives arrow-key navigation for free&quot;. It does not. ARIA roles describe behaviour; they do not add it. A screen reader announced &quot;radio button, 1 of 7&quot;, the user pressed the arrow keys as a radio group invites, and nothing happened, while every day was its own Tab stop. The buttons also did nothing at all without JavaScript, inside a form this course calls progressive. A list of links needs no keyboard code because it uses the keyboard behaviour links already have, <code>aria-current</code> marks the chosen one, and the chosen day is styled from <code>[aria-current='true']</code> itself, so what is seen and what is announced cannot drift apart.</p>
+</aside>
 <h3 id="progressive">Revealing the form at the right moment</h3>
 
 <figure class="code">
@@ -77,14 +139,41 @@ function pickService(slug: string | null) {
 		<span class="code__file">src/routes/book/[slug]/+page.svelte</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">{#if selectedStart !== null}
-	&lt;section class=&quot;step details&quot; {@attach reveal({ y: 14 })}&gt;
-		&lt;h3&gt;Your details&lt;/h3&gt;
-		&lt;!-- … name, email, phone, note … --&gt;
-	&lt;/section&gt;
-{/if}</code></pre>
+	<pre><code class="lang-svelte">&lt;section class=&quot;step details&quot; {@attach reveal({ y: 14 })}&gt;
+	&lt;h3&gt;Your details&lt;/h3&gt;
+
+	{#if selected !== null}
+		&lt;p class=&quot;summary&quot;&gt;
+			&lt;strong&gt;{service.name}&lt;/strong&gt; ·
+			{formatIsoDate(instantToIsoDate(selected.start, viewerZone))} at
+			{formatTime(selected.start, viewerZone, { withZone: zonesDiffer })}
+		&lt;/p&gt;
+	{/if}
+
+	&lt;!-- … --&gt;
+
+	&lt;Button type=&quot;submit&quot; size=&quot;lg&quot; full loading={book.pending &gt; 0}&gt;Book this time&lt;/Button&gt;
+
+	&lt;!-- … --&gt;
+&lt;/section&gt;</code></pre>
 </figure>
-<p>A form asking for a name and email while the customer is still deciding which Tuesday is noise. Worse on a phone, where it pushes the actual choice off the screen. It appears when a time is chosen and animates in, which also tells the customer *something happened* without a message saying so.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/book/[slug]/+page.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-css">.booking:not(:has(:global(.slot input:checked))) .details {
+	display: none;
+}</code></pre>
+</figure>
+<p>A form asking for a name and email while the customer is still deciding which Tuesday is noise. Worse on a phone, where it pushes the actual choice off the screen. So the details stay out of sight until a time is chosen, and animate in when one is, which also tells the customer <em>something happened</em> without a message saying so. Between the heading and the button sit a one-line summary of the chosen time, the error alert from the end of this chapter, and the four fields: name, email, phone and a note.</p>
+<p>The section is always rendered, and the CSS rule decides whether it shows. <code>:has()</code> asks the browser whether any time in the grid is checked; the radios are rendered by <code>SlotGrid</code>, another component, hence the <code>:global(...)</code> inside it. The <code>selected</code> that the summary reads is chapter 23's derived value: the chosen slot, if it is still one of the times on screen.</p>
+
+<aside class="callout callout--why">
+	<h4>Why CSS, and not {#if}</h4>
+	<p>This section used to sit inside <code>{#if selectedStart !== null}</code>, where <code>selectedStart</code> came from the form field's value. With JavaScript, fine. Without it, that value is whatever the server rendered — nothing — and it never changes, so the name, the email and the Book button were never in the page at all, and a checkpoint in this course that told you to book with JavaScript disabled could not be passed. Whether a radio is checked is something the browser knows by itself, script or no script, so the rule that reveals the form now asks the browser. A browser without <code>:has()</code> shows the details all the time: a worse layout, and the same working form.</p>
+</aside>
 <h3 id="only-one">Not asking questions with one answer</h3>
 
 <figure class="code">
@@ -92,26 +181,43 @@ function pickService(slug: string | null) {
 		<span class="code__file">src/routes/book/[slug]/+page.svelte</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">{#if service.staffIds.length &gt; 1}
+	<pre><code class="lang-svelte">{#if offeredBy.length &gt; 1}
 	&lt;section class=&quot;step&quot;&gt;
 		&lt;h3&gt;Who with?&lt;/h3&gt;
-		&lt;div class=&quot;who&quot; role=&quot;radiogroup&quot; aria-label=&quot;Choose who with&quot;&gt;
-			&lt;button
-				type=&quot;button&quot;
-				role=&quot;radio&quot;
-				aria-checked={staffId === null}
-				class=&quot;who-option&quot;
-				class:selected={staffId === null}
-				onclick={() =&gt; (staffId = null)}
-			&gt;
-				Anyone
-			&lt;/button&gt;
-			&lt;!-- … one button per person who offers this service … --&gt;
-		&lt;/div&gt;
+		&lt;!-- … --&gt;
+		&lt;ul
+			class=&quot;who&quot;
+			role=&quot;list&quot;
+			aria-label=&quot;Choose who with&quot;
+			data-sveltekit-reset=&quot;false&quot;
+			data-sveltekit-replacestate
+		&gt;
+			&lt;li&gt;
+				&lt;a
+					class=&quot;who-option&quot;
+					href={bookingHref({ service: service.slug, day: selectedDay })}
+					aria-current={staffId === null ? 'true' : undefined}
+				&gt;
+					Anyone
+				&lt;/a&gt;
+			&lt;/li&gt;
+			{#each offeredBy as person (person.id)}
+				&lt;li&gt;
+					&lt;a
+						class=&quot;who-option&quot;
+						href={bookingHref({ service: service.slug, with: person.id, day: selectedDay })}
+						aria-current={staffId === person.id ? 'true' : undefined}
+					&gt;
+						{person.displayName}
+					&lt;/a&gt;
+				&lt;/li&gt;
+			{/each}
+		&lt;/ul&gt;
 	&lt;/section&gt;
 {/if}</code></pre>
 </figure>
 <p>If only one person offers the service, there is no question to ask, so we do not ask it. This is the kind of thing that separates software that feels considered from software that feels like a form.</p>
+<p>When there is a question, it is an &quot;Anyone&quot; link followed by one link per person who offers this service, each the same page with <code>?with=</code> changed, built the same way as the day strip's and for the same reasons: it works without JavaScript, survives a refresh, and is a Tab stop that Enter follows. <code>offeredBy</code> is a <code>$derived</code> in the script — the team filtered to the people who offer this service — rather than a <code>.filter()</code> written into the <code>{#each}</code>, so the markup says what it lists and the script says how.</p>
 <h3 id="zones">Two clocks, honestly labelled</h3>
 
 <figure class="code">
@@ -121,13 +227,13 @@ function pickService(slug: string | null) {
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;SlotGrid slots={daySlots} zone={viewerZone} field={book.fields.slot} /&gt;
 
-{#if zonesDiffer &amp;&amp; selectedStart !== null}
+{#if zonesDiffer &amp;&amp; selected !== null}
 	&lt;p class=&quot;zone-note&quot;&gt;
-		That is {formatTime(selectedStart, businessZone)} at the studio ({offsetLabel(
-			selectedStart,
+		That is {formatTime(selected.start, businessZone)} at the studio ({offsetLabel(
+			selected.start,
 			businessZone
 		)}), and
-		{formatTime(selectedStart, viewerZone)} where you are.
+		{formatTime(selected.start, viewerZone)} where you are.
 	&lt;/p&gt;
 {/if}</code></pre>
 </figure>
@@ -137,20 +243,59 @@ function pickService(slug: string | null) {
 
 <figure class="code">
 	<figcaption>
+		<span class="code__file">src/routes/book/[slug]/booking.remote.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">}).catch((thrown: unknown) =&gt; {
+	if (!(thrown instanceof BookingError)) throw thrown;
+
+	// …
+	if (REFUSED_TIME.has(thrown.code)) invalid(issue.slot(thrown.message));
+
+	// …
+	error(thrown.code === 'not_found' ? 404 : 400, thrown.message);
+});</code></pre>
+</figure>
+<p>Most refusals are the schema's — a missing name, an email that is not one — and they arrive on the fields themselves. The handler's own refusals are about the chosen time: it was taken, it fell inside the notice period, it is past the booking horizon, the person no longer does it. <code>REFUSED_TIME</code> is the set of those <code>BookingError</code> codes, and each goes on the form with <code>invalid(issue.slot(…))</code>, attached to the <code>slot</code> field. Only a studio or service that has vanished is a failure screen, because nothing on the form can fix that.</p>
+
+<figure class="code">
+	<figcaption>
 		<span class="code__file">src/routes/book/[slug]/+page.svelte</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">{#if book.result === undefined &amp;&amp; book.fields.allIssues()?.length}
-	&lt;Alert tone=&quot;error&quot; title=&quot;Please check the form&quot;&gt;
-		&lt;p&gt;Some details need another look.&lt;/p&gt;
-	&lt;/Alert&gt;
+	<pre><code class="lang-svelte">{#if slotIssue &amp;&amp; selected === null}
+	&lt;Alert tone=&quot;error&quot;&gt;&lt;p&gt;{slotIssue}&lt;/p&gt;&lt;/Alert&gt;
 {/if}</code></pre>
 </figure>
-<p>For a lost race the message comes from the server: &quot;That time was just taken.&quot; — or, when the race is lost at the claim itself, &quot;Sorry — that time was booked moments ago.&quot; And because availability is a live query, the grid has already removed it by the time they look up. Being told what happened *and* seeing the world agree is what makes an error feel like an event rather than a fault.</p>
+<p>The page shows that sentence beside the grid, where the remedy is, once the refused time has left the screen — which it does by itself: the live grid drops a taken slot within moments, and one that has slid inside the notice period at the next minute's tick, and the selection derived from it goes too. Without JavaScript the page that comes back is rendered without it. Choose another time and the alert gives way; the details below were never cleared, so the name and email are still there.</p>
+
+<aside class="callout callout--why">
+	<h4>The same rule as chapter 21</h4>
+	<p>This handler used to call <code>error(409, …)</code> for a lost race, which sent the submission to <code>+error.svelte</code>: a failure screen whose only button is &quot;Back to the start&quot;, and a customer typing their name and email in again to try a different time. That is precisely the mistake chapter 21 corrects on the sign-in form — a refusal the person can put right on the same form belongs on the form — made a second time, on the page where it costs a booking.</p>
+</aside>
+<p>A lost race is rarer than it sounds, because availability is a live query: a time somebody else takes disappears from the grid, usually before the customer reaches the button. When one does reach the server, the loser is normally turned away by the re-check at the top of <code>createBooking</code>, because the write queue lets the winner commit first, and the sentence is &quot;That time is no longer available.&quot; Only two server processes racing each other get as far as the claim table, where the loser hears &quot;Sorry — that time was booked moments ago.&quot; Either way it is the same answer on the same form.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/booking.e2e.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">await page.getByRole('button', { name: 'Book this time' }).click();
+
+// …
+await expect(page).toHaveURL(/\/book\/willow-lane\?/);
+await expect(page.getByRole('alert')).toContainText('That time is no longer available.');
+await expect(page.locator('label.slot', { hasText: lostTime })).toHaveCount(0);
+
+await page.locator('label.slot').first().click();
+await expect(page.getByLabel('Your name')).toHaveValue('Second Sasha');
+await expect(page.getByRole('button', { name: 'Book this time' })).toBeVisible();</code></pre>
+</figure>
+<p>The race is made deterministic by running the loser with JavaScript off. That browser picks a time and fills in its details; a second, ordinary browser books the same time with the same stylist; then the first presses Book. With no script there is no live grid to drop the time first, so the submission really does reach the server and lose — and the page that comes back is the booking form, with the sentence, without the lost time, and with the name still filled in.</p>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>
-	<p>Choosing a service updates the URL; refreshing keeps it; the details form appears only after a time is picked; and the whole flow works with JavaScript disabled.</p>
+	<p>Choosing a service, a person or a day updates the URL; refreshing keeps all three; the details form appears only after a time is picked; and with JavaScript disabled the whole flow still works, from the service list to the confirmation page.</p>
 </aside>
 		</article>
 

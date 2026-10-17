@@ -39,7 +39,7 @@ export const part3 = [
 	import FeatureGrid from '#lib/components/marketing/FeatureGrid.svelte';
 	import StatStrip from '#lib/components/marketing/StatStrip.svelte';
 	import CtaBand from '#lib/components/marketing/CtaBand.svelte';
-	// …the motion imports (heroSequence, parallax, reveal, revealGroup) are built in part 4…
+	import { heroSequence, parallax, reveal, revealGroup } from '#lib/motion/index.ts';
 
 	const stats = [
 		{ value: '<250ms', label: 'Tape to screen', note: 'Median, Pro and Desk plans' },
@@ -48,7 +48,23 @@ export const part3 = [
 		{ value: '7 yrs', label: 'Tick history', note: 'Back to January 2019' }
 	];
 
-	// …the \`steps\` data for the how-it-works section…
+	const steps = [
+		{
+			icon: DatabaseIcon,
+			title: 'We take the whole tape',
+			body: 'Direct OPRA ingest across all sixteen US options exchanges, plus FINRA dark pool reporting. No aggregator in the middle adding seconds and dropping fields.'
+		},
+		{
+			icon: StrategyIcon,
+			title: 'We work out what it means',
+			body: 'Every print is matched against the quote at execution to find the aggressor, stitched back together with its other legs, and scored against that contract’s own ninety-day baseline.'
+		},
+		{
+			icon: BroadcastIcon,
+			title: 'You see intent, not noise',
+			body: 'What reaches your screen is a classified, deduplicated stream you can filter and set rules on — rather than a wall of prints you have to interpret yourself.'
+		}
+	];
 </script>
 
 <Seo
@@ -118,7 +134,7 @@ export const part3 = [
 			},
 			{
 				type: 'note',
-				text: 'The `{@attach heroSequence()}` and `{@attach reveal(…)}` attributes, the `data-hero`/`data-reveal` markers, the `pull` prop on the primary button and the `animated` flag on `StatStrip` are all hooks for the motion system — we build every piece of it in part 4 (chapters 31–34). They are shown here so the markup matches the finished project; everything else on this page works without them.'
+				text: 'The `#lib/motion/index.ts` import at the top of the script, the `{@attach heroSequence()}`, `{@attach parallax(0.12)}` and `{@attach reveal(…)}` attributes, the `data-hero`/`data-reveal` markers, the `pull` prop on the primary button and the `animated` flag on `StatStrip` are all hooks for the motion system — we build every piece of it in part 4 (chapters 31–34). They are shown here so the code matches the finished project; until you build that folder, leave the import and every one of those hooks out — everything else on this page works without them. (The import also brings in `revealGroup`, which the sections further down the real file attach in the same way; leave those attachments out too.)'
 			},
 			{
 				type: 'why',
@@ -245,7 +261,7 @@ export const part3 = [
 				file: 'src/routes/features/+page.svelte',
 				code: `<Seo
 	title="Features — the full options tape, classified in real time"
-	description="Live flow scanning, unusual activity baselines, dealer gamma exposure…"
+	description="Live flow scanning, unusual activity baselines, dealer gamma exposure, dark pool prints, a real alerts engine and full tick replay. Here is exactly what StrikeFlow does."
 	schema={[
 		softwareApplicationSchema(),
 		breadcrumbSchema(pageUrl, [
@@ -285,12 +301,9 @@ export const part3 = [
 				lang: 'ts',
 				file: 'src/routes/features/+page.svelte',
 				code: `const limitations = [
-	'We infer dealer positioning from public volume and open interest. Nobody can ' +
-		'observe it directly, so treat every gamma figure as a well-informed estimate.',
-	'The consolidated tape does not report whether a trade opened or closed a position. ' +
-		'Our opening-position detection is probabilistic, and we show you the confidence.',
-	'Starter plan data is delayed fifteen minutes. That is the standard non-professional ' +
-		'market data entitlement, not a limitation we invented.'
+	'We infer dealer positioning from public volume and open interest. Nobody can observe it directly, so treat every gamma figure as a well-informed estimate.',
+	'The consolidated tape does not report whether a trade opened or closed a position. Our opening-position detection is probabilistic, and we show you the confidence.',
+	'Starter plan data is delayed fifteen minutes. That is the standard non-professional market data entitlement, not a limitation we invented.'
 ];`
 			},
 			{ type: 'h3', id: 'about', text: 'The about page, and why it is an SEO page' },
@@ -313,7 +326,7 @@ export const part3 = [
 				file: 'src/routes/about/+page.svelte',
 				code: `<Seo
 	title="About — the team behind StrikeFlow"
-	description="StrikeFlow was founded in 2021 by a derivatives trader and a market data engineer…"
+	description="StrikeFlow was founded in 2021 by a derivatives trader and a market data engineer. Here is who builds it, what we believe about market data, and what we refuse to do."
 	schema={[
 		...team.map(personSchema),
 		breadcrumbSchema(pageUrl, [
@@ -341,10 +354,24 @@ export const part3 = [
 				lang: 'svelte',
 				file: 'src/routes/contact/+page.svelte',
 				code: `{#if channel.href}
+	<!--
+		\`mailto:\` and \`tel:\` are scheme URLs, not routes, so there is nothing
+		for \`resolve()\` to do. The lint rule accepts such hrefs when it can
+		read the literal, but not through an \`{#each}\` variable — hence the
+		targeted disable rather than a \`rel="external"\` that would be wrong
+		for an email address.
+	-->
+	<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
 	<a class="channels__link" href={channel.href}>{channel.linkLabel}</a>
 {:else}
+	<!-- \`<address>\` is the correct element for contact details of its
+	     nearest article or the document as a whole. -->
 	<address class="channels__address">{channel.linkLabel}</address>
 {/if}`
+			},
+			{
+				type: 'note',
+				text: 'The `eslint-disable` line is not decoration. `eslint-plugin-svelte` 3.23 makes `svelte/no-navigation-without-resolve` an **error** in its `recommended` config: every `href` must come from `resolve()`, be a literal the rule can see is not a route (`mailto:`, `https://…`), or carry `rel="external"` — which is what the footer and the team profile links do. Here the value hides behind an `{#each}` variable, so the rule cannot read it, and `rel="external"` would be a lie on an email address. So we switch the rule off for this one line and write down why. Type the anchor without it and `pnpm run lint` fails on this file.'
 			},
 			{
 				type: 'note',
@@ -374,21 +401,28 @@ export const part3 = [
 				type: 'code',
 				file: 'src/lib/server/leads.ts',
 				lang: 'ts',
-				code: `export interface Lead {
+				code: `/** A captured lead. */
+export interface Lead {
 	readonly email: string;
+	/** Self-reported experience, used for list segmentation. */
 	readonly experience: ExperienceLevel;
 	readonly consentedToMarketing: boolean;
+	/** ISO 8601 timestamp of capture. */
 	readonly capturedAt: string;
+	/** Which page or campaign produced the signup. */
 	readonly source: string;
 }
 
+export type ExperienceLevel = 'new' | 'some' | 'experienced' | 'professional';
+// …
 export interface LeadStore {
+	/** Persist a lead. Must be idempotent-safe: the same email may arrive twice. */
 	save(lead: Lead): Promise<void>;
+	/** Has this address already signed up? Used to avoid duplicate welcome emails. */
 	has(email: string): Promise<boolean>;
 }
 
-// …a file-backed implementation…
-
+// …
 export const leadStore: LeadStore = new FileLeadStore();`
 			},
 			{
@@ -398,7 +432,7 @@ export const leadStore: LeadStore = new FileLeadStore();`
 			},
 			{
 				type: 'p',
-				text: 'The default implementation appends newline-delimited JSON to a file. Zero dependencies, zero infrastructure, and you can read the output with `cat`.'
+				text: 'The second `// …` in that listing stands for the default implementation — a small `FileLeadStore` class, the path it writes to, and the `normaliseEmail()` helper it uses (the first is a doc comment). It appends newline-delimited JSON to a file. Zero dependencies, zero infrastructure, and you can read the output with `cat`.'
 			},
 			{
 				type: 'note',
@@ -423,22 +457,36 @@ export const leadStore: LeadStore = new FileLeadStore();`
 				file: 'src/lib/server/tokens.ts',
 				lang: 'ts',
 				code: `import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
+import * as v from 'valibot';
 import { EBOOK_TOKEN_SECRET } from '$app/env/private';
 
 // …
 const secret: string = EBOOK_TOKEN_SECRET ?? randomBytes(32).toString('hex');
 
-// …a boot-time console.warn if EBOOK_TOKEN_SECRET is unset…
+if (!EBOOK_TOKEN_SECRET) {
+	console.warn(
+		'[tokens] EBOOK_TOKEN_SECRET is not set — using an ephemeral key.\\n' +
+			'         Download links will stop working when the server restarts.\\n' +
+			'         Set it in .env before deploying. See .env.example.'
+	);
+}
 
 /** How long a download link stays valid. Long enough to be useful; short enough to matter. */
 const TTL_MS = 1000 * 60 * 60 * 24; // 24 hours
 
-interface TokenPayload {
+/**
+ * What a token carries, as a schema rather than a bare interface — because on the
+ * way back in, the payload is parsed from a string and has to be CHECKED, not
+ * assumed. The type is inferred from the schema, so the two cannot drift.
+ */
+const TokenPayloadSchema = v.object({
 	/** Who it was issued to. Lets us attribute a download without a database lookup. */
-	email: string;
+	email: v.string(),
 	/** Expiry, as epoch milliseconds. */
-	exp: number;
-}
+	exp: v.number()
+});
+
+type TokenPayload = v.InferOutput<typeof TokenPayloadSchema>;
 
 // …
 function encode(value: string): string {
@@ -465,6 +513,10 @@ export function createDownloadToken(email: string): string {
 }`
 			},
 			{
+				type: 'p',
+				text: 'If `EBOOK_TOKEN_SECRET` is unset, the module makes up a random key when the server starts and says so in the console. The project runs with zero setup, at the cost of every outstanding link dying on restart — a deliberately visible symptom, so it gets fixed before deploy rather than running on a default key in production.'
+			},
+			{
 				type: 'note',
 				text: '`base64url` is the URL-safe variant of base64: it swaps `+`, `/` and `=` for `-`, `_` and nothing. Standard base64 in a query string needs escaping, and breaks when copied out of an email client.'
 			},
@@ -484,7 +536,8 @@ export function createDownloadToken(email: string): string {
 
 	const expected = sign(encoded);
 
-	/* …why timingSafeEqual and the length pre-check — see the warning below… */
+
+	// …
 	const expectedBuffer = Buffer.from(expected);
 	const providedBuffer = Buffer.from(signature);
 
@@ -496,17 +549,20 @@ export function createDownloadToken(email: string): string {
 		return { valid: false, reason: 'bad-signature' };
 	}
 
-	// Only now, with the signature proven, do we trust the payload's contents.
-	let payload: TokenPayload;
+	// Only now, with the signature proven, do we trust the payload's contents — and
+	// even then we check its shape rather than assert it. \`JSON.parse\` returns \`any\`,
+	// and \`as TokenPayload\` would wave a wrong shape (a token from an older format,
+	// say) straight through to the code below.
+	let json: unknown;
 	try {
-		payload = JSON.parse(decode(encoded)) as TokenPayload;
+		json = JSON.parse(decode(encoded));
 	} catch {
 		return { valid: false, reason: 'malformed' };
 	}
 
-	if (typeof payload.exp !== 'number' || typeof payload.email !== 'string') {
-		return { valid: false, reason: 'malformed' };
-	}
+	const parsed = v.safeParse(TokenPayloadSchema, json);
+	if (!parsed.success) return { valid: false, reason: 'malformed' };
+	const payload = parsed.output;
 
 	if (Date.now() > payload.exp) {
 		return { valid: false, reason: 'expired' };
@@ -517,11 +573,16 @@ export function createDownloadToken(email: string): string {
 			},
 			{
 				type: 'warn',
-				text: '**`timingSafeEqual`, not `===`.** A normal string comparison returns as soon as it finds a differing character. That means comparing `"aaaa"` takes fractionally longer than `"zaaa"` when the real signature starts with `"a"` — and an attacker who can measure that difference can recover the signature one character at a time. It is called a timing attack and it is practical over a local network. `timingSafeEqual` always compares the full length.'
+				text: '**`timingSafeEqual`, not `===`.** A normal string comparison returns as soon as it finds a differing character. That means comparing `"aaaa"` takes fractionally longer than `"zaaa"` when the real signature starts with `"a"` — and an attacker who can measure that difference can recover the signature one character at a time. It is called a timing attack and it is practical over a local network. `timingSafeEqual` always compares the full length. It needs two buffers of equal length, so we check the lengths first — safe to short-circuit, because the length of a signature is not a secret. (The `// …` in the listing is the comment in the real file that says all of this.)'
 			},
 			{
 				type: 'note',
 				text: 'The function returns a **discriminated union** rather than throwing. That forces the caller to handle failure, and lets them tell "expired" (offer a re-send) apart from "bad signature" (someone is poking at it).'
+			},
+			{
+				type: 'why',
+				title: 'Why the payload is checked with a schema, not a cast',
+				text: "`JSON.parse` returns `any`, and the tempting next line is `JSON.parse(…) as TokenPayload`. A cast checks nothing: it tells the compiler to believe you, so if the shape were ever wrong, the code below would read `payload.exp` as `undefined` and compare dates with it, and nothing would complain. A valid signature only proves *our server* wrote the payload — and \"our server\" includes last year's version of it, with last year's payload format. So the payload's shape is a valibot schema, `TokenPayloadSchema`, and `v.safeParse` checks the parsed value against it; anything that does not fit is `malformed`. The `TokenPayload` type is inferred from the schema with `v.InferOutput`, so the type and the check can never drift apart. It is the same valibot that validates the signup form, used for the same reason: data from outside the type system gets checked at the border."
 			},
 			{ type: 'h3', id: 'ratelimit', text: 'Rate limiting' },
 			{
@@ -540,8 +601,20 @@ export function createDownloadToken(email: string): string {
 
 const buckets = new Map<string, Bucket>();
 
-// …the sweep() helper that deletes expired buckets…
+/**
+ * Reclaim memory from expired buckets.
+ *
+ * Without this the Map grows forever — one entry per unique IP, never removed. On a
+ * long-running server that is a slow memory leak, and "slow memory leak" is how you
+ * get paged at 4am six months from now.
+ */
+function sweep(now: number): void {
+	for (const [key, bucket] of buckets) {
+		if (bucket.resetAt <= now) buckets.delete(key);
+	}
+}
 
+// …
 export function rateLimit(key: string, options: RateLimitOptions = {}): RateLimitResult {
 	const { limit = 5, windowMs = 60_000 } = options;
 	const now = Date.now();
@@ -574,6 +647,10 @@ export function rateLimit(key: string, options: RateLimitOptions = {}): RateLimi
 			{
 				type: 'note',
 				text: 'The `sweep()` function is not optional. Without it the Map grows forever, one entry per unique IP, never removed. On a long-running server that is a slow memory leak — and a slow memory leak is how you get paged at 4am six months from now.'
+			},
+			{
+				type: 'note',
+				text: "The key is only as good as the address in it. In the next chapter the form keys on `event.getClientAddress()`, which is the address of whatever connected to the server — and behind a hosting platform's proxy, that is the proxy, for every visitor alike. Chapter 37 shows the two environment variables that fix it before you deploy."
 			},
 			{
 				type: 'checkpoint',
@@ -617,13 +694,20 @@ export function rateLimit(key: string, options: RateLimitOptions = {}): RateLimi
 import { form, getRequestEvent } from '$app/server';
 import { redirect, invalid } from '@sveltejs/kit';
 
+import { leadStore, normaliseEmail, type Lead } from '#lib/server/leads.ts';
+import { createDownloadToken } from '#lib/server/tokens.ts';
+import { rateLimit } from '#lib/server/rate-limit.ts';
+
+// …
 const guideSchema = v.object({
 	email: v.pipe(
 		v.string(),
 		v.trim(),
 		v.nonEmpty('Enter your email address'),
 		v.email('That does not look like a valid email address'),
-		v.maxLength(254, 'That email address is too long')  // RFC 5321 limit
+		// Guards against a database column overflow and against absurd input.
+		// RFC 5321 caps a full address at 254 characters.
+		v.maxLength(254, 'That email address is too long')
 	),
 
 	experience: v.picklist(
@@ -631,19 +715,22 @@ const guideSchema = v.object({
 		'Choose which best describes you'
 	),
 
+	// …
 	consent: v.pipe(
 		v.optional(v.boolean(), false),
-		v.check((value) => value === true,
-			'Please confirm you would like to receive the guide by email')
+		v.check(
+			(value) => value === true,
+			'Please confirm you would like to receive the guide by email'
+		)
 	),
 
-	/** Honeypot — hidden from humans, filled in by naive bots. */
+	// …
 	_company: v.optional(v.string(), '')
 });`
 			},
 			{
 				type: 'warn',
-				text: "**Checkbox fields must be optional.** An unchecked checkbox sends *nothing* — not `false`, the field is simply absent. So `v.boolean()` can never be satisfied by an unchecked box. SvelteKit enforces this at the type level: write a non-optional boolean and the `form()` overload resolves to a string literal explaining the problem, and your handler stops type-checking. It is a deliberately designed compile error, and a much better teacher than a runtime bug where consent silently never validates."
+				text: "**Checkbox fields must be optional.** An unchecked checkbox sends *nothing* — not `false`, the field is simply absent. So `v.boolean()` can never be satisfied by an unchecked box. SvelteKit enforces this at the type level: write a non-optional boolean and the `form()` overload resolves to a string literal explaining the problem, and your handler stops type-checking. It is a deliberately designed compile error, and a much better teacher than a runtime bug where consent silently never validates. So: optional with a default of `false`, then a `check` that demands `true`. The real file spells all of this out in a long comment above `consent` — that is what the `// …` there stands for; the others are the schema's doc comment and the honeypot's."
 			},
 			{
 				type: 'note',
@@ -742,7 +829,7 @@ const guideSchema = v.object({
 		slug: 'the-capture-page',
 		title: 'The capture page',
 		summary:
-			'Wiring the form into markup, showing validation errors accessibly, hiding a honeypot properly — and the one page that cannot be prerendered.',
+			'Wiring the form into markup, showing validation errors accessibly, hiding a honeypot properly, the one page that cannot be prerendered — and what a visitor sees when the server fails.',
 		goal: 'A working, accessible signup form.',
 		blocks: [
 			{
@@ -756,7 +843,7 @@ const guideSchema = v.object({
 	// …
 </script>
 
-<!-- …the hero copy column, then: -->
+<!-- … -->
 <form {...requestGuide} class="signup" aria-labelledby="signup-heading">
 	<h2 id="signup-heading" class="signup__title">Get the guide</h2>
 	<p class="signup__sub">Enter your email and we'll send you straight to the download.</p>
@@ -775,7 +862,11 @@ const guideSchema = v.object({
 				: undefined}
 		/>
 		{#if requestGuide.fields.email.issues()}
-			<!-- … -->
+			<!--
+				\`role="alert"\` makes a screen reader announce the message the
+				moment it appears, rather than only when the user happens to
+				navigate onto it.
+			-->
 			<p class="field__error" id="guide-email-error" role="alert">
 				{#each requestGuide.fields.email.issues() ?? [] as issue (issue.message)}
 					{issue.message}
@@ -784,10 +875,7 @@ const guideSchema = v.object({
 		{/if}
 	</div>
 
-	<!-- …the experience <select> and the consent checkbox repeat the same field pattern… -->
-
-	<!-- …the honeypot — shown in the next section… -->
-
+	<!-- … -->
 	<button class="signup__submit" type="submit" disabled={requestGuide.pending > 0}>
 		{#if requestGuide.pending > 0}
 			Sending…
@@ -797,8 +885,18 @@ const guideSchema = v.object({
 		{/if}
 	</button>
 
-	<!-- …the privacy reassurance line (LockSimpleIcon + a link to the policy)… -->
+	<p class="signup__privacy">
+		<LockSimpleIcon size={14} aria-hidden="true" />
+		<span>
+			We never sell or share your address. See our
+			<a href={resolve('/legal/privacy')}>privacy policy</a>.
+		</span>
+	</p>
 </form>`
+			},
+			{
+				type: 'p',
+				text: 'The `// …` and `<!-- … -->` lines stand for what this listing leaves out: the other imports and the page data, the hero copy column beside the form, and — inside the form — the experience `<select>` and the consent checkbox (the same field pattern again), the honeypot, which the next section shows, and the comments the real file puts above each part.'
 			},
 			{ type: 'h3', id: 'spread', text: 'What the spreads do' },
 			{
@@ -859,8 +957,19 @@ const guideSchema = v.object({
 				lang: 'css',
 				file: 'src/routes/guide/+page.svelte',
 				code: `.field__input {
+	/* … */
 	min-height: 3rem;
-	font-size: var(--fs-base);   /* 1rem = 16px minimum */
+	/* … */
+	/*
+	 * 16px minimum on mobile.
+	 *
+	 * iOS Safari automatically zooms the page when you focus an input whose
+	 * font-size is under 16px, and it does not zoom back out. Users experience
+	 * this as the site "breaking" when they tap a field. \`--fs-base\` is 1rem,
+	 * which clears the threshold.
+	 */
+	font-size: var(--fs-base);
+	/* … */
 }`
 			},
 			{
@@ -891,9 +1000,168 @@ const guideSchema = v.object({
 				type: 'note',
 				text: 'The cost is small. This page renders per request instead of being a static file, adding a few milliseconds of server time. Everything expensive about it — CSS, fonts, JavaScript — is still static and still cached at the edge. Only the HTML shell is dynamic.'
 			},
+			{ type: 'h3', id: 'when-it-fails', text: 'When the server fails' },
+			{
+				type: 'p',
+				text: "Every failure so far has an answer the visitor can act on. A field the schema rejects comes back as an issue beside that input, and too many attempts comes back as an issue on the email field. What is left is the failure nobody planned: the disk the leads are written to is full, or there is a bug, and `leadStore.has()` or `save()` throws before the handler reaches its `redirect()`."
+			},
+			{
+				type: 'p',
+				text: "When code on the server throws, SvelteKit does not send the exception to the browser. It reduces every error to a small object of type `App.Error`, which always has two fields: a `status` (an HTTP status code such as 404 or 500) and a `message`. The reducing is done by a **hook** called `handleError` — a function SvelteKit calls for every error, which you may export from a file named `src/hooks.server.ts`. StrikeFlow has no such file, so SvelteKit's built-in default applies, and it does two things. An error the code threw on purpose, like the `error(404, 'No article found at …')` in the blog route, keeps the status and the sentence it was given. Anything else — an exception nobody planned — is printed to the server's console with its full stack, and reaches the browser as `{ status: 500, message: 'Internal Error' }`."
+			},
+			{
+				type: 'why',
+				title: 'Why the real message never reaches the browser',
+				text: "Because an unplanned error is, by definition, one nobody has checked is safe to show. Ours would read something like `ENOTDIR: not a directory, open '/srv/app/package.json/leads.jsonl'` — a file path on the server, handed to anyone who submits the form. Database errors can carry worse: table names, fragments of queries, sometimes credentials. SvelteKit's errors documentation puts it plainly: unknown errors \"can contain sensitive information\", so \"unknown error messages and stack traces are not exposed to users\". The full error goes to the server's log, where you can read it; the visitor gets a safe sentence. If you want a friendlier one than `'Internal Error'`, that is what your own `handleError` is for:"
+			},
+			{
+				type: 'code',
+				file: 'a handleError of your own',
+				lang: 'ts',
+				code: `import type { HandleServerError } from '@sveltejs/kit/hooks';
+
+export const handleError: HandleServerError = ({ kind, error }) => {
+	// error(…) bodies, SvelteKit's own errors and validation errors are already
+	// safe to show: returning nothing keeps them exactly as they are.
+	if (kind !== 'unknown') return;
+
+	// Anything else may carry a file path or a secret. Log it where only you can
+	// read it, and give the visitor a sentence instead of 'Internal Error'.
+	console.error(error);
+	return { message: 'Something went wrong on our side. Please try again shortly.' };
+};`
+			},
+			{
+				type: 'note',
+				text: "That is an option, not part of StrikeFlow. Once you supply the hook, logging is your job — SvelteKit only logs unknown errors itself when you have not. The [errors documentation](https://svelte.dev/docs/kit/errors) covers the rest, including adding fields such as a support reference to `App.Error`."
+			},
+			{
+				type: 'p',
+				text: "Where does the visitor see that `App.Error`? The documentation for remote forms answers: \"If an error occurs during submission, the nearest `+error.svelte` page will be rendered.\" `+error.svelte` is a route file, like `+page.svelte`, and SvelteKit walks up the folders from the failing route looking for one. With none anywhere, it falls back to a page of its own, which is this short:"
+			},
+			{
+				type: 'code',
+				file: "SvelteKit's built-in error page",
+				lang: 'svelte',
+				code: `<svelte:options runes={true} />
+
+<script>
+	import { page } from '$app/state';
+</script>
+
+<h1>{page.status}</h1>
+<p>{page.error?.message}</p>`
+			},
+			{
+				type: 'p',
+				text: "A status code and a message, and nothing else: no heading a person would write, no way back to the form, not even a title. It is a safety net, not a page you ship. So StrikeFlow has its own, at the root of `src/routes`, where it catches every route on the site:"
+			},
+			{
+				type: 'code',
+				file: 'src/routes/+error.svelte',
+				lang: 'svelte',
+				code: `<script lang="ts">
+	import { resolve } from '$app/paths';
+	import { site } from '#lib/data/site.ts';
+	import Button from '#lib/components/ui/Button.svelte';
+	import type { ErrorProps } from './$types';
+
+	let { error }: ErrorProps = $props();
+
+	const notFound = $derived(error.status === 404);
+	const heading = $derived(notFound ? 'We can’t find that page' : 'Something went wrong');
+</script>
+
+<!--
+	No <Seo> here: an error page has no canonical URL to claim and nothing to say
+	to a social card. It only needs a title, and to stay out of the index.
+-->
+<svelte:head>
+	<title>{heading} | {site.titleSuffix}</title>
+	<meta name="robots" content="noindex" />
+</svelte:head>
+
+<section class="error-page">
+	<div class="container container--narrow">
+		<p class="eyebrow">Error {error.status}</p>
+		<h1 class="error-page__title">{heading}</h1>
+		<p class="lede">{error.message}</p>
+
+		<div class="error-page__actions">
+			<Button href={resolve('/')}>Back to the home page</Button>
+			<Button href={resolve('/guide')} variant="secondary">Get the free guide</Button>
+		</div>
+	</div>
+</section>`
+			},
+			{
+				type: 'ul',
+				items: [
+					"**`error` arrives as a prop**, typed as `ErrorProps` from `./$types` — the same way a page receives `data`. Older code reads `page.error` from `$app/state`, as the built-in page does, and that still works; the prop is the SvelteKit 3 idiom, because the component then depends on its inputs rather than on global state.",
+					"**It renders inside the root layout**, so the header, footer and skip link stay, and the two buttons give the visitor somewhere to go.",
+					"**`error.message` is shown as it stands**, because `handleError` has already made it safe: either the sentence the code wrote, or `'Not Found'` / `'Internal Error'`. The heading carries the human words, by status.",
+					"**No `<Seo>`**: an error page has no canonical URL to claim. It gets a title and `noindex`, and SvelteKit sends it with the real status code — a 404 is a 404, not a 200 page that *says* not found."
+				]
+			},
+			{
+				type: 'why',
+				title: 'Why the capture page catches nothing itself',
+				text: "Because it has nothing better to say. The failures that reach this point are ones the visitor cannot fix by changing what they typed, and the only safe sentence about them is the one `handleError` has already written. A `catch` in the page would be code for the one case with no better message to show, so we let the error page take it. The cost is real and worth naming: the error page replaces the form, and a visitor who wants another go has to come back to it — which is why our error page offers the way back. For three fields that is a fair trade. For a long form it is not: take control of the submission with `enhance`, and read the next warning before you do."
+			},
+			{
+				type: 'warn',
+				text: "**A `catch` around a remote call receives a different shape.** Await `form.submit()` inside `enhance` — or a `command()` in a click handler — and a failure rejects with SvelteKit's `HttpError`: `{ status, body }`, where `body` is that same `App.Error`. It is not an `Error`, and it has no `message` of its own. So `(error as Error).message` is `undefined`, and `error instanceof Error ? error.message : 'Something went wrong'` throws the server's sentence away every time — while a plausible sentence sits on screen and nothing looks broken. Read `body.message`, behind `isHttpError()`. A `<svelte:boundary>`'s `failed` snippet and `+error.svelte` are the other way round: they receive the `App.Error` itself, so they read `error.message`."
+			},
+			{
+				type: 'code',
+				file: 'if you take control',
+				lang: 'svelte',
+				code: `<script lang="ts">
+	import { isHttpError } from '@sveltejs/kit';
+	import { requestGuide } from './guide.remote.ts';
+
+	let failure = $state<string | null>(null);
+</script>
+
+<form
+	{...requestGuide.enhance(async (form) => {
+		failure = null;
+		try {
+			// A success redirects to the thank-you page; there is nothing else to do.
+			await form.submit();
+		} catch (error) {
+			// An HttpError carries the server's App.Error in \`body\`. Its message is a
+			// sentence written for the visitor whenever code chose the status —
+			// error(503, 'Signups are paused…'). A 500 is the status every UNPLANNED
+			// error gets, with the bare 'Internal Error', which is no help under a
+			// form; and a dropped connection is not an HttpError at all.
+			failure =
+				isHttpError(error) && error.status !== 500
+					? error.body.message
+					: 'Something went wrong on our side. Please try again.';
+		}
+	})}
+	class="signup"
+	aria-labelledby="signup-heading"
+>
+	<h2 id="signup-heading" class="signup__title">Get the guide</h2>
+	<!-- … -->
+	{#if failure}
+		<p class="field__error" role="alert">{failure}</p>
+	{/if}
+</form>`
+			},
+			{
+				type: 'p',
+				text: "Look at the condition. `isHttpError(error)` narrows the type, so `error.status` and `error.body.message` need no cast. Then `error.status !== 500` separates the two kinds of message: any other status was chosen by code — a 503 because signups are paused, a 429 from a rate limiter — and came with a sentence meant for a person, while 500 is what every unplanned error becomes, and its `'Internal Error'` would sit under the form like a shrug. Those, and anything that is not an `HttpError` at all, get one sentence of our own."
+			},
+			{
+				type: 'note',
+				text: "We checked both shapes in a real browser before writing them down, against a lead store that could not be read and an `error(503, …)` added for the experiment. Left to the error page, the 503's own sentence — **Signups are paused while we move the list.** — reached the visitor, and the store failure arrived as **Internal Error**. The same two failures caught in `enhance` arrived with `error instanceof Error` false, `error.message` undefined, and the server's words in `error.body.message`. The store failure is pinned by `e2e/failure.e2e.ts`, with JavaScript and without (chapter 36 shows how)."
+			},
 			{
 				type: 'checkpoint',
-				text: 'Submit the form with a bad email and see an inline error. Submit a good one and land on `/guide/thank-you?t=…`. Then disable JavaScript in devtools and do it again — it should still work.'
+				text: "Submit the form with a bad email and see an inline error. Submit a good one and land on `/guide/thank-you?t=…`. Then disable JavaScript in devtools and do it again — it should still work. Last, watch it fail: set `LEADS_DIR` in your `.env` to `package.json` — a file where the store expects a folder — restart `pnpm dev` and submit. You get the site's error page, **Something went wrong** over **Internal Error**, inside the header and footer, and the `ENOTDIR` error with its stack in the terminal. Put `LEADS_DIR` back afterwards. While you are there, visit `/no-such-page`: the same component, saying it can't find the page, with a real 404 status in the network tab."
 			}
 		]
 	},
@@ -914,25 +1182,56 @@ const guideSchema = v.object({
 				code: `import type { PageServerLoad } from './$types';
 import { verifyDownloadToken } from '#lib/server/tokens.ts';
 
+// …
 export const prerender = false;
 
 export const load: PageServerLoad = ({ url, setHeaders }) => {
-	const token = url.searchParams.get('t');
+	// A missing \`t\` becomes '', which verifies as 'malformed' like any other bad
+	// token — and keeps \`token\` a plain string for the valid branch below.
+	const token = url.searchParams.get('t') ?? '';
 	const result = verifyDownloadToken(token);
 
+	/*
+	 * Belt and braces on top of the \`noindex\` meta tag the page renders.
+	 *
+	 * The meta tag is in the HTML, so only a crawler that parses the HTML sees it.
+	 * An \`X-Robots-Tag\` header is read from the response itself, before any parsing.
+	 * Two mechanisms, because a gated page leaking into the index is embarrassing
+	 * and slow to undo. Both need the crawler to fetch the page, which is why
+	 * robots.txt deliberately does NOT disallow it — see \`robots.txt/+server.ts\`.
+	 */
 	setHeaders({
 		'X-Robots-Tag': 'noindex, nofollow',
 		'Cache-Control': 'private, no-store'
 	});
 
 	if (!result.valid) {
-		return { status: 'invalid' as const, reason: result.reason, downloadUrl: null, email: null };
+		return {
+			// Never echo the raw token back into the page — that's how a bad token ends
+			// up in an analytics URL, a referrer header, or a support screenshot.
+			status: 'invalid' as const,
+			reason: result.reason,
+			token: null,
+			email: null
+		};
 	}
 
 	return {
 		status: 'valid' as const,
 		reason: null,
-		downloadUrl: \`/guide/download?t=\${encodeURIComponent(token ?? '')}\`,
+		// The token is re-used for the download route, which verifies it again.
+		// Every entry point validates independently — never trust that an earlier
+		// step in the flow did its job.
+		//
+		// We return the token, not a finished URL, and the page builds the link with
+		// \`resolve()\` as it renders. On the server \`resolve()\` returns a path relative
+		// to the request: \`../guide/download?t=…\` for a full page load, but
+		// \`../../guide/download?t=…\` for the \`__data.json\` request a client-side
+		// navigation makes, which is one level deeper. Serialised from here, that
+		// second answer reaches a page that is NOT one level deeper; it only lands
+		// on the right file today because a surplus \`..\` stops at the site root,
+		// and under a base path it would climb out of the base.
+		token,
 		email: result.email
 	};
 };`
@@ -943,8 +1242,45 @@ export const load: PageServerLoad = ({ url, setHeaders }) => {
 				text: 'A component could decode the token and read its expiry, but it could never verify the **signature** — that requires the secret, and anything the browser can read is not a secret. So the server decides, and the page just renders the verdict.'
 			},
 			{
+				type: 'p',
+				text: "The load hands the page the verified token, and the page builds the download link itself, with `resolve()`, as it renders:"
+			},
+			{
+				type: 'code',
+				file: 'src/routes/guide/thank-you/+page.svelte',
+				lang: 'svelte',
+				code: `<script lang="ts">
+	import { resolve } from '$app/paths';
+	// …
+	import type { PageProps } from './$types';
+
+	let { data }: PageProps = $props();
+
+	// …
+</script>
+
+<!-- … -->
+<a
+	class="thanks__download"
+	href={resolve(\`/guide/download?t=\${encodeURIComponent(data.token)}\`)}
+	download
+>
+	<DownloadSimpleIcon size={22} aria-hidden="true" />
+	<span>Download the PDF (8 chapters)</span>
+</a>`
+			},
+			{
+				type: 'why',
+				title: 'Why `resolve()` belongs in the component, not in load data',
+				text: "It is tempting to finish the URL in the load function and return `downloadUrl` ready to use; an earlier version of this file did exactly that. The trouble is what `resolve()` returns on the server. The `$app/paths` docs say: \"During server rendering, the base path is relative and depends on the page currently being rendered.\" So on the server `resolve('/guide/download?t=…')` is a *relative* path, worked out from the current request — and a load function runs for two different requests. A full page load asks for `/guide/thank-you`, and gets `../guide/download?t=…`. A visitor with JavaScript arrives by client-side navigation (the form redirects here), and then the load runs for `/guide/thank-you/__data.json`, one folder deeper, and gets `../../guide/download?t=…`. That string is then serialised and dropped into a page that is *not* one folder deeper. Today it still lands on the right file, only because a surplus `..` stops at the root of the site; deploy under a base path and the link would climb out of it. Data should be data. Return the token, and let the component — which knows exactly which page it is rendering — turn it into a link."
+			},
+			{
 				type: 'note',
-				text: 'Three layers keep this page out of the index: a `noindex` meta tag, a `Disallow` in robots.txt, and an `X-Robots-Tag` header. The header matters because it also covers the PDF response, and it works even if a crawler never executes far enough to read the meta tag.'
+				text: "`PageProps` from `./$types` types everything the page receives — `data` from the load above, and `params`. It is generated from your load function, so `data.status === 'valid'` narrows `data.token` to a `string` inside the `{#if}` with no cast. (Older code writes `{ data: PageData }` by hand; `PageProps` replaced that in SvelteKit 2.16.)"
+			},
+			{
+				type: 'note',
+				text: "Two layers keep this page out of the index: a `noindex` meta tag in the HTML, and an `X-Robots-Tag` header on the response itself, which a crawler reads before it parses anything. robots.txt is deliberately *not* a third layer. Both of the others only work on a crawler that is allowed to fetch the page, and a `Disallow` would stop it fetching — the self-defeating combination chapter 18 warned about."
 			},
 			{ type: 'h3', id: 'download', text: 'The download endpoint' },
 			{
@@ -962,7 +1298,7 @@ export const GET: RequestHandler = async ({ url }) => {
 	const result = verifyDownloadToken(url.searchParams.get('t'));
 
 	if (!result.valid) {
-		/* …403, not 404 — the caller just isn't allowed it… */
+		// …
 		error(
 			403,
 			result.reason === 'expired' ? 'This download link has expired' : 'Invalid download link'
@@ -992,6 +1328,10 @@ export const GET: RequestHandler = async ({ url }) => {
 };`
 			},
 			{
+				type: 'p',
+				text: 'The `// …` inside `if (!result.valid)` stands for a comment explaining why that is a **403, not a 404**: the resource exists, the caller just is not allowed it. Hiding existence with a 404 suits genuinely secret resources, but the whole site advertises this PDF, so pretending otherwise would only confuse someone with an expired link. The two `// …` among the headers are short comments: `attachment` makes the browser save the file rather than display it, and `private` is explained below.'
+			},
+			{
 				type: 'warn',
 				text: "**The PDF is not in `static/`.** Anything in `static/` is copied verbatim into the build and served directly by the CDN — it is public, full stop. The URL is guessable, and the moment one person shares it your email gate is decorative. So it lives in a top-level `private/` directory that never enters the client build."
 			},
@@ -1014,45 +1354,59 @@ export const GET: RequestHandler = async ({ url }) => {
 				file: 'scripts/build-ebook.js',
 				lang: 'js',
 				code: `import { chromium } from 'playwright';
+// …
+function renderHtml() {
+	// …
+}
 
-// …renderHtml() builds the document from ebook-content.js, then:
-
-// …CHROMIUM_PATH lets CI or Docker point at a system Chromium instead of downloading one…
-const executablePath = process.env.CHROMIUM_PATH;
-
-const browser = await chromium.launch(executablePath ? { executablePath } : {});
-try {
-	const page = await browser.newPage();
+async function main() {
+	await mkdir(outDir, { recursive: true });
 
 	// …
-	await page.setContent(renderHtml(), { waitUntil: 'networkidle' });
+	const executablePath = process.env.CHROMIUM_PATH;
 
-	await page.pdf({
-		path: outFile,
-		format: 'A4',
-		// Chromium's own margins set to zero so the stylesheet's @page rule is the
-		// only thing controlling layout. Two competing margin systems is a
-		// reliable way to produce a document that looks fine on screen and wrong
-		// on paper.
-		margin: { top: '0', bottom: '0', left: '0', right: '0' },
-		// Without this, Chromium strips background colours when printing — which
-		// would silently remove every callout box.
-		printBackground: true,
-		displayHeaderFooter: true,
-		headerTemplate: '<div></div>',
-		footerTemplate: \`
-			<div style="width:100%;font-size:8pt;color:#8590a8;padding:0 20mm;display:flex;justify-content:space-between;font-family:sans-serif;">
-				<span>StrikeFlow — How to read options flow</span>
-				<span class="pageNumber"></span>
-			</div>\`
-	});
+	const browser = await chromium.launch(executablePath ? { executablePath } : {});
+	try {
+		const page = await browser.newPage();
+		// …
+		await page.setContent(renderHtml(), { waitUntil: 'networkidle' });
 
-	// …
-} finally {
-	// \`finally\` so a failed render still closes the browser. Leaked Chromium
-	// processes are a classic way to exhaust CI memory.
-	await browser.close();
-}`
+		await page.pdf({
+			path: outFile,
+			format: 'A4',
+			// Chromium's own margins set to zero so the stylesheet's @page rule is the
+			// only thing controlling layout. Two competing margin systems is a
+			// reliable way to produce a document that looks fine on screen and wrong
+			// on paper.
+			margin: { top: '0', bottom: '0', left: '0', right: '0' },
+			// Without this, Chromium strips background colours when printing — which
+			// would silently remove every callout box.
+			printBackground: true,
+			displayHeaderFooter: true,
+			headerTemplate: '<div></div>',
+			footerTemplate: \`
+				<div style="width:100%;font-size:8pt;color:#8590a8;padding:0 20mm;display:flex;justify-content:space-between;font-family:sans-serif;">
+					<span>StrikeFlow — How to read options flow</span>
+					<span class="pageNumber"></span>
+				</div>\`
+		});
+
+		const pages = await page.evaluate(() => document.querySelectorAll('.chapter').length);
+		console.log(\`[ebook] \${pages} chapters rendered\`);
+	} finally {
+		// \`finally\` so a failed render still closes the browser. Leaked Chromium
+		// processes are a classic way to exhaust CI memory.
+		await browser.close();
+	}
+
+	console.log(\`[ebook] written to \${outFile}\`);
+}
+
+await main();`
+			},
+			{
+				type: 'p',
+				text: 'The `// …` lines stand for the rest of the script: the other imports and paths, the body of `renderHtml()` — which builds the whole document as one HTML string from `ebook-content.js` — and two comments. The one above `CHROMIUM_PATH` explains the override: CI images, Docker builds and locked-down networks can point it at a Chromium they already have instead of downloading a second copy. The one above `setContent` explains `networkidle`: the document has no external resources today, but the day you add a logo or a web font, printing before it loads leaves a gap where it should be.'
 			},
 			{
 				type: 'p',
@@ -1068,6 +1422,20 @@ try {
 .chapter h3 { break-after: avoid; }   /* never orphan a heading at page bottom */
 .callout    { break-inside: avoid; }  /* never split a box across pages */
 p           { orphans: 2; widows: 2; } /* never leave one line alone */`
+			},
+			{
+				type: 'p',
+				text: "Give the script a name in `package.json`, so nobody has to remember the path:"
+			},
+			{
+				type: 'code',
+				file: 'package.json',
+				lang: 'json',
+				code: `"scripts": {
+	…
+	"ebook:build": "node scripts/build-ebook.js",
+	…
+},`
 			},
 			{ type: 'terminal', code: 'pnpm exec playwright install chromium\npnpm run ebook:build' },
 			{
@@ -1176,8 +1544,15 @@ export const load: PageLoad = ({ params }) => {
 				type: 'code',
 				lang: 'css',
 				file: 'src/routes/blog/+page.svelte',
-				code: `.post-card { position: relative; }
+				code: `.post-card {
+	/* Required — the stretched-link ::after below is absolutely positioned
+	   against this. Without it, the overlay escapes to the nearest positioned
+	   ancestor and covers the whole page. */
+	position: relative;
+	/* … */
+}
 
+/* … */
 .post-card__title a::after {
 	content: '';
 	position: absolute;
@@ -1204,12 +1579,13 @@ export const load: PageLoad = ({ params }) => {
 				code: `.legal :global(h2) {
 	font-size: var(--fs-xl);
 	margin-block: var(--space-10) var(--space-4);
+	scroll-margin-top: calc(var(--header-height) + var(--space-6));
 }`
 			},
 			{
 				type: 'why',
 				title: 'Why :global here',
-				text: 'Svelte scopes styles by adding a hash class to elements it can see in **this** component\'s markup. The headings come from the child page, so they never get that class and a normal selector would not reach them. `.legal :global(h2)` reads as: scope the `.legal` part, but let the `h2` part match anything inside. That is the correct escape hatch for styling child-rendered content — far better than reaching for `!important`.'
+				text: 'Svelte scopes styles by adding a hash class to elements it can see in **this** component\'s markup. The headings come from the child page, so they never get that class and a normal selector would not reach them. `.legal :global(h2)` reads as: scope the `.legal` part, but let the `h2` part match anything inside. That is the correct escape hatch for styling child-rendered content — far better than reaching for `!important`. (The `scroll-margin-top` line does nothing yet: none of the legal headings has an `id`, so nothing can link to one. It is there for the day they do. When the browser scrolls to a linked element it adds that element\'s `scroll-margin-top` to the page-wide `scroll-padding-top` from chapter 13, so a linked `h2` here would stop with extra clearance below the sticky header.)'
 			},
 			{ type: 'h3', id: 'ymyl', text: 'Why a trading site needs these pages' },
 			{
@@ -1292,12 +1668,14 @@ export default defineConfig({
 			// …
 		}),
 
-		/* …the ordering story from chapter 19: this must come after sveltekit()… */
+		// …
 		sveltePhosphorOptimize()
 	],
 
 	test: {
 		expect: { requireAssertions: true },
+
+		// …
 		projects: [
 			// …
 		]
@@ -1306,7 +1684,7 @@ export default defineConfig({
 			},
 			{
 				type: 'note',
-				text: 'The import comes from `vitest/config`, not `vite` — the same `defineConfig`, but its types know about the `test` block.'
+				text: 'The import comes from `vitest/config`, not `vite` — the same `defineConfig`, but its types know about the `test` block. The `// …` just above `sveltePhosphorOptimize()` is the ordering comment from chapter 19: it must come after `sveltekit()`.'
 			},
 			{
 				type: 'why',
@@ -1323,10 +1701,12 @@ export default defineConfig({
 				file: 'vite.config.ts',
 				lang: 'ts',
 				code: `test: {
+	// …
 	projects: [
 		{
-			// Component tests — a REAL Chromium, not a DOM emulator
-			extends: './vite.config.ts',
+			// Component tests — run in a real Chromium, not a DOM emulator.
+			// Worth the extra seconds: jsdom quietly lies about layout and focus,
+			// which are exactly the things a component test should verify.
 			test: {
 				name: 'client',
 				browser: {
@@ -1339,8 +1719,7 @@ export default defineConfig({
 			}
 		},
 		{
-			// Pure logic — plain Node, no browser, very fast
-			extends: './vite.config.ts',
+			// Pure logic tests — plain Node, no browser, fast.
 			test: {
 				name: 'server',
 				environment: 'node',
@@ -1350,6 +1729,10 @@ export default defineConfig({
 		}
 	]
 }`
+			},
+			{
+				type: 'note',
+				text: "Each project inherits the root config — the `sveltekit()` and Phosphor plugins included — automatically. That is a Vitest 5 behaviour: Vitest 4 needed `extends: './vite.config.ts'` on every project, which re-read this file from disk each time. If you see that line in an older example, it is no longer needed; `extends: false` is the opt-out for a project that must stand alone."
 			},
 			{
 				type: 'ul',
@@ -1390,7 +1773,7 @@ export default defineConfig({
 	const token = createDownloadToken('reader@example.com');
 	const [, signature] = token.split('.');
 
-	// Re-encode a payload claiming a different email, keeping the old signature
+	// Re-encode a payload claiming a different email, keeping the old signature.
 	const forgedPayload = Buffer.from(
 		JSON.stringify({ email: 'attacker@example.com', exp: Date.now() + 100_000 })
 	).toString('base64url');
@@ -1488,14 +1871,30 @@ it('never produces a non-positive price', () => {
 				file: 'src/lib/utils/market-data.spec.ts',
 				lang: 'ts',
 				code: `it('formats a value with a trailing zero, whichever ICU is installed', () => {
-	/* …a long comment in the source explains: DELIBERATELY A PATTERN, NOT AN EXACT STRING… */
+	/*
+	 * DELIBERATELY A PATTERN, NOT AN EXACT STRING.
+	 *
+	 * \`Intl\` is implemented by ICU, the Unicode library Node bundles, and its
+	 * output is a moving target across versions. Compact *currency* formatting
+	 * used to keep the currency's minimum fraction digits — \`$5.60K\` — and as
+	 * of ICU 78.3 it trims them: \`$5.6K\`. Node 22 ships 78.2, Node 24 ships
+	 * 78.3, so the same code produces different text on each.
+	 *
+	 * A byte-exact assertion here is therefore not a test of this function. It
+	 * is a test of which Node version is installed, and it fails on upgrade for
+	 * a reason that has nothing to do with the code under test. This project
+	 * learned that the hard way while moving from Node 22 to Node 24.
+	 *
+	 * What the app actually needs is the right symbol, the right magnitude
+	 * suffix, and no more than two decimals. That is what this asserts.
+	 */
 	expect(formatCompactUsd(5_600)).toMatch(/^\\$5\\.60?K$/);
 	expect(formatCompactUsd(1_000)).toMatch(/^\\$1(\\.00)?K$/);
 });`
 			},
 			{
 				type: 'note',
-				text: 'A byte-exact assertion here is not a test of `formatCompactUsd` — it is a test of which Node version is installed, and it fails on upgrade for a reason that has nothing to do with the code under test. What the app actually needs is the right symbol, the right magnitude suffix and no more than two decimals, so the test asserts a pattern — and carries a comment explaining why, or the next person will "fix" it back to an exact string.'
+				text: 'The comment is half the test. A pattern where you would expect an exact string looks like laziness to the next person who reads it, and without the explanation they will "fix" it back to a byte-exact assertion — which is not a test of `formatCompactUsd` at all, but of which Node version is installed.'
 			},
 			{ type: 'h3', id: 'running', text: 'Running them' },
 			{
@@ -1534,26 +1933,44 @@ pnpm exec vitest run --project=server   # just the fast Node ones`
 				code: `export default defineConfig({
 	testMatch: '**/*.e2e.{ts,js}',
 
-	webServer: {
-		command: 'npm run build && npm run preview',
-		port: 4173,
-		// Building takes a moment; the default 60s is tight on a cold cache.
-		timeout: 180_000,
+	webServer: [
+		{
+			command: 'pnpm run build && pnpm run preview',
+			port: 4173,
+			// Building takes a moment; the default 60s is tight on a cold cache.
+			timeout: 180_000,
 
-		/*
-		 * Deliberately NOT \`reuseExistingServer: !process.env.CI\`, which is the
-		 * common default.
-		 *
-		 * Reusing a server you happen to have running is faster, and it means the
-		 * suite can silently test a build from twenty minutes ago. That bit me while
-		 * writing this project: a motion test failed, I spent time diagnosing the
-		 * code, and the code was fine — the server was stale.
-		 *
-		 * A test suite that can pass or fail against the wrong build is worse than a
-		 * slow one, because it makes every result untrustworthy. Always build fresh.
-		 */
-		reuseExistingServer: false
-	},
+			/*
+			 * Deliberately NOT \`reuseExistingServer: !process.env.CI\`, which is the
+			 * common default.
+			 *
+			 * Reusing a server you happen to have running is faster, and it means the
+			 * suite can silently test a build from twenty minutes ago. That bit me while
+			 * writing this project: a motion test failed, I spent time diagnosing the
+			 * code, and the code was fine — the server was stale.
+			 *
+			 * A test suite that can pass or fail against the wrong build is worse than a
+			 * slow one, because it makes every result untrustworthy. Always build fresh.
+			 */
+			reuseExistingServer: false
+		},
+		{
+			/*
+			 * A second server over the SAME build, with the lead store pointed at a
+			 * file where it expects a directory. Every signup then fails for real —
+			 * \`ENOTDIR\` from the file system, not a mock — which is the only honest
+			 * way to test what a visitor sees when the server breaks.
+			 *
+			 * Only \`e2e/failure.e2e.ts\` talks to this port, so the server above stays
+			 * healthy for everything else. Playwright starts web servers one after
+			 * another, so this one starts after the build above has finished.
+			 */
+			command: 'pnpm exec vite preview --port 4174 --strictPort',
+			port: 4174,
+			env: { LEADS_DIR: 'package.json' },
+			reuseExistingServer: false
+		}
+	],
 
 	use: {
 		baseURL: 'http://localhost:4173',
@@ -1561,7 +1978,7 @@ pnpm exec vitest run --project=server   # just the fast Node ones`
 		trace: 'retain-on-failure'
 	},
 
-	/* … */
+	// …
 	projects: [
 		{
 			name: 'desktop',
@@ -1574,8 +1991,9 @@ pnpm exec vitest run --project=server   # just the fast Node ones`
 	],
 
 	// A failing e2e test is almost never flaky in this project — fail fast rather
-	// than retrying and hiding a real bug.
-	retries: process.env.CI ? 1 : 0,
+	// than retrying and hiding a real bug. That holds in CI as much as locally, so
+	// there are no retries anywhere.
+	retries: 0,
 	reporter: process.env.CI ? 'github' : 'list'
 });`
 			},
@@ -1610,7 +2028,13 @@ pnpm exec vitest run --project=server   # just the fast Node ones`
 		// means the end of your title is invisible in the results page.
 		expect(title.length).toBeLessThanOrEqual(70);
 
-		// …the meta description: present, 50–200 characters…
+		// --- Description ---
+		const description = await page
+			.locator('head meta[name="description"]')
+			.getAttribute('content');
+		expect(description).toBeTruthy();
+		expect((description ?? '').length).toBeGreaterThan(50);
+		expect((description ?? '').length).toBeLessThanOrEqual(200);
 
 		// --- Canonical: exactly one, absolute, matching this path ---
 		const canonicals = page.locator('head link[rel="canonical"]');
@@ -1620,11 +2044,21 @@ pnpm exec vitest run --project=server   # just the fast Node ones`
 		expect(new URL(canonical ?? '').pathname).toBe(path);
 
 		// --- Exactly one h1 ---
-		// …
+		// More than one is a document-outline bug; zero means the page has no
+		// stated subject. Both are common and both are avoidable.
 		await expect(page.locator('h1')).toHaveCount(1);
 
-		// …robots: contains index, never noindex, plus max-image-preview:large…
-		// …Open Graph: og:title, og:description, og:image, og:url, og:type all present…
+		// --- Indexable ---
+		const robots = await page.locator('head meta[name="robots"]').getAttribute('content');
+		expect(robots).toContain('index');
+		expect(robots).not.toContain('noindex');
+		// The directive that unlocks large thumbnails, and Discover eligibility.
+		expect(robots).toContain('max-image-preview:large');
+
+		// --- Open Graph ---
+		for (const property of ['og:title', 'og:description', 'og:image', 'og:url', 'og:type']) {
+			await expect(page.locator(\`head meta[property="\${property}"]\`)).toHaveCount(1);
+		}
 
 		// --- Structured data parses and is a graph ---
 		const ldJson = await page.locator('head script[type="application/ld+json"]').textContent();
@@ -1681,11 +2115,81 @@ pnpm exec vitest run --project=server   # just the fast Node ones`
 		await page.waitForURL(/\\/guide\\/thank-you/);
 		await expect(page.getByRole('heading', { name: /your guide is ready/i })).toBeVisible();
 	});
+
+	test('marketing pages render their content server-side', async ({ page }) => {
+		await page.goto('/');
+		// Real text in the initial HTML — which is also what a crawler sees.
+		await expect(page.getByRole('heading', { level: 1 })).toContainText(/options flow/i);
+		await expect(page.getByRole('link', { name: /free guide/i }).first()).toBeVisible();
+	});
 });`
 			},
 			{
 				type: 'p',
-				text: 'This is the test that justifies using a remote `form()` rather than a `command()`. With JavaScript disabled the page is inert HTML — no hydration, no fetch, no client handler. If the form still works, it works for people on flaky connections, on locked-down corporate browsers, and in the window before your JavaScript has finished loading.'
+				text: 'The first of these is the test that justifies using a remote `form()` rather than a `command()`; the second confirms the marketing copy is real text in the initial HTML, which is also what a crawler sees. With JavaScript disabled the page is inert HTML — no hydration, no fetch, no client handler. If the form still works, it works for people on flaky connections, on locked-down corporate browsers, and in the window before your JavaScript has finished loading.'
+			},
+			{ type: 'h3', id: 'failure', text: 'Testing the failure, for real' },
+			{
+				type: 'p',
+				text: "Everything so far runs against a healthy server. But chapter 28 promised what a visitor sees when the server *breaks* — the site's own error page, inside the layout, with a way back — and a promise like that is exactly what a dependency upgrade can quietly undo. So it gets a test too. The question is how to make a production build fail on demand."
+			},
+			{
+				type: 'p',
+				text: "Look again at the `webServer` list in the config above. The second entry starts another `vite preview` over the *same* build, on port 4174, with one environment variable changed: `LEADS_DIR` points at `package.json`, a file where the lead store expects a folder. Every signup on that server fails for real, with `ENOTDIR` from the file system. Playwright starts web servers one after another, so the build has finished by the time it starts, and only this spec talks to it:"
+			},
+			{
+				type: 'code',
+				file: 'e2e/failure.e2e.ts',
+				lang: 'ts',
+				code: `import { test, expect, type Page } from '@playwright/test';
+
+test.use({ baseURL: 'http://localhost:4174' });
+
+async function submitSignup(page: Page): Promise<void> {
+	await page.goto('/guide');
+	await page
+		.getByLabel('Email address')
+		.fill(\`e2e-\${Math.random().toString(36).slice(2, 10)}@example.com\`);
+	await page.getByLabel('Which best describes you?').selectOption('some');
+	await page.getByRole('checkbox').check();
+	await page.getByRole('button', { name: /send me the guide/i }).click();
+}
+
+async function expectErrorPage(page: Page): Promise<void> {
+	await expect(page.getByRole('heading', { level: 1, name: 'Something went wrong' })).toBeVisible();
+	// SvelteKit's default \`handleError\` has replaced the real message — ENOTDIR and
+	// a file path — with a safe one before it reached the page.
+	await expect(page.getByText('Internal Error')).toBeVisible();
+	await expect(page.getByText(/ENOTDIR|package\\.json/)).toHaveCount(0);
+	// Inside the site's layout, with a way forward rather than a dead end.
+	await expect(page.getByRole('banner')).toBeVisible();
+	await expect(page.getByRole('link', { name: 'Back to the home page' })).toBeVisible();
+}
+
+test.describe('a signup the server cannot save', () => {
+	test('shows the error page', async ({ page }) => {
+		await submitSignup(page);
+		await expectErrorPage(page);
+	});
+
+	test.describe('without JavaScript', () => {
+		test.use({ javaScriptEnabled: false });
+
+		test('shows the same error page', async ({ page }) => {
+			await submitSignup(page);
+			await expectErrorPage(page);
+		});
+	});
+});`
+			},
+			{
+				type: 'why',
+				title: 'Why a second server rather than a mock',
+				text: "The usual shortcuts are all worse. Faking the response with `page.route()` means hand-writing SvelteKit's private wire format, and the test then proves only that your fake renders. A test-only switch in production code (\"if this header is set, throw\") ships a way to break your site on purpose. Breaking `LEADS_DIR` for the one server breaks every happy-path test with it. A second server costs a few lines of config and fails the way production would fail — through the real store, the real `handleError`, the real error page — while the first stays healthy for everything else. Note what the spec asserts beyond the heading: that `ENOTDIR` and the file path appear *nowhere* on the page. That is the security property from chapter 28, held by a test."
+			},
+			{
+				type: 'p',
+				text: "Three smaller specs guard promises made in earlier chapters. `e2e/header.e2e.ts` loads `/features` with JavaScript off and checks the Features link carries `aria-current=\"page\"` in the HTML the server sent (chapter 20), then opens the drawer on a phone-sized screen and closes it with a click on the backdrop. `e2e/pricing.e2e.ts` presses the right arrow on the billing toggle and expects Annual to be chosen (chapter 23). And `e2e/seo.e2e.ts` gained a test that an unknown address answers with a real 404 status, a `noindex`, and the site's error page. Each was run against the code *before* its fix and watched fail first: a test you have never seen fail has not yet proved it can."
 			},
 			{ type: 'h3', id: 'bug1', text: 'Bug one: 181 pixels' },
 			{
@@ -1713,23 +2217,48 @@ pnpm exec vitest run --project=server   # just the fast Node ones`
 // fallback against itself, producing a perfect 100% that is completely wrong.
 await page.evaluate(() => document.fonts.ready);
 
-// …then, inside page.evaluate, for each target font versus the Arial fallback…
-const targetWidth = width(target.family, target.weight);
-const fallbackWidth = width(fallback, target.weight);
-const metrics = vertical(target.family, target.weight);
+const results = await page.evaluate(
+	({ targets, fallback }) => {
+		// …
 
-const sizeAdjust = targetWidth / fallbackWidth;
+		return targets.map((/** @type {{label:string,family:string,weight:number}} */ target) => {
+			const targetWidth = width(target.family, target.weight);
+			const fallbackWidth = width(fallback, target.weight);
+			const metrics = vertical(target.family, target.weight);
 
-return {
-	label: target.label,
-	sizeAdjust,
-	// Overrides are relative to the already-size-adjusted em, so each
-	// real metric is divided by the size adjustment.
-	ascentOverride: metrics.ascent / sizeAdjust,
-	descentOverride: metrics.descent / sizeAdjust,
-	rawAscent: metrics.ascent,
-	rawDescent: metrics.descent
-};`
+			const sizeAdjust = targetWidth / fallbackWidth;
+
+			return {
+				label: target.label,
+				sizeAdjust,
+				// Overrides are relative to the already-size-adjusted em, so each
+				// real metric is divided by the size adjustment.
+				ascentOverride: metrics.ascent / sizeAdjust,
+				descentOverride: metrics.descent / sizeAdjust,
+				rawAscent: metrics.ascent,
+				rawDescent: metrics.descent
+			};
+		});
+	},
+	{ targets: TARGETS, fallback: FALLBACK }
+);`
+			},
+			{
+				type: 'p',
+				text: 'The `// …` stands for two small helpers that run inside the page: `width()` renders a sample string in a hidden `<span>` and measures it, and `vertical()` reads the ascent and descent from a canvas. Everything is compared against Arial — the fallback the `@font-face` rules re-describe.'
+			},
+			{
+				type: 'p',
+				text: "Add it to `package.json` beside the other scripts, then run it with the dev server up, since it measures the fonts in a real page:"
+			},
+			{
+				type: 'code',
+				file: 'package.json',
+				lang: 'json',
+				code: `"scripts": {
+	…
+	"fonts:measure": "node scripts/measure-font-metrics.js"
+},`
 			},
 			{ type: 'terminal', code: 'pnpm run fonts:measure' },
 			{ type: 'p', text: 'Shift after the fix: **0 pixels**.' },
@@ -1783,7 +2312,7 @@ pnpm run build`
 			},
 			{
 				type: 'p',
-				text: 'All five should be clean. On the finished project that is 0 type errors, 0 lint errors, 30 unit tests, and 35 end-to-end tests that each run on both device profiles — 70 e2e results in all.'
+				text: 'All five should be clean. On the finished project that is 0 type errors, 0 lint errors, 30 unit tests, and 41 end-to-end tests that each run on both device profiles — 82 e2e results in all.'
 			},
 			{
 				type: 'note',
@@ -1796,13 +2325,30 @@ pnpm run build`
 			},
 			{ type: 'terminal', code: 'pnpm run build\nnode build/index.js' },
 			{
+				type: 'note',
+				text: "`adapter-node` 6 — the version that ships with SvelteKit 3 — changed three things worth knowing before you deploy. The `ORIGIN` environment variable is gone: if the server sits behind a proxy that hides the real host, set `paths: { origin: 'https://strikeflow.io' }` inside `sveltekit()` in `vite.config.ts` instead (`PORT` and `HOST` still work as before). Static files are served from a list recorded at build time, with content-hash `ETag`s and no `Last-Modified` header, so a file copied into `build/client` after the build is simply not served — runtime configuration belongs in environment variables. And static assets answer only `GET` and `HEAD`; any other method gets a 405."
+			},
+			{
+				type: 'warn',
+				text: "**On your own machine, `node build/index.js` refuses every signup, and that is the CSRF check doing its job.** With no `paths.origin` and no `PROTOCOL_HEADER`, `adapter-node` works out the site's origin from the request's `host` header and assumes **https**; the adapter docs say so in as many words. Open `http://localhost:3000` and the server believes it is `https://localhost:3000`, so the form's origin does not match and the CSRF check answers **403** — \"Cross-site remote requests are forbidden\" with JavaScript, \"Cross-site POST form submissions are forbidden\" without. Nothing is broken: behind your host's TLS the two agree. For a local smoke test of the production build, use `pnpm run preview`, which serves it over plain http (it is what the end-to-end tests run against). If you specifically want `node build` over http, build once with `paths: { origin: 'http://localhost:3000' }` in `vite.config.ts`, and take it out before you deploy."
+			},
+			{
+				type: 'note',
+				text: "Behind a proxy — and Fly, Railway and Render all put one in front of your app — the server needs one more variable. `event.getClientAddress()`, which the rate limiter from chapter 26 keys on, returns the address of whatever connected to Node, and behind a proxy that is the proxy. Tell the adapter where the real address is with `ADDRESS_HEADER`, usually `X-Forwarded-For`, and with `XFF_DEPTH` set to the number of trusted proxies in front of you (often `1`). The adapter reads that header from the *right*, skipping your own proxies, because the left end is whatever the client chose to send."
+			},
+			{
+				type: 'why',
+				title: 'Why the rate limiter makes ADDRESS_HEADER urgent',
+				text: "Without it, every visitor shares the proxy's address, so they all share one rate-limit bucket. The limit of five signups a minute stops being per person and becomes per *site*: the sixth person to sign up in any minute, anywhere in the world, is told \"Too many attempts\". Nothing errors and nothing is logged; signups just quietly drop on your best traffic day. The opposite mistake is as bad: set `ADDRESS_HEADER` when there is *no* proxy and anyone can send their own `X-Forwarded-For`, pick a fresh address per request, and walk straight past the limit. Headers are easy to forge, so set these only for the proxies you actually have."
+			},
+			{
 				type: 'p',
 				text: 'That runs anywhere Node runs — a VPS, a container, Fly, Railway, Render. If you would rather deploy to a specific platform, swap the adapter in `vite.config.ts`:'
 			},
 			{
 				type: 'code',
 				lang: 'ts',
-				file: 'vite.config.ts',
+				file: 'swapping the adapter',
 				code: `import adapter from '@sveltejs/adapter-vercel';     // or -cloudflare, -netlify, -static
 
 export default defineConfig({
@@ -1815,27 +2361,44 @@ export default defineConfig({
 			},
 			{ type: 'h3', id: 'env-prod', text: 'Environment, before anything else' },
 			{
+				type: 'p',
+				text: 'The project\'s `.env.example` documents every variable `src/env.ts` declares. In production, give each one a real value:'
+			},
+			{
 				type: 'code',
-				file: 'production .env',
+				file: 'production values',
 				lang: 'bash',
 				code: `PUBLIC_SITE_URL="https://strikeflow.io"
 LEADS_DIR="/var/lib/strikeflow/leads"
 EBOOK_TOKEN_SECRET="<64 hex characters>"`
 			},
 			{
+				type: 'p',
+				text: 'For the secret, let Node generate the 64 random hex characters:'
+			},
+			{
 				type: 'terminal',
 				code: `node -e "console.log(crypto.randomBytes(32).toString('hex'))"`
 			},
 			{
+				type: 'p',
+				text: 'Where you put those values depends on when each one is read. `LEADS_DIR` and `EBOOK_TOKEN_SECRET` are read when the server starts, and the server `adapter-node` builds does **not** load a `.env` file on its own — only `pnpm dev`, `pnpm preview` and the build do that. So either set them in your host\'s environment settings, or keep them in a `.env` file beside the build and start the server with Node\'s `--env-file` flag:'
+			},
+			{ type: 'terminal', code: 'node --env-file=.env build/index.js' },
+			{
+				type: 'p',
+				text: 'Start it with plain `node build/index.js` and no host settings, and the server never sees either value: it falls back to a throwaway signing key, so every download link dies on the next restart, and it writes leads to `.data` in whatever directory it was started from.'
+			},
+			{
 				type: 'warn',
-				text: '`PUBLIC_SITE_URL` is `static: true`, which means it is **baked in at build time**. Setting it after building does nothing — you will deploy a site whose every canonical tag, Open Graph URL and sitemap entry points at localhost. Set it before you build.'
+				text: '`PUBLIC_SITE_URL` is `static: true`, which means it is **baked in at build time**. Setting it after building does nothing — you will deploy a site whose every canonical tag, Open Graph URL and sitemap entry points at localhost. Set it before you build, in `.env` (which the build does read) or in the shell that runs `pnpm run build`.'
 			},
 			{ type: 'h3', id: 'checklist', text: 'Pre-launch checklist' },
 			{
 				type: 'ol',
 				items: [
 					'`PUBLIC_SITE_URL` is the real domain and was set **before** the build.',
-					'`EBOOK_TOKEN_SECRET` is set — otherwise download links die on every restart.',
+					'`EBOOK_TOKEN_SECRET` and `LEADS_DIR` reach the running server, from your host\'s settings or `node --env-file=.env` — otherwise download links die on every restart and leads land in `.data`.',
 					'`curl https://yourdomain.com/robots.txt` returns the real domain in the `Sitemap:` line.',
 					'`curl https://yourdomain.com/sitemap.xml` lists real URLs, and each returns 200.',
 					'View source on the home page: exactly one `<title>`, one canonical, one `<h1>`.',
@@ -1843,9 +2406,10 @@ EBOOK_TOKEN_SECRET="<64 hex characters>"`
 					'Paste a URL into Slack or LinkedIn and check the share card renders with the right image.',
 					'Run Lighthouse on mobile. Watch CLS especially — it should be 0.',
 					'Tab through the home page. The skip link appears first, focus is always visible, nothing is unreachable.',
-					'Turn off JavaScript and submit the signup form.',
+					'Turn off JavaScript and submit the signup form — on the deployed https site, or locally on `pnpm run preview`, not on a plain-http `node build` (see the warning above).',
 					'Submit an expired token to `/guide/download` and confirm a 403.',
-					'Submit the form six times in a minute and confirm the rate limit fires.',
+					'Behind a proxy, `ADDRESS_HEADER` (and `XFF_DEPTH`) are set, so each visitor has their own rate limit.',
+					'Submit the form six times in a minute and confirm the rate limit fires — and that a second device on another network is still let through.',
 					'Verify Search Console ownership and submit the sitemap.'
 				]
 			},

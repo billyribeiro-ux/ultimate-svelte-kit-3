@@ -48,7 +48,7 @@ export const part2 = [
 			},
 			{
 				type: 'warn',
-				text: '`@libsql/client` and `drizzle-orm` go in **dependencies**, not `devDependencies`. Vite bundles devDependencies into the server build, and `@libsql/client` loads a native binary at runtime that cannot be bundled. Get this wrong and the app builds perfectly, deploys perfectly, and dies on first request with `Cannot find module \'@libsql/linux-x64-gnu\'`. This cost real time on this project.'
+				text: '`@libsql/client` and `drizzle-orm` go in **dependencies**, not `devDependencies`. `adapter-node` bundles devDependencies into the server build, and `@libsql/client` loads a native binary at runtime that cannot be bundled. Get this wrong and the app builds perfectly, deploys perfectly, and dies on first request with `Cannot find module \'@libsql/linux-x64-gnu\'`. This cost real time on this project.'
 			},
 
 			{ type: 'h3', id: 'connection', text: 'The connection' },
@@ -58,18 +58,30 @@ export const part2 = [
 				lang: 'ts',
 				code: `
 import { drizzle } from 'drizzle-orm/libsql';
-import { createClient } from '@libsql/client';
+import { createClient, type Client } from '@libsql/client';
+import { building } from '$app/env';
 import { DATABASE_URL, DATABASE_AUTH_TOKEN } from '$app/env/private';
 import * as schema from './schema.ts';
 
 // …
-const client = createClient({
-	url: DATABASE_URL,
-	// libSQL rejects \`authToken: undefined\` on some versions, so only pass the key
-	// when we actually have one. Spreading a conditional object is the tidiest way
-	// to say "this property may not exist at all".
-	...(DATABASE_AUTH_TOKEN ? { authToken: DATABASE_AUTH_TOKEN } : {})
-});
+function connect(): Client {
+	// …
+	if (building) return createClient({ url: ':memory:' });
+
+	// Unreachable once built: \`src/env.ts\` refuses to start the server without
+	// it. The check is here to narrow the type, not to catch anything.
+	if (!DATABASE_URL) throw new Error('DATABASE_URL is required to start the server.');
+
+	return createClient({
+		url: DATABASE_URL,
+		// libSQL rejects \`authToken: undefined\` on some versions, so only pass the key
+		// when we actually have one. Spreading a conditional object is the tidiest way
+		// to say "this property may not exist at all".
+		...(DATABASE_AUTH_TOKEN ? { authToken: DATABASE_AUTH_TOKEN } : {})
+	});
+}
+
+const client = connect();
 
 // …
 export const db = drizzle(client, { schema });`
@@ -77,6 +89,10 @@ export const db = drizzle(client, { schema });`
 			{
 				type: 'p',
 				text: 'Passing `{ schema }` is what turns on the relational query builder — `db.query.booking.findMany({ with: { customer: true } })` — and gives every result its proper type. Without it you still get SQL, but you lose the part that makes Drizzle worth using.'
+			},
+			{
+				type: 'p',
+				text: 'The `building` check is SvelteKit\'s own advice, followed literally. The build imports this module to analyse the app, and the docs say: "Any code that should not be executed at this stage must check that `building` from `$app/env` is `false`." Opening a database is such code — pointed at a `file:` URL it creates the file, and pointed at a remote database it connects — so while building, `drizzle` gets an in-memory database that touches nothing and disappears with the build. Chapter 15 explains why `DATABASE_URL` is allowed to be missing at that stage, and chapter 35 what that buys a deployment.'
 			},
 
 			{ type: 'h3', id: 'pragmas', text: 'The two pragmas' },
@@ -89,7 +105,9 @@ export const db = drizzle(client, { schema });`
 				file: 'src/lib/server/db/index.ts',
 				lang: 'ts',
 				code: `
-void (async () => {
+if (!building) void applyPragmas();
+
+async function applyPragmas() {
 	try {
 		// Persisted in the database file, so this is idempotent; running it every
 		// boot simply guarantees no deployment is ever missing it.
@@ -99,7 +117,7 @@ void (async () => {
 	} catch (error) {
 		console.warn('[db] could not apply pragmas; continuing with defaults', error);
 	}
-})();`
+}`
 			},
 			{
 				type: 'ul',

@@ -128,3 +128,67 @@ test('a rule can be disabled from the list', async ({ page }) => {
 	// Put it back, so the suite leaves the workspace as it found it.
 	await page.getByRole('checkbox', { name: 'Enabled' }).first().check();
 });
+
+test('a toggle the server refuses says why, and the box goes back', async ({ page, context }) => {
+	await page.goto('/demo/alerts');
+	await expect(page.locator('html[data-hydrated]')).toHaveCount(1);
+
+	const row = page
+		.getByRole('listitem')
+		.filter({ has: page.getByRole('checkbox', { name: 'Enabled' }) })
+		.first();
+	const toggle = row.getByRole('checkbox', { name: 'Enabled' });
+	const before = await toggle.isChecked();
+
+	/*
+	 * The session ends under a live page, so the command is refused for real:
+	 * a 401 that says "Sign in to continue.". `click`, not `check` or `uncheck`,
+	 * which insist the box ends up changed — and the point is that it does not.
+	 *
+	 * The message comes from the rejection's `body`. Awaiting a command rejects
+	 * with the `HttpError` the client rebuilt from the response, not with the
+	 * `App.Error` a boundary is handed, and it has no `message` of its own.
+	 */
+	await context.clearCookies();
+	await toggle.click();
+
+	await expect(row.getByRole('alert')).toHaveText('Sign in to continue.');
+	await expect(toggle).toBeChecked({ checked: before });
+});
+
+test('a list of rules that cannot load says what the server said', async ({ page, context }) => {
+	/*
+	 * The session ends under a live page, then the header's Alerts link is
+	 * followed. The page loads no server data of its own, so the navigation asks
+	 * for nothing but the rules, and that is refused for real. The boundary is
+	 * handed SvelteKit's `App.Error`; it used to look for the message on `body`.
+	 */
+	await page.goto('/demo/settings');
+	await expect(page.locator('html[data-hydrated]')).toHaveCount(1);
+
+	await context.clearCookies();
+	await page
+		.getByRole('navigation', { name: 'Workspace' })
+		.getByRole('link', { name: 'Alerts' })
+		.click();
+
+	await expect(page).toHaveURL(/\/demo\/alerts$/);
+	await expect(page.getByRole('alert')).toHaveText('Sign in to continue.');
+});
+
+test.describe('with JavaScript off, so the screen is what the server sent', () => {
+	test.use({ javaScriptEnabled: false });
+
+	test('the rules are in the server’s HTML', async ({ page }) => {
+		/*
+		 * The list used to be awaited in the page's script, with a `pending`
+		 * snippet in its boundary: the server waited for the rules and then sent
+		 * "Loading rules…" in their place, which is all a page with no JavaScript
+		 * ever showed.
+		 */
+		await page.goto('/demo/alerts');
+
+		await expect(page.getByRole('heading', { name: 'Checkout p95 latency' })).toBeVisible();
+		await expect(page.getByRole('status')).toHaveCount(0);
+	});
+});

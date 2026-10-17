@@ -46,31 +46,36 @@
 	<pre><code class="lang-ts">const hasFinePointer = window.matchMedia('(pointer: fine) and (hover: hover)').matches;
 if (!hasFinePointer) return;
 
+const { gsap } = motion;
+const { strength = 7, radius = 28 } = options;
+// …
 const moveX = gsap.quickTo(node, 'x', { duration: 0.45, ease: 'power3.out' });
 const moveY = gsap.quickTo(node, 'y', { duration: 0.45, ease: 'power3.out' });
 
 function handleMove(event: PointerEvent) {
 	const rect = node.getBoundingClientRect();
 
-	// …
+	// Cursor offset from the element's centre.
 	const offsetX = event.clientX - (rect.left + rect.width / 2);
 	const offsetY = event.clientY - (rect.top + rect.height / 2);
 
-	// …
+	// Normalise to roughly -1..1 across the element plus its radius, so the
+	// pull is proportional to how close the cursor is rather than absolute.
 	const normalX = offsetX / (rect.width / 2 + radius);
 	const normalY = offsetY / (rect.height / 2 + radius);
 
-	// …
+	// Clamp, so a fast cursor sweeping past cannot fling the button.
 	moveX(gsap.utils.clamp(-1, 1, normalX) * strength);
 	moveY(gsap.utils.clamp(-1, 1, normalY) * strength);
 }
 
 function handleLeave() {
-	// …
+	// A gentle overshoot on the way back reads as elasticity. This is the
+	// one place in the project where a bounce is warranted.
 	gsap.to(node, { x: 0, y: 0, duration: 0.6, ease: 'elastic.out(1, 0.45)' });
 }</code></pre>
 </figure>
-<ul><li><strong>Maximum ~8px of travel.</strong> More and the button appears to dodge the user, which is genuinely annoying to click.</li><li><strong>Damped</strong> — the element moves a *fraction* of the cursor offset. It should feel attracted, not attached.</li><li><strong>Desktop only.</strong> <code>pointer: fine</code> plus <code>hover: hover</code> is the reliable test for &quot;there is a cursor that hovers&quot;.</li><li><strong>Clamped</strong>, so a fast cursor sweeping past cannot fling it.</li></ul>
+<ul><li><strong>Maximum ~8px of travel.</strong> More and the button appears to dodge the user, which is genuinely annoying to click.</li><li><strong>Damped</strong> — the element moves a <em>fraction</em> of the cursor offset. It should feel attracted, not attached.</li><li><strong>Desktop only.</strong> <code>pointer: fine</code> plus <code>hover: hover</code> is the reliable test for &quot;there is a cursor that hovers&quot;.</li><li><strong>Clamped</strong>, so a fast cursor sweeping past cannot fling it.</li></ul>
 
 <aside class="callout callout--why">
 	<h4>Why quickTo instead of gsap.to</h4>
@@ -86,7 +91,7 @@ function handleLeave() {
 		<span class="code__file">src/lib/motion/counter.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">/* … */
+	<pre><code class="lang-ts">// …
 const accessible = document.createElement('span');
 accessible.className = 'visually-hidden';
 accessible.textContent = raw;
@@ -128,6 +133,15 @@ node.append(accessible, visual);</code></pre>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">onNavigate((navigation) =&gt; {
+	// Kit 3 runs the navigation hooks for shallow navigations too — a
+	// `goto(url, { shallow: true })` that only changes `page.state`. Nothing on
+	// screen is replaced by one, so a full-page cross-fade would be a flash for
+	// no reason. Same guard as the header drawer; the site has no shallow routing
+	// today, so this is insurance rather than a fix.
+	if (navigation.shallow) return;
+
+	// Not supported in every browser, and correctly skipped for reduced motion.
+	// Returning nothing lets SvelteKit navigate normally.
 	if (!document.startViewTransition || prefersReducedMotion()) return;
 
 	return new Promise((resolve) =&gt; {

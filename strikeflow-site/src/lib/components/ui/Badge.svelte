@@ -11,7 +11,7 @@
 	let { tone = 'neutral', children }: Props = $props();
 </script>
 
-<span class="badge badge--{tone}">{@render children()}</span>
+<span class={['badge', `badge--${tone}`]}>{@render children()}</span>
 
 <style>
 	.badge {

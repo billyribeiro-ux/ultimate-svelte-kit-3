@@ -1,9 +1,11 @@
 /**
  * The market data and order entry API, as remote functions.
  *
- * A `.remote.ts` file is SvelteKit 3's replacement for load functions and form
- * actions: what is exported here runs on the server, and a component that
- * imports it gets a typed, awaitable function that happens to cross a network.
+ * A `.remote.ts` file holds SvelteKit's remote functions — still experimental
+ * in Kit 3, and switched on in `vite.config.ts` — which this app uses where Kit
+ * 2 code would have reached for load functions and form actions. What is
+ * exported here runs on the server, and a component that imports it gets a
+ * typed, awaitable function that happens to cross a network.
  *
  * The security model is the opposite of a load function's, and it matters more
  * here than anywhere else in the three projects. A load function runs for one
@@ -50,7 +52,7 @@ function requireCan(viewer: Viewer, action: Parameters<typeof assertCan>[1]): vo
 	try {
 		assertCan(viewer, action, { firmId: viewer.firmId });
 	} catch (thrown) {
-		if (thrown instanceof NotAllowed) error(thrown.status as 403, thrown.message);
+		if (thrown instanceof NotAllowed) error(thrown.status, thrown.message);
 		throw thrown;
 	}
 }
@@ -146,10 +148,13 @@ export interface MarketSnapshot {
 /**
  * The book and the tape, streamed.
  *
- * `query.live` takes an async generator, and everything it yields goes to every
- * browser subscribed with the same arguments. The shape is always the same
- * three steps: yield the current answer immediately so the page has something
- * to draw, wait for a reason to look again, yield the new answer.
+ * `query.live` takes an async generator, and everything it yields is streamed to
+ * the browser for as long as a component there is using it. Every component in
+ * one page that asks with the same arguments shares a single connection, and
+ * when the last of them goes the stream closes and this generator is stopped.
+ * The shape is always the same three steps: yield the current answer
+ * immediately so the page has something to draw, wait for a reason to look
+ * again, yield the new answer.
  *
  * ## Coalescing, and why it is not an optimisation
  *

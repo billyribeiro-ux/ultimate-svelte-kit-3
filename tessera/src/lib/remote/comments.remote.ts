@@ -22,6 +22,8 @@ import { requireUser } from '#lib/server/session.ts';
 
 const boardId = v.pipe(v.string(), v.minLength(1), v.maxLength(64));
 const body = v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(2_000));
+/** A comment's id or a shape's: short, and never free text. Empty means "none". */
+const reference = v.pipe(v.string(), v.maxLength(64));
 
 function rethrow(thrown: unknown): never {
 	if (thrown instanceof AccessError) error(thrown.status, thrown.message);
@@ -99,14 +101,32 @@ export const postComment = form(
 	v.object({
 		boardId,
 		body,
-		anchor: v.optional(v.string()),
-		parentId: v.optional(v.string())
+		anchor: v.optional(reference),
+		parentId: v.optional(reference)
 	}),
 	async ({ boardId: id, body: text, anchor, parentId }) => {
 		const who = requireUser();
 
 		// `commenter` is enough. That is the whole point of the role.
 		await requireAccess(id, who.id, 'commenter').catch(rethrow);
+
+		/*
+		 * A reply names its thread by id, and the id comes from the client.
+		 *
+		 * The check above is about the board in `boardId`. Nothing about it says the
+		 * thread in `parentId` is on that board, so it is looked up *with* the board
+		 * — a root comment, on the board that was just checked — and anything else
+		 * is a thread that does not exist, as far as this caller is concerned.
+		 */
+		if (parentId) {
+			const parent = await db
+				.select({ id: comment.id })
+				.from(comment)
+				.where(and(eq(comment.id, parentId), eq(comment.boardId, id), isNull(comment.parentId)))
+				.limit(1);
+
+			if (parent.length === 0) error(404, 'No such thread.');
+		}
 
 		await db.insert(comment).values({
 			id: crypto.randomUUID(),
@@ -122,19 +142,35 @@ export const postComment = form(
 );
 
 export const resolveThread = command(
-	v.object({ boardId, id: v.pipe(v.string(), v.minLength(1)), resolved: v.boolean() }),
+	v.object({ boardId, id: v.pipe(reference, v.minLength(1)), resolved: v.boolean() }),
 	async ({ boardId: board, id, resolved }) => {
 		const who = requireUser();
 		await requireAccess(board, who.id, 'commenter').catch(rethrow);
 
-		await db
+		const result = await db
 			.update(comment)
 			.set({
 				resolvedAt: resolved ? new Date() : null,
 				resolvedBy: resolved ? who.id : null
 			})
-			// Only a root comment can be resolved; a reply has no independent state.
-			.where(and(eq(comment.id, id), isNull(comment.parentId)));
+			/*
+			 * Three conditions, and the middle one is part of the permission check.
+			 *
+			 * `requireAccess` proved that this person may comment on `board` — the
+			 * board the *caller* named. `id` names a row, and a row id says nothing
+			 * about which board it is on. Matching on the id alone lets anybody who
+			 * can comment on a board of their own resolve a thread on any board at
+			 * all, by sending their board's id next to somebody else's thread id.
+			 * The check and the write have to name the same board.
+			 *
+			 * The last condition is the model: only a root comment can be resolved,
+			 * because a reply has no independent state.
+			 */
+			.where(and(eq(comment.id, id), eq(comment.boardId, board), isNull(comment.parentId)));
+
+		// The same answer for "no such comment" and "not on this board", so a
+		// thread id is not an oracle either.
+		if (result.rowsAffected === 0) error(404, 'No such thread.');
 
 		await threads(board).refresh();
 	}

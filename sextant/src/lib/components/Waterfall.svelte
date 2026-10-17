@@ -311,11 +311,12 @@
 	-->
 	<div class="waterfall__list" role="tree" aria-label="Spans" bind:this={list}>
 		{#each lines as line (line.node.spanId)}
-			{@const node = line.node}
+			{const node = $derived(line.node)}
 			<div
-				class="row"
-				class:row--error={node.status === 'error'}
-				class:row--selected={selected === node.spanId}
+				class={[
+					'row',
+					{ 'row--error': node.status === 'error', 'row--selected': selected === node.spanId }
+				]}
 				role="treeitem"
 				aria-level={node.depth + 1}
 				aria-selected={selected === node.spanId}
@@ -361,8 +362,7 @@
 
 				<div class="row__track">
 					<div
-						class="bar"
-						class:bar--synthetic={node.synthetic}
+						class={['bar', { 'bar--synthetic': node.synthetic }]}
 						style:--hue={hueFor(node.service)}
 						style:left="{line.offset * 100}%"
 						style:width="{line.width * 100}%"

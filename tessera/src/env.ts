@@ -1,7 +1,9 @@
 /**
  * Every environment variable this app reads, declared once.
  *
- * SvelteKit 3 replaced the `$env/*` magic modules with this file. A variable not
+ * SvelteKit 3 deprecated the `$env/*` modules in favour of this file — they
+ * still work, and are removed in SvelteKit 4 — and every variable it declares is
+ * imported from `$app/env/private` or `$app/env/public`. A variable not
  * declared here cannot be imported — a type error at build time rather than an
  * `undefined` that surfaces in production three weeks later — and `public: true`
  * is something you have to type, so a secret cannot reach the browser by

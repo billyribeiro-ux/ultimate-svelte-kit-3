@@ -47,12 +47,14 @@
 	</figcaption>
 	<pre><code class="lang-sql">-- Commands, in the order the sequencer accepted them.
 --
--- `seq` is an explicit INTEGER PRIMARY KEY rather than an autoincrement,
+-- \`seq\` is an explicit INTEGER PRIMARY KEY rather than an autoincrement,
 -- because the sequencer owns it. Letting SQLite choose would mean the ordering
 -- authority lived in two places, and the day they disagree is the day replay
 -- stops reproducing history.
 --
--- …
+-- There are no UPDATE or DELETE statements against this table anywhere in the
+-- codebase. A trigger below enforces that, because &quot;we agreed not to&quot; is not an
+-- enforcement mechanism.
 CREATE TABLE IF NOT EXISTS command_log (
 	seq INTEGER PRIMARY KEY,
 
@@ -74,11 +76,11 @@ CREATE TABLE IF NOT EXISTS command_log (
 	body TEXT NOT NULL
 ) STRICT;
 
--- …
+CREATE INDEX IF NOT EXISTS command_log_firm_idx ON command_log (firm_id, seq);
 
 -- Events, in the order the engine produced them.
 --
--- `caused_by` points at the command that produced this event. It is the single
+-- \`caused_by\` points at the command that produced this event. It is the single
 -- most useful column in the database during an incident: every event knows its
 -- cause, and every derived identifier contains its own sequence number, so
 -- &quot;why did this happen&quot; is a lookup rather than an investigation.
@@ -92,6 +94,7 @@ CREATE TABLE IF NOT EXISTS event_log (
 	body TEXT NOT NULL
 ) STRICT;</code></pre>
 </figure>
+<p>The SQL lives inside a <code>String.raw</code> template literal in <code>schema.ts</code> rather than in a <code>.sql</code> file — the file's header tells the story of the production build that could not find <code>schema.sql</code> — which is why every backtick in its comments is preceded by a backslash.</p>
 <aside class="callout callout--note"><p><code>STRICT</code> is SQLite 3.37+. Without it, SQLite will happily store the string <code>&quot;banana&quot;</code> in an <code>INTEGER</code> column, because its type system is advisory by default. With it, that is an error. For a system of record, advisory typing is not enough.</p></aside>
 <h3 id="triggers">Append-only, enforced</h3>
 <p>The log is append-only. Not &quot;we agreed not to update it&quot; — enforced.</p>
@@ -129,29 +132,115 @@ END;</code></pre>
 		<span class="code__file">packages/store/src/client.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">/*
- * Separate `execute` calls, not a batch.
+	<pre><code class="lang-ts">const client = createClient({
+	url,
+	...(authToken === undefined ? {} : { authToken }),
+	/*
+	 * `busy_timeout`, as the client option rather than the pragma.
+	 *
+	 * The option is applied by the client to every connection it opens,
+	 * including the ones it opens later for transactions. The pragma reaches
+	 * only whichever connection happened to run it, and a venue where three
+	 * connections wait politely and the fourth fails instantly with
+	 * `SQLITE_BUSY` is a venue with a bug that reproduces one time in four.
+	 */
+	timeout: BUSY_TIMEOUT_MS,
+	concurrency: POOL_SIZE
+});
+
+/*
+ * A plain `execute`, not a batch.
  *
  * `batch` wraps its statements in a transaction, and SQLite refuses to change
  * journal mode inside one — &quot;cannot change into wal mode from within a
  * transaction&quot;. Written as a batch this fails, the error is easy to swallow,
  * and WAL silently never applies. The venue then works perfectly until two
  * processes read and write at once.
+ *
+ * Once is enough: WAL is recorded in the database file, and every connection
+ * to it, from any process, inherits it.
  */
 await client.execute('PRAGMA journal_mode = WAL');
-await client.execute('PRAGMA busy_timeout = 5000');
-await client.execute('PRAGMA foreign_keys = ON');
-/*
- * `synchronous = FULL` rather than the WAL default of `NORMAL`.
- *
- * NORMAL lets the OS decide when to flush, which means a machine that loses
- * power can lose the last few commits. For a cache that is a fine trade. For
- * an append-only log that is the system of record for other people's money,
- * it is not: the whole promise is that an acknowledged order is durable.
- */
-await client.execute('PRAGMA synchronous = FULL');</code></pre>
+
+await configurePool(client, url, [...CONNECTION_PRAGMAS, ...connectionPragmas]);</code></pre>
 </figure>
-<aside class="callout callout--warn"><p><code>busy_timeout</code> is a property of the <strong>connection</strong>, not the database. Every process that opens a connection must set it again. A process that forgets is the one that fails under load with <code>SQLITE_BUSY</code> while every other process is fine — which is a maddening thing to debug. That is why every process in Sequent calls one <code>openStore</code> function rather than creating clients itself.</p></aside>
+<p>Three of the four settings are properties of the <strong>connection</strong>, not the database, and since <code>@libsql/client</code> 0.18 a client is not one connection but a small pool of them. A statement outside a transaction borrows a connection and hands it back before its promise resolves, so four <code>execute</code> calls in a row all land on the *same* connection — and the other three turn up later with whatever the library compiled in. <code>busy_timeout</code> has a client option that reaches every connection. The other two do not, so they are applied the only way that addresses each connection individually: by holding all of them at once.</p>
+<p>How many connections that is, is a decision of its own:</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">packages/store/src/client.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export const POOL_SIZE = 4;</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why four, and why not one</h4>
+	<p>One is the size that looks safest and is the only one that breaks. A transaction holds its connection for its whole life, and when transactions hold every connection the pool <strong>refuses</strong> the next borrower with <code>TRANSACTION_ACTIVE</code> rather than making it wait. With one connection, every read that arrives while a write is in flight throws — and in the web process that is a live query polling while an order is appended, which is to say constantly. Two is the floor. Four leaves room for a stray direct <code>client.transaction()</code> somewhere without starving the readers. More buys nothing: a statement outside a transaction borrows a connection, runs synchronously and returns it before anything else in the process can run, so reads never genuinely overlap inside one Node process, and each extra connection is two more file descriptors held open for nothing.</p>
+</aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">packages/store/src/client.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * The settings every connection must carry.
+ *
+ * `journal_mode` is deliberately not here: it is a property of the *file*, set
+ * once and remembered. These two are properties of the connection, and SQLite
+ * forgets them the moment it is closed.
+ *
+ * `foreign_keys = ON` — the log's `caused_by` and the ledger's postings point at
+ * other rows, and an event whose command does not exist must fail to commit. A
+ * test in `log.spec.ts` depends on exactly that.
+ *
+ * `synchronous = FULL` rather than `NORMAL` — NORMAL lets the OS decide when to
+ * flush, which means a machine that loses power can lose the last few commits.
+ * For a cache that is a fine trade. For an append-only log that is the system
+ * of record for other people's money, it is not: the whole promise is that an
+ * acknowledged order is durable.
+ *
+ * libSQL happens to compile both of these in as its defaults. Relying on that
+ * would let a build flag somebody else controls decide whether the books
+ * balance after a power cut, so they are set explicitly. The same coincidence
+ * means reading them back proves nothing, so the test that every connection is
+ * configured uses a pragma of its own — see `connectionPragmas`.
+ */
+const CONNECTION_PRAGMAS = ['PRAGMA foreign_keys = ON', 'PRAGMA synchronous = FULL'];
+
+// …
+async function configurePool(
+	client: Client,
+	url: string,
+	pragmas: readonly string[]
+): Promise&lt;void&gt; {
+	const pooled = url.startsWith('file:') &amp;&amp; !url.includes(':memory:');
+
+	if (!pooled) {
+		for (const pragma of pragmas) await client.execute(pragma);
+		return;
+	}
+
+	const held: Transaction[] = [];
+	for (let index = 0; index &lt; POOL_SIZE; index += 1) {
+		held.push(await client.transaction('deferred'));
+	}
+
+	for (const transaction of held) {
+		await transaction.executeMultiple(['ROLLBACK', ...pragmas].join(';\n') + ';');
+		transaction.close();
+	}
+}</code></pre>
+</figure>
+<p>Two details carry the weight, and the doc comment on <code>configurePool</code> spells both out. <code>PRAGMA foreign_keys</code> is a documented no-op inside a transaction, so each held connection first runs <code>ROLLBACK</code> — there is nothing to roll back — and then the pragmas, in one <code>executeMultiple</code>: the one method on a transaction that does not check the transaction is still open between statements. Then <code>close()</code> hands the configured connection back to the pool, where it is reused ahead of any new one. An in-memory database or a remote libSQL server is not a pool this can reach, so it takes the plain branch at the top and the pragmas run once.</p>
+<aside class="callout callout--warn"><p>The connection-level settings are the ones that fail silently. A process that forgets <code>busy_timeout</code> is the one that fails under load with <code>SQLITE_BUSY</code> while every other process is fine; a connection that misses <code>foreign_keys</code> is the one that lets an event point at a command that never happened. Both are maddening to debug precisely because the other connections are fine. That is why every process in Sequent calls one <code>openStore</code> function rather than creating clients itself, and why there is a test that reads the settings back through every connection in the pool.</p></aside>
+
+<aside class="callout callout--why">
+	<h4>A test needs a value that could have been different</h4>
+	<p>The first version of that test read <code>busy_timeout</code>, <code>foreign_keys</code> and <code>synchronous</code> back through every connection and expected <code>5000</code>, <code>1</code> and <code>2</code>. It passed — and it passed just as well with <code>configurePool</code> reduced to an immediate <code>return</code>, because the timeout comes from the client option and libSQL compiles in the other two as its defaults. An assertion that agrees with the defaults cannot tell configured from forgotten. So <code>openStore</code> takes <code>connectionPragmas</code>, which nothing in the venue uses, and the test opens a store with <code>PRAGMA cache_size = -4321</code> — a value nobody would choose and no build has as its default — and finds it on all <code>POOL_SIZE</code> connections. With <code>configurePool</code> stubbed out it reads <code>-2000</code>, and fails, which is the property a test is for.</p>
+</aside>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>

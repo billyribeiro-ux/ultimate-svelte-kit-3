@@ -1,5 +1,5 @@
 /**
- * PART 4 — The web tier (chapters 23–28)
+ * PART 4 — The web tier (chapters 22–27)
  *
  * Everything so far runs happily in a terminal. This part puts a SvelteKit 3
  * application in front of it, and spends most of its time on the four places
@@ -12,7 +12,7 @@ export const part4 = [
 		slug: 'a-kit-3-app-from-nothing',
 		title: 'A Kit 3 app from nothing',
 		summary:
-			'No svelte.config.js, no $lib, and a tsconfig that has to say which files are yours.',
+			'Kit 2\'s svelte.config.js and $lib are gone in Kit 3, and the tsconfig has to say which files are yours.',
 		goal: 'Create the venue app and understand every line of its configuration.',
 		blocks: [
 			{
@@ -30,7 +30,7 @@ cd apps/web`
 				text: 'That is the whole scaffold. There is no `npx sv create` step in this course because typing the files out is how you find out what each one is for.'
 			},
 
-			{ type: 'h3', id: 'no-svelte-config', text: 'There is no svelte.config.js' },
+			{ type: 'h3', id: 'no-svelte-config', text: 'Kit 2\'s svelte.config.js is gone' },
 			{
 				type: 'p',
 				text: 'In Kit 2, `svelte.config.js` held the adapter, the aliases, the CSRF setting and the compiler options, and `vite.config.js` held Vite\'s. Two files, one project, and a constant low-level question of which one a given setting lived in. Kit 3 deletes the first: **everything is an option on the `sveltekit()` Vite plugin.**'
@@ -44,17 +44,20 @@ import { defineConfig, loadEnv } from 'vite';
 import { sveltekit } from '@sveltejs/kit/vite';
 import adapter from '@sveltejs/adapter-node';
 
-/* … */
+// …
 export default defineConfig(({ mode }) => {
 	const env = { ...loadEnv(mode, process.cwd(), ''), ...process.env };
+
+	// …
+	const origin = (env['PUBLIC_ORIGIN'] ?? 'http://localhost:4173').replace(/\\/+$/, '');
 
 	return {
 		plugins: [
 			sveltekit({
 				// …
-				paths: { origin: env['PUBLIC_ORIGIN'] ?? 'http://localhost:4173' },
+				paths: { origin },
 
-				/* … */
+				// …
 				csrf: { trustedOrigins: ['*'] },
 
 				compilerOptions: { runes: true, experimental: { async: true } },
@@ -76,13 +79,18 @@ export default defineConfig(({ mode }) => {
 				type: 'ul',
 				items: [
 					'**`defineConfig(({ mode }) => …)`** — a *function*, not an object. `loadEnv` has to run before the plugin is constructed, because `paths.origin` needs a value out of `.env` and Vite has not read those yet when a plain object literal is evaluated. Write it as an object and `PUBLIC_ORIGIN` is `undefined` at exactly the moment it is needed.',
-					'**`paths.origin`** — the origin the app believes it is served from. More on this in a moment; it is the single most surprising thing in the file.',
-					'**`csrf.trustedOrigins`** — replaces Kit 2\'s `checkOrigin: false`. We set `[\'*\']` and write our own check, for reasons that get a whole chapter.',
-					'**`compilerOptions.runes: true`** — no legacy mode. Every component is runes-only, so a stray `export let` is an error rather than a silent reactivity mismatch.',
+					'**`paths.origin`** — the origin the app believes it is served from. More on this in a moment; it is the single most surprising thing in the file. The `origin` constant above it strips any trailing slash first, for a reason chapter 23 explains.',
+					'**`csrf.trustedOrigins`** — Kit 2 turned its form-submission check off with `checkOrigin: false`; Kit 3 removed that option, and `trustedOrigins: [\'*\']` is how you say the same thing now. It is narrower than it looks: calls to remote functions keep a same-origin check of Kit\'s own that ignores this setting. We set `[\'*\']` and write our own check, for reasons that get a whole chapter.',
+					'**`compilerOptions.runes: true`** — no legacy mode. Every component is runes-only, so a Svelte 4 `export let` left in by habit is a compile error telling you to use `$props()`, rather than a component that quietly runs in legacy mode.',
 					'**`compilerOptions.experimental.async: true`** — turns on `await` inside `$derived` and in component markup. The terminal is built on it.',
-					'**`experimental.remoteFunctions: true`** — turns on `.remote.ts` files. Forget it and every import from one resolves to nothing, with an error that does not mention the flag.',
+					'**`experimental.remoteFunctions: true`** — turns on `.remote.ts` files. Forget it and every remote module fails to compile, in `vite dev` and in the build alike. The error does at least name the flag and give you the exact snippet to add to the `sveltekit()` options.',
 					'**`ssr.external`** — `@libsql/client` loads a native `.node` binary. Vite cannot bundle that, and the error if it tries is a module-not-found for a file that plainly exists.'
 				]
+			},
+			{
+				type: 'why',
+				title: 'Experimental means what it says',
+				text: 'Two of those flags are called `experimental` because they are. SvelteKit\'s documentation says it plainly of remote functions — "This feature is currently experimental, meaning it is likely to contain bugs and is subject to change without notice" — and async Svelte is behind a flag for the same reason. For a production venue that is a real cost: an upgrade can change an API this app is built on, and the release notes for those two features are reading you cannot skip. The course uses them anyway, deliberately. They are where SvelteKit is going, they remove a great deal of plumbing — a typed function instead of a load function, an endpoint and a fetch — and the places they break are exactly what a course about running a real system should teach. Load functions and form actions are not legacy: they are the stable primitives, fully supported, and a team that cannot absorb a breaking change in a minor release should build on them. Chapter 24 shows what this project uses in their place.'
 			},
 			{
 				type: 'why',
@@ -94,10 +102,10 @@ export default defineConfig(({ mode }) => {
 				text: 'If a deployed Kit 3 app suddenly rejects every form and you changed nothing but the hostname, `paths.origin` is the first place to look — and a restart will not fix it.'
 			},
 
-			{ type: 'h3', id: 'no-dollar-lib', text: 'There is no $lib either' },
+			{ type: 'h3', id: 'no-dollar-lib', text: 'Kit 2\'s $lib is gone too' },
 			{
 				type: 'p',
-				text: '`$lib` is gone. Kit 3 uses **Node subpath imports** — a plain `package.json` feature that existed long before Kit and needs no bundler magic to understand.'
+				text: 'Kit 2 generated a `$lib` alias for you. Kit 3 does not: it uses **Node subpath imports** — a plain `package.json` feature that existed long before Kit and needs no bundler magic to understand.'
 			},
 			{
 				type: 'code',
@@ -116,7 +124,7 @@ export default defineConfig(({ mode }) => {
 			},
 			{
 				type: 'code',
-				file: 'anywhere in src/',
+				file: 'the same import, in Kit 2 and in Kit 3',
 				lang: 'ts',
 				code: `
 // Kit 2
@@ -138,17 +146,17 @@ import { db } from '#lib/server/db.ts';`
 			{ type: 'h3', id: 'tsconfig', text: 'The tsconfig has to say which files are yours' },
 			{
 				type: 'p',
-				text: 'This one cost an afternoon. `svelte-kit sync` generates a base config and you extend it, exactly as in Kit 2. What changed is that the Kit 3 base deliberately sets **no `include` and no `exclude`.**'
+				text: 'This one cost an afternoon. You still extend a base config that `svelte-kit sync` generates, but two things changed. The base is now `$app/tsconfig` rather than Kit 2\'s `./.svelte-kit/tsconfig.json`. And the Kit 3 base deliberately sets **no `include` and no `exclude`.** The first is a one-line edit. The second is where the afternoon went.'
 			},
 			{
 				type: 'terminal',
 				code: `
 $ pnpm --filter @sequent/web check
 
-...
+…
 build/server/chunks/index-BqK2v8.js:1:2847
   Error: Parameter 'e' implicitly has an 'any' type.
-...
+…
 2952 errors`
 			},
 			{
@@ -161,23 +169,25 @@ build/server/chunks/index-BqK2v8.js:1:2847
 				lang: 'json',
 				code: `
 {
-	// …
+	…
 	"extends": "$app/tsconfig",
 
-	/* … */
+	…
 	"include": [
 		"src/**/*.ts",
 		"src/**/*.js",
 		"src/**/*.svelte",
 		"scripts/**/*.ts",
+		"e2e/**/*.ts",
 		"vite.config.ts",
+		"playwright.config.ts",
 		".svelte-kit/types/**/*.ts"
 	],
 	"exclude": ["build", "node_modules", ".svelte-kit/output", ".svelte-kit/adapter-node"],
 
 	"compilerOptions": {
 		"strict": true,
-		// …
+		…
 		"noUncheckedIndexedAccess": true,
 		"noImplicitOverride": true,
 		"noFallthroughCasesInSwitch": true,
@@ -188,6 +198,10 @@ build/server/chunks/index-BqK2v8.js:1:2847
 			{
 				type: 'warn',
 				text: '`.svelte-kit/types/**/*.ts` **must** be in `include`. That is where Kit writes the generated route types that `./$types` resolves to. Leave it out and every `PageServerLoad` import fails with a module-not-found for a file that is sitting right there on disk.'
+			},
+			{
+				type: 'p',
+				text: 'The list is also how the browser tests get type-checked. `e2e/**/*.ts` and `playwright.config.ts` are the end-to-end suite you meet in chapter 41; listing them means `svelte-check` reads them like any other file, so a test that calls a locator method that does not exist fails `pnpm check` rather than failing in a browser five minutes into `verify`.'
 			},
 			{
 				type: 'p',
@@ -211,14 +225,14 @@ build/server/chunks/index-BqK2v8.js:1:2847
 		slug: 'environment-variables-declared',
 		title: 'Environment variables, declared',
 		summary:
-			'src/env.ts replaces the four $env modules, and makes leaking a secret into the browser a type error.',
+			'src/env.ts replaces Kit 2\'s four $env modules, and makes leaking a secret into the browser a build error.',
 		goal: 'Declare every variable the app reads, with a valibot schema on each.',
 		blocks: [
 			{
 				type: 'p',
 				text: 'Kit 2 had four magic modules: `$env/static/private`, `$env/static/public`, `$env/dynamic/private`, `$env/dynamic/public`. They worked, but they had two problems. Nothing told you which variables an app actually needed until it crashed, and the only thing standing between a secret and the browser bundle was remembering which of four import paths you were typing.'
 			},
-			{ type: 'p', text: 'Kit 3 replaces all four with one file you write.' },
+			{ type: 'p', text: 'Kit 3 deprecates all four — they are due to be removed in Kit 4 — in favour of one file you write.' },
 			{
 				type: 'code',
 				file: 'apps/web/src/env.ts',
@@ -255,14 +269,30 @@ export const variables = defineEnvVars({
 			{
 				type: 'ul',
 				items: [
-					'**`schema`** — a valibot schema. It runs at startup, so `DATABASE_URL=""` fails immediately with a clear message instead of producing an unopenable database three layers down.',
+					'**`schema`** — a valibot schema. It runs when the app starts, and during the build, so `DATABASE_URL=""` fails immediately with a clear message instead of producing an unopenable database three layers down.',
 					'**`public: true`** — this value is allowed in the browser. It is absent by default, so a secret reaching the client requires somebody to *type the word public*, which is exactly the kind of mistake that survives a review and the kind that does not.',
-					'**`static: true`** — inlined at build time rather than read from `process.env` at request time. Faster, and it means the value cannot change under a running process. Use it for things that genuinely do not vary between restarts.'
+					'**`static: true`** — inlined into the bundle at build time, rather than read from the environment when the app starts. That allows dead-code elimination, and it means changing the value needs a **rebuild**, not a restart. Use it for things that are fixed for the life of a build — `PUBLIC_ORIGIN` is one, since `paths.origin` is baked in at build time anyway.'
 				]
 			},
 			{
 				type: 'p',
-				text: 'Note what the `PUBLIC_ORIGIN` schema does beyond checking: `v.transform` strips trailing slashes. `https://sequent.exchange/` and `https://sequent.exchange` are the same origin to a person and different strings to a comparison — and this value is compared against an `Origin` header on every state-changing request. Normalising it once here is better than remembering to normalise it at every use.'
+				text: 'Note what the `PUBLIC_ORIGIN` schema does beyond checking: `v.transform` strips trailing slashes. `https://sequent.exchange/` and `https://sequent.exchange` are the same origin to a person and different strings to a comparison — and this value is compared against an `Origin` header on every state-changing request. Normalising it in the declaration means every import of `PUBLIC_ORIGIN` gets the clean value, rather than every use remembering to clean it.'
+			},
+			{
+				type: 'p',
+				text: 'There is one reader this file cannot reach: `vite.config.ts`, which hands the same variable to `paths.origin` while the config is being evaluated — before `src/env.ts` has run. Kit checks that value too, and refuses an origin with anything after it, so a trailing slash would fail the build before the schema\'s transform ever saw it. The config therefore applies the same normalisation itself, in the `origin` constant from chapter 22:'
+			},
+			{
+				type: 'code',
+				file: 'apps/web/vite.config.ts',
+				lang: 'ts',
+				code: `
+const origin = (env['PUBLIC_ORIGIN'] ?? 'http://localhost:4173').replace(/\\/+$/, '');`
+			},
+			{
+				type: 'why',
+				title: 'One variable, two readers, one rule',
+				text: '`paths.origin` is the authority for Kit: it is what the adapter bakes into the build and what Kit\'s own checks compare against. `PUBLIC_ORIGIN` from `$app/env/public` is what our CSRF hook compares against. If the two could disagree — one with a slash, one without — the hook would refuse requests Kit had accepted, or the build would refuse a value the schema would have fixed. Writing the same transform in both places is a small duplication that keeps them identical; the comment above the constant says so, because the next person to touch either line needs to know the other exists.'
 			},
 			{
 				type: 'why',
@@ -308,7 +338,7 @@ import { PUBLIC_ORIGIN } from '$app/env/public';`
 		title: 'Remote functions',
 		summary:
 			'query, command, form and query.live — and why every argument needs a schema even though the caller is your own page.',
-		goal: 'Replace load functions and form actions with typed server functions you can call from anywhere.',
+		goal: 'Build the web tier on typed server functions you can call from anywhere, and know what using an experimental feature costs.',
 		blocks: [
 			{
 				type: 'p',
@@ -316,7 +346,11 @@ import { PUBLIC_ORIGIN } from '$app/env/public';`
 			},
 			{
 				type: 'p',
-				text: 'This replaces `+page.server.ts` load functions and form actions for most work, and the difference is not syntax. A load function is tied to a route: it runs when that URL loads, and nowhere else. A remote function is tied to *nothing* — any component on any page can call it, and so can another remote function.'
+				text: 'This project uses them for most of what a Kit 2 app would do with `+page.server.ts` load functions and form actions, and the difference is not syntax. A load function is tied to a route: it runs when that URL loads, and nowhere else. A remote function is tied to *nothing* — any component on any page can call it, and so can another remote function.'
+			},
+			{
+				type: 'note',
+				text: 'Remote functions are **experimental** in SvelteKit 3 — "likely to contain bugs and … subject to change without notice", in the documentation\'s words — and so is the `await` in components that makes them pleasant (chapter 22 has the flags and the trade). Load functions and form actions are not deprecated and not legacy; they are the stable way to do this work, and this app still uses load functions where a page needs a decision made before it renders, such as who may open it. Choosing remote functions here is choosing to track an API that may move, in exchange for far less plumbing.'
 			},
 
 			{ type: 'h3', id: 'query', text: 'query — reading' },
@@ -343,26 +377,56 @@ export const getMyOrders = query(async () => {
 		args: [viewer.firmId]
 	});
 
-	return result.rows.map((row: Row) => ({ /* … */ }));
+	return result.rows.map((row: Row) => ({
+		orderId: String(row['order_id']),
+		clientOrderId: String(row['client_order_id']),
+		instrumentId: String(row['instrument_id']),
+		side: String(row['side']),
+		price: row['price'] === null ? null : Number(row['price']),
+		priceLabel:
+			row['price'] === null ? 'market' : formatPrice(Number(row['price']) as Price, 'GBP'),
+		quantity: Number(row['quantity']),
+		filled: Number(row['filled']),
+		timeInForce: String(row['time_in_force']),
+		status: String(row['status']),
+		cancelReason: row['cancel_reason'] === null ? null : String(row['cancel_reason']),
+		updatedAt: Number(row['updated_at'])
+	}));
 });`
 			},
 			{
 				type: 'code',
+				file: 'apps/web/src/routes/terminal/+page.svelte',
 				lang: 'svelte',
 				code: `
 <script lang="ts">
-	import { getMyOrders } from './market.remote.ts';
+	// …
+	import {
+		cancelOrder,
+		getInstruments,
+		getMyOrders,
+		getMyPositions,
+		placeOrder,
+		watchMarket
+	} from './market.remote.ts';
 
+	// …
 	const orders = $derived(await getMyOrders());
+	// …
 </script>
 
+<!-- … -->
 {#each orders as order (order.orderId)}
-	<tr>…</tr>
+	<tr>
+		<!-- … -->
+	</tr>
+{:else}
+	<tr><td colspan="7" class="muted small">Nothing sent yet.</td></tr>
 {/each}`
 			},
 			{
 				type: 'p',
-				text: 'That is the whole thing. `await` inside `$derived` is the `experimental.async` flag from the last chapter, and it is what makes a remote call read like a local one. Kit deduplicates identical calls within a render, caches the result, and re-runs the query when something calls `.refresh()` on it.'
+				text: 'That is all a component needs: import the function, await it inside `$derived`, use the result. `await` inside `$derived` is the `compilerOptions.experimental.async` flag from chapter 22, and it is what makes a remote call read like a local one. Kit deduplicates identical calls within a render, caches the result, and re-runs the query when something calls `.refresh()` on it.'
 			},
 
 			{ type: 'h3', id: 'schemas', text: 'Every argument gets a schema' },
@@ -385,7 +449,7 @@ const positiveInteger = v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValu
 			},
 			{
 				type: 'note',
-				text: 'SvelteKit enforces the discipline for you: inside a remote function, `event.url` and `event.params` **throw** if you read them. A remote function is not a route, so it has no URL to read, and the framework refuses to let you pretend otherwise. Everything that varies must arrive as a validated argument.'
+				text: 'SvelteKit enforces part of the discipline for you: inside a `query` (and a `query.live`), reading `event.url`, `event.params` or `event.route` **throws**. A query is cached by its arguments and is not re-run when somebody navigates, so anything it read from the URL would go stale without the cache noticing. In a `command` or a `form` those properties describe the page that made the call — which is part of the request, so it can be forged and must never decide what somebody is allowed to do. Either way, everything that varies must arrive as a validated argument.'
 			},
 
 			{ type: 'h3', id: 'command', text: 'command — writing' },
@@ -432,6 +496,75 @@ export const placeOrder = command(
 				text: '`void` in front is deliberate: we are not awaiting it, because we do not want the command\'s response held up by a refresh, and an un-awaited promise without `void` is the kind of thing a linter should complain about.'
 			},
 
+			{ type: 'h3', id: 'refused', text: 'When the server says no' },
+			{
+				type: 'p',
+				text: 'A command can be refused, and on a venue it often is. The gateway answers an auditor\'s cancel with `error(403, \'Your role does not allow that.\')`, an expired session gets `error(401, \'Sign in to continue.\')`, and a paused venue answers a new order with a 503 that explains itself. In the browser, the `await` in front of the command **rejects**. The person deserves the server\'s sentence rather than a shrug, so the only question is where in the rejected value that sentence lives.'
+			},
+			{
+				type: 'p',
+				text: 'Rather than guess, force one and look. A throwaway command that does nothing but `error(409, \'probe command\')`, called from a button, caught, and described:'
+			},
+			{
+				type: 'terminal',
+				code: `
+{"instanceofError":false,"ctor":"HandledHttpError","keys":["status","body"],"status":409,"body":{"status":409,"message":"probe command"}}`
+			},
+			{
+				type: 'why',
+				title: 'It is not an Error',
+				text: 'What a rejected remote call hands you is SvelteKit\'s `HttpError` — here its subclass `HandledHttpError`, which means `handleError` has already run on the server — and it has exactly two properties: `status`, and `body`, the `App.Error` the server sent. The message is `body.message`. There is no `message` on the object itself and it does not extend `Error`, so the reflex `thrown instanceof Error ? thrown.message : \'Something went wrong\'` takes the fallback **every time the server refused on purpose** — the one case where it had something worth saying.'
+			},
+			{
+				type: 'p',
+				text: 'The probe is how you find out what the value *is*. It is not how you should read it. SvelteKit exports a guard for exactly this value, `isHttpError`, and the reader the three screens share is built on it:'
+			},
+			{
+				type: 'code',
+				file: 'apps/web/src/lib/errors.ts',
+				lang: 'ts',
+				code: `
+import { isHttpError } from '@sveltejs/kit';
+
+export const NO_ANSWER = 'The venue did not answer. Check your connection and try again.';
+
+export function messageFrom(thrown: unknown): string {
+	return isHttpError(thrown) ? thrown.body.message : NO_ANSWER;
+}`
+			},
+			{
+				type: 'why',
+				title: 'Ask the framework, not the shape',
+				text: '`isHttpError(e)` is an `instanceof` check against the very class the client runtime throws, and its return type narrows `e` to `HttpError`, whose `body` is typed `App.Error`. So `thrown.body.message` needs no cast, and the compiler knows it is a string. The first version of this reader did it by hand — `(thrown as { body?: { message?: unknown } }).body`, a cast, a `typeof` check, and a second cast for `message` — and it was pasted into three components. It worked, but it encoded a belief about Kit\'s internals that only the probe had verified, and the casts would have kept compiling the day that belief stopped being true. SvelteKit 3\'s migration guide says the same of its own classes: rather than `instanceof` checks against `HttpError`, "use `isHttpError`/`isRedirect` from `@sveltejs/kit` instead". One function in `#lib`, imported where it is needed, is also something Vitest can test without a browser — and `errors.spec.ts` does, against a real `error(…)`.'
+			},
+			{
+				type: 'p',
+				text: 'Two branches, and both are deliberate. A refusal — `error(…)` in a remote function, or a response that was not SvelteKit\'s JSON at all, such as the plain-text 403 from our own CSRF hook in chapter 26 — arrives as an `HttpError`, and the person reads the server\'s sentence (`Forbidden`, for the hook). Anything else means the venue never answered: most often `fetch` rejecting with a `TypeError` because the connection dropped. Its message, "Failed to fetch", is the browser talking to a developer, so the person gets a sentence of ours instead. And the one refusal the page can know about before it asks — a person with no trading account — is not thrown at all: `send` says so and returns, because a fact about the person is not a failure of the call.'
+			},
+			{
+				type: 'code',
+				file: 'apps/web/src/routes/terminal/+page.svelte',
+				lang: 'ts',
+				code: `
+async function cancel(clientOrderId: string) {
+	cancelError = null;
+
+	try {
+		await cancelOrder({ clientOrderId });
+	} catch (thrown) {
+		cancelError = messageFrom(thrown);
+	}
+}`
+			},
+			{
+				type: 'warn',
+				text: 'The first version had no `try` at all — `onclick={() => void cancelOrder(...)}`, straight from the button. Here the `void` was not a decision, it was a way of quietening the linter, and the rejection went to the console as an unhandled error while the screen showed a Cancel button that looked as if it had worked. Only a trader holds `cancel_order`, so four of the five roles that open the terminal are refused it — and three of them see a Cancel button they may not use: an auditor reads everything and changes nothing, and a risk manager\'s or firm admin\'s cancel is the firm-wide one. (The venue operator, the fourth, has no orders on this screen to cancel.) A cancel that silently does not happen is the expensive kind of nothing — somebody walks away believing an order is out of the book while it is still resting there.'
+			},
+			{
+				type: 'p',
+				text: 'The message is shown above the orders table with `role="alert"`, not `role="status"`, because the order it is about is still working: that is news somebody should hear now, not when the screen reader next has a moment.'
+			},
+
 			{ type: 'h3', id: 'form', text: 'form — progressive enhancement' },
 			{
 				type: 'p',
@@ -456,10 +589,11 @@ export const signOut = form(v.object({}), async () => {
 			},
 			{
 				type: 'code',
+				file: 'apps/web/src/routes/+layout.svelte',
 				lang: 'svelte',
 				code: `
 <form {...signOut}>
-	<button type="submit">Sign out</button>
+	<button type="submit" class="link">Sign out</button>
 </form>`
 			},
 			{
@@ -470,7 +604,7 @@ export const signOut = form(v.object({}), async () => {
 			{ type: 'h3', id: 'live', text: 'query.live — streaming' },
 			{
 				type: 'p',
-				text: 'The last kind takes an **async generator**, and everything it yields is pushed to every browser subscribed with the same arguments.'
+				text: 'The last kind takes an **async generator**, and everything it yields is streamed to the browser for as long as a component on the page is using it. Several components using the same live query share one connection; when the last of them goes away, the stream disconnects and the generator on the server is stopped.'
 			},
 			{
 				type: 'code',
@@ -524,6 +658,7 @@ export const watchMarket = query.live(
 					'You can write a `query`, a `command`, a `form` and a `query.live`',
 					'You can explain why every argument needs a schema even for your own page',
 					'You can explain what `.refresh()` inside a command saves you',
+					'You can say where a refused command\'s message lives, why `instanceof Error` never finds it, and why `isHttpError` is the way to read it',
 					'You can explain why the live generator coalesces, and what `request.signal` prevents'
 				]
 			}
@@ -556,7 +691,17 @@ const HOME = '/terminal';
 export const signIn = form(
 	v.object({
 		email: v.pipe(v.string(), v.trim(), v.email('Enter the email you signed up with')),
-		password: v.pipe(v.string(), v.minLength(1, 'Enter your password')),
+		/*
+		 * \`_password\`, and the underscore is the security control.
+		 *
+		 * A form submitted without JavaScript that fails — a schema issue or an
+		 * \`invalid\` below — is answered with the page again, and SvelteKit puts
+		 * what was typed back into the fields so nobody fills the form out twice.
+		 * It holds back exactly one kind of field: a name that starts with \`_\`.
+		 * Without it, every mistyped password went back to the browser in plain
+		 * text, in the input's \`value\` and again in the page's hydration data.
+		 */
+		_password: v.pipe(v.string(), v.minLength(1, 'Enter your password')),
 		redirectTo: v.optional(
 			v.pipe(
 				v.string(),
@@ -568,7 +713,9 @@ export const signIn = form(
 			HOME
 		)
 	}),
-	async (data) => { /* … */ }
+	async (data) => {
+		// …
+	}
 );`
 			},
 			{
@@ -593,12 +740,19 @@ const row = result.rows[0];
  *
  * Distinguishing them turns this form into a tool for discovering which
  * firms are members of the venue.
+ *
+ * \`invalid\`, not \`error\`. An \`error(401, …)\` thrown from a form handler
+ * renders the error page in place of the form, so a mistyped password
+ * cost the person the form itself. \`invalid\` with a plain string is an
+ * issue for the form as a whole: it comes back in \`fields.allIssues()\`,
+ * which the page already shows above the fields, with the email still
+ * filled in.
  */
 if (!row || Number(row['is_active']) !== 1) {
-	error(401, 'That email and password do not match an account.');
+	invalid('That email and password do not match an account.');
 }
-if (!verifySecret(data.password, String(row['password_hash']))) {
-	error(401, 'That email and password do not match an account.');
+if (!verifySecret(data._password, String(row['password_hash']))) {
+	invalid('That email and password do not match an account.');
 }`
 			},
 			{
@@ -608,6 +762,47 @@ if (!verifySecret(data.password, String(row['password_hash']))) {
 			{
 				type: 'p',
 				text: 'The same reasoning applies to the *deactivated* case, which is folded into the first branch. "That account exists but is switched off" tells you the account exists.'
+			},
+			{
+				type: 'p',
+				text: 'Both branches refuse with `invalid`, and the first version used `error(401, …)` instead. That looks like the more honest status code, and it is the wrong tool. A form handler that throws `error` hands the failure to the nearest `+error.svelte`, which renders **in place of the page** — so somebody who mistyped their password lost the form, the email they had typed and the button, and was left reading a 401. `invalid` is the form\'s own way of saying no: the submission fails, the message comes back as an issue, and the page shows it where it already shows validation problems.'
+			},
+			{
+				type: 'code',
+				file: 'apps/web/src/routes/sign-in/+page.svelte',
+				lang: 'svelte',
+				code: `
+{#if signIn.fields.allIssues()?.length}
+	<p class="error" role="alert">{signIn.fields.allIssues()?.[0]?.message}</p>
+{/if}
+
+<label data-motion="field">
+	Email
+	<input {...signIn.fields.email.as('email')} autocomplete="username" required />
+</label>
+
+<label data-motion="field">
+	Password
+	<input
+		{...signIn.fields._password.as('password')}
+		autocomplete="current-password"
+		required
+	/>
+</label>`
+			},
+			{
+				type: 'why',
+				title: 'A refusal the person can fix is a validation result',
+				text: 'The line to draw is whether the person can do anything about it. A wrong password is fixed by retyping it, so it belongs on the form, beside "Enter your password". A failure they cannot fix — the venue is down, their role may not open the page — belongs on the error page. And `invalid` is given a plain string, which attaches the message to the form as a whole rather than to the password field, on purpose: pinning it there would say "the email was fine", which is exactly what the single message exists not to say.'
+			},
+			{
+				type: 'p',
+				text: 'Keeping the form brings one more duty with it. With JavaScript the failed submission is a background request and nothing is re-rendered. Without it — a slow connection, a blocked script, a locked-down browser — the browser posts the form, and SvelteKit answers with the whole page again, the fields filled back in with what was typed so nobody starts from scratch. Everything that was typed. Called `password`, the field came back with a mistyped password in its `value` attribute and again in the data the page hydrates from, in plain text, in a response any proxy or browser cache along the way may keep.'
+			},
+			{
+				type: 'why',
+				title: 'An underscore is how a field says "never send this back"',
+				text: 'SvelteKit\'s rule is in its documentation under "Handling sensitive data": "You can prevent sensitive data (such as passwords and credit card numbers) from being sent back to the user by using a name with a leading underscore." So the schema key is `_password`, the handler reads `data._password`, and the page spreads `signIn.fields._password.as(\'password\')`; the email, which is worth giving back, keeps its plain name. It is a naming convention doing a security job, which is easy to undo by accident — a tidy-minded rename to `password` would compile, pass every type check and work perfectly with JavaScript on. That is why a browser test with JavaScript switched off submits a wrong password and asserts that it appears nowhere in the page that comes back (chapter 41).'
 			},
 
 			{ type: 'h3', id: 'the-cookie', text: 'The cookie' },
@@ -694,6 +889,8 @@ export const handle: Handle = sequence(handleCsrf, handleAuth, handleHeaders);`
 				items: [
 					'You can explain what an open redirect is and why `//evil.example` is not a path',
 					'You can explain why sign-in has one error message for two different failures',
+					'You can choose between `invalid` and `error` in a form handler, and say why the message is not pinned to the password field',
+					'You can explain what a form without JavaScript gets back when it fails, and why the password field is called `_password`',
 					'You can name each cookie flag and what it defends against',
 					'You can explain why the session is a database row rather than a signed token'
 				]
@@ -743,19 +940,19 @@ export const handle: Handle = sequence(handleCsrf, handleAuth, handleHeaders);`
 			{ type: 'h3', id: 'the-bug', text: 'The bug' },
 			{
 				type: 'p',
-				text: 'While testing the public API by hand, this happened:'
+				text: 'While testing the public API by hand against a production build, this happened:'
 			},
 			{
 				type: 'terminal',
 				code: `
-$ curl -X DELETE http://localhost:5173/api/v1/orders/ORD-1 \\
-    -H "Authorization: Bearer sq_live_9f2a…"
+$ curl -X DELETE http://localhost:4173/api/v1/orders/ORD-1 \\
+    -H "Authorization: Bearer ak_7f2cQe9xKm4t.Zq4mR8sT…"
 
-Cross-site POST form submissions are forbidden`
+Cross-site DELETE form submissions are forbidden`
 			},
 			{
 				type: 'p',
-				text: 'A body-less `DELETE`, authenticated with a Bearer token, from a command-line tool with no origin at all, refused as a cross-site form submission.'
+				text: 'A body-less `DELETE`, authenticated with a Bearer token, from a command-line tool with no origin at all, refused as a cross-site form submission. Port 4173 is `vite preview`, and that matters: Kit runs its CSRF check only in production, so the same request against `vite dev` goes straight through and the bug waits for the first deploy.'
 			},
 			{
 				type: 'p',
@@ -787,7 +984,26 @@ sveltekit({
 	/*
 	 * Kit's own cross-site check is turned off, and replaced by a stricter
 	 * one in \`hooks.server.ts\`. Read that before deciding this is reckless.
-	 * …
+	 *
+	 * Kit blocks a non-GET request when its \`Content-Type\` is form-like *or
+	 * absent* and the \`Origin\` does not match. Two consequences:
+	 *
+	 *   1. A body-less \`DELETE /api/v1/orders/ORD-1\` sends no content type,
+	 *      so it is blocked — and there is no way for an API client to know
+	 *      it must send a content type on a request with no body.
+	 *   2. A cross-origin \`POST\` with \`Content-Type: application/json\` is
+	 *      *allowed*, because browsers cannot send one without a CORS
+	 *      preflight. True, but it makes our safety depend on the browser.
+	 *
+	 * Our rule instead: **any state-changing request authenticated by a
+	 * cookie must carry a matching Origin.** Bearer-token requests are
+	 * exempt because CSRF is a cookie attack — a browser attaches cookies to
+	 * a forged cross-site request automatically and never attaches an
+	 * \`Authorization\` header. That covers case 1 and closes case 2.
+	 *
+	 * \`['*']\` turns off Kit's check on form submissions and nothing else.
+	 * A call to a remote function still meets Kit's own same-origin check,
+	 * which ignores \`trustedOrigins\` entirely, before it reaches our hook.
 	 */
 	csrf: { trustedOrigins: ['*'] },
 
@@ -799,13 +1015,17 @@ sveltekit({
 				text: '`trustedOrigins: [\'*\']` on its own is a serious vulnerability. It is only acceptable here because the hook below runs on every request and is strictly stronger. If you copy the config line without the hook, you have removed your CSRF protection and added nothing.'
 			},
 			{
+				type: 'note',
+				text: 'Be precise about what the setting switches off. Kit has two origin checks, and `trustedOrigins` reaches only one of them: the check on form submissions and other ordinary non-GET requests. What the page\'s JavaScript sends to a remote function — every `command` from chapter 24, and a `form` submitted with scripts running — goes to Kit\'s remote endpoint, which has a check of its own that refuses any non-GET call whose `Origin` is not the app\'s; Kit\'s source says outright that "entries in `trusted_origins` are *not* honoured" there. So placing and cancelling orders meets Kit\'s check first and our hook second. A form posted without JavaScript is an ordinary form submission to the page, and the public API is an ordinary endpoint: those meet our hook alone, which is exactly why the hook has to be right.'
+			},
+			{
 				type: 'code',
 				file: 'apps/web/src/hooks.server.ts',
 				lang: 'ts',
 				code: `
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
-/* … */
+// …
 const handleCsrf: Handle = async ({ event, resolve }) => {
 	if (SAFE_METHODS.has(event.request.method)) return resolve(event);
 
@@ -905,12 +1125,15 @@ const instrument = $derived(instruments.find((row) => row.instrumentId === chose
 // nothing else changes while somebody is looking at it.
 const market = $derived(chosen ? await watchMarket({ instrumentId: chosen }) : null);
 
-const orders = $derived(await getMyOrders());
-const positions = $derived(await getMyPositions());`
+const orders = $derived(await getMyOrders());`
 			},
 			{
 				type: 'p',
-				text: 'Six lines that fetch from the server, pick a default, follow the URL, subscribe to a stream, and re-run precisely the parts that depend on what changed. In Kit 2 that is a load function, a `$:` block, a store subscription and an `onDestroy`.'
+				text: 'Five lines that fetch from the server, pick a default, follow the URL, subscribe to a stream, and re-run precisely the parts that depend on what changed. In Kit 2 that is a load function, a `$:` block, a store subscription and an `onDestroy`.'
+			},
+			{
+				type: 'p',
+				text: 'There used to be a sixth, for positions. Where it went, and why, is the last section of this chapter.'
 			},
 
 			{ type: 'h3', id: 'the-trap', text: 'The trap' },
@@ -961,9 +1184,12 @@ let ticket = $state({
 
 let sending = $state(false);
 let lastError = $state<string | null>(null);
-
-// …only now the awaited deriveds
+// …
 const instruments = $derived(await getInstruments());`
+			},
+			{
+				type: 'p',
+				text: 'The `// …` is three more `$state` declarations — `lastSent`, `cancelError` and `ticketOpen` — and `seenPhase`, a plain variable the next section uses. Only after all of them does the first `await` appear.'
 			},
 			{
 				type: 'warn',
@@ -1014,13 +1240,175 @@ $effect(() => {
 				type: 'p',
 				text: 'The `seenPhase !== null` guard is the same class of thinking as the idempotent projectors: it separates "the state changed" from "this is the first time I am seeing state at all". Arriving at a market that is already open is not the market opening, and firing the venue\'s one dramatic animation at everybody who loads the page would make it mean nothing.'
 			},
+
+			{ type: 'h3', id: 'where-you-await', text: 'Where you await is what fails with it' },
+			{
+				type: 'p',
+				text: 'An awaited `$derived` in the script is a promise the whole component waits on. On the server, if it rejects, the render has failed: there is no page to send, only the error page. That is the right trade for the instrument list, without which there is no terminal. It was the wrong one for positions.'
+			},
+			{
+				type: 'p',
+				text: 'A venue operator can open the terminal: the nav offers it, because watching the book and the tape is half the job. But an operator belongs to the venue, not to a member firm, holds no positions, and is refused `view_positions`. With `getMyPositions()` awaited in the script, that one refusal failed the page, and the operator lost the book, the tape and every Cancel button to a panel they had no use for.'
+			},
+			{
+				type: 'p',
+				text: 'The first fix moved the await into the markup, inside a `<svelte:boundary>`, and let the boundary catch the 403. On screen it looked right — the whole terminal, and a Positions panel saying "Your role does not allow that." Then somebody looked at the response: **HTTP 403**, for a page that had rendered perfectly. SvelteKit hands every boundary a `transformError` that runs the error through `handleError` and then sets the page\'s error and status from it — on the server and in the browser alike — so `page.status` read 403 too, and any monitor or client checking the status saw a failed page. A refusal you know is coming is not an error to catch. It is a branch.'
+			},
+			{
+				type: 'code',
+				file: 'apps/web/src/routes/terminal/+page.server.ts',
+				lang: 'ts',
+				code: `
+return {
+	accountIds: locals.viewer.accountIds,
+	/*
+	 * Whether the Positions panel should ask at all.
+	 *
+	 * Every role that opens the terminal may see the book, and one of them — the
+	 * venue operator — holds no positions. Deciding that here, from the same
+	 * rule \`getMyPositions\` enforces, turns a certain refusal into a branch in
+	 * the markup. The query still checks for itself: this is a courtesy to the
+	 * page, and the remote function is the control.
+	 */
+	canSeePositions: can(locals.viewer, 'view_positions', { firmId: locals.viewer.firmId }).allowed
+};`
+			},
+			{
+				type: 'p',
+				text: 'This is the one job a load function still does best here: decide something about the page before any of it renders. The admin screen works the same way, with `data.canSeeQueue ? await getQueue() : null`. The panel then branches, and keeps a boundary for what nobody can predict:'
+			},
+			{
+				type: 'code',
+				file: 'apps/web/src/routes/terminal/+page.svelte',
+				lang: 'svelte',
+				code: `
+{#if data.canSeePositions}
+	<!-- … -->
+	<svelte:boundary>
+		<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+		<div class="scroller" tabindex="0" role="region" aria-label="Positions, scrollable">
+			<table>
+				<!-- … -->
+				<tbody>
+					{#each await getMyPositions() as position (position.accountId + position.instrumentId)}
+						<!-- … -->
+					{:else}
+						<tr><td colspan="5" class="muted small">Flat.</td></tr>
+					{/each}
+				</tbody>
+			</table>
+		</div>
+
+		{#snippet failed(error, reset)}
+			{const failure = $derived(error as App.Error)}
+			{#if failure.status >= 500}
+				<!-- … -->
+				<p class="muted small under-heading">
+					Positions did not load{failure.id ? \` (reference \${failure.id})\` : ''}.
+					<button
+						type="button"
+						class="link"
+						onclick={() => {
+							void getMyPositions().refresh();
+							reset();
+						}}>Try again</button
+					>
+				</p>
+			{:else}
+				<!-- … -->
+				<p class="muted small under-heading">{failure.message}</p>
+			{/if}
+		{/snippet}
+	</svelte:boundary>
+{:else}
+	<p class="muted small under-heading">
+		Positions belong to member firms. This role watches the market and holds none.
+	</p>
+{/if}`
+			},
+			{
+				type: 'p',
+				text: 'A `<svelte:boundary>` catches what fails inside it, during rendering or in an `await`, and shows its `failed` snippet instead of its contents. Everything outside carries on. So a dropped connection or a fault at our end now costs this panel and nothing else — though, as above, it still sets the page\'s status, which for a genuine fault is honest.'
+			},
+			{
+				type: 'why',
+				title: 'Why the await is in the markup, not the script',
+				text: 'Because the server and the browser must agree. On the server a script-level `$derived(await …)` that rejects fails the render before any boundary in the markup exists to catch it, and the person gets the error page. In the browser, after a client-side navigation, a boundary around the place the value is *read* does catch it — which is how an earlier version of this test suite passed with the await still in the script: it only ever reached the terminal by navigating there after signing in. Written inside the boundary, the await fails inside the boundary in both places. The browser test now reloads the page as the operator and asserts a 200, so the server\'s half is checked too.'
+			},
+			{
+				type: 'why',
+				title: 'No pending snippet, and a retry that refreshes',
+				text: 'The boundary has a `failed` snippet and deliberately no `pending` one. Svelte\'s documentation: "During server-side rendering, a boundary with a `pending` snippet renders that snippet and ignores the rest of its content" — so a pending snippet would make every first load show a placeholder where the server could have sent the table. And the retry is offered only for a fault (a status of 500 or more), because a refusal answers the same way every time. It calls `getMyPositions().refresh()` before `reset()`: `reset` re-renders the boundary\'s contents, but a query that failed keeps its failure until it is refreshed, so on its own the retry would await the same rejection again. A browser test drops the connection on that one request, checks the panel says so while the rest of the terminal carries on, restores it, and presses Try again.'
+			},
+			{
+				type: 'why',
+				title: 'The error is an App.Error, and the cast says so',
+				text: 'What reaches `failed` under SvelteKit is not the thing that was thrown. Kit puts every boundary\'s error through its error handling first — the server\'s `handleError` for a query that called `error(...)`, the client-side `handleError` (Kit\'s default here, as there is no `hooks.client.ts`) for anything thrown in the browser — and passes on the result: an `App.Error`, a plain `{ status, message }` object, plus the `id` our `handleError` adds to unexpected errors. A runtime probe that forced a query to throw `error(418, \'probe query\')` printed `{"instanceofError":false,"ctor":"Object","keys":["status","message"],"message":"probe query","status":418}` — the same on the server render and after a client-side navigation. Svelte itself types the parameter `unknown`, because a boundary in plain Svelte can catch anything at all, and the strict checker rejects annotating it as `App.Error`. So the snippet says it once, in a declaration tag: `{const failure = $derived(error as App.Error)}`. The cast is not a guess but a statement of what Kit guarantees, and the comment above the boundary says so.'
+			},
+			{
+				type: 'p',
+				text: 'That line is a **declaration tag** — `{const …}` in the markup, scoped to the block it sits in — and it is the current way to name a value inside a template. The legacy spelling was `{@const failure = …}`, which Svelte\'s documentation now calls "considered legacy — use declaration tags instead". Unlike `{@const}`, a declaration tag is an ordinary declaration, so it is reactive only if you ask: "When values should be reactive, you can use `$state` and `$derived`." That is why it says `$derived` — the snippet is the same `failed` snippet for every failure, and the name should follow whichever `error` it was handed. Chapter 35 meets the other declaration tag on this page.'
+			},
+			{
+				type: 'p',
+				text: 'And the failure the panel cannot absorb — a page whose load refuses, a route that does not exist — goes to `src/routes/+error.svelte`, which receives the same `App.Error` as a prop:'
+			},
+			{
+				type: 'code',
+				file: 'apps/web/src/routes/+error.svelte',
+				lang: 'svelte',
+				code: `
+<script lang="ts">
+	import type { ErrorProps } from './$types';
+
+	// …
+	let { error }: ErrorProps = $props();
+
+	// …
+	const heading = $derived(
+		error.status >= 500
+			? 'Something went wrong'
+			: error.status === 404
+				? 'There is nothing here'
+				: 'We cannot show you this'
+	);
+</script>
+
+<div class="container card stack failure" role="alert">
+	<h1>{heading}</h1>
+	<p class="muted">{error.message}</p>
+	{#if error.id}
+		<p class="small faint mono">Reference {error.id}</p>
+	{/if}
+	{#if error.status >= 500}
+		<!-- … -->
+		<button type="button" onclick={() => location.reload()}>Try again</button>
+	{/if}
+</div>`
+			},
+			{
+				type: 'p',
+				text: 'Three headings, because three different things happened: the venue failed, the page is not there, or the venue refused for a reason it states. Only the first gets a Try again button — a reload cannot change a refusal or conjure a missing page, and offering one says it might.'
+			},
+			{
+				type: 'note',
+				text: '`ErrorProps` comes from `./$types`, the module `svelte-kit sync` generates for each route folder — the reason chapter 22 put `.svelte-kit/types` in the tsconfig. Every page and layout in Sequent types its props the same way: `let { data }: PageProps = $props()` on a page, `LayoutProps` on a layout. That makes `data` exactly what the route\'s `load` returned, so a field added to the load appears in the component and a field removed from it is a type error, where a hand-written `{ data: { … } }` would have drifted silently — the layout\'s once said a viewer\'s role was any `string`, when the domain says it is one of five.'
+			},
+			{
+				type: 'warn',
+				text: 'This file replaced a boundary in the root layout that wrapped every page, guarded its message with `error instanceof Error`, and had never once run. The guard was wrong — an `App.Error` is never an `Error`, so the fallback "We could not load this." would have won every time — but it did not matter, because SvelteKit 3 wraps **each page** in a boundary of its own that renders the nearest `+error.svelte`, falling back to Kit\'s built-in one when the app has none. The page\'s failure was always caught one level below the layout, and shown as Kit\'s bare status code and message. A boundary is only reached if nothing nearer catches first.'
+			},
 			{
 				type: 'checkpoint',
 				items: [
 					'You can use `await` inside `$derived` and explain what re-runs when',
 					'You can state the declaration-order rule and the exact error breaking it produces',
 					'You can explain why a plain `$state` binding is unaffected but a member binding is not',
-					'You can decide between `$derived` and `$effect` from what the code does, not how it looks'
+					'You can decide between `$derived` and `$effect` from what the code does, not how it looks',
+					'You can decide whether an await belongs in the script or inside a boundary, from what should fail with it, and why the server and the browser disagree when it is in the wrong place',
+					'You can explain why a refusal you can predict belongs in the load as a flag, not in a boundary — and what a caught error does to the page\'s status',
+					'You can say what a `failed` snippet and `+error.svelte` receive, and why the layout\'s boundary never ran',
+					'You can write a declaration tag, and say when it needs `$derived`'
 				]
 			}
 		]

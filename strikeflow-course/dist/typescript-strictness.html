@@ -35,22 +35,22 @@
 			<h1>TypeScript, tightened</h1>
 			<p class="lede">Four extra compiler flags that catch real crashes, and the one setting SvelteKit 3 now requires you to write yourself.</p>
 			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Your <code>tsconfig.json</code> is stricter than the default and <code>pnpm run check</code> passes.</p></aside>
-			<p>Open <code>tsconfig.json</code>. The scaffold gives you something short, because most of the configuration comes from a file SvelteKit generates:</p>
+			<p>Open <code>tsconfig.json</code>. The scaffold gives you something short, because most of the configuration comes from a module SvelteKit generates, <code>$app/tsconfig</code>, which your file extends:</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">tsconfig.json (generated)</span>
+		<span class="code__file">tsconfig.json, as scaffolded</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-json">{
 	&quot;extends&quot;: &quot;$app/tsconfig&quot;,
 	&quot;compilerOptions&quot;: {
-		&quot;sourceMap&quot;: true,
 		&quot;strict&quot;: true
-	}
+	},
+	&quot;include&quot;: [&quot;src&quot;, &quot;vite.config.ts&quot;]
 }</code></pre>
 </figure>
-<p><code>strict: true</code> is doing a lot of work — it turns on <code>strictNullChecks</code>, <code>noImplicitAny</code> and half a dozen others. We're going to add four more, and one required section.</p>
+<p><code>strict: true</code> is doing a lot of work — it turns on <code>strictNullChecks</code>, <code>noImplicitAny</code> and half a dozen others. We're going to add four more flags and <code>sourceMap</code>, spell out exactly which files are checked, and add an <code>exclude</code>.</p>
 
 <figure class="code">
 	<figcaption>
@@ -58,15 +58,35 @@
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-json">{
+	// SvelteKit generates a base config into `node_modules/$app/tsconfig` on every
+	// `svelte-kit sync`. It already sets module resolution, the DOM libs, and the
+	// generated route types — so we only add what's specific to this project.
 	&quot;extends&quot;: &quot;$app/tsconfig&quot;,
 	&quot;compilerOptions&quot;: {
 		&quot;sourceMap&quot;: true,
+
+		// The big one. Turns on strictNullChecks, noImplicitAny and friends.
 		&quot;strict&quot;: true,
+
+		// Reading `array[0]` gives you `T | undefined` rather than `T`.
+		// Annoying for about a day, then it starts catching real crashes —
+		// because `array[0]` genuinely can be undefined and pretending otherwise
+		// is how you get &quot;cannot read properties of undefined&quot; in production.
 		&quot;noUncheckedIndexedAccess&quot;: true,
+
+		// A subclass method that overrides a parent must say `override`.
 		&quot;noImplicitOverride&quot;: true,
+
+		// A `case` that falls through to the next one must be deliberate.
 		&quot;noFallthroughCasesInSwitch&quot;: true,
+
+		// Every code path in a function that returns a value must return a value.
 		&quot;noImplicitReturns&quot;: true
 	},
+
+	// SvelteKit 3 requires these to be explicit — the generated config no longer
+	// guesses. Without them, `svelte-check` happily type-checks your minified
+	// production output in `build/` and reports thousands of meaningless errors.
 	&quot;include&quot;: [
 		&quot;src/**/*.ts&quot;,
 		&quot;src/**/*.js&quot;,
@@ -83,7 +103,7 @@
 	<h4>noUncheckedIndexedAccess is the one that matters</h4>
 	<p>Without it, TypeScript claims <code>array[0]</code> is definitely a <code>T</code>. It is not — the array might be empty. With the flag on, you get <code>T | undefined</code> and have to deal with it. It is mildly irritating for about a day and then it starts catching real &quot;cannot read properties of undefined&quot; crashes before they ship.</p>
 </aside>
-<p>The <code>include</code> and <code>exclude</code> arrays are not optional in SvelteKit 3. The generated config no longer guesses them. Leave them out and <code>svelte-check</code> will happily type-check your <strong>minified production build</strong> in <code>build/</code> and report a couple of thousand meaningless errors — which is a genuinely bewildering first experience.</p>
+<p>The <code>include</code> and <code>exclude</code> arrays are not optional in SvelteKit 3. In SvelteKit 2 the generated config guessed them for you; <code>$app/tsconfig</code> deliberately does not, which is why the scaffold already writes an <code>include</code>. Ours lists the source patterns explicitly — adding <code>scripts/</code> and the config files — and adds an <code>exclude</code> for generated output and the service worker. Leave them out and <code>svelte-check</code> will happily type-check your <strong>minified production build</strong> in <code>build/</code> and report a couple of thousand meaningless errors — which is a genuinely bewildering first experience.</p>
 <h3 id="check">Checking your work</h3>
 <p>TypeScript on its own does not understand <code>.svelte</code> files. <code>svelte-check</code> does — it type-checks your components, your markup expressions and your props:</p>
 
@@ -98,7 +118,7 @@
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>
-	<p><code>pnpm run check</code> prints <code>0 errors</code>. If it reports thousands, you have not added the <code>exclude</code> array.</p>
+	<p><code>pnpm run check</code> prints <code>0 errors</code>. If it reports thousands, it is type-checking the minified output in <code>build/</code>: your <code>include</code> is missing or too broad, and nothing in <code>exclude</code> rules <code>build</code> out.</p>
 </aside>
 		</article>
 

@@ -3,7 +3,9 @@
 	import { CalendarBlankIcon, CaretLeftIcon, CaretRightIcon } from 'phosphor-svelte';
 	import { untrack } from 'svelte';
 	import { CalendarDate, getLocalTimeZone, today, type DateValue } from '@internationalized/date';
+	import { m } from '#lib/paraglide/messages.js';
 	import { getLocale } from '#lib/paraglide/runtime.js';
+	import { segmentAttributes } from './date-segments.ts';
 
 	/**
 	 * A DATE RANGE, THE ACCESSIBLE WAY
@@ -19,6 +21,11 @@
 	 * `name` on each input renders a hidden `<input>` with the ISO date, which
 	 * is how the value reaches a remote `form` — and how it would reach a
 	 * plain HTML form with JavaScript off.
+	 *
+	 * Each segment is rendered through Bits UI's `child` snippet, so the
+	 * names a screen reader hears are in the page's language and an issue
+	 * from the form is announced on the field it belongs to —
+	 * `date-segments.ts` says what Bits writes in English and why.
 	 */
 	interface Props {
 		label: string;
@@ -52,14 +59,23 @@
 
 	const parse = (iso: string | undefined): DateValue | undefined => {
 		if (!iso) return undefined;
-		const [y, m, d] = iso.split('-').map(Number);
-		return new CalendarDate(y!, m!, d!);
+		const [year, month, day] = iso.split('-').map(Number);
+		return new CalendarDate(year!, month!, day!);
 	};
 
 	// The props are the *initial* value only — after that the picker owns it.
 	// `untrack` says so out loud, and quiets the compiler's fair question.
 	let value = $state(untrack(() => ({ start: parse(start), end: parse(end) })));
 	const placeholder = today(getLocalTimeZone());
+
+	/* The issue line's id: what an invalid segment points at with `aria-describedby`. */
+	const issueId = $props.id();
+	const segment = (props: Record<string, unknown>, part: string) =>
+		segmentAttributes(props, part, {
+			locale,
+			empty: m.date_empty(),
+			issueId: issues.length > 0 ? issueId : undefined
+		});
 </script>
 
 <DateRangePicker.Root
@@ -69,6 +85,7 @@
 	}}
 	{placeholder}
 	{locale}
+	calendarLabel={label}
 	weekdayFormat="short"
 	fixedWeeks
 	minValue={futureOnly ? placeholder : undefined}
@@ -76,39 +93,65 @@
 >
 	<DateRangePicker.Label class="label">{label}</DateRangePicker.Label>
 
-	<div class="range__row" class:range__row--invalid={issues.length > 0}>
-		{#each [['start', startName], ['end', endName]] as const as [type, name] (type)}
-			<DateRangePicker.Input {type} {name} class="range__input">
-				{#snippet children({ segments })}
-					{#each segments as { part, value: text }, i (part + i)}
-						<DateRangePicker.Segment {part} class="range__segment">{text}</DateRangePicker.Segment>
-					{/each}
-				{/snippet}
-			</DateRangePicker.Input>
-			{#if type === 'start'}
-				<span class="range__dash" aria-hidden="true">–</span>
-			{/if}
-		{/each}
+	<!--
+		The two dates are one group that may wrap, and the calendar button
+		stays at the end: at 360px, "mm/dd/yyyy – mm/dd/yyyy" and a 36px
+		button are wider than a card's column, and a field that cannot shrink
+		pokes out of the card it is in.
+	-->
+	<div class={['datefield', { 'datefield--invalid': issues.length > 0 }]}>
+		<div class="datefield__dates">
+			{#each [['start', startName], ['end', endName]] as const as [type, name] (type)}
+				<span class="datefield__date">
+					<DateRangePicker.Input {type} {name} class="range__input datefield__input">
+						{#snippet children({ segments })}
+							{#each segments as { part, value: text }, i (part + i)}
+								<DateRangePicker.Segment {part} class="datefield__segment">
+									{#snippet child({ props })}
+										<span {...props} {...segment(props, part)}>{text}</span>
+									{/snippet}
+								</DateRangePicker.Segment>
+							{/each}
+						{/snippet}
+					</DateRangePicker.Input>
+					{#if type === 'start'}
+						<span class="range__dash" aria-hidden="true">–</span>
+					{/if}
+				</span>
+			{/each}
+		</div>
 
-		<DateRangePicker.Trigger class="btn btn--icon btn--ghost btn--sm" aria-label={label}>
+		<DateRangePicker.Trigger
+			class="btn btn--icon btn--ghost btn--sm datefield__trigger"
+			aria-label={label}
+		>
 			<CalendarBlankIcon size={18} aria-hidden="true" />
 		</DateRangePicker.Trigger>
 	</div>
 
-	{#each issues as issue (issue.message)}
-		<span class="issue">{issue.message}</span>
+	{#each issues as issue, i (issue.message)}
+		<span class="issue" id={i === 0 ? issueId : undefined}>{issue.message}</span>
 	{/each}
 
-	<DateRangePicker.Content class="range__popover" sideOffset={6}>
+	<DateRangePicker.Content class="datefield__popover pop-in" sideOffset={6}>
 		<DateRangePicker.Calendar class="cal">
 			{#snippet children({ months, weekdays })}
 				<DateRangePicker.Header class="cal__header">
+					<!-- Bits names these two "Previous" and "Next", in English, after any name we pass; the child snippet lets ours come last. -->
 					<DateRangePicker.PrevButton class="btn btn--icon btn--ghost btn--sm">
-						<CaretLeftIcon size={16} aria-hidden="true" />
+						{#snippet child({ props })}
+							<button {...props} aria-label={m.date_previous_month()}>
+								<CaretLeftIcon size={16} aria-hidden="true" />
+							</button>
+						{/snippet}
 					</DateRangePicker.PrevButton>
 					<DateRangePicker.Heading class="cal__heading" />
 					<DateRangePicker.NextButton class="btn btn--icon btn--ghost btn--sm">
-						<CaretRightIcon size={16} aria-hidden="true" />
+						{#snippet child({ props })}
+							<button {...props} aria-label={m.date_next_month()}>
+								<CaretRightIcon size={16} aria-hidden="true" />
+							</button>
+						{/snippet}
 					</DateRangePicker.NextButton>
 				</DateRangePicker.Header>
 
@@ -140,139 +183,14 @@
 </DateRangePicker.Root>
 
 <style>
+	/* The field, the segments, the popover and the calendar are `src/lib/styles/dates.css`, shared with the single-date field. */
 	:global(.range) {
 		display: grid;
 		gap: var(--space-1);
 	}
 
-	.range__row {
-		display: flex;
-		align-items: center;
-		gap: var(--space-2);
-		min-height: 2.5rem;
-		padding: 0.25rem 0.25rem 0.25rem 0.75rem;
-		border: 1px solid var(--line-2);
-		border-radius: var(--radius);
-		background: var(--paper-2);
-	}
-
-	.range__row:focus-within {
-		border-color: var(--focus);
-		box-shadow: 0 0 0 3px light-dark(rgb(37 99 235 / 0.18), rgb(147 197 253 / 0.25));
-	}
-
-	.range__row--invalid {
-		border-color: var(--coral);
-	}
-
-	:global(.range__input) {
-		display: inline-flex;
-		align-items: center;
-		font-variant-numeric: tabular-nums;
-	}
-
-	:global(.range__segment) {
-		padding: 0 0.1em;
-		border-radius: 3px;
-		outline: none;
-	}
-
-	:global(.range__segment[data-segment='literal']) {
-		color: var(--ink-3);
-	}
-
-	:global(.range__segment:focus) {
-		background: var(--sea-soft);
-		color: var(--sea);
-	}
-
 	.range__dash {
+		margin-inline-start: var(--space-1);
 		color: var(--ink-3);
-	}
-
-	:global(.range__popover) {
-		z-index: 50;
-		padding: var(--space-3);
-		border: 1px solid var(--line);
-		border-radius: var(--radius-lg);
-		background: var(--paper-2);
-		box-shadow: var(--shadow-3);
-	}
-
-	:global(.cal) {
-		display: grid;
-		gap: var(--space-2);
-	}
-
-	:global(.cal__header) {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-	}
-
-	:global(.cal__heading) {
-		font-weight: 600;
-		font-size: var(--text-sm);
-	}
-
-	:global(.cal__grid) {
-		border-collapse: collapse;
-	}
-
-	:global(.cal__weekday) {
-		width: 2.25rem;
-		font-size: var(--text-xs);
-		font-weight: 500;
-		color: var(--ink-3);
-		text-align: center;
-	}
-
-	:global(.cal__cell) {
-		padding: 1px;
-		text-align: center;
-	}
-
-	:global(.cal__day) {
-		display: grid;
-		place-items: center;
-		width: 2.25rem;
-		height: 2.25rem;
-		border-radius: var(--radius-sm);
-		font-size: var(--text-sm);
-		font-variant-numeric: tabular-nums;
-		cursor: pointer;
-	}
-
-	:global(.cal__day:hover) {
-		background: var(--paper-3);
-	}
-
-	:global(.cal__day[data-outside-month]) {
-		color: var(--ink-3);
-		opacity: 0.5;
-	}
-
-	:global(.cal__day[data-disabled]) {
-		color: var(--ink-3);
-		opacity: 0.35;
-		cursor: not-allowed;
-	}
-
-	:global(.cal__day[data-today]) {
-		box-shadow: inset 0 0 0 1px var(--line-2);
-	}
-
-	:global(.cal__day[data-selected]),
-	:global(.cal__day[data-highlighted]) {
-		background: var(--sea-soft);
-		color: var(--sea);
-		border-radius: 0;
-	}
-
-	:global(.cal__day[data-selection-start]),
-	:global(.cal__day[data-selection-end]) {
-		background: var(--sea);
-		color: light-dark(#fff, #052926);
-		border-radius: var(--radius-sm);
 	}
 </style>

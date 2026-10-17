@@ -6,8 +6,8 @@
  * finishes the requests it has rather than dropping them.
  *
  * `PORT` and `HOST` come from the environment because that is where every
- * platform puts them. `ORIGIN` too, for the case where it was not baked in at
- * build time.
+ * platform puts them. The origin does not: it was baked in at build time, and
+ * `originFor` in `handler.js` says why there is no `ORIGIN` variable.
  */
 
 import http from 'node:http';

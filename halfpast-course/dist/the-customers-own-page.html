@@ -52,7 +52,7 @@
 	&lt;meta name=&quot;robots&quot; content=&quot;noindex, nofollow&quot; /&gt;
 &lt;/svelte:head&gt;</code></pre>
 </figure>
-<aside class="callout callout--warn"><p>The <code>noindex</code> is not optional. The URL *is* the password. A search engine that indexes it publishes a cancel button for somebody's appointment — a breach delivered by Google, with a stack trace nowhere.</p></aside>
+<aside class="callout callout--warn"><p>The <code>noindex</code> is not optional. The URL <em>is</em> the password. A search engine that indexes it publishes a cancel button for somebody's appointment — a breach delivered by Google, with a stack trace nowhere.</p></aside>
 <h3 id="notice">A rule the customer can see</h3>
 
 <figure class="code">
@@ -95,7 +95,11 @@
 		if (!found) error(404, 'We could not find that booking.');
 
 		try {
-			await cancelBooking({ bookingId: found.id, by: 'customer', reason: reason || undefined });
+			await cancelBooking({
+				bookingId: found.id,
+				by: 'customer',
+				reason: reason || undefined
+			});
 		} catch (thrown) {
 			if (thrown instanceof BookingError) {
 				// 409 for &quot;too late&quot;: the request was valid, the world moved on.

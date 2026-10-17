@@ -3,7 +3,7 @@
 	import TrashIcon from 'phosphor-svelte/lib/Trash';
 	import ArrowLineUpIcon from 'phosphor-svelte/lib/ArrowLineUp';
 	import ArrowLineDownIcon from 'phosphor-svelte/lib/ArrowLineDown';
-	import { FILLS, NODE_KINDS, type Fill, type NodeKind } from '#lib/board/index.ts';
+	import { FILLS, NODE_KINDS } from '#lib/board/index.ts';
 	import type { BoardEditor } from '#lib/canvas/editor.svelte.ts';
 	import { requireMessages } from '#lib/i18n/context.ts';
 
@@ -36,13 +36,13 @@
 	const kind = $derived(shared((node) => node.kind));
 </script>
 
-<aside class="inspector" aria-label="Properties">
+<aside class="inspector" aria-label={t.inspector.heading}>
 	{#if selected.length === 0}
-		<p class="inspector__empty">Select a shape to edit it.</p>
+		<p class="inspector__empty">{t.inspector.empty}</p>
 	{:else}
 		<header class="inspector__header">
 			<h2 class="inspector__title truncate">
-				{one ? one.label || t.board.untitled : `${selected.length} shapes`}
+				{one ? one.label || t.board.untitled : t.board.nodes(selected.length)}
 			</h2>
 		</header>
 
@@ -52,13 +52,12 @@
 				{#each FILLS as option (option)}
 					<button
 						type="button"
-						class="inspector__swatch"
-						class:inspector__swatch--on={fill === option}
+						class={['inspector__swatch', { 'inspector__swatch--on': fill === option }]}
 						style="--hue: var(--fill-{option}-h)"
 						aria-label={option}
 						aria-pressed={fill === option}
 						disabled={editor.readOnly}
-						onclick={() => editor.setFill(option as Fill)}
+						onclick={() => editor.setFill(option)}
 					></button>
 				{/each}
 			</div>
@@ -72,8 +71,12 @@
 					value={kind ?? ''}
 					disabled={editor.readOnly}
 					aria-label="Kind"
-					onchange={(event) =>
-						editor.document.setNode(one.id, 'kind', event.currentTarget.value as NodeKind)}
+					onchange={(event) => {
+						// Found in the list rather than cast: the DOM hands back a string,
+						// and only a string that *is* a kind becomes one.
+						const next = NODE_KINDS.find((option) => option === event.currentTarget.value);
+						if (next) editor.document.setNode(one.id, 'kind', next);
+					}}
 				>
 					{#each NODE_KINDS as option (option)}
 						<option value={option}>{t.tools[option]}</option>

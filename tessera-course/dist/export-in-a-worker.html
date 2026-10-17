@@ -146,7 +146,7 @@ const worker = new Worker(new URL('./raster.worker.ts', import.meta.url), { type
 }</code></pre>
 </figure>
 <p>A timeout, and a <code>finally</code> that terminates the worker on <strong>every</strong> path including the timeout — a worker left running holds its module graph and its <code>OffscreenCanvas</code> for the life of the tab. And the scale is capped at 2, so a 5K screen does not produce a file five times larger than anybody wanted.</p>
-<aside class="callout callout--note"><p>The cross-origin isolation headers from chapter 34 are what make <code>SharedArrayBuffer</code> available to this worker. They are scoped to the application’s own pages rather than set globally, because <code>require-corp</code> also forbids loading any cross-origin resource that does not opt in — and the embed route deliberately renders inside other people’s sites.</p></aside>
+<aside class="callout callout--note"><p>The cross-origin isolation headers set in <code>hooks.server.ts</code> are what make <code>SharedArrayBuffer</code> available to this worker (the dev server gets the same two from <code>vite.config.ts</code>). In the built app they are scoped to the application’s own pages rather than set globally, because <code>require-corp</code> also forbids loading any cross-origin resource that does not opt in — and the embed route deliberately renders inside other people’s sites.</p></aside>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>

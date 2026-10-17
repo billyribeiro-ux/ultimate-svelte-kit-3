@@ -1,10 +1,10 @@
 // `defineConfig` comes from `vitest/config` so the `test` block below type-checks;
 // `loadEnv` is not re-exported from there, so it comes straight from Vite.
 import { defineConfig } from 'vitest/config';
-import { loadEnv } from 'vite';
+import { loadEnv, type Plugin } from 'vite';
 import { execSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { playwright } from '@vitest/browser-playwright';
 import { sveltekit } from '@sveltejs/kit/vite';
 import { enhancedImages } from '@sveltejs/enhanced-img';
@@ -12,7 +12,12 @@ import { paraglideVitePlugin } from '@inlang/paraglide-js';
 import { mdsvex } from 'mdsvex';
 import { sveltePhosphorOptimize } from 'phosphor-svelte/vite';
 import adapter from '@sveltejs/adapter-node';
-import { version as packageVersion } from './package.json' with { type: 'json' };
+/*
+ * A default import, not `{ version }`: per spec a JSON module has only a
+ * default export, and Vite's native config loader — the default in the next
+ * major — refuses the named form that the esbuild loader used to tolerate.
+ */
+import pkg from './package.json' with { type: 'json' };
 
 /*
  * SvelteKit 3 keeps ALL framework configuration here, inside the `sveltekit()`
@@ -53,8 +58,20 @@ export default defineConfig(({ mode }) => {
 				 * HTTP behind a proxy does not reconstruct `https://…` from headers
 				 * and reject every POST as cross-site. Better Auth uses the same value
 				 * as its `baseURL` (see `src/lib/server/auth.ts`).
+				 *
+				 * `relative: false`, because every link goes through `href()` and
+				 * Paraglide. With the default, `true`, `resolve()` answers a server
+				 * render with a path relative to the page — `./trips`, `../trips` —
+				 * so the HTML is portable to a subdirectory; Paraglide's
+				 * `localizeHref` then resolves that against an origin and hands back
+				 * a whole URL, `http://localhost:4173/trips`. Every link in the
+				 * server's HTML, and in every prerendered guide, carried the
+				 * build's origin, and the header could never mark the current page:
+				 * it compares a pathname with an `href`, and a URL is never equal to
+				 * a pathname. Root-relative paths are what the browser's half
+				 * already produced, so now both halves write `/de/trips`.
 				 */
-				paths: { origin: env.PUBLIC_ORIGIN },
+				paths: { origin: env.PUBLIC_ORIGIN, relative: false },
 
 				/*
 				 * MARKDOWN COMPONENTS
@@ -77,18 +94,24 @@ export default defineConfig(({ mode }) => {
 				 * =============================
 				 *
 				 * `src/lib/embed` holds `<meridian-route>`, which is compiled as a
-				 * custom element — `customElements.define`, a shadow root — rather
-				 * than as an ordinary component. That is a per-file compiler option,
-				 * and `dynamicCompileOptions` is how a per-file option is set.
+				 * custom element — a class the browser can register, with a shadow
+				 * root — rather than as an ordinary component. That is a per-file
+				 * compiler option, and `dynamicCompileOptions` is how a per-file
+				 * option is set.
 				 *
 				 * `environment.name === 'client'` because a custom element has no
-				 * server-rendered form: it registers itself with the browser and is
-				 * imported on mount. The server build compiles the same file as a
-				 * plain component it never renders.
+				 * server-rendered form: `src/lib/embed/element.ts` registers it with
+				 * the browser, and is imported on mount. The server build compiles
+				 * the same file as a plain component it never renders.
+				 *
+				 * The test is the folder `src/lib/embed`, not any folder called
+				 * `embed`: the frame page at `src/routes/embed/[slug]` is an ordinary
+				 * page, and compiled as a custom element its styles went into a
+				 * shadow root that never exists — the frame rendered unstyled.
 				 */
 				dynamicCompileOptions({ filename, environment }) {
 					if (environment.name !== 'client') return {};
-					if (filename.split(/[/\\]/).includes('embed')) return { customElement: true };
+					if (/[/\\]src[/\\]lib[/\\]embed[/\\]/.test(filename)) return { customElement: true };
 					return {};
 				},
 
@@ -104,8 +127,9 @@ export default defineConfig(({ mode }) => {
 					 * snippets, `$effect.pending()`, `settled()` and `fork()`.
 					 *
 					 * A trip planner is full of it: the globe is a three-hundred-kilobyte
-					 * import that loads when a person asks for it, a place search is a
-					 * request per keystroke, and opening a trip is "wait, then draw".
+					 * import that loads when a person asks for it, the explore page
+					 * awaits the gazetteer at the top of its script, and opening a trip
+					 * is "wait, then draw".
 					 */
 					experimental: { async: true }
 				},
@@ -220,7 +244,7 @@ export default defineConfig(({ mode }) => {
 				 * `name` is the commit, because it has to be deterministic.
 				 */
 				version: {
-					name: commitHash() ?? packageVersion,
+					name: commitHash() ?? pkg.version,
 					pollInterval: 60_000
 				},
 
@@ -261,7 +285,10 @@ export default defineConfig(({ mode }) => {
 			 * parses its input as JavaScript, so putting it first hands it raw `.svelte`
 			 * source and it dies on the first `<h1>`.
 			 */
-			sveltePhosphorOptimize()
+			sveltePhosphorOptimize(),
+
+			// What went into each browser chunk, for `scripts/bundle-guard.ts`. See the function below.
+			bundleStats()
 		],
 
 		/*
@@ -285,8 +312,13 @@ export default defineConfig(({ mode }) => {
 					 * and `getBoundingClientRect`, and the itinerary animates with
 					 * `animate:flip`. jsdom has none of those and would pass every test
 					 * you thought to write while doing nothing.
+					 *
+					 * No `extends` line. Since Vitest 5 an inline project inherits the
+					 * config that declares it — the plugins, `#lib`, Paraglide — so
+					 * naming this file again would load the Svelte plugin twice and
+					 * earn a warning. `extends: false` is the only thing left to say,
+					 * and it would be wrong here.
 					 */
-					extends: './vite.config.ts',
 					/*
 					 * The icons the tested components use, pre-bundled before the first
 					 * test runs. `sveltePhosphorOptimize()` rewrites `phosphor-svelte`
@@ -298,6 +330,9 @@ export default defineConfig(({ mode }) => {
 					optimizeDeps: {
 						include: [
 							'phosphor-svelte/lib/BedIcon',
+							'phosphor-svelte/lib/CalendarBlankIcon',
+							'phosphor-svelte/lib/CaretLeftIcon',
+							'phosphor-svelte/lib/CaretRightIcon',
 							'phosphor-svelte/lib/DotsSixVerticalIcon',
 							'phosphor-svelte/lib/ForkKnifeIcon',
 							'phosphor-svelte/lib/LightbulbIcon',
@@ -321,8 +356,8 @@ export default defineConfig(({ mode }) => {
 				},
 				{
 					// Pure logic — plain Node, no browser, fast. Splits, ordering, dates,
-					// schemas, the geodata build, the identity helpers.
-					extends: './vite.config.ts',
+					// schemas, the geodata build, the identity helpers. Inherits this
+					// config like the project above, for the same reason.
 					test: {
 						name: 'server',
 						environment: 'node',
@@ -378,4 +413,40 @@ function commitHash(): string | null {
 	} catch {
 		return null;
 	}
+}
+
+/**
+ * WHAT IS IN EACH CHUNK
+ * =====================
+ *
+ * The bundle guard (`scripts/bundle-guard.ts`, run after the build in
+ * `pnpm run verify`) has two rules — GSAP only in the home page's chunk, no
+ * new chunk over 20 KB gzipped — and both need to know what a chunk *is*.
+ * Its file name is a hash and its manifest name is whichever module came
+ * first, so neither survives an edit. The bundler knows: at the end of the
+ * browser build this writes every chunk's file and the modules in it, with
+ * how many bytes of each made it into the output, to
+ * `.svelte-kit/bundle-stats.json` — beside the build, never in it, so it is
+ * not served.
+ */
+function bundleStats(): Plugin {
+	return {
+		name: 'meridian:bundle-stats',
+		apply: 'build',
+		generateBundle(_options, bundle) {
+			if (this.environment?.name !== 'client') return;
+			const chunks = Object.values(bundle)
+				.filter((output) => output.type === 'chunk')
+				.map((chunk) => ({
+					file: chunk.fileName,
+					entry: chunk.isEntry || chunk.isDynamicEntry,
+					facade: chunk.facadeModuleId,
+					modules: Object.fromEntries(
+						Object.entries(chunk.modules).map(([id, info]) => [id, info.renderedLength])
+					)
+				}));
+			mkdirSync('.svelte-kit', { recursive: true });
+			writeFileSync('.svelte-kit/bundle-stats.json', JSON.stringify(chunks));
+		}
+	};
 }

@@ -34,7 +34,7 @@
 			<p class="eyebrow">Chapter 32</p>
 			<h1>Unit tests that earn their keep</h1>
 			<p class="lede">What to test, what not to, and the concurrency test that is the most valuable one in the project.</p>
-			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>118 tests that run in two seconds and would catch every bug this project actually had.</p></aside>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>131 tests that run in a few seconds and would catch every bug this project actually had.</p></aside>
 			<p>A useful rule for what deserves a unit test: <strong>would getting this wrong be invisible?</strong> Time arithmetic, availability, the concurrency guard — all invisible until somebody is standing in a doorway. A component that renders a name is not.</p>
 <h3 id="shape">The shape of a good test</h3>
 
@@ -103,7 +103,7 @@ describe('createBooking under concurrency', () =&gt; {
 	// …
 });</code></pre>
 </figure>
-<p><code>Promise.allSettled</code>, not <code>Promise.all</code> — we *expect* nine rejections and want to inspect them, not to have the first one abandon the test.</p>
+<p><code>Promise.allSettled</code>, not <code>Promise.all</code> — we <em>expect</em> nine rejections and want to inspect them, not to have the first one abandon the test.</p>
 <p>The last two assertions are the ones people leave out. &quot;Exactly one winner&quot; can be true while the database is full of leftovers from the nine rolled-back transactions. Counting the rows directly — one booking, and exactly the twelve five-minute claim cells of the winner's hour-long block, nothing more — is what proves the rollback rolled back.</p>
 <p>The test after this one sends five losers to the same slot and accepts either <code>slot_taken</code> or <code>slot_not_offered</code> as the reason: sometimes the pre-flight availability check catches the collision before the claim does, and both are honest answers. What matters, as its comment says, is that neither is a 500.</p>
 <h3 id="when-wrong">When the test is the thing that is wrong</h3>
@@ -120,7 +120,8 @@ describe('createBooking under concurrency', () =&gt; {
 	<pre><code class="lang-ts">const compact = new Intl.NumberFormat('en-GB', {
 	style: 'currency',
 	currency: 'GBP',
-	notation: 'compact'
+	notation: 'compact',
+	maximumFractionDigits: 2
 });
 
 expect(compact.format(5600)).toBe('£5.60K');</code></pre>
@@ -131,10 +132,88 @@ expect(compact.format(5600)).toBe('£5.60K');</code></pre>
 		<span class="code__file">do</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">expect(compact.format(5600)).toMatch(/^£5\.60?K$/);</code></pre>
+	<pre><code class="lang-ts">expect(compact.format(5600)).toMatch(/^£5\.60?k$/i);</code></pre>
 </figure>
-<p><code>Intl</code> output depends on the runtime's ICU version. Between ICU 78.2 and 78.3 — the difference between two Node releases — compact currency changed from <code>£5.60K</code> to <code>£5.6K</code>. A byte-exact assertion turns a routine Node upgrade into a failing build with no bug behind it. Halfpast's own <code>formatMoney</code> is a thin wrapper around <code>Intl.NumberFormat</code>, so its tests face exactly this trap.</p>
-<p>Assert the shape, or assert on the *inputs* to formatting. Never on a locale-dependent string you did not construct yourself.</p>
+<p><code>Intl</code> output depends on the runtime's ICU version. Node 22.22, from the LTS line before this one, ships ICU 77.1; Node 24.21, the version this project pins, ships ICU 78.3; and between the two that compact pound changed from <code>£5.60K</code> to <code>£5.6k</code>: a zero dropped and the K went lower-case, which is why the pattern above allows both. A byte-exact assertion turns a routine Node upgrade into a failing build with no bug behind it. Halfpast's own <code>formatMoney</code> is a thin wrapper around <code>Intl.NumberFormat</code>, so its tests face exactly this trap.</p>
+<p>Assert the shape, or assert on the <em>inputs</em> to formatting. Never on a locale-dependent string you did not construct yourself.</p>
+<h3 id="real-values">Test with the real thing, not its shape</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/errors.spec.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">function thrownBy(status: number, message: string): unknown {
+	try {
+		error(status, message);
+	} catch (thrown) {
+		return thrown;
+	}
+	throw new Error('error() returned instead of throwing');
+}
+
+// …
+
+	it('does not trust a lookalike that SvelteKit did not make', () =&gt; {
+		// The right shape, the wrong origin: nothing vetted this sentence.
+		const lookalike = { status: 400, body: { status: 400, message: 'Not from us.' } };
+		expect(messageFrom(lookalike, 'Could not cancel that.')).toBe('Could not cancel that.');
+	});</code></pre>
+</figure>
+<p>Chapter 20's <code>messageFrom</code> is tested against the value SvelteKit's own <code>error()</code> actually throws, caught and handed over, rather than an object literal typed to look like it. The difference is the whole point. The helper asks <code>isHttpError</code>, an <code>instanceof</code>, so a literal <code>{ status, body }</code> would describe something the browser never produces, and a test built on one would go on passing whatever SvelteKit did. The lookalike test turns that round and pins the decision down: right shape, wrong origin, fallback.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/errors.spec.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">const proxyPage = thrownBy(502, 'Bad Gateway');
+expect(messageFrom(proxyPage, 'Could not cancel that.')).toBe('Could not cancel that.');</code></pre>
+</figure>
+<p>The same helper builds the case chapter 20's <code>status &lt; 500</code> exists for. For a 502 page that never came from SvelteKit, the browser makes <code>new HttpError({ status: 502, message: response.statusText })</code> — the very class <code>error()</code> throws — so <code>thrownBy(502, 'Bad Gateway')</code> is not an approximation of it but the thing itself. Run against the helper without the status check, this test fails with &quot;Bad Gateway&quot; where the fallback should be.</p>
+<h3 id="component">A component test, in a real browser</h3>
+<p>The rule at the top of this chapter says a component that renders a name does not need a test. <code>Field</code> from chapter 21 renders a label, and still has one, because everything it is for is invisible: whether the label names the control, whether the error is part of what the control says about itself, whether the control says it is invalid. Get any of that wrong and the page looks exactly the same.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/Field.svelte.spec.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">const textInput = createRawSnippet&lt;[Wiring]&gt;((wiring) =&gt; ({
+	render: () =&gt; {
+		const { id, describedBy, invalid } = wiring();
+		const description = describedBy ? ` aria-describedby=&quot;${describedBy}&quot;` : '';
+		return `&lt;input type=&quot;email&quot; id=&quot;${id}&quot;${description} aria-invalid=&quot;${invalid}&quot; /&gt;`;
+	}
+}));
+
+// …
+
+	it('announces an error as invalid, and reads it out with the hint', async () =&gt; {
+		const screen = await render(Field, {
+			label: 'Email',
+			required: true,
+			hint: 'We send your confirmation here.',
+			error: 'That does not look like an email address',
+			children: textInput
+		});
+
+		const input = screen.getByRole('textbox', { name: 'Email' });
+		await expect.element(input).toHaveAttribute('aria-invalid', 'true');
+		await expect
+			.element(input)
+			.toHaveAccessibleDescription(
+				'We send your confirmation here. That does not look like an email address'
+			);
+		// …
+	});</code></pre>
+</figure>
+<p>The file is called <code>Field.svelte.spec.ts</code>, so chapter 9's <code>client</code> project picks it up and runs it in headless Chromium through <code>vitest-browser-svelte</code>. <code>Field</code> takes its control as a snippet, and <code>createRawSnippet</code> from <code>svelte</code> builds one in code: <code>render</code> returns the element's HTML and receives the snippet's parameters as a function, the same <code>{ id, describedBy, invalid }</code> a page destructures. Then the assertions ask what assistive technology asks. <code>getByRole('textbox', { name: 'Email' })</code> only finds the input if the label really names it, and <code>toHaveAccessibleDescription</code> works the description out from <code>aria-describedby</code> and the text it points at.</p>
+
+<aside class="callout callout--why">
+	<h4>Why the accessible description, not the attribute</h4>
+	<p>An <code>aria-describedby</code> pointing at an id that is not on the page passes a check for the attribute and announces nothing. Asking for the description checks the whole chain. It also found a bug on its first run: the description came back as &quot;We send your confirmation here. ! That does not look like an email address&quot;. The red mark beside the error was CSS generated content, <code>content: '!'</code>, and generated text is part of what a screen reader reads, so every error began &quot;exclamation mark&quot;. The mark is now a <code>&lt;span aria-hidden=&quot;true&quot;&gt;</code>. Removing <code>errorId</code> from the description, the mutation we tried, fails the same test.</p>
+</aside>
 <h3 id="require">One config flag worth turning on</h3>
 
 <figure class="code">
@@ -153,7 +232,7 @@ expect(compact.format(5600)).toBe('£5.60K');</code></pre>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>
-	<p><code>pnpm test:unit -- --run</code> reports 118 passing in about two seconds, and every one of them would fail if you deleted the behaviour it describes.</p>
+	<p><code>pnpm test:unit -- --run</code> reports 131 passing — 128 in Node and 3 in the browser — in a few seconds, and every one of them would fail if you deleted the behaviour it describes.</p>
 </aside>
 		</article>
 

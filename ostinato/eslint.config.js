@@ -54,5 +54,29 @@ export default defineConfig(
 		// Test helpers and specs may reach for whatever is clearest.
 		files: ['**/*.spec.ts', '**/*.test.ts'],
 		rules: { 'svelte/prefer-svelte-reactivity': 'off' }
+	},
+	{
+		/*
+		 * `no-navigation-without-resolve` is on — it is in the recommended set —
+		 * and every internal `href` and `goto()` goes through `resolve()` from
+		 * `$app/paths`. The base path is the reason the rule gives, and the
+		 * smaller one here: this app is served at the root of its origin. The
+		 * bigger one is that `resolve('/(app)/p/[id]', { id })` names a route *id*,
+		 * checked against the route table, so renaming a folder is a type error
+		 * rather than a link that 404s in production.
+		 *
+		 * The few links with nothing to resolve say so on the line, with an
+		 * `eslint-disable-next-line` and the reason: `goto('', { shallow: true })`,
+		 * which adds a history entry without going anywhere; the reload banner's
+		 * `href={page.url.href}`; a `blob:` download; and vanity addresses, which
+		 * are not routes until the `reroute` hook makes them one.
+		 *
+		 * The one folder it is off for is `src/lib/embed/`: a custom element that
+		 * runs on *other people's* pages, where there is no SvelteKit and
+		 * `$app/paths` has nothing to say. Its link is to this app's origin,
+		 * spelled out, which is exactly what it should be.
+		 */
+		files: ['src/lib/embed/**'],
+		rules: { 'svelte/no-navigation-without-resolve': 'off' }
 	}
 );

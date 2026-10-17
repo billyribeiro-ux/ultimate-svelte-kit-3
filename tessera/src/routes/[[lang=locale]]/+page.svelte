@@ -1,17 +1,15 @@
 <script lang="ts">
-	import { messages } from '#lib/i18n/index.ts';
+	import { langParam, messages } from '#lib/i18n/index.ts';
 	import { reveal } from '#lib/motion/index.ts';
 	import Logo from '#lib/components/Logo.svelte';
 	import Button from '#lib/components/Button.svelte';
-	import type { PageData } from './$types';
+	import type { PageProps } from './$types';
+	import { resolve } from '$app/paths';
 
-	interface Props {
-		data: PageData;
-	}
-
-	let { data }: Props = $props();
+	let { data }: PageProps = $props();
 	const t = $derived(messages(data.locale));
-	const prefix = $derived(data.locale === 'en' ? '' : `/${data.locale}`);
+	// See the layout for why links are built with `resolve()` and `langParam`.
+	const lang = $derived(langParam(data.locale));
 </script>
 
 <svelte:head>
@@ -27,11 +25,11 @@
 		cannot lose a change to a race between two people typing.
 	</p>
 	<div class="hero__actions">
-		<Button variant="primary" href="{prefix}/boards">
+		<Button variant="primary" href={resolve('/[[lang=locale]]/boards', { lang })}>
 			{data.user ? t.nav.boards : t.board.create}
 		</Button>
 		{#if !data.user}
-			<Button href="{prefix}/sign-in">{t.nav.signIn}</Button>
+			<Button href={resolve('/[[lang=locale]]/sign-in', { lang })}>{t.nav.signIn}</Button>
 		{/if}
 	</div>
 </section>

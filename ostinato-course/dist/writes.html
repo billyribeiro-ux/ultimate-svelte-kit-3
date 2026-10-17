@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Writes: command and form — Building Ostinato</title>
-<meta name="description" content="Commands with single-flight refreshes, a publish form that works with JavaScript off, `invalid(issue.handle(...))` for a 409 under the right field, two submit buttons, a redirect from inside `enhance`, and a per-card delete form with `remove.for(id)`.">
+<meta name="description" content="Commands with single-flight refreshes, a publish form that works with JavaScript off, `invalid(issue.handle(...))` for a 409 under the right field, two submit buttons, a redirect from a form handler, a per-card delete form with `remove.for(id)`, and what the browser is handed when a write is refused.">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -33,14 +33,14 @@
 		<article>
 			<p class="eyebrow">Chapter 24</p>
 			<h1>Writes: command and form</h1>
-			<p class="lede">Commands with single-flight refreshes, a publish form that works with JavaScript off, <code>invalid(issue.handle(...))</code> for a 409 under the right field, two submit buttons, a redirect from inside <code>enhance</code>, and a per-card delete form with <code>remove.for(id)</code>.</p>
+			<p class="lede">Commands with single-flight refreshes, a publish form that works with JavaScript off, <code>invalid(issue.handle(...))</code> for a 409 under the right field, two submit buttons, a redirect from a form handler, a per-card delete form with <code>remove.for(id)</code>, and what the browser is handed when a write is refused.</p>
 			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Choose between <code>command</code> and <code>form</code>, refresh exactly the queries a write changed in the same response, and turn a server error into a field message.</p></aside>
 			<p>Two kinds of write. A <code>command</code> is a function the browser calls from JavaScript — a play was heard, a heart was pressed. A <code>form</code> is a <code>&lt;form&gt;</code>: it posts, it works with JavaScript off, and with <code>enhance</code> it is taken over without a reload. Publishing is a form because it is the one write that should survive a broken script.</p>
 <h3 id="commands">Commands, and what they refresh</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/remote/patterns.remote.ts<span class="code__lines">:81-99</span></span>
+		<span class="code__file">src/lib/remote/patterns.remote.ts<span class="code__lines">:82-100</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -63,7 +63,7 @@ export const lovePattern = command(v.string(), async (id) =&gt; {
 	return likes;
 });</code></pre>
 </figure>
-<p><code>requested(getCounts, 8).refreshAll()</code> is the server half of an optimistic update. The browser called <code>recordPlay(id).updates(getCounts(id).withOverride(...))</code> — bump the number on screen now, and *name* the query it wants refreshed. <code>requested</code> refreshes exactly the instances the client named, up to eight, and the real counts come back in the same response as the command’s result. One round trip, no stale number.</p>
+<p><code>requested(getCounts, 8).refreshAll()</code> is the server half of an optimistic update. The browser called <code>recordPlay(id).updates(getCounts(id).withOverride(...))</code> — bump the number on screen now, and *name* the query it wants refreshed. <code>requested</code> refreshes exactly the instances the client named, up to eight, and the real counts come back in the same response as the command’s result. One round trip, no stale number. And in SvelteKit 3 it is not optional: a refresh the client asked for and the server did not answer fails that query on the *client*, once the response is back, with a 400 <code>HttpError</code>, “Requested update was not handled by the remote function”. The server did nothing wrong by its own lights; the browser notices that the key it asked for is missing from the answer. So every command or form that a caller drives with <code>.updates(…)</code> either refreshes what was named — <code>requested(…).refreshAll()</code> here, <code>getMine().refresh()</code> in <code>remove</code> — or says <code>ignore()</code> on purpose.</p>
 <aside class="callout callout--note"><p><code>void getPattern(id).refresh()</code> is the other kind of refresh: server-driven. This handler *knows* <code>getPattern(id)</code> changed, so it says so, and any browser with that query open gets the new value in the response — whether or not it asked. The two compose: the client names what it is showing, the server names what it changed.</p></aside>
 
 <figure class="code">
@@ -98,7 +98,7 @@ export async function love(id: string): Promise&lt;number&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/remote/patterns.remote.ts<span class="code__lines">:101-161</span></span>
+		<span class="code__file">src/lib/remote/patterns.remote.ts<span class="code__lines">:102-162</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -154,7 +154,7 @@ export const publish = form(
 		void getMine().refresh();
 		await requested(getPatterns, 3).refreshAll();
 
-		if (action === 'open') redirect(303, `/p/${published.id}`);
+		if (action === 'open') redirect(303, resolve('/(app)/p/[id]', { id: published.id }));
 
 		return {
 			id: published.id,
@@ -169,7 +169,7 @@ export const publish = form(
 	<h4>Why <code>invalid(issue.handle(...))</code></h4>
 	<p><code>claimHandle</code> says “taken” with a 409, which on a page would be an error page. On a form it should be a message under the handle field. <code>issue.handle(message)</code> builds that issue, and <code>invalid(...)</code> throws it so that the form re-renders with the message in <code>publish.fields.handle.issues()</code> — and, with JavaScript off, with the other fields still filled in. A plain <code>invalid(&quot;...&quot;)</code> with no field is a form-level issue, shown by <code>allIssues()</code>; the unreadable-pattern case uses that, because no field a person typed is at fault.</p>
 </aside>
-<p>Two submit buttons share the form and <code>action</code> says which was pressed. <code>redirect(303, …)</code> from inside the handler is honoured by an enhanced submission since SvelteKit 3.0.0-next.17 — the browser navigates to the new pattern’s page, with the vanity address computed for the other button’s result.</p>
+<p>Two submit buttons share the form and <code>action</code> says which was pressed. For “open”, the handler throws <code>redirect(303, resolve(&quot;/(app)/p/[id]&quot;, { id }))</code> and the enhanced submission follows it to the new pattern’s page; for “stay”, it returns the vanity address and the panel shows it. A redirect from a remote <code>form</code> handler is a remote-functions feature and worked before SvelteKit 3 — the 3.0 release note about enhanced forms that navigate is about <code>use:enhance</code> form *actions* whose <code>action</code> points at another page, which this project does not have. The address is <code>resolve()</code>d rather than written as a string for the same reason as every link (ch. 27): the route id is checked at build time.</p>
 
 <figure class="code">
 	<figcaption>
@@ -230,7 +230,7 @@ export async function publishPattern(
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/remote/patterns.remote.ts<span class="code__lines">:163-174</span></span>
+		<span class="code__file">src/lib/remote/patterns.remote.ts<span class="code__lines">:164-175</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -289,10 +289,62 @@ export const forget = form(async () =&gt; {
 });</code></pre>
 </figure>
 <p>Both set a cookie, so both are forms. <code>becomeArtist</code> refreshes <code>whoAmI()</code> — the query the header reads — so the name appears at the top of the page without a reload. And when the form was submitted from a jam room, it calls <code>watchRoom(room).reconnect()</code>: the room’s live stream read the cookie when it opened and still thinks this browser is “someone”; <code>reconnect</code> ends that stream and starts a fresh one, carried back in the same response, and the new one reads the new cookie. The documented case for <code>reconnect</code> is exactly a mutation that changes something a live query depends on.</p>
+<h3 id="refused">When a write is refused, in the browser</h3>
+<p>Everything above is the server’s half: <code>error(404, &quot;Not yours, or not there&quot;)</code>, a 409 turned into a field message. The browser’s half is a <code>catch</code>. When a command or an enhanced form submission is refused outright, the promise the page awaited rejects — and what it rejects *with* decides whether the person reads the server’s sentence or a guess.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/errors.ts<span class="code__lines">:1-37</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * WHAT THE SERVER SAID
+ * ====================
+ *
+ * A remote call awaited in the browser — `await lovePattern(id)`, `await
+ * f.submit()` inside a form's `enhance` — rejects with SvelteKit's
+ * `HttpError`: `{ status, body }`, where `body` is the `App.Error` the
+ * server's `handleError` produced. The server's sentence is `body.message`.
+ *
+ * It is not an `Error`, and it has no `message` of its own. So the obvious
+ * `(e as Error).message` is `undefined` — the jam room used to show an empty
+ * toast for every refused edit — and a `catch` that ignores the value and
+ * prints its own sentence throws away the one thing the server took the
+ * trouble to say, like &quot;No such track in this room&quot;.
+ *
+ * A `failed` snippet or an `onerror` handler is the other case, and the
+ * opposite one: what a boundary is handed has already been through
+ * `handleError` and *is* the `App.Error`, so it reads `error.message`
+ * directly. Calling this there would answer the fallback every time.
+ *
+ * Anything that is not an `HttpError` — the network dropped, the tab went
+ * offline — carries no message meant for a person, and gets the caller's
+ * `fallback`, which says what was being attempted.
+ *
+ * An unexpected failure also carries the `id` that `handleError` logged it
+ * under. The error page prints it; a toast is the only thing somebody sees
+ * when a command fails, so it carries the reference too — otherwise there is
+ * nothing to quote when they report it.
+ */
+
+import { isHttpError } from '@sveltejs/kit';
+
+export function messageOf(error: unknown, fallback: string): string {
+	if (!isHttpError(error)) return fallback;
+	const { message, id } = error.body;
+	return id ? `${message} (ref ${id})` : message;
+}</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why a helper for one line</h4>
+	<p>Because the obvious line is wrong twice over. The rejection is SvelteKit’s <code>HttpError</code>, <code>{ status, body }</code>, where <code>body</code> is the <code>App.Error</code> that <code>handleError</code> produced — so the server’s words are <code>body.message</code>. It is not an <code>Error</code>, so <code>(e as Error).message</code> is <code>undefined</code>: the jam room (ch. 31) showed an empty toast for every refused edit. And a <code>catch</code> that ignores the value and prints its own sentence throws away the one thing the server took the trouble to say — which is what the gallery’s “Could not delete that” and the studio’s “Publishing failed” did, before both became the fallback rather than the message. <code>isHttpError</code> tells a refusal from a request that never arrived, which is the only case that gets the caller’s fallback. A <code>failed</code> snippet is the opposite case and must *not* call this: a boundary is handed the <code>App.Error</code> itself, and <code>error.message</code> is already the sentence (ch. 30, 31). One more field is worth carrying: an unexpected failure has the <code>id</code> that <code>handleError</code> logged it under (ch. 26). The error page prints it as a reference; a toast is all somebody sees when a command fails, so <code>messageOf</code> puts it in brackets after the sentence — “Something went wrong on our side. (ref 3f1c…)” — and the person has something to quote. <code>errors.spec.ts</code> pins all three cases.</p>
+</aside>
+<aside class="callout callout--note"><p>The server side of this project already read the right field. <code>isHttpError(e) &amp;&amp; e.status === 409</code> and <code>e.body.message</code> in <code>publish</code> and <code>becomeArtist</code> are inside remote functions, where <code>claimHandle</code> throws the <code>HttpError</code> that <code>error(409, …)</code> makes. Only the browser’s reads were wrong, and only a browser showed it: a probe that made each remote function throw, and recorded what every <code>catch</code> and <code>failed</code> snippet was handed.</p></aside>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>
-	<ul><li>You can say why publishing is a form and loving is a command.</li><li>You can explain the difference between <code>requested(...).refreshAll()</code> and <code>getPattern(id).refresh()</code>.</li><li>You can turn a thrown HTTP error into a message under a specific field.</li></ul>
+	<ul><li>You can say why publishing is a form and loving is a command.</li><li>You can explain the difference between <code>requested(...).refreshAll()</code> and <code>getPattern(id).refresh()</code>.</li><li>You can turn a thrown HTTP error into a message under a specific field.</li><li>You can say what a <code>catch</code> around <code>await lovePattern(id)</code> is handed, and where its message is.</li></ul>
 </aside>
 		</article>
 

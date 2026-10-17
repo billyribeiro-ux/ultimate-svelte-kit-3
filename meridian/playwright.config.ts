@@ -4,7 +4,8 @@ import { defineConfig, devices } from '@playwright/test';
  * END-TO-END CONFIGURATION
  * ========================
  *
- * Against the **adapter's own output**, on its own database, in two viewports.
+ * Against the **adapter's own output**, on its own database, in two viewports
+ * — and the design's checks in a third.
  *
  * WHY THE BUILT SERVER AND NOT `vite preview`
  * -------------------------------------------
@@ -18,11 +19,17 @@ import { defineConfig, devices } from '@playwright/test';
  * WHY TWO VIEWPORTS AND NOT A RESPONSIVE ASSERTION
  * ------------------------------------------------
  * Because the trip page genuinely renders different DOM at different widths:
- * the map sits beside the itinerary on a desktop and below it on a phone,
+ * the map sits beside the itinerary on a desktop and is not rendered on a phone,
  * the header collapses into a menu, and the drag-and-drop uses a touch
  * pointer. Those are the parts most likely to break and the parts nobody
  * looks at, so they run as their own project rather than as a resize inside
  * a test.
+ *
+ * The third project is the same phone at 360px, the narrowest the design
+ * is drawn for, and it runs only `visual.e2e.ts`: the questions about
+ * whether a screen holds together. A behaviour does not change between
+ * 412px and 360px; a layout does — the date range field ran out of its
+ * card at 360px with the 412px phone none the wiser.
  *
  * TWO PEOPLE ON ONE TRIP
  * ----------------------
@@ -61,6 +68,15 @@ export default defineConfig({
 			// and a device pixel ratio with it, and both change what the map does.
 			name: 'phone',
 			use: { ...devices['Pixel 7'] }
+		},
+		{
+			name: 'narrow',
+			testMatch: /visual\.e2e\.ts/,
+			use: {
+				...devices['Pixel 7'],
+				viewport: { width: 360, height: 780 },
+				screen: { width: 360, height: 780 }
+			}
 		}
 	],
 

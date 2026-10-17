@@ -22,10 +22,10 @@
 		type IsoDate
 	} from '#lib/time/index.ts';
 	import { cancelAppointment, getDiary } from './diary.remote.ts';
-	import type { PageData } from './$types';
+	import type { PageProps } from './$types';
 	import { messageFrom } from '#lib/errors.ts';
 
-	let { data }: { data: PageData } = $props();
+	let { data, params }: PageProps = $props();
 
 	/*
 	 * `day` starts as null and means "today", rather than being initialised to
@@ -48,7 +48,7 @@
 	 * `diaryQuery` carries `connected` for the Live badge; `result` is the awaited
 	 * value, re-resolved every time the server pushes a new diary down the stream.
 	 */
-	const diaryQuery = $derived(getDiary({ slug: data.slug, day: activeDay }));
+	const diaryQuery = $derived(getDiary({ slug: params.slug, day: activeDay }));
 	const result = $derived(await diaryQuery);
 
 	async function cancel(bookingId: string, customerName: string) {
@@ -70,7 +70,7 @@
 			 * Single-flight updates earn their keep on ordinary queries, where
 			 * nothing else is going to tell the client the answer changed.
 			 */
-			await cancelAppointment({ slug: data.slug, bookingId, reason: '' });
+			await cancelAppointment({ slug: params.slug, bookingId, reason: '' });
 		} catch (thrown) {
 			lastError = messageFrom(thrown, 'Could not cancel that appointment.');
 		} finally {
@@ -98,7 +98,12 @@
 			<CaretLeftIcon weight="bold" />
 		</button>
 
-		<p class="daylabel">{formatIsoDate(activeDay)}</p>
+		<!--
+			`<time datetime>` gives the day a machine-readable value beside the words
+			written for a person, so a test, or anything else, can tell which day is
+			showing without parsing "Tuesday 20 October".
+		-->
+		<p class="daylabel"><time datetime={activeDay}>{formatIsoDate(activeDay)}</time></p>
 
 		<button type="button" onclick={() => (day = addDays(activeDay, 1))} aria-label="Next day">
 			<CaretRightIcon weight="bold" />
@@ -129,8 +134,9 @@
 	{:else}
 		<ul class="entries" role="list" {@attach stagger({ y: 8, each: 0.04, onView: false })}>
 			{#each result.entries as entry (entry.id)}
-				{@const canManage =
-					result.viewer.role === 'owner' || result.viewer.staffId === entry.staffId}
+				{const canManage = $derived(
+					result.viewer.role === 'owner' || result.viewer.staffId === entry.staffId
+				)}
 				<li class="entry" style="--hue: {entry.colourHue}">
 					<div class="times">
 						<span class="start">{formatTime(entry.startsAt, result.timeZone)}</span>
@@ -316,7 +322,7 @@
 
 	.entry {
 		display: grid;
-		grid-template-columns: auto 1fr auto;
+		grid-template-columns: auto 1fr;
 		gap: var(--space-4);
 		align-items: start;
 
@@ -402,6 +408,8 @@
 	}
 
 	.cancel {
+		grid-column: 2;
+		justify-self: end;
 		display: grid;
 		place-items: center;
 		width: 2.5rem;
@@ -424,15 +432,17 @@
 		cursor: wait;
 	}
 
-	/* On a phone the stripe and the time column stay; the cancel button drops to
-	 * its own row so the customer's name gets the full width. */
-	@media (max-width: 30rem) {
+	/* Mobile first: on a phone the stripe and the time column stay and the
+	 * cancel button sits on its own row, so the customer's name gets the full
+	 * width. From 30rem there is room for a third column beside the name. */
+	@media (min-width: 30rem) {
 		.entry {
-			grid-template-columns: auto 1fr;
+			grid-template-columns: auto 1fr auto;
 		}
+
 		.cancel {
-			grid-column: 2;
-			justify-self: end;
+			grid-column: auto;
+			justify-self: auto;
 		}
 	}
 </style>

@@ -10,6 +10,7 @@ import {
 	isValidTimeZone,
 	offsetLabel,
 	offsetMinutesAt,
+	parseIsoDate,
 	sameWallClock,
 	startOfDayInstant,
 	todayIn,
@@ -194,6 +195,27 @@ describe('calendar arithmetic', () => {
 		expect(daysBetween('2026-08-14', '2026-08-17')).toBe(3);
 		expect(daysBetween('2026-03-28', '2026-03-30')).toBe(2);
 		expect(daysBetween('2026-08-17', '2026-08-14')).toBe(-3);
+	});
+});
+
+describe('parseIsoDate', () => {
+	it('accepts a real calendar day, unchanged', () => {
+		expect(parseIsoDate('2026-10-17')).toBe('2026-10-17');
+		expect(parseIsoDate('2028-02-29')).toBe('2028-02-29');
+	});
+
+	it('refuses a day the calendar does not have', () => {
+		expect(parseIsoDate('2026-02-30')).toBeNull();
+		expect(parseIsoDate('2026-02-29')).toBeNull();
+		expect(parseIsoDate('2026-13-01')).toBeNull();
+	});
+
+	it('refuses anything that is not exactly YYYY-MM-DD', () => {
+		expect(parseIsoDate('2026-1-01')).toBeNull();
+		expect(parseIsoDate('2026-10-17T09:00')).toBeNull();
+		expect(parseIsoDate('tomorrow')).toBeNull();
+		expect(parseIsoDate('')).toBeNull();
+		expect(parseIsoDate(null)).toBeNull();
 	});
 });
 

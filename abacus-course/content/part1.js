@@ -142,7 +142,7 @@ export const part1 = [
 				type: 'p',
 				text: 'Numbers: digits, an optional fraction, an optional exponent. `.5` is a number, `5.` is a number, `1e3` is a number. `1.2.3` is deliberately *two* tokens and a syntax error at the parser — which is where the message can say something clear, rather than the lexer guessing.'
 			},
-			code('src/lib/formula/lexer.ts', 102, 130, { partial: true }),
+			code('src/lib/formula/lexer.ts', 104, 131),
 			{
 				type: 'p',
 				text: 'Strings use `""` for a literal quote, as spreadsheets do. Error literals are tokens too, so `=IFERROR(#REF!, 0)` parses, and an unknown `#…` is refused at once.'
@@ -236,22 +236,22 @@ export const part1 = [
 			'The evaluator walks the tree with a `Context` and knows nothing about sheets. Fifty functions register themselves in a `Map`, receive their arguments as thunks so `IF` is lazy, and share a few coercion helpers.',
 		goal: 'Know how a formula becomes a value, why arguments are thunks, and how criteria, rounding and lookups are done the way a spreadsheet does them.',
 		blocks: [
-			code('src/lib/formula/evaluate.ts', 1, 43),
+			code('src/lib/formula/evaluate.ts', 1, 42),
 			{
 				type: 'p',
 				text: 'The evaluator does not know what a sheet is. The cells it needs come through a `Context` — the engine provides one, a test provides a `Map`, the lesson page in chapter 17 provides a closure over nine `$derived`s. The clock and the random source are injected for the same reason: `TODAY()` in a test must give the same answer tomorrow.'
 			},
-			code('src/lib/formula/evaluate.ts', 45, 94),
+			code('src/lib/formula/evaluate.ts', 44, 93),
 			{
 				type: 'p',
 				text: 'The `call` branch is the one to read slowly. A function receives its arguments as **thunks** — `() => evaluate(arg, ctx)` — not as values. `IF` must not evaluate the branch it does not take (it might be `1/0`), and `IFERROR` must be able to *catch* an error rather than receive it. Laziness costs a closure per argument and buys the semantics every spreadsheet has.'
 			},
-			code('src/lib/formula/evaluate.ts', 96, 107),
+			code('src/lib/formula/evaluate.ts', 95, 106),
 			{
 				type: 'p',
 				text: 'A range larger than a million cells is refused with `#NUM!` rather than allocated. `=SUM(A:A)` does not exist in this language — ranges are always two corners — but `=SUM(A1:XFD1048576)` does, and a person who types it should get an error, not a frozen tab.'
 			},
-			code('src/lib/formula/evaluate.ts', 109, 168),
+			code('src/lib/formula/evaluate.ts', 108, 167),
 
 			{ type: 'h3', id: 'the-library', text: 'The library' },
 			code('src/lib/formula/functions.ts', 1, 22),

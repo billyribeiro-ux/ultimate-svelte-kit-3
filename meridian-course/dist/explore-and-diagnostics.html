@@ -38,7 +38,7 @@
 			
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(site)/explore/+page.svelte<span class="code__lines">:10-50</span></span>
+		<span class="code__file">src/routes/(site)/explore/+page.svelte<span class="code__lines">:12-95</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/*
@@ -52,7 +52,10 @@
  * static file at build time, so the first call is a GET of a file a CDN
  * can cache, and the browser keeps it in the Cache API across reloads.
  * The page itself is dynamic — it has a header that knows who you are —
- * and the data on it is not. That split is what `prerender` is for.
+ * and the data on it is not. That split is what `prerender` is for. (On
+ * the server, rendering this page, the same call fetches that file from
+ * the app's public address, and falls back to running the function when
+ * it cannot; `geo.remote.ts` says why the function is `dynamic` for that.)
  *
  * `Intl.DisplayNames` turns `PT` into &quot;Portugal&quot;, or &quot;Portugal&quot;, or
  * &quot;Portugal&quot; — and `JP` into &quot;Japan&quot;, &quot;Japan&quot; and &quot;Japão&quot;. The gazetteer
@@ -63,7 +66,47 @@ const locale = getLocale();
 const regions = new Intl.DisplayNames(locale, { type: 'region' });
 const countryName = (code: string) =&gt; regions.of(code) ?? code;
 
-let query = $state('');
+/*
+ * `38.72° N, 9.14° W` reads as a place; `38.72°, -9.14°` reads as a
+ * spreadsheet. The compass letters are messages, because they are words:
+ * east is O in German (Ost) and L in Portuguese (leste), and west is O
+ * in Portuguese (oeste).
+ */
+const degrees = new Intl.NumberFormat(locale, {
+	minimumFractionDigits: 2,
+	maximumFractionDigits: 2
+});
+const coords = (place: Place) =&gt;
+	`${degrees.format(Math.abs(place.lat))}° ${place.lat &lt; 0 ? m.coord_south() : m.coord_north()}, ` +
+	`${degrees.format(Math.abs(place.lng))}° ${place.lng &lt; 0 ? m.coord_west() : m.coord_east()}`;
+
+/*
+ * What was typed before the page hydrated is kept. While this script runs
+ * on a server-rendered page, the server's input is still there with
+ * whatever a person typed into it, and hydration would write the empty
+ * string the server knew about over it — the bug `keepTyped()` fixes for
+ * the sign-in form (chapter 32), here for a plain `bind:value`. On a
+ * client-side navigation there is no such input yet, and the filter
+ * starts empty.
+ */
+let query = $state(
+	(browser &amp;&amp; document.querySelector&lt;HTMLInputElement&gt;('input.search__input')?.value) || ''
+);
+let search = $state&lt;HTMLInputElement&gt;();
+
+/*
+ * Both &quot;clear&quot; buttons remove themselves — the one in the field shows
+ * only while there is a query, the one in the empty state only while
+ * nothing matches — and a button that disappears under the keyboard's
+ * focus drops it to the top of the document. So clearing puts focus
+ * back in the field, where the next thing typed belongs. That is an
+ * imperative step in a click handler, so the field is held with
+ * `bind:this` for it.
+ */
+function clear() {
+	query = '';
+	search?.focus();
+}
 /*
  * runed's `Debounced` follows a reactive value with a delay: `current`
  * changes 150 ms after the last keystroke, so the list is not rebuilt
@@ -83,17 +126,38 @@ const filtered = $derived.by(() =&gt; {
 	);
 });</code></pre>
 </figure>
-<p>Three things in forty lines. <code>await places()</code> at the top of the script — allowed in async mode — is the prerendered gazetteer: the page is dynamic because its header knows who you are, and its data is static, and that split is what <code>prerender</code> remote functions are for. <code>Intl.DisplayNames</code> turns country codes into names in the page’s language, a hundred strings per locale nobody translated. And runed’s <code>Debounced</code> follows <code>query</code> with a delay: <code>settled.current</code> changes 150 ms after the last keystroke, so the list is not rebuilt on every one. It takes a getter, so <code>query</code> stays a plain <code>$state</code>.</p>
+<p>Three things worth stopping on, and one small one. <code>await places()</code> at the top of the script — allowed in async mode — is the prerendered gazetteer: the page is dynamic because its header knows who you are, and its data is static, and that split is what <code>prerender</code> remote functions are for. (On the server, rendering this page, the same call fetches that file from the app’s public address, and falls back to running the function when it cannot — chapter 16 says why the function is <code>dynamic</code> for that day.) <code>Intl.DisplayNames</code> turns country codes into names in the page’s language, a hundred strings per locale nobody translated. And runed’s <code>Debounced</code> follows <code>query</code> with a delay: <code>settled.current</code> changes 150 ms after the last keystroke, so the list is not rebuilt on every one. It takes a getter, so <code>query</code> stays a plain <code>$state</code>. The coordinates under each place read as a place — <code>38.72° N, 9.14° W</code> — and the compass letters are messages, because they are words: east is O in German and L in Portuguese, and west is O in Portuguese. The small one is <code>clear()</code>. Both “clear” buttons remove themselves — the one in the field shows only while there is a query, the one in the empty state only while nothing matches — and a button that disappears under the keyboard’s focus drops focus to the top of the document, so a keyboard user who cleared the search had to tab back through the header to type again. <code>clear()</code> empties the query and puts focus in the field, through a <code>bind:this</code>, which is where the next thing typed belongs. And <code>query</code> does not quite start empty. On a page the server rendered, the field is there and usable before the JavaScript is, and what a person types into it in that second was wiped when the page hydrated — <code>bind:value</code> writes the state into the input, and the state was the empty string the server knew. The script runs while the server’s input is still on the page, so the state starts from whatever is in it: the same cure as <code>keepTyped()</code> for the sign-in form in chapter 32, for a plain input. On a client-side navigation there is no server input to read, and it starts empty after all.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(site)/explore/+page.svelte<span class="code__lines">:52-69</span></span>
+		<span class="code__file">src/routes/(site)/explore/+page.svelte<span class="code__lines">:97-135</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">interface Country {
 	readonly code: string;
 	readonly name: string;
 	readonly places: Place[];
+}
+
+/*
+ * When the search row is stuck under the header it draws a hairline, so
+ * the cards sliding under it have an edge to slide under. A zero-height
+ * sentinel sits just above the row; once it has scrolled up behind the
+ * header, the row is stuck.
+ */
+let stuck = $state(false);
+
+function sentinel(element: HTMLElement) {
+	const header = document.querySelector&lt;HTMLElement&gt;('.header');
+	const top = header?.getBoundingClientRect().height ?? 56;
+	const observer = new IntersectionObserver(
+		([entry]) =&gt; {
+			stuck = !!entry &amp;&amp; !entry.isIntersecting &amp;&amp; entry.boundingClientRect.top &lt; top + 1;
+		},
+		{ rootMargin: `-${Math.ceil(top) + 1}px 0px 0px 0px` }
+	);
+	observer.observe(element);
+	return () =&gt; observer.disconnect();
 }
 
 const countries: Country[] = $derived.by(() =&gt; {
@@ -112,48 +176,68 @@ const countries: Country[] = $derived.by(() =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(site)/explore/+page.svelte<span class="code__lines">:100-136</span></span>
+		<span class="code__file">src/routes/(site)/explore/+page.svelte<span class="code__lines">:188-244</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">{#each countries as country (country.code)}
-	&lt;section class=&quot;stack stack--sm&quot;&gt;
-		&lt;h2 class=&quot;country&quot;&gt;
-			{country.name}
-			&lt;span class=&quot;muted tabular&quot;&gt;{country.places.length}&lt;/span&gt;
-		&lt;/h2&gt;
-		&lt;ul class=&quot;places&quot; role=&quot;list&quot;&gt;
-			{#each country.places as place (place.id)}
-				{@const guide = guideForPlace(place.id)}
-				&lt;li class=&quot;card place&quot;&gt;
-					&lt;div class=&quot;stack stack--sm&quot;&gt;
-						&lt;strong&gt;{place.name}&lt;/strong&gt;
-						&lt;span class=&quot;muted tabular coords&quot;&gt;
-							{place.lat.toFixed(2)}°, {place.lng.toFixed(2)}°
-						&lt;/span&gt;
-					&lt;/div&gt;
-					&lt;div class=&quot;cluster&quot;&gt;
-						{#if guide}
-							&lt;a
-								class=&quot;btn btn--sm btn--ghost&quot;
-								href={localizeHref(resolve('/guides/[guide]', { guide: guide.slug }))}
-							&gt;
-								{m.explore_guide()}
+	<pre><code class="lang-svelte">{#if countries.length === 0}
+	&lt;div class=&quot;explore__empty&quot;&gt;
+		&lt;Empty icon={MagnifyingGlassIcon} title={m.explore_none_title()} body={m.explore_none()}&gt;
+			{#snippet action()}
+				&lt;button class=&quot;btn btn--ghost&quot; type=&quot;button&quot; onclick={clear}&gt;
+					{m.explore_clear()}
+				&lt;/button&gt;
+			{/snippet}
+		&lt;/Empty&gt;
+	&lt;/div&gt;
+{/if}
+
+&lt;!--
+	The countries are a grid in reading order — one column on a phone, two
+	from 48em, three from 64em — so the alphabet runs across and then down,
+	each country unbroken, its places one under another. They were CSS
+	columns once: the alphabet ran down a 4,000px page and started again at
+	the top of the next column, and &quot;Hong Kong&quot; sat beside &quot;Argentina&quot;.
+
+	A place is a card, not a link — its two buttons are the links — so it
+	does not lift on hover: a lift says &quot;this is a link&quot;.
+--&gt;
+&lt;div class=&quot;countries&quot;&gt;
+	{#each countries as country (country.code)}
+		&lt;section class=&quot;country&quot;&gt;
+			&lt;h2 class=&quot;country__name&quot;&gt;
+				{country.name}
+				&lt;span class=&quot;country__count tabular&quot;&gt;{country.places.length}&lt;/span&gt;
+			&lt;/h2&gt;
+			&lt;ul class=&quot;places&quot; role=&quot;list&quot;&gt;
+				{#each country.places as place (place.id)}
+					{const guide = $derived(guideForPlace(place.id))}
+					&lt;li class=&quot;card place&quot;&gt;
+						&lt;div class=&quot;place__body&quot;&gt;
+							&lt;strong class=&quot;place__name&quot;&gt;{place.name}&lt;/strong&gt;
+							&lt;span class=&quot;place__coords tabular&quot;&gt;{coords(place)}&lt;/span&gt;
+						&lt;/div&gt;
+						&lt;div class=&quot;place__actions&quot;&gt;
+							{#if guide}
+								&lt;a
+									class=&quot;btn btn--sm btn--ghost&quot;
+									href={href('/guides/[guide]', { guide: guide.slug })}
+								&gt;
+									{m.explore_guide()}
+								&lt;/a&gt;
+							{/if}
+							&lt;a class=&quot;btn btn--sm&quot; href={href(`/(site)/(app)/trips/new?place=${place.id}`)}&gt;
+								{m.explore_start()}
+								&lt;ArrowRightIcon size={14} aria-hidden=&quot;true&quot; /&gt;
 							&lt;/a&gt;
-						{/if}
-						&lt;a
-							class=&quot;btn btn--sm&quot;
-							href={localizeHref(`${resolve('/(site)/(app)/trips/new')}?place=${place.id}`)}
-						&gt;
-							{m.explore_start()}
-						&lt;/a&gt;
-					&lt;/div&gt;
-				&lt;/li&gt;
-			{/each}
-		&lt;/ul&gt;
-	&lt;/section&gt;
-{/each}</code></pre>
+						&lt;/div&gt;
+					&lt;/li&gt;
+				{/each}
+			&lt;/ul&gt;
+		&lt;/section&gt;
+	{/each}
+&lt;/div&gt;</code></pre>
 </figure>
-<p>Two <code>resolve()</code> calls, one with a parameter and one without. The route id for the new-trip page is <code>/(site)/(app)/trips/new</code> — route ids include their groups, which surprises people the first time — and <code>resolve</code> gives back the pathname <code>/trips/new</code>, type-checked against the routes that exist. <code>localizeHref</code> then adds the language prefix. The place links to its guide when one exists, through <code>guideForPlace</code> from chapter 34.</p>
+<p>Two <code>href()</code> calls, one with a parameter and one without, and <code>resolve()</code> with the route id underneath each. The route id for the new-trip page is <code>/(site)/(app)/trips/new?place=…</code> — route ids include their groups, which surprises people the first time, and since SvelteKit 2.54, so in every 3.x, they may carry their search string — and <code>resolve</code> gives back <code>/trips/new?place=lisbon</code>, type-checked against the routes that exist, before the language prefix goes on. It gives that back on the server as well as in the browser because <code>paths.relative</code> is <code>false</code>; with the default, the server’s answer was <code>./trips/new?place=lisbon</code>, and chapter 23 tells what became of it. The place links to its guide when one exists, through <code>guideForPlace</code> from chapter 34. The countries are a grid in reading order — one column on a phone, two from 48em, three from 64em, <code>align-items: start</code> so a short country does not stretch to its neighbour’s height — and each country is unbroken, its places one under another. They were CSS columns once, <code>columns: 3 18rem</code>, and columns fill *down* first: the alphabet ran down a 4,000px page and started again at the top of the next column, so “Hong Kong” sat beside “Argentina” and a person scanning across for “Japan” never found it. A grid of *places* had been wrong the other way, leaving each country a row of one or two cards and the rest of the width empty; a grid of countries is the shape the content has. A place is a card and not a link — its two buttons are the links — so it does not lift on hover, because a lift says “this is a link”. The search row sticks under the header and draws its hairline once it is stuck, which a zero-height sentinel and an <code>IntersectionObserver</code> attached to it decide; the browser’s blue clear button is replaced by a ghost one of ours, and on a phone the count is the places alone, so the row stays one row.</p>
 
 <aside class="callout callout--why">
 	<h4>Why runed, for one debounce</h4>
@@ -348,27 +432,34 @@ export const diagnostics = query(async () =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(site)/(app)/diagnostics/+page.svelte<span class="code__lines">:52-120</span></span>
+		<span class="code__file">src/routes/(site)/(app)/diagnostics/+page.svelte<span class="code__lines">:53-130</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">&lt;svelte:boundary&gt;
+	<pre><code class="lang-svelte">&lt;!--
+	`failed` is handed an `App.Error`, the `{ status, message }` that
+	`handleError` made of the failure — not an `Error` — so the words are
+	on `message`, and `boundaryMessage` reads them. `$derived` is what
+	makes Refresh redraw: a bare `{const}` would await the first report
+	and keep it.
+--&gt;
+&lt;svelte:boundary&gt;
 	{#snippet failed(error)}
-		&lt;p class=&quot;issue&quot;&gt;{error instanceof Error ? error.message : m.error_title()}&lt;/p&gt;
+		&lt;p class=&quot;issue&quot;&gt;{boundaryMessage(error)}&lt;/p&gt;
 	{/snippet}
 
-	{const report = await diagnostics()}
+	{const report = $derived(await diagnostics())}
 
 	&lt;dl class=&quot;facts card card--pad&quot;&gt;
 		&lt;div&gt;
-			&lt;dt class=&quot;label&quot;&gt;{m.diagnostics_version()}&lt;/dt&gt;
+			&lt;dt class=&quot;overline&quot;&gt;{m.diagnostics_version()}&lt;/dt&gt;
 			&lt;dd&gt;&lt;code&gt;{report.version}&lt;/code&gt;&lt;/dd&gt;
 		&lt;/div&gt;
 		&lt;div&gt;
-			&lt;dt class=&quot;label&quot;&gt;{m.diagnostics_node()}&lt;/dt&gt;
+			&lt;dt class=&quot;overline&quot;&gt;{m.diagnostics_node()}&lt;/dt&gt;
 			&lt;dd&gt;&lt;code&gt;{report.node}&lt;/code&gt;&lt;/dd&gt;
 		&lt;/div&gt;
 		&lt;div&gt;
-			&lt;dt class=&quot;label&quot;&gt;{m.diagnostics_uptime()}&lt;/dt&gt;
+			&lt;dt class=&quot;overline&quot;&gt;{m.diagnostics_uptime()}&lt;/dt&gt;
 			&lt;dd&gt;{uptime(report.startedAt, report.now)}&lt;/dd&gt;
 		&lt;/div&gt;
 	&lt;/dl&gt;
@@ -376,7 +467,7 @@ export const diagnostics = query(async () =&gt; {
 	&lt;section class=&quot;stack stack--sm&quot;&gt;
 		&lt;h2&gt;{m.diagnostics_rooms()}&lt;/h2&gt;
 		{#if report.rooms.length === 0}
-			&lt;p class=&quot;muted&quot;&gt;{m.diagnostics_no_rooms()}&lt;/p&gt;
+			&lt;p class=&quot;hint&quot;&gt;{m.diagnostics_no_rooms()}&lt;/p&gt;
 		{:else}
 			&lt;ul class=&quot;cluster&quot; role=&quot;list&quot;&gt;
 				{#each report.rooms as room (room.tripId)}
@@ -403,14 +494,16 @@ export const diagnostics = query(async () =&gt; {
 				&lt;/thead&gt;
 				&lt;tbody&gt;
 					{#each report.spans as span (span.spanId)}
-						&lt;tr class:span--child={span.parentId !== null}&gt;
+						&lt;tr class={{ 'span--child': span.parentId !== null }}&gt;
 							&lt;td&gt;
 								&lt;span class=&quot;span__name&quot;&gt;{span.name}&lt;/span&gt;
 								&lt;span class=&quot;muted&quot;&gt;{clock.format(span.start)}&lt;/span&gt;
 							&lt;/td&gt;
 							&lt;td class=&quot;num tabular&quot;&gt;{millis.format(span.duration)} ms&lt;/td&gt;
 							&lt;td&gt;
-								&lt;span class=&quot;chip&quot; class:chip--coral={!span.ok}&gt;{span.ok ? 'ok' : 'error'}&lt;/span&gt;
+								&lt;span class={['chip', { 'chip--coral': !span.ok }]}
+									&gt;{span.ok ? 'ok' : 'error'}&lt;/span
+								&gt;
 							&lt;/td&gt;
 							&lt;td&gt;&lt;code class=&quot;muted&quot;&gt;{span.traceId.slice(0, 8)}&lt;/code&gt;&lt;/td&gt;
 						&lt;/tr&gt;
@@ -421,7 +514,7 @@ export const diagnostics = query(async () =&gt; {
 	&lt;/section&gt;
 &lt;/svelte:boundary&gt;</code></pre>
 </figure>
-<p>The page is one query and a table: version, Node version, uptime formatted by <code>Intl</code> units; the live rooms with their watcher counts, from chapter 18; and the spans, indented when they have a parent. Open the trip page in another tab, come back, refresh — and the <code>watchTrip</code> span is there, with the <code>heartbeat</code> commands under it, which is how the presence loop in chapter 24 was first seen as a column of identical rows.</p>
+<p>The page is one query and a table: version, Node version, uptime formatted by <code>Intl</code> units; the live rooms with their watcher counts, from chapter 18; and the spans, indented when they have a parent. Refresh calls <code>diagnostics().refresh()</code>, and the table redraws because the report is <code>{const report = $derived(await diagnostics())}</code>. A failed report is printed by the <code>failed</code> snippet through <code>boundaryMessage</code>, like every boundary in the app (chapter 25), and a child span’s indent and a failed span’s coral chip are <code>class={…}</code> objects (chapter 23). It was a bare <code>{const}</code> at first, which awaits the first report and keeps it: the button fetched a new one and the page went on showing the old, until an end-to-end test pressed it (chapter 42). Open the trip page in another tab, come back, refresh — and the <code>watchTrip</code> span is there, with the <code>heartbeat</code> commands under it, which is how the presence loop in chapter 24 was first seen as a column of identical rows.</p>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>

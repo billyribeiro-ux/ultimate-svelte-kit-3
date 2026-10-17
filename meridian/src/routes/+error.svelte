@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { CompassRoseIcon } from 'phosphor-svelte';
 	import { m } from '#lib/paraglide/messages.js';
-	import { localizeHref } from '#lib/paraglide/runtime.js';
+	import { href } from '#lib/href.ts';
 	import ErrorView from '#lib/ui/ErrorView.svelte';
 
 	/*
@@ -12,7 +12,7 @@
 </script>
 
 <header class="bare container">
-	<a class="bare__brand" href={localizeHref('/')}>
+	<a class="bare__brand" href={href('/(site)')}>
 		<CompassRoseIcon size={22} weight="duotone" aria-hidden="true" />
 		{m.app_name()}
 	</a>
@@ -23,17 +23,28 @@
 </main>
 
 <style>
+	/* The same brand mark as the site header, on a bare page: the name, in the display face, and the sea compass. */
 	.bare {
-		padding-block: var(--space-4);
+		display: flex;
+		align-items: center;
+		min-height: var(--header-h);
 	}
 
 	.bare__brand {
 		display: inline-flex;
 		align-items: center;
+		min-height: var(--control);
 		gap: var(--space-2);
 		font-family: var(--font-display);
+		font-size: var(--text-lg);
 		font-weight: 600;
+		letter-spacing: -0.01em;
 		text-decoration: none;
+		color: var(--ink);
+	}
+
+	.bare__brand :global(svg) {
+		color: var(--sea);
 	}
 
 	.main {

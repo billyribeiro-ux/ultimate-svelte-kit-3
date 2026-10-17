@@ -27,6 +27,17 @@ test('is served as a prerendered page with a hashed policy', async ({ page }) =>
 	await expect(page.getByRole('heading', { level: 1 })).toContainText('groovebox');
 });
 
+test('a prerendered page still carries the security headers', async ({ request }) => {
+	// No hook runs for a file, so these come from the adapter — and the frame
+	// header most of all, because `frame-ancestors` in the meta policy above
+	// is ignored by every browser.
+	const headers = (await request.get('/')).headers();
+	expect(headers['x-frame-options']).toBe('DENY');
+	expect(headers['x-content-type-options']).toBe('nosniff');
+	expect(headers['referrer-policy']).toBe('strict-origin-when-cross-origin');
+	expect(headers['permissions-policy']).toContain('microphone=()');
+});
+
 test('shows the featured grooves that were prerendered with it', async ({ page }) => {
 	await page.goto('/');
 

@@ -1,6 +1,6 @@
 /**
  * PART 8 — The rest of the product
- * (chapters 36–41)
+ * (chapters 35–40)
  *
  * Six features, each chosen because it needs a different part of the platform:
  * progressive forms, a fold over a log, a Web Worker, a custom element, a
@@ -53,8 +53,6 @@ export const part8 = [
 				file: 'src/lib/components/LabelEditor.svelte',
 				lang: 'svelte',
 				code: `
-let field = $state<HTMLTextAreaElement | null>(null);
-
 /**
  * Take focus, and select what is there.
  *
@@ -97,8 +95,12 @@ const takeFocus: Attachment<HTMLTextAreaElement> = (node) => {
  * person has not committed. Diffing it produces a stream of insertions and
  * deletions that other replicas watch flicker, and it breaks the IME's own
  * candidate window. So nothing is sent until composition ends.
+ *
+ * A plain \`let\`, like \`mirror\` and \`ids\` below: they are read only by the
+ * event handlers, \`commit\` and the attachment, never by the markup, a
+ * \`$derived\` or an \`$effect\`, so there is nothing for a signal to notify.
  */
-let composing = $state(false);`
+let composing = false;`
 			},
 			{
 				type: 'p',
@@ -108,6 +110,10 @@ let composing = $state(false);`
 				type: 'p',
 				text: 'This is a good example of a feature you cannot find by testing in English. It is also why `ja` is one of the three languages: having it in the catalogue means somebody actually types Japanese into the thing at some point.'
 			},
+			{
+				type: 'note',
+				text: '`composing` is a plain `let`, not `$state`. Only the event handlers read it — never the markup, a `$derived` or an `$effect` — so a signal would be written on every composition for nobody to hear. `$state` is for values something *reacts* to; a flag that only code reads is just a variable.'
+			},
 
 			{ type: 'h3', id: 'the-caret', text: 'A remote edit, and where the caret goes' },
 			{
@@ -116,43 +122,116 @@ let composing = $state(false);`
 				lang: 'svelte',
 				code: `
 /**
- * The last text we know the document holds.
+ * The last text we know the document holds, and the id of each of its
+ * characters, in order.
  *
  * Tracked separately from \`value\` because the diff must be against what the
  * *document* had, not what the textarea last rendered — those differ for one
- * frame after a remote edit lands.
+ * frame after a remote edit lands. The ids are what an offset in the field
+ * *meant* while the two were in step: by the time a remote edit reaches this
+ * component the document already holds the new text, so asking it which
+ * character sits at the caret's old offset would answer about the wrong text.
  */
 // svelte-ignore state_referenced_locally
 // Intentional. \`mirror\` is seeded from the current text once and then tracks
 // what the *document* holds, which is not the same thing as what this prop
 // last rendered — the two differ for one frame after a remote edit lands, and
 // that frame is exactly when the diff must not use the newer value.
-let mirror = $state(value);
+let mirror = value;
+let ids: readonly Stamp[] = [];
 
-$effect(() => {
-	// A remote edit arrived. Update the field without disturbing the caret more
-	// than the change itself requires.
-	if (!field || field.value === value) {
-		mirror = value;
+/** The field and the document now agree on \`text\`. */
+function inStep(text: string) {
+	mirror = text;
+	ids = board
+		.label(target)
+		.visible()
+		.map((item) => item.id);
+}
+
+/**
+ * Put the document's text into the field, keeping the caret on its character.
+ *
+ * The field has no \`value={value}\` in the markup, and that is the point.
+ * Svelte writes a changed \`value\` into the textarea before any effect runs,
+ * and assigning a textarea's value moves its caret to the end — so by the
+ * time code meant to keep the caret still got to look, the text already
+ * matched and the caret had already gone. This attachment is the only thing
+ * that writes the value, and it reads the caret before it does.
+ *
+ * An attachment, not \`bind:this\` and an \`$effect\`: it is handed the element,
+ * so there is no variable that is \`null\` until mount, and it runs in an
+ * effect of its own — reading \`value\` is what re-runs it when somebody else's
+ * edit lands. Like \`takeFocus\`, it is a \`const\`, so that read is the only
+ * thing that does.
+ */
+const followDocument: Attachment<HTMLTextAreaElement> = (field) => {
+	if (field.value === value) {
+		inStep(value);
 		return;
 	}
 
-	const anchor = board.label(target).idBefore(field.selectionStart);
+	// Not focused yet — the first run, on mount. Nothing to keep in place.
+	if (field.ownerDocument.activeElement !== field) {
+		field.value = value;
+		inStep(value);
+		return;
+	}
+
+	// The character the caret sat after, by id, read from the text the field
+	// still shows. Chapter 11's \`offsetAfter\` then says where it is now.
+	const before = field.selectionStart;
+	const anchor = before > 0 ? (ids[before - 1] ?? null) : null;
+
 	field.value = value;
-	mirror = value;
+	inStep(value);
 
 	const offset = board.label(target).offsetAfter(anchor);
-	const caret = offset ?? Math.min(field.selectionStart, value.length);
+	const caret = offset ?? Math.min(before, value.length);
 	field.setSelectionRange(caret, caret);
-});`
+};`
+			},
+			{
+				type: 'code',
+				file: 'src/lib/components/LabelEditor.svelte',
+				lang: 'svelte',
+				code: `
+<!--
+	\`followDocument\` before \`takeFocus\`: the text has to be in the field before
+	there is anything to select.
+-->
+<textarea
+	{@attach followDocument}
+	{@attach takeFocus}
+	class="label-editor"
+	readonly={readOnly}`
 			},
 			{
 				type: 'p',
-				text: 'Five lines, and they are chapter 11’s `idBefore`/`offsetAfter` pair doing the job they exist for. Remember the character id under the caret **before** the value changes, then ask the RGA where that character is now. Somebody inserting three characters above you does not move your cursor, because the character it is anchored to has not moved.'
+				text: 'The caret is remembered as a **character**, not an offset. `ids` holds the id of every character in `mirror`, refreshed each time the field and the document agree; when somebody else’s edit lands, the character before the caret is looked up in that list — in the text the field is *still showing* — and chapter 11’s `offsetAfter` says where that character is now. Somebody inserting three characters before you does not move your cursor, because the character it is anchored to has not moved.'
+			},
+			{
+				type: 'why',
+				title: 'The version that looked right',
+				text: 'The first version did this with `bind:this`, an `$effect`, and `value={value}` on the textarea, and its caret code never ran. Svelte writes a changed `value` into the element in its template effect, which runs *before* any `$effect` — and assigning a textarea’s `value` moves its caret to the end. By the time the effect looked, the field already matched and the caret had already gone. Its anchor was wrong too: it asked the document for the character at the caret’s offset, but the document already held the new text. Now the textarea has no `value` in its markup at all. `followDocument` is the only thing that writes it, and it reads the caret, and the id under it, before it does.'
 			},
 			{
 				type: 'note',
-				text: '`mirror` is tracked separately from the `value` prop, and the `svelte-ignore state_referenced_locally` is intentional rather than a suppression. The diff must be against what the *document* had, not what the textarea last rendered — those differ for exactly one frame after a remote edit lands, and that frame is precisely when the diff must not use the newer value.'
+				text: 'An **attachment** rather than `bind:this` and an `$effect`. It is handed the element, so there is no variable that is `null` until mount, and the documentation’s description is exactly the job: attachments “run in an effect when an element is mounted to the DOM or when state read inside the function updates.” Reading `value` is that state. The order of the two `{@attach}` tags is the order they run, so the text is in the field before `takeFocus` selects it.'
+			},
+			{
+				type: 'terminal',
+				code: `
+$ pnpm exec vitest --run --project client src/lib/components/LabelEditor.svelte.spec.ts
+
+  ✓ the label editor › keeps the caret on its character when somebody types before it
+  ✓ the label editor › opens with the whole label selected, so typing replaces it
+
+  before the fix: expected 11 to be 9 — the caret after "wor" in "world" had jumped to the end of "hello world"`
+			},
+			{
+				type: 'note',
+				text: '`mirror` is tracked separately from the `value` prop, and the `svelte-ignore state_referenced_locally` is intentional rather than a suppression. The diff must be against what the *document* had, not what the textarea last rendered — those differ for exactly one frame after a remote edit lands, and that frame is precisely when the diff must not use the newer value. Like `composing`, `mirror` and `ids` are plain `let`s: the handlers, `commit` and the attachment read them, and nothing renders from them.'
 			},
 
 			{ type: 'h3', id: 'the-diff', text: 'The diff' },
@@ -187,7 +266,7 @@ function commit(next: string) {
 	if (removed > 0) board.deleteText(target, start, start + removed);
 	if (added) board.insertText(target, start, added);
 
-	mirror = next;
+	inStep(next);
 }`
 			},
 			{
@@ -315,14 +394,32 @@ export const postComment = form(
 	v.object({
 		boardId,
 		body,
-		anchor: v.optional(v.string()),
-		parentId: v.optional(v.string())
+		anchor: v.optional(reference),
+		parentId: v.optional(reference)
 	}),
 	async ({ boardId: id, body: text, anchor, parentId }) => {
 		const who = requireUser();
 
 		// \`commenter\` is enough. That is the whole point of the role.
 		await requireAccess(id, who.id, 'commenter').catch(rethrow);
+
+		/*
+		 * A reply names its thread by id, and the id comes from the client.
+		 *
+		 * The check above is about the board in \`boardId\`. Nothing about it says the
+		 * thread in \`parentId\` is on that board, so it is looked up *with* the board
+		 * — a root comment, on the board that was just checked — and anything else
+		 * is a thread that does not exist, as far as this caller is concerned.
+		 */
+		if (parentId) {
+			const parent = await db
+				.select({ id: comment.id })
+				.from(comment)
+				.where(and(eq(comment.id, parentId), eq(comment.boardId, id), isNull(comment.parentId)))
+				.limit(1);
+
+			if (parent.length === 0) error(404, 'No such thread.');
+		}
 
 		await db.insert(comment).values({
 			id: crypto.randomUUID(),
@@ -334,11 +431,12 @@ export const postComment = form(
 		});
 
 		await threads(id).refresh();
-	}`
+	}
+);`
 			},
 			{
 				type: 'p',
-				text: 'A `form()` rather than a `command()`, for the reason from chapter 32 — it works without JavaScript — and for a second reason specific to this shape: `postComment.for(threadId)` gives every reply box its own instance from one definition.'
+				text: 'A `form()` rather than a `command()`, for the reason from chapter 31 — it works without JavaScript — and for a second reason specific to this shape: `postComment.for(threadId)` gives every reply box its own instance from one definition. The `parentId` check in the middle is the subject of a section of its own, below.'
 			},
 			{
 				type: 'code',
@@ -354,12 +452,11 @@ export const postComment = form(
  * the reference only captures the initial value, which is a warning worth
  * listening to rather than silencing.
  */
-const list = $derived(threads(boardId));
-const open = $derived((list.current ?? []).filter((thread) => thread.resolvedAt === null));`
+const list = $derived(threads(boardId));`
 			},
 			{
 				type: 'warn',
-				text: '`$derived`, not a plain `const`. `threads(boardId)` called once captures whichever board was open when the component mounted. Deriving it means navigating to another board re-runs the query — and, less obviously, it is what makes the compiler stop warning that the reference only captures the initial value, which is a warning worth listening to rather than silencing.'
+				text: '`$derived`, not a plain `const`. `threads(boardId)` called once captures whichever board was open when the component mounted. Deriving it means navigating to another board re-runs the query — and, less obviously, it is what makes the compiler stop warning that the reference only captures the initial value, which is a warning worth listening to rather than silencing. It is the same reason chapter 30’s board page derives `openBoard(params.board)`.'
 			},
 
 			{ type: 'h3', id: 'per-thread', text: 'One definition, independent state' },
@@ -369,11 +466,11 @@ const open = $derived((list.current ?? []).filter((thread) => thread.resolvedAt 
 				lang: 'svelte',
 				code: `
 {#each open as thread (thread.id)}
-	{@const reply = postComment.for(thread.id)}
+	{const reply = $derived(postComment.for(thread.id))}
 	<article class="thread">
 		<header class="thread__head">
 			<strong>{thread.author}</strong>
-			{#if thread.anchor}<span class="thread__anchor">on a shape</span>{/if}
+			{#if thread.anchor}<span class="thread__anchor">{t.comments.onShape}</span>{/if}
 		</header>
 		<p class="thread__body">{thread.body}</p>
 
@@ -388,19 +485,23 @@ const open = $derived((list.current ?? []).filter((thread) => thread.resolvedAt 
 			under every other one. Spreading the bare \`postComment\` into a loop
 			gives every thread the same instance and exactly that bug.
 		-->
-		<form {...reply} class="thread__reply-form">
+		<form {...reply.enhance((form) => send(form, thread.id))} class="thread__reply-form">
 			<input {...reply.fields.boardId.as('hidden', boardId)} />
 			<input {...reply.fields.parentId.as('hidden', thread.id)} />
-			<label class="visually-hidden" for="reply-{thread.id}">Reply</label>
-			<input id="reply-{thread.id}" {...reply.fields.body.as('text')} placeholder="Reply…" />
+			<label class="visually-hidden" for="{uid}-reply-{thread.id}">{t.comments.reply}</label>
+			<input
+				id="{uid}-reply-{thread.id}"
+				{...reply.fields.body.as('text')}
+				placeholder={t.comments.replyPlaceholder}
+			/>
 			<Button size="sm" type="submit">{t.comments.post}</Button>
 		</form>
 
-		<Button
-			size="sm"
-			variant="ghost"
-			onclick={() => resolveThread({ boardId, id: thread.id, resolved: true })}
-		>
+		{#if reply.fields.issues()?.length}
+			<p class="comments__error" role="alert">{reply.fields.issues()?.[0]?.message}</p>
+		{/if}
+
+		<Button size="sm" variant="ghost" onclick={() => setResolved(thread.id, true)}>
 			{t.comments.resolve}
 		</Button>`
 			},
@@ -410,7 +511,282 @@ const open = $derived((list.current ?? []).filter((thread) => thread.resolvedAt 
 			},
 			{
 				type: 'note',
-				text: 'Note `resolveThread`’s `where` clause: `and(eq(comment.id, id), isNull(comment.parentId))`. Only a root comment can be resolved, because a reply has no independent state — and expressing that in the query rather than in a check above it means there is no path that forgets.'
+				text: '`{const reply = $derived(…)}` is a declaration tag, from chapter 30, and here its *scope* is the part worth seeing. A declaration tag’s name is visible to its siblings and to their children — in the documentation’s words, to “everything in the same lexical scope” — so `reply` reaches the whole `<article>` and nothing outside this `{#each}`. The legacy `{@const}` had to sit directly inside a block; a declaration tag can go anywhere in markup.'
+			},
+
+			{ type: 'h3', id: 'the-same-board', text: 'The check and the write name the same board' },
+			{
+				type: 'p',
+				text: 'Resolving a thread is a command. Read it for what the `where` clause says, because the first version of it had a hole in exactly that line.'
+			},
+			{
+				type: 'code',
+				file: 'src/lib/remote/comments.remote.ts',
+				lang: 'ts',
+				code: `
+export const resolveThread = command(
+	v.object({ boardId, id: v.pipe(reference, v.minLength(1)), resolved: v.boolean() }),
+	async ({ boardId: board, id, resolved }) => {
+		const who = requireUser();
+		await requireAccess(board, who.id, 'commenter').catch(rethrow);
+
+		const result = await db
+			.update(comment)
+			.set({
+				resolvedAt: resolved ? new Date() : null,
+				resolvedBy: resolved ? who.id : null
+			})
+			/*
+			 * Three conditions, and the middle one is part of the permission check.
+			 *
+			 * \`requireAccess\` proved that this person may comment on \`board\` — the
+			 * board the *caller* named. \`id\` names a row, and a row id says nothing
+			 * about which board it is on. Matching on the id alone lets anybody who
+			 * can comment on a board of their own resolve a thread on any board at
+			 * all, by sending their board's id next to somebody else's thread id.
+			 * The check and the write have to name the same board.
+			 *
+			 * The last condition is the model: only a root comment can be resolved,
+			 * because a reply has no independent state.
+			 */
+			.where(and(eq(comment.id, id), eq(comment.boardId, board), isNull(comment.parentId)));
+
+		// The same answer for "no such comment" and "not on this board", so a
+		// thread id is not an oracle either.
+		if (result.rowsAffected === 0) error(404, 'No such thread.');
+
+		await threads(board).refresh();
+	}
+);`
+			},
+			{
+				type: 'why',
+				title: 'The question the check answered',
+				text: '`requireAccess(board, who.id, \'commenter\')` answers a precise question: may this person comment on the board *the caller named*? The caller also names the thread, by id — and a row id says nothing about which board the row is on. The first version updated `where(and(eq(comment.id, id), isNull(comment.parentId)))`: the right thread, on any board at all. Everybody who signs up owns a workspace and can make a board in it, so every viewer in the app was one devtools edit away from resolving threads on boards they can only look at: press Resolve, and change the `boardId` in the request to a board of their own. The check passed, for the board it was asked about. The write happened somewhere else.'
+			},
+			{
+				type: 'p',
+				text: 'The fix is one condition — `eq(comment.boardId, board)` — and the rule it stands for is worth more than the line: **the access check and the row lookup must name the same board.** A check that proves something about one id, followed by a write that matches on another, is not a check. And when nothing matches, the answer is 404, the same for “no such comment” as for “not on this board”, so a thread id is no more of an oracle than a board id was in chapter 18.'
+			},
+			{
+				type: 'p',
+				text: 'The same shape turns up wherever a remote function takes the id of a row *inside* a board. `postComment` takes a `parentId`, and looks it up with the board before it writes a reply to it — above. `forgetCheckpoint` deletes a checkpoint by id:'
+			},
+			{
+				type: 'code',
+				file: 'src/lib/remote/history.remote.ts',
+				lang: 'ts',
+				code: `
+/** Delete a checkpoint. The operations it pointed at are untouched. */
+export const forgetCheckpoint = command(
+	v.object({ boardId, id: v.pipe(v.string(), v.minLength(1), v.maxLength(64)) }),
+	async ({ boardId: board, id }) => {
+		const user = requireUser();
+		await requireAccess(board, user.id, 'editor').catch(rethrow);
+
+		// Scoped to the board that was checked, not just the id: see \`resolveThread\`
+		// in \`comments.remote.ts\` for what matching on the id alone allows.
+		const result = await db
+			.delete(checkpoint)
+			.where(and(eq(checkpoint.id, id), eq(checkpoint.boardId, board)));
+
+		if (result.rowsAffected === 0) error(404, 'No such checkpoint.');
+
+		await revisions(board).refresh();
+	}
+);`
+			},
+			{
+				type: 'terminal',
+				code: `
+[features] comments › will not let a viewer resolve a thread by naming a board of their own
+
+  the owner posts a thread on a new board; the viewer, who owns "mo-board", opens it
+  the viewer presses Resolve, and the command's boardId is rewritten to "mo-board"
+  the panel's alert                         → "No such thread."
+  the owner reloads                         → the thread is still open, nothing resolved
+
+  before: HTTP 200 — the thread was resolved, by somebody who can only view the board`
+			},
+			{
+				type: 'note',
+				text: 'The test forges the request the way an attacker would: it presses the real button and rewrites the command’s argument on the way out with Playwright’s `page.route`. The seed gives the viewer a workspace and a board of their own for exactly this, because every account made through the sign-up form has one — a fixture in which the viewer is *only* a viewer is a fixture in which this bug cannot be seen.'
+			},
+
+			{ type: 'h3', id: 'refused', text: 'When the server says no' },
+			{
+				type: 'p',
+				text: 'A viewer can see the comment box, the Reply boxes and the Resolve button. Hiding them would be a courtesy, and courtesies get forgotten; what actually stops a viewer is `requireAccess(…, \'commenter\')` in `postComment` and `resolveThread`, which answers 403 — about the board the write is really scoped to, now. The interface’s job is to say so, in the server’s words, next to the thing that was refused.'
+			},
+			{
+				type: 'code',
+				file: 'src/lib/components/Comments.svelte',
+				lang: 'svelte',
+				code: `
+/**
+ * Why the last thing this panel sent was refused, in the server's words, and
+ * where to say so: \`'new'\` for the new-thread form, or the thread it was about.
+ */
+let refusal = $state<{ at: string; message: string } | null>(null);
+
+/*
+ * \`thrown.body.message\`, not \`thrown.message\`.
+ *
+ * Something the server refuses — a viewer pressing Resolve, say — rejects with
+ * an \`HttpError\`: \`{ status, body }\`, where \`body\` is the \`App.Error\`. It is not
+ * an \`Error\` and has no \`message\` of its own, so reading one shows nothing.
+ * Anything that is not an \`HttpError\` is a request that never got an answer,
+ * and that gets the generic line.
+ */
+function refuse(at: string, thrown: unknown) {
+	refusal = { at, message: isHttpError(thrown) ? thrown.body.message : t.errors.generic };
+}
+
+async function setResolved(id: string, done: boolean) {
+	refusal = null;
+	try {
+		await resolveThread({ boardId, id, resolved: done });
+	} catch (thrown) {
+		refuse(id, thrown);
+	}
+}
+
+/**
+ * What both comment forms do when submitted, via \`enhance\`.
+ *
+ * Without it, a submission the server refuses renders the nearest
+ * \`+error.svelte\` — and for a board, which resets its layout, that is the root
+ * error page, in place of the whole editor. A viewer who typed a comment would
+ * lose the board to find out they may not post one. With it, the refusal is a
+ * line under the form and the text they typed is still in the box.
+ *
+ * \`enhance\` hands over the reset too: the form is cleared only once the comment
+ * has landed.
+ */
+async function send(form: Pick<RemoteFormEnhanceInstance, 'element' | 'submit'>, at: string) {
+	refusal = null;
+	try {
+		if (await form.submit()) form.element.reset();
+	} catch (thrown) {
+		refuse(at, thrown);
+	}
+}`
+			},
+			{
+				type: 'why',
+				title: 'Why `body.message`',
+				text: 'A command the server refuses rejects with an `HttpError` — `{ status, body }` — and an `HttpError` is not an `Error`, so `thrown.message` is `undefined` and the obvious line shows nothing at all. The first version did not even get that far: it had no `catch`, the rejection went nowhere, and pressing the button did nothing anybody could see. `isHttpError(thrown)` narrows the type, `body.message` is the server’s sentence, and anything that is not an `HttpError` — a request that never got an answer — gets the generic line.'
+			},
+			{
+				type: 'p',
+				text: 'The two forms go through `send`, by way of `enhance`:'
+			},
+			{
+				type: 'code',
+				file: 'src/lib/components/Comments.svelte',
+				lang: 'svelte',
+				code: `
+<form {...postComment.enhance((form) => send(form, 'new'))} class="comments__new">
+	<input {...postComment.fields.boardId.as('hidden', boardId)} />
+	<input {...postComment.fields.anchor.as('hidden', anchor ?? '')} />
+
+	<label class="visually-hidden" for="{uid}-new">{t.comments.placeholder}</label>
+	<textarea
+		id="{uid}-new"
+		{...postComment.fields.body.as('text')}
+		placeholder={t.comments.placeholder}
+		rows="2"></textarea>
+
+	{#if postComment.fields.issues()?.length}
+		<p class="comments__error" role="alert">{postComment.fields.issues()?.[0]?.message}</p>
+	{/if}
+
+	<Button size="sm" variant="primary" type="submit">{t.comments.post}</Button>
+</form>`
+			},
+			{
+				type: 'why',
+				title: 'Why `enhance`',
+				text: 'A form spread without `enhance` handles its own failures, and the documentation says how: “if an error occurs during submission, the nearest `+error.svelte` page will be rendered.” For this panel the nearest one is the root error page — the board page resets its layout with `@`, and no layout in between has one — so a viewer who typed a comment and pressed Post lost the whole editor to find out they may not post. `enhance` hands the submission to the component: `form.submit()` rejects with the same `HttpError` a command does, and `send` turns it into a line under the form, with the comment still in the box. The documentation also says what `enhance` takes away — “the `<form>` is not automatically reset — you must call `form.element.reset()`” — which is why `send` clears the box only once `submit()` reports success.'
+			},
+			{
+				type: 'code',
+				file: 'src/lib/components/Comments.svelte',
+				lang: 'svelte',
+				code: `
+/** Unique to this instance, for the \`for\`/\`id\` pairs below. */
+const uid = $props.id();`
+			},
+			{
+				type: 'note',
+				text: '`{uid}-new` rather than `id="new-comment"`. A fixed id is unique until the component is rendered twice — two panels, a test that mounts two — and then two labels point at one textarea. `$props.id()` “generates an ID that is unique to the current component instance”, the same on the server and after hydration, and the documentation’s example is exactly this: linking a `<label for>` to its control.'
+			},
+
+			{ type: 'h3', id: 'the-list', text: 'The list, awaited where it is shown' },
+			{
+				type: 'code',
+				file: 'src/lib/components/Comments.svelte',
+				lang: 'svelte',
+				code: `
+<!--
+	The query awaited here, in this component's own markup and inside its own
+	boundary — so the wait is this boundary's \`pending\` snippet and a failure is
+	its \`failed\` one, and the rest of the editor never notices either.
+
+	Each declaration tag is a \`$derived\`, so a refresh after a post or a resolve
+	re-runs the split into open and resolved without re-running anything else.
+-->
+<svelte:boundary>
+	{const all = $derived(await list)}
+	{const open = $derived(all.filter((thread) => thread.resolvedAt === null))}
+	{const resolved = $derived(all.filter((thread) => thread.resolvedAt !== null))}
+
+	{#if all.length === 0}
+		<p class="comments__empty">{t.comments.none}</p>
+	{/if}`
+			},
+			{
+				type: 'code',
+				file: 'src/lib/components/Comments.svelte',
+				lang: 'svelte',
+				code: `
+{#snippet pending()}
+	<p class="comments__empty">{t.sync.connecting}</p>
+{/snippet}
+
+<!--
+	An \`App.Error\`, already through \`handleError\`, so the text is its
+	\`message\`. Svelte types \`error\` as \`unknown\` — it cannot know what
+	SvelteKit's \`transformError\` returns — hence the cast.
+-->
+{#snippet failed(error)}
+	<p class="comments__error" role="alert">
+		{t.errors.generic} <small>{(error as App.Error).message}</small>
+	</p>
+{/snippet}`
+			},
+			{
+				type: 'p',
+				text: 'This is the idiom, and it is the same one the board page and the board list use: the query awaited **in this component’s own markup**, inside its own `<svelte:boundary>`, with declaration tags naming what is derived from it. The wait is this boundary’s `pending` snippet, a failure is its `failed` snippet, and the rest of the editor never notices either. `open` and `resolved` are `$derived` declaration tags, so a refresh after a post or a resolve re-runs the split and nothing else.'
+			},
+			{
+				type: 'why',
+				title: 'Why not `.current`',
+				text: 'A query also has `current`, `loading` and `error`, and the documentation offers them plainly as the second choice: “while using `await` is recommended, as an alternative the query also has `loading`, `error` and `current` properties.” This panel used them for a while, on the theory that an `await` would suspend the whole component. That is true of an `await` in the *script*; one in the markup suspends only its boundary. What the properties cost is every branch written by hand — loading, error, empty — and nothing to stop a fallback showing at the wrong moment. The first version showed “No comments yet” over a query that had failed: a fallback that always won, and the one line on the panel that was confidently wrong. Reach for `.current` when you want the rest of a component to render without waiting and are prepared to handle `undefined` and `.error` yourself.'
+			},
+			{
+				type: 'terminal',
+				code: `
+[features] comments › tells a viewer, in the server’s words, why they cannot resolve one
+[features] comments › tells a viewer who posts why not, and leaves the board where it was
+[features] comments › will not let a viewer resolve a thread by naming a board of their own
+
+  viewer presses Resolve        → "You have view-only access to this board."
+  viewer posts "May I?"         → the same sentence; the canvas is still there, and so is "May I?"
+  viewer forges the boardId     → "No such thread."
+
+  before: Resolve did nothing anybody could see; Post replaced the editor with the root error page;
+          the forged request resolved the thread`
 			},
 
 			{
@@ -418,6 +794,8 @@ const open = $derived((list.current ?? []).filter((thread) => thread.resolvedAt 
 				items: [
 					'A colleague’s comment appears without a refresh.',
 					'A failed reply shows its error under one thread only.',
+					'A viewer who presses Resolve or Post is told why not, in the server’s words, and keeps the board.',
+					'A request that names one board and a thread on another is answered 404, not obeyed.',
 					'A `commenter` can comment and cannot move a box.'
 				]
 			}
@@ -676,6 +1054,36 @@ export const restoreTo = command(
 				text: 'And the restore goes through `ingest` — the same function every client’s edits go through, with the same per-operation permission check and the same broadcast. That is what makes a restore arrive on everybody else’s screen as an ordinary batch of edits, live, while they are working.'
 			},
 			{
+				type: 'p',
+				text: 'In the browser, the Restore button is a command call, so a refusal comes back the way chapter 36’s does — as an `HttpError` — and is caught the same way. The checkpoint form goes through `enhance` for chapter 36’s reason too, so a refused save is a sentence rather than the root error page. The list itself is awaited inside `History.svelte`’s boundary, so its `pending` and `failed` snippets are the ones that run.'
+			},
+			{
+				type: 'code',
+				file: 'src/lib/components/History.svelte',
+				lang: 'svelte',
+				code: `
+async function restore(seq: number) {
+	restoring = seq;
+	refusal = null;
+	try {
+		await restoreTo({ boardId, seq });
+	} catch (thrown) {
+		/*
+		 * \`thrown.body.message\`, not \`thrown.message\`.
+		 *
+		 * A command the server refuses rejects with an \`HttpError\`: \`{ status,
+		 * body }\`, where \`body\` is the \`App.Error\` a boundary would have been
+		 * handed. It is not an \`Error\` and has no \`message\` of its own. Anything
+		 * that is not an \`HttpError\` is a request that never got an answer, and
+		 * that gets the generic line.
+		 */
+		refusal = isHttpError(thrown) ? thrown.body.message : t.errors.generic;
+	} finally {
+		restoring = null;
+	}
+}`
+			},
+			{
 				type: 'terminal',
 				code: `
 [features] version history › restores a board to a checkpoint
@@ -828,7 +1236,7 @@ const worker = new Worker(new URL('./raster.worker.ts', import.meta.url), { type
 			},
 			{
 				type: 'note',
-				text: 'The cross-origin isolation headers from chapter 34 are what make `SharedArrayBuffer` available to this worker. They are scoped to the application’s own pages rather than set globally, because `require-corp` also forbids loading any cross-origin resource that does not opt in — and the embed route deliberately renders inside other people’s sites.'
+				text: 'The cross-origin isolation headers set in `hooks.server.ts` are what make `SharedArrayBuffer` available to this worker (the dev server gets the same two from `vite.config.ts`). In the built app they are scoped to the application’s own pages rather than set globally, because `require-corp` also forbids loading any cross-origin resource that does not opt in — and the embed route deliberately renders inside other people’s sites.'
 			},
 
 			{
@@ -1002,7 +1410,7 @@ const worker = new Worker(new URL('./raster.worker.ts', import.meta.url), { type
  */
 
 import type { RequestHandler } from './$types';
-import { error, json } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 import { eq } from 'drizzle-orm';
 import { BoardDocument, emptySnapshot, parseSnapshot } from '#lib/board/index.ts';
 import { newActorId } from '#lib/crdt/index.ts';
@@ -1028,6 +1436,27 @@ import { AccessError, requireAccess } from '#lib/server/rbac.ts';
 				type: 'note',
 				text: 'Compaction happens *here* rather than in a scheduled job, because this is the only place that already pays for the replay — and a board nobody reads does not need compacting. That is a nice example of putting maintenance work where the cost has already been incurred.'
 			},
+			{
+				type: 'code',
+				file: 'src/routes/api/boards/[board]/snapshot/+server.ts',
+				lang: 'ts',
+				code: `
+	/*
+	 * \`Response.json\`, not SvelteKit's \`json()\`.
+	 *
+	 * SvelteKit 3 deprecated its \`json(...)\` and \`text(...)\` helpers because the
+	 * platform caught up. \`Response.json\` serialises the body and sets the
+	 * content type, which is all this endpoint needs; SvelteKit's own helper
+	 * built its \`Response\` by hand and added a \`content-length\`, which nothing
+	 * here relies on. \`setHeaders\` above still applies — SvelteKit merges those
+	 * onto whatever the handler returns.
+	 */
+	return Response.json(snapshot);`
+			},
+			{
+				type: 'p',
+				text: 'Notice what is *not* imported from `@sveltejs/kit`: only `error`. SvelteKit 3 deprecated the `json()` and `text()` response helpers, because `Response.json(...)` and `new Response(text)` are the platform doing the job. They are not identical — SvelteKit’s `json()` built its `Response` by hand and also set a `content-length` — but `Response.json` serialises the body and sets the content type, which is everything this endpoint needs. `setHeaders` still applies — SvelteKit merges those headers onto whatever the handler returns.'
+			},
 
 			{ type: 'h3', id: 'ssr', text: 'The host page, and one dynamic import' },
 			{
@@ -1037,7 +1466,9 @@ import { AccessError, requireAccess } from '#lib/server/rbac.ts';
 				code: `
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { page } from '$app/state';
+	import type { PageProps } from './$types';
+
+	let { params }: PageProps = $props();
 
 	/**
 	 * The embed host page.
@@ -1070,7 +1501,7 @@ import { AccessError, requireAccess } from '#lib/server/rbac.ts';
 		The element is used exactly as a host page would use it: an unknown tag with
 		plain attributes. Svelte has no idea what this is, which is the point.
 	-->
-	<tessera-board board={page.params.board} height="420"></tessera-board>
+	<tessera-board board={params.board} height="420"></tessera-board>
 {/if}`
 			},
 			{
@@ -1079,7 +1510,7 @@ import { AccessError, requireAccess } from '#lib/server/rbac.ts';
 			},
 			{
 				type: 'p',
-				text: 'And note how the element is used in the markup: an unknown tag with plain attributes. Svelte has no idea what it is, which is exactly the point — that is how a host page will use it.'
+				text: 'And note how the element is used in the markup: an unknown tag with plain attributes. Svelte has no idea what it is, which is exactly the point — that is how a host page will use it. The board id comes from the page’s own `params`, typed by its `PageProps`, as on every route since chapter 30.'
 			},
 
 			{
@@ -1102,7 +1533,7 @@ import { AccessError, requireAccess } from '#lib/server/rbac.ts';
 		blocks: [
 			{
 				type: 'code',
-				file: 'src/service-worker.ts',
+				file: 'src/service-worker/index.ts',
 				lang: 'ts',
 				code: `
 /**
@@ -1136,9 +1567,33 @@ import { AccessError, requireAccess } from '#lib/server/rbac.ts';
  * SvelteKit 3 split the old \`$service-worker\` module apart: the build manifest
  * is \`$app/manifest\` (\`immutable\`, \`assets\`, \`prerendered\`, \`routes\`), the build
  * id is \`version\` from \`$app/env\`, and \`$app/service-worker\` now exports only a
- * correctly-typed \`self\`. Bringing the SvelteKit 2 import forward gives four
- * "has no exported member" errors at once, which at least says so plainly.
- */`
+ * correctly-typed \`self\`. Bring the SvelteKit 2 import forward unchanged and the
+ * type checker cannot find \`$service-worker\` at all; repoint the same names at
+ * \`$app/service-worker\` and it reports four "has no exported member" errors
+ * instead. Either way it says so plainly, and either way the answer is the same:
+ * the names moved, to \`$app/manifest\` and \`$app/env\`.
+ *
+ * WHY THIS IS A DIRECTORY
+ * -----------------------
+ * \`src/service-worker/index.ts\`, not \`src/service-worker.ts\`. SvelteKit 3
+ * accepts both; the directory is the one that lets the worker's own
+ * \`tsconfig.json\` sit next to the only file it governs. That config extends
+ * \`$app/tsconfig/service-worker\`, which swaps the DOM lib for \`WebWorker\` and
+ * is what makes \`self\` below a \`ServiceWorkerGlobalScope\` rather than a
+ * \`Window\` — and the root \`tsconfig.json\` excludes this directory so the file
+ * is never checked against an environment it will not run in. SvelteKit
+ * bundles the result and registers it with \`{ type: 'module' }\`, which is why
+ * plain \`import\` statements are fine here.
+ */
+
+import { self } from '$app/service-worker';
+import { version } from '$app/env';
+import { assets, immutable } from '$app/manifest';
+import { resolve } from '$app/paths';`
+			},
+			{
+				type: 'p',
+				text: 'A directory, not a file. `src/service-worker.ts` still works in SvelteKit 3, but `src/service-worker/index.ts` is the layout the framework documents, because it gives the worker somewhere to keep its own `tsconfig.json` — the one that extends `$app/tsconfig/service-worker` and swaps the DOM lib for `WebWorker`. The root `tsconfig.json` excludes the directory, and the `check` script runs `tsc` against the worker’s config explicitly, since `svelte-check` only ever reads the root one. The worker is bundled and registered as `{ type: \'module\' }`, which is why plain `import` statements are fine inside it.'
 			},
 			{
 				type: 'p',
@@ -1151,11 +1606,11 @@ import { AccessError, requireAccess } from '#lib/server/rbac.ts';
 			},
 			{
 				type: 'warn',
-				text: 'SvelteKit 3 split the old `$service-worker` module apart. The build manifest is `$app/manifest` (`immutable`, `assets`, `prerendered`, `routes`), the build id is `version` from `$app/env`, and `$app/service-worker` now exports only a correctly-typed `self`. Bringing the SvelteKit 2 import forward gives four "has no exported member" errors at once, which at least says so plainly.'
+				text: 'SvelteKit 3 removed the old `$service-worker` module and split what it exported apart. The build manifest is `$app/manifest` (`immutable`, `assets`, `prerendered`, `routes`), the build id is `version` from `$app/env`, and `$app/service-worker` is new, and exports only a correctly-typed `self`. Leave the SvelteKit 2 import exactly as it was and the type checker says `$service-worker` cannot be found at all. Repoint the same names at `$app/service-worker`, which is the obvious-looking fix, and you get four "has no exported member" errors instead, one each for `build`, `files`, `prerendered` and `version`. Both mean the same thing: the names moved, to `$app/manifest` and `$app/env`.'
 			},
 			{
 				type: 'code',
-				file: 'src/service-worker.ts',
+				file: 'src/service-worker/index.ts',
 				lang: 'ts',
 				code: `
 /*
@@ -1171,9 +1626,27 @@ const CACHE = \`tessera-\${version}\`;
  *
  * \`immutable\` is Vite's hashed output; \`assets\` is whatever is in \`static/\`,
  * which for this application is the two font files. Both arrive as
- * \`{ path }\` objects rather than bare strings.
+ * \`{ path }\` objects rather than bare strings — and the path is relative to
+ * the base path, with no leading slash: \`_app/immutable/…\`, \`fonts/…\`.
+ *
+ * \`resolve()\` turns each into the absolute pathname the browser will actually
+ * request, which is what \`url.pathname\` is compared with in the fetch handler.
+ * Skip it and that comparison never matches. Nothing fails loudly:
+ * \`cache.addAll\` resolves the relative paths against the worker's own URL, so
+ * the shell is still cached and the application still starts offline — but
+ * the "cache-first, forever" rule has silently become network-first for every
+ * hashed asset, which is the kind of regression no test notices and everybody
+ * on a slow connection pays for.
+ *
+ * Typed as \`string[]\` on purpose. \`resolve()\` returns \`ResolvedPathname\`, a
+ * template-literal type — a \`/\` followed by one of the app's known paths —
+ * which is what lets a link be checked, and exactly wrong for a list whose only
+ * job is to be compared with \`url.pathname\`, a plain string.
+ * \`Array.prototype.includes\` is typed with the element type, so a
+ * \`ResolvedPathname[]\` refuses a plain string at compile time. Widening here
+ * says once what these are: the pathnames the browser will actually request.
  */
-const PRECACHE = [...immutable, ...assets].map((entry) => entry.path);
+const PRECACHE: string[] = [...immutable, ...assets].map((entry) => resolve(entry.path));
 
 self.addEventListener('install', (event) => {
 	event.waitUntil(
@@ -1203,8 +1676,12 @@ self.addEventListener('activate', (event) => {
 				text: 'The cache is named after `version`, which is unique per build, so a new deployment gets a new cache and the old one is deleted on activate. Naming it anything stable is how a service worker ends up serving an application from two releases ago with no way to clear it short of asking people to open devtools.'
 			},
 			{
+				type: 'warn',
+				text: 'The paths in `$app/manifest` are relative to the base path — `_app/immutable/…`, no leading slash — and `url.pathname` in the fetch handler is absolute. `resolve()` from `$app/paths` is what makes the two comparable — the pathname form of chapter 33’s `resolve()`, without the leading slash — and it is easy to leave out because nothing fails when you do: `cache.addAll` resolves relative paths against the worker’s own URL, so the shell still caches and the app still starts offline. What silently goes wrong is the first rule — hashed assets become network-first — and no test notices. The `string[]` annotation is the other half: `resolve()` returns a `ResolvedPathname`, a template-literal type, and `includes` will not compare one with the plain string `url.pathname` is.'
+			},
+			{
 				type: 'code',
-				file: 'src/service-worker.ts',
+				file: 'src/service-worker/index.ts',
 				lang: 'ts',
 				code: `
 async function respond(request: Request, url: URL): Promise<Response> {
@@ -1279,9 +1756,7 @@ async function respond(request: Request, url: URL): Promise<Response> {
 -->
 <!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
 <div
-	bind:this={surface}
-	class="board"
-	class:board--connecting={editor.tool === 'connect'}
+	class={['board', { 'board--connecting': editor.tool === 'connect' }]}
 	data-canvas
 	role="application"
 	aria-label={t.a11y.canvas}
@@ -1302,6 +1777,10 @@ async function respond(request: Request, url: URL): Promise<Response> {
 				type: 'why',
 				title: 'What `role="application"` obliges you to do',
 				text: 'It tells a screen reader to **stop interpreting keystrokes itself** and pass them through, which a canvas whose entire interface is keys genuinely needs. It is also the strongest claim in ARIA: you have taken away the navigation somebody relies on everywhere else. The obligation that comes with it is to offer the same capabilities another way — and if you cannot, you should not use the role.'
+			},
+			{
+				type: 'note',
+				text: 'Two smaller things in that opening tag. The class is the attribute’s array-and-object form, `class={[\'board\', { \'board--connecting\': … }]}`, which Svelte has accepted since 5.16 and now prefers to the `class:` directive: “unless you’re using an older version of Svelte, consider avoiding `class:`, since the attribute is more powerful and composable.” And there is no `bind:this`. Every handler is attached to this element, so each one reads `event.currentTarget` — typed as the `<div>` itself — instead of an element variable that is `null` until mount and has to be checked in every handler.'
 			},
 			{
 				type: 'code',

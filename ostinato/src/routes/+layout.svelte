@@ -34,6 +34,11 @@
 	 * produces.
 	 */
 	onNavigate((navigation) => {
+		// A shallow navigation — a panel opening in the studio, a preview in the
+		// gallery — changes history, not the document. Since SvelteKit 3 it runs
+		// the navigation hooks like any other, so this has to say: no cross-fade
+		// for those. The panel brings its own transition.
+		if (navigation.shallow) return;
 		if (!document.startViewTransition) return;
 		if (prefersReducedMotion.current) return;
 		if (document.visibilityState !== 'visible') return;

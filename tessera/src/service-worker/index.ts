@@ -31,13 +31,29 @@
  * SvelteKit 3 split the old `$service-worker` module apart: the build manifest
  * is `$app/manifest` (`immutable`, `assets`, `prerendered`, `routes`), the build
  * id is `version` from `$app/env`, and `$app/service-worker` now exports only a
- * correctly-typed `self`. Bringing the SvelteKit 2 import forward gives four
- * "has no exported member" errors at once, which at least says so plainly.
+ * correctly-typed `self`. Bring the SvelteKit 2 import forward unchanged and the
+ * type checker cannot find `$service-worker` at all; repoint the same names at
+ * `$app/service-worker` and it reports four "has no exported member" errors
+ * instead. Either way it says so plainly, and either way the answer is the same:
+ * the names moved, to `$app/manifest` and `$app/env`.
+ *
+ * WHY THIS IS A DIRECTORY
+ * -----------------------
+ * `src/service-worker/index.ts`, not `src/service-worker.ts`. SvelteKit 3
+ * accepts both; the directory is the one that lets the worker's own
+ * `tsconfig.json` sit next to the only file it governs. That config extends
+ * `$app/tsconfig/service-worker`, which swaps the DOM lib for `WebWorker` and
+ * is what makes `self` below a `ServiceWorkerGlobalScope` rather than a
+ * `Window` — and the root `tsconfig.json` excludes this directory so the file
+ * is never checked against an environment it will not run in. SvelteKit
+ * bundles the result and registers it with `{ type: 'module' }`, which is why
+ * plain `import` statements are fine here.
  */
 
 import { self } from '$app/service-worker';
 import { version } from '$app/env';
 import { assets, immutable } from '$app/manifest';
+import { resolve } from '$app/paths';
 
 /*
  * `version` is unique per build, so a new deployment gets a new cache and the
@@ -52,9 +68,27 @@ const CACHE = `tessera-${version}`;
  *
  * `immutable` is Vite's hashed output; `assets` is whatever is in `static/`,
  * which for this application is the two font files. Both arrive as
- * `{ path }` objects rather than bare strings.
+ * `{ path }` objects rather than bare strings — and the path is relative to
+ * the base path, with no leading slash: `_app/immutable/…`, `fonts/…`.
+ *
+ * `resolve()` turns each into the absolute pathname the browser will actually
+ * request, which is what `url.pathname` is compared with in the fetch handler.
+ * Skip it and that comparison never matches. Nothing fails loudly:
+ * `cache.addAll` resolves the relative paths against the worker's own URL, so
+ * the shell is still cached and the application still starts offline — but
+ * the "cache-first, forever" rule has silently become network-first for every
+ * hashed asset, which is the kind of regression no test notices and everybody
+ * on a slow connection pays for.
+ *
+ * Typed as `string[]` on purpose. `resolve()` returns `ResolvedPathname`, a
+ * template-literal type — a `/` followed by one of the app's known paths —
+ * which is what lets a link be checked, and exactly wrong for a list whose only
+ * job is to be compared with `url.pathname`, a plain string.
+ * `Array.prototype.includes` is typed with the element type, so a
+ * `ResolvedPathname[]` refuses a plain string at compile time. Widening here
+ * says once what these are: the pathnames the browser will actually request.
  */
-const PRECACHE = [...immutable, ...assets].map((entry) => entry.path);
+const PRECACHE: string[] = [...immutable, ...assets].map((entry) => resolve(entry.path));
 
 self.addEventListener('install', (event) => {
 	event.waitUntil(

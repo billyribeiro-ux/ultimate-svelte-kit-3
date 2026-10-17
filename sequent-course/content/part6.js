@@ -1,5 +1,5 @@
 /**
- * PART 6 — The screens (chapters 34–38)
+ * PART 6 — The screens (chapters 33–37)
  *
  * Mobile first on a screen designed for six monitors, two bugs that only a real
  * browser could find, and a motion system whose defining feature is how little
@@ -71,6 +71,22 @@ export const part6 = [
 }`
 			},
 			{
+				type: 'p',
+				text: 'On a phone the same element is a sheet that opens and closes, and the markup says which with one class:'
+			},
+			{
+				type: 'code',
+				file: 'apps/web/src/routes/terminal/+page.svelte',
+				lang: 'svelte',
+				code: `
+<section class={['card stack ticket', { open: ticketOpen }]} aria-label="Order ticket">`
+			},
+			{
+				type: 'why',
+				title: 'A class attribute that takes a list',
+				text: 'Since Svelte 5.16 the `class` attribute accepts an array or an object as well as a string, and turns it into a class list the way the `clsx` library does: strings are kept, and an object adds each key whose value is truthy. So `[\'card stack ticket\', { open: ticketOpen }]` is the fixed classes plus `open` while the sheet is open. Every conditional class in Sequent is written this way — `{ up: position.quantity > 0, down: position.quantity < 0 }` on a number that can rise or fall, `{ bad: books.total !== 0 }` on a trial balance that must be zero. The older spelling was a directive per class, `class:open={ticketOpen}`, and before that a template string with ternaries inside it. The documentation is direct about the first: "Unless you\'re using an older version of Svelte, consider avoiding `class:`, since the attribute is more powerful and composable." The second is worse than either — a nested ternary inside a string, where a forgotten space joins two class names into one that matches nothing, and no tool can tell.'
+			},
+			{
 				type: 'ul',
 				items: [
 					'**`min-width`, never `max-width`.** Base styles are the small screen; each query *adds* as room appears. Written the other way round, every rule needs an override and the cascade fights you.',
@@ -109,7 +125,9 @@ export const part6 = [
 	 * \`overflow-x: auto\` and exists precisely to absorb this. It never gets the
 	 * chance: its parent has already grown to fit, so there is nothing to scroll.
 	 *
-	 * …
+	 * This is the single most common cause of "why does my page scroll sideways
+	 * on mobile", and it is invisible in devtools because every element looks
+	 * like it is behaving.
 	 */
 	min-inline-size: 0;
 
@@ -303,7 +321,15 @@ export const part6 = [
 	 * scrollable width to the *page*, even though the table itself is correctly
 	 * clipped and nothing is visibly out of place.
 	 *
-	 * …
+	 * Every element measures correctly. \`getBoundingClientRect\` on every child
+	 * is inside its parent. The page still scrolls sideways by 122px, and the
+	 * only way to see it is to try scrolling.
+	 *
+	 * \`clip\` rather than \`hidden\`: \`hidden\` would make this a scroll container,
+	 * which breaks the sticky positioning it is meant to protect and gives the
+	 * card its own scrollbar. \`clip\` just clips. The small margin lets focus
+	 * rings and the tap-target expanders bleed a few pixels rather than being
+	 * shaved off at the border.
 	 */
 	overflow-x: clip;
 	overflow-clip-margin: 4px;
@@ -458,6 +484,7 @@ export const DURATION = {
 				code: `
 const REVEAL_BUDGET = 0.45;
 
+// …
 export function reveal(options: RevealOptions = {}): Attachment<HTMLElement> {
 	return (node) => {
 		const { distance = 10 } = options;
@@ -501,7 +528,7 @@ export function reveal(options: RevealOptions = {}): Attachment<HTMLElement> {
 			{ type: 'h3', id: 'attachments', text: 'Why these are attachments, not actions' },
 			{
 				type: 'p',
-				text: 'An earlier version of this file exported Svelte *actions* returning `{ update, destroy }`. The official `use:` docs now mark that return shape as legacy — "prior to the `$effect` rune, actions could return an object with `update` and `destroy` methods; using effects is preferred" — and recommend attachments outright for 5.29 and newer. An attachment is a function that runs in an effect when its element mounts and may return a cleanup, which is why `reveal` above ends with `return () => …` instead of a `destroy` method.'
+				text: 'An earlier version of this file exported Svelte *actions* returning `{ update, destroy }`. The official `use:` docs now mark that return shape as legacy — "prior to the `$effect` rune, actions could return an object with `update` and `destroy` methods … using effects is preferred" — and for 5.29 and newer they suggest attachments instead: "consider using attachments instead, as they are more flexible and composable". An attachment is a function that runs in an effect when its element mounts and may return a cleanup, which is why `reveal` above ends with `return () => …` instead of a `destroy` method.'
 			},
 			{
 				type: 'p',
@@ -511,6 +538,33 @@ export function reveal(options: RevealOptions = {}): Attachment<HTMLElement> {
 				type: 'why',
 				title: 'The getter pattern, for the two that react',
 				text: 'Attachments are fully reactive: `{@attach flash(directionFor(level))}` would read `level` while the expression is evaluated, and the docs are explicit that the attachment is then torn down and recreated on every change — killing the tween continuity the flash exists for. The documented fix is to pass the value **as a function** and read it inside a child `$effect`: `{@attach flash(() => directionFor(level))}`. The per-node setup runs once; only the effect re-runs when the level changes. `flash`, `count` and the ladder\'s `bar` all use this shape.'
+			},
+			{
+				type: 'p',
+				text: 'The getter has one sharp edge, and the terminal\'s last-price counter shows it:'
+			},
+			{
+				type: 'code',
+				file: 'apps/web/src/routes/terminal/+page.svelte',
+				lang: 'svelte',
+				code: `
+{#if market?.last}
+	<!-- … -->
+	{const last = $derived(market.last)}
+	<span
+		class="mono last"
+		{@attach count(() => ({ value: last.price, format: priceLabel }))}
+		aria-live="off"
+	></span>
+	<span class="faint mono">× {last.quantity.toLocaleString('en-GB')}</span>
+{:else}
+	<span class="faint">no trades yet</span>
+{/if}`
+			},
+			{
+				type: 'why',
+				title: 'A declaration tag, so the narrowing survives the closure',
+				text: 'Inside `{#if market?.last}` TypeScript knows `market.last` exists — but the getter handed to `count` is a closure that runs later, and narrowing does not survive into a closure: by then `market` could have changed, and the checker is right to say so. `{const last = $derived(market.last)}` is a **declaration tag**: a declaration written in the markup, scoped to this branch, so `last` exists exactly while there is a last trade and has the narrowed type. It is `$derived` because a declaration tag is not reactive on its own — "When values should be reactive, you can use `$state` and `$derived`", in the documentation\'s words — and the price must follow every trade. The legacy `{@const last = market.last}` was reactive implicitly; the documentation now calls that syntax "considered legacy — use declaration tags instead". Writing `$derived` costs a word and makes the reactivity something you can see. Chapter 27 has the other declaration tag on this page, in a boundary\'s `failed` snippet.'
 			},
 
 			{ type: 'h3', id: 'reduced-motion', text: 'What "reduce" actually means' },
@@ -527,6 +581,11 @@ export function prefersReducedMotion(): boolean {
 			{
 				type: 'p',
 				text: 'Checked live rather than read once, because it can change while the page is open — somebody toggling it in system settings expects the page to obey without a reload. And `true` on the server, because server-rendered markup must not assume animation.'
+			},
+			{
+				type: 'why',
+				title: 'Why not the one in svelte/motion',
+				text: 'Svelte ships `prefersReducedMotion` in `svelte/motion`: a reactive `MediaQuery` whose `.current` updates when the setting changes, and the right tool when *markup* should change with it. Here it would be the wrong one. Every caller of ours is an attachment or an effect, and the attachment docs are explicit that an attachment is destroyed and recreated when state it reads changes — "the same thing would happen for any state read *inside* the attachment function when it first runs". `reveal` is written to read no reactive state precisely so that it runs once. Reading `.current` there would make toggling the setting tear every revealed panel down and run its entrance again, on a page that arrived long ago. What these call sites want is the answer at the moment they animate, and a plain `matchMedia` read is exactly that.'
 			},
 			{
 				type: 'code',
@@ -647,10 +706,15 @@ gsap.to(state, {
 			{ type: 'h3', id: 'keyed', text: '2. Keyed by price' },
 			{
 				type: 'code',
+				file: 'apps/web/src/lib/components/DepthLadder.svelte',
 				lang: 'svelte',
 				code: `
-{#each levels as level (level.price)}
-	<tr>…</tr>
+{#each column.levels as level (level.price)}
+	<tr class={column.side} {@attach flash(() => directionFor(level))}>
+		<!-- … -->
+	</tr>
+{:else}
+	<tr><td colspan="3" class="empty muted">Nothing resting</td></tr>
 {/each}`
 			},
 			{
@@ -718,10 +782,18 @@ const largest = $derived(
  * the template depend on it, and writing it during that same render
  * invalidates the thing being rendered.
  *
- * …
+ * This is the general shape of "previous value" in a reactive system, and
+ * getting it wrong produces an infinite loop rather than a wrong answer,
+ * which is at least honest.
  */
-// …
+// A \`SvelteMap\` here would be precisely the bug described above: nothing reads
+// this during render, and making it reactive creates the cycle.
+// eslint-disable-next-line svelte/prefer-svelte-reactivity
 const lastSize = new Map<number, number>();`
+			},
+			{
+				type: 'p',
+				text: 'The `eslint-disable` line is there because `svelte/prefer-svelte-reactivity` flags a plain `Map` inside a component and suggests a `SvelteMap` — which here would be exactly the reactive cycle the comment describes. A lint rule is a good default, and the place to overrule it is next to the line, with the reason written down.'
 			},
 			{
 				type: 'why',
@@ -865,7 +937,7 @@ export const getVenue = query.live(async function* () {
 			{ type: 'h3', id: 'the-test-trap', text: 'The test that could never pass' },
 			{
 				type: 'p',
-				text: 'One more trap, from driving this page in a browser:'
+				text: 'One more trap, which this project has walked into more than once — its first browser suite did, and so did the throwaway probe that the suite in chapter 41 grew out of:'
 			},
 			{
 				type: 'code',

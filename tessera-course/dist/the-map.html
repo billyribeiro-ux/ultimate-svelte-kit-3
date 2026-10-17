@@ -63,7 +63,8 @@
   hooks.client.ts
   params.ts      route parameter matchers.
   env.ts         environment variables.
-  service-worker.ts</code></pre>
+  service-worker/
+    index.ts     the offline shell. its own tsconfig.json sits beside it.</code></pre>
 </figure>
 <h3 id="the-layers">Four layers, and the rule</h3>
 <p>The folders fall into four layers, and the rule is that <strong>a layer may only import from layers above it</strong>.</p>
@@ -77,25 +78,27 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">ts</span>
+		<span class="code__file">package.json</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">// package.json
-&quot;imports&quot;: {
+	<pre><code class="lang-json">&quot;imports&quot;: {
 	&quot;#lib&quot;: &quot;./src/lib/index.js&quot;,
 	&quot;#lib/*&quot;: &quot;./src/lib/*&quot;
 }</code></pre>
 </figure>
-<p>Node subpath imports rather than a bundler alias, so the same specifier works in Vite, in Vitest, and in a plain <code>node</code> process running a script. Every import carries its extension:</p>
+<p>Node subpath imports rather than a bundler alias, so the same specifier works in Vite, in Vitest, and in a plain <code>node</code> process running a script. This is also how SvelteKit 3 wants it: the framework no longer generates the old <code>$lib</code> alias, and the <code>imports</code> field in <code>package.json</code> is where <code>#lib</code> is declared instead. Every import carries its extension — here is the top of the server’s version-history module, which reaches into three other folders under <code>lib/</code> and one of its own:</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">ts</span>
+		<span class="code__file">src/lib/server/history.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">import { Clock } from '#lib/crdt/clock.ts';
-import Board from '#lib/components/Board.svelte';
-import { boardOps } from '#lib/board/index.ts';</code></pre>
+	<pre><code class="lang-ts">import { BoardDocument, emptySnapshot, parseSnapshot, type Operation } from '#lib/board/index.ts';
+import type { EdgeFields, NodeFields } from '#lib/board/index.ts';
+import { Clock, newActorId, type ActorId } from '#lib/crdt/index.ts';
+import { BoardRevision } from '#lib/history/revision.ts';
+import { db } from './db/index.ts';
+import { board, checkpoint, operation, user } from './db/schema.ts';</code></pre>
 </figure>
 <aside class="callout callout--warn"><p>The extensions are not optional. Node’s ESM resolver does not guess, and the type-stripping runtime resolves <code>.ts</code> specifiers directly. Omit one and you get <code>ERR_MODULE_NOT_FOUND</code> naming a file that is plainly there. Ask anybody who has spent twenty minutes on it.</p></aside>
 <h3 id="routes">The routes</h3>
@@ -118,7 +121,7 @@ import { boardOps } from '#lib/board/index.ts';</code></pre>
     snapshot/+server.ts        a board as JSON, for the embed</code></pre>
 </figure>
 <p>Two things to notice. <code>[[lang=locale]]</code> is an *optional* parameter with a matcher — <code>/fr/boards</code> and <code>/boards</code> are the same route. And <code>+page@.svelte</code>, with a bare <code>@</code>, resets the layout inheritance: the editor is a full-viewport application and does not want the site chrome its siblings share.</p>
-<p>There are exactly two API routes, and both exist because they are *streams or documents*, not function calls. Everything else that would have been an endpoint is a remote function, which we get to in part 6.</p>
+<p>There are exactly two API routes, and both exist because they are *streams or documents*, not function calls. Everything else that would have been an endpoint is a remote function, which we get to in chapter 30.</p>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>

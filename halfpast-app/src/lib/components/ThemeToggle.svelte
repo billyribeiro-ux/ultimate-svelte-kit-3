@@ -26,7 +26,7 @@
 	<legend class="visually-hidden">Colour theme</legend>
 
 	{#each THEMES as option (option)}
-		<label class="option" class:selected={theme.preference === option}>
+		<label class={['option', { selected: theme.preference === option }]}>
 			<input
 				type="radio"
 				name="theme"

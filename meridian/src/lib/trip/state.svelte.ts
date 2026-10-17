@@ -28,6 +28,11 @@ import type { TripDocument } from '#lib/server/trips.ts';
 export const TABS = ['itinerary', 'map', 'globe', 'expenses', 'notes', 'companions'] as const;
 export type Tab = (typeof TABS)[number];
 
+/** Whether a value from the URL names a tab: a type guard, so the caller needs no cast. */
+export function isTab(value: string | null): value is Tab {
+	return TABS.some((tab) => tab === value);
+}
+
 export class TripState {
 	#initial: TripDocument;
 	#live: () => LiveTrip | null | undefined;

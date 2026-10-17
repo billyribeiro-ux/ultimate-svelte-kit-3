@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Hooks: identity, headers, one framed route, errors by kind — Building Abacus</title>
-<meta name="description" content="`sequence` of two handles, a `preload` filter that names font files by source `filename`, a per-route `frame-ancestors` swap, `handleFetch`, `handleError` that tells validation failures from real ones, `init`, and the `transport` that carries an `ErrorValue` across the wire.">
+<meta name="description" content="sequence of two handles, a preload filter that names font files by source filename, a per-route frame-ancestors swap, handleFetch, handleError that tells validation failures from real ones on the server and leaves a deliberate error(…) alone in the browser, init, the transport that carries an ErrorValue across the wire, and the two shapes of error a page has to read.">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -33,12 +33,12 @@
 		<article>
 			<p class="eyebrow">Chapter 29</p>
 			<h1>Hooks: identity, headers, one framed route, errors by kind</h1>
-			<p class="lede"><code>sequence</code> of two handles, a <code>preload</code> filter that names font files by source <code>filename</code>, a per-route <code>frame-ancestors</code> swap, <code>handleFetch</code>, <code>handleError</code> that tells validation failures from real ones, <code>init</code>, and the <code>transport</code> that carries an <code>ErrorValue</code> across the wire.</p>
+			<p class="lede"><code>sequence</code> of two handles, a <code>preload</code> filter that names font files by source <code>filename</code>, a per-route <code>frame-ancestors</code> swap, <code>handleFetch</code>, <code>handleError</code> that tells validation failures from real ones on the server and leaves a deliberate <code>error(…)</code> alone in the browser, <code>init</code>, the <code>transport</code> that carries an <code>ErrorValue</code> across the wire, and the two shapes of error a page has to read.</p>
 			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Read every hook in the project and say what each is for — and what the September 2026 releases changed in them.</p></aside>
 			
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/hooks.server.ts<span class="code__lines">:1-37</span></span>
+		<span class="code__file">src/hooks.server.ts<span class="code__lines">:1-36</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -51,18 +51,17 @@
  *   2. security — headers, which fonts to preload, and the one route that may
  *      be framed
  *
- * plus `handleFetch`, `handleError` and `init`. The universal hooks —
- * `transport` and `reroute` — live in `src/hooks.ts` because the browser
- * needs them too.
+ * plus `handleFetch`, `handleError` and `init`. The one universal hook,
+ * `transport`, lives in `src/hooks.ts` because the browser needs it too.
  */
 
 import { building } from '$app/env';
 import { SESSION_SECRET } from '$app/env/private';
 /*
- * SvelteKit 3 moved every hook type into `@sveltejs/kit/hooks`. Importing them
- * from `@sveltejs/kit` compiles to `any` for each destructured argument — which
- * is not an error, so the file keeps working and every parameter silently loses
- * its type.
+ * SvelteKit 3 moved every hook type into `@sveltejs/kit/hooks`. The old import
+ * from `@sveltejs/kit` is now a type error — TS2305, &quot;has no exported member
+ * 'Handle'&quot; — which `pnpm run check` reports for every name, followed by an
+ * implicit `any` for every argument the types used to describe.
  */
 import {
 	sequence,
@@ -79,11 +78,11 @@ const handleIdentity: Handle = async ({ event, resolve }) =&gt; {
 	return resolve(event);
 };</code></pre>
 </figure>
-<p>The types come from <code>@sveltejs/kit/hooks</code>. Importing them from <code>@sveltejs/kit</code> compiles to <code>any</code> for every destructured argument — not an error, so the file keeps working and every parameter silently loses its type. The comment is there because it happened.</p>
+<p>The types come from <code>@sveltejs/kit/hooks</code>, where SvelteKit 3 moved every one of them. The old import from <code>@sveltejs/kit</code> is now a type error — TS2305, “Module '&quot;@sveltejs/kit&quot;' has no exported member 'Handle'” — once for each name, followed by an implicit <code>any</code> for every argument those types used to describe, and <code>pnpm run check</code> fails on it. That was tried, in a copy of this project, rather than assumed. The one place an old import fails quietly is a hooks file written in JavaScript with JSDoc types and no <code>checkJs</code>, where nothing type-checks the file at all; in a strict TypeScript project like this one, it cannot slip through.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/hooks.server.ts<span class="code__lines">:39-102</span></span>
+		<span class="code__file">src/hooks.server.ts<span class="code__lines">:38-101</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -101,8 +100,8 @@ const handleSecurity: Handle = async ({ event, resolve }) =&gt; {
 		/*
 		 * Preload the two fonts the first paint needs, by source filename.
 		 *
-		 * SvelteKit preloads `js` and `css` by default and never fonts. Since
-		 * 3.0.0-next.24 a `font` input carries its `filename` — the project-relative
+		 * SvelteKit preloads `js` and `css` by default and never fonts. In
+		 * SvelteKit 3 a `font` input carries its `filename` — the project-relative
 		 * source path, before hashing — so this can name the exact file rather than
 		 * guessing at a hashed URL.
 		 */
@@ -151,11 +150,11 @@ const handleSecurity: Handle = async ({ event, resolve }) =&gt; {
 
 export const handle: Handle = sequence(handleIdentity, handleSecurity);</code></pre>
 </figure>
-<p>Three things in the security handle. The <code>preload</code> filter preloads the two font files the first paint needs, by source filename — since 3.0.0-next.24 a <code>font</code> input carries its <code>filename</code>, so nothing has to guess at a hashed URL. The security headers. And the one route that may be framed: the config says <code>frame-ancestors 'none'</code> for the whole app, and for <code>/embed/</code> the hook replaces it after SvelteKit has built the policy. The config is the rule; the hook is the exception, stated once.</p>
+<p>Three things in the security handle. The <code>preload</code> filter preloads the two font files the first paint needs, by source filename — in SvelteKit 3 a <code>font</code> input carries its <code>filename</code>, so nothing has to guess at a hashed URL. The security headers. And the one route that may be framed: the config says <code>frame-ancestors 'none'</code> for the whole app, and for <code>/embed/</code> the hook replaces it after SvelteKit has built the policy. The config is the rule; the hook is the exception, stated once.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/hooks.server.ts<span class="code__lines">:104-119</span></span>
+		<span class="code__file">src/hooks.server.ts<span class="code__lines">:103-118</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -178,7 +177,7 @@ export const handleFetch: HandleFetch = ({ request, fetch, event }) =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/hooks.server.ts<span class="code__lines">:121-147</span></span>
+		<span class="code__file">src/hooks.server.ts<span class="code__lines">:120-146</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -212,12 +211,12 @@ export const handleError: HandleServerError = ({ error, event, kind, issues }) =
 
 <aside class="callout callout--why">
 	<h4>Why handleError looks at kind</h4>
-	<p>SvelteKit 3 tells <code>handleError</code> what kind of error it is holding: <code>app</code> for a deliberate <code>error(404, …)</code>, <code>framework</code> for its own, <code>validation</code> for a remote function argument that failed its schema, <code>unknown</code> for something genuinely broken. Only the last deserves a correlation id and a stack in the log; a validation failure logs the field path and answers with a plain message; the first two keep SvelteKit’s defaults. Before <code>kind</code>, every one of those was an <code>unknown</code> with a stack trace.</p>
+	<p>SvelteKit 3 tells <code>handleError</code> what kind of error it is holding: <code>app</code> for a deliberate <code>error(404, …)</code>, <code>framework</code> for its own, <code>validation</code> for a remote function argument that failed its schema, <code>unknown</code> for something genuinely broken. Only the last deserves a correlation id and a stack in the log; a validation failure logs the field path and answers with a plain message; the first two keep SvelteKit’s defaults. In SvelteKit 2 the hook never saw a deliberate <code>error(…)</code> at all and validation failures went to a separate <code>handleValidationError</code>; SvelteKit 3 sends every error here and <code>kind</code> says which is which.</p>
 </aside>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/hooks.server.ts<span class="code__lines">:149-158</span></span>
+		<span class="code__file">src/hooks.server.ts<span class="code__lines">:148-157</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -272,7 +271,7 @@ export const transport: Transport = {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/hooks.client.ts<span class="code__lines">:1-20</span></span>
+		<span class="code__file">src/hooks.client.ts<span class="code__lines">:1-30</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -283,23 +282,92 @@ export const transport: Transport = {
  * navigation or a render: a `load` that threw on the client, a component
  * that threw while hydrating. The server's `handleError` never sees these.
  *
- * It logs, and it hands the error page a message and a reference. A real
- * deployment would send the reference and the stack to an error tracker
- * here; this one keeps the shape so that adding it is one line.
+ * It looks at `kind`, as the server's does. An `app` error is an
+ * `error(404, 'No such template')` that a universal `load` threw in this tab;
+ * it already says what it means, and returning nothing keeps its status and
+ * message. Only an `unknown` error — a component that threw, a bug — is
+ * logged and given a reference. A real deployment would send the reference
+ * and the stack to an error tracker here; this one keeps the shape so that
+ * adding it is one line.
+ *
+ * What a remote function threw on the server is not handled here at all: it
+ * arrives already through the server's hook and is not passed to this one a
+ * second time.
  */
 
 import type { HandleClientError } from '@sveltejs/kit/hooks';
 
-export const handleError: HandleClientError = ({ error, event }) =&gt; {
+export const handleError: HandleClientError = ({ error, event, kind }) =&gt; {
+	if (kind !== 'unknown') return;
+
 	const id = crypto.randomUUID();
 	console.error(`[${id}] at ${event.url.pathname}`, error);
 	return { message: 'Something went wrong in this tab.', id };
 };</code></pre>
 </figure>
+<p>The client hook looks at <code>kind</code> as the server’s does. An <code>error(404, 'No such template')</code> thrown by a universal <code>load</code> while the browser is navigating arrives as <code>app</code>, and returning nothing keeps its status and message, so the error page says <em>No such template</em> and shows no reference — a 404 is not a bug. Only an <code>unknown</code> error, a component that threw, is logged and given one. In SvelteKit 2 the hook never saw an <code>error(…)</code> at all, so a hook that answered everything with “Something went wrong in this tab.” was harmless; SvelteKit 3 sends it every error, and the same five lines started hiding every deliberate message behind one sentence and putting a reference number on a missing page. The end-to-end suite now follows a link to a template that does not exist, and fails if that comes back.</p>
+<h3 id="two-shapes">Two shapes of error in the browser</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/errors.ts<span class="code__lines">:1-45</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * WHAT THE SERVER SAID
+ * ====================
+ *
+ * A remote call awaited in the browser — `await publish(id)`, `await
+ * form.submit()`, `await getPublished(id)` outside the markup — rejects with
+ * SvelteKit's `HttpError`: `{ status, body }`, where `body` is the `App.Error`
+ * the server's `handleError` produced. The server's words are in
+ * `body.message`. There is no `message` on the error itself, and it is not an
+ * `Error` at all, so the obvious `(e as Error).message` is `undefined` — a
+ * toast with nothing in it — and `e instanceof Error ? … : 'Something went
+ * wrong'` throws the server's sentence away every time.
+ *
+ * A `failed` snippet is different: what it receives has already been through
+ * `handleError` and *is* the `App.Error`, so its sentence is `error.message`.
+ * `messageOf` is for the `catch` blocks; `failureOf`, below, for the snippets.
+ *
+ * Anything that is not an `HttpError` — the network dropped, the tab is
+ * offline — has no message meant for a person, and gets the caller's
+ * `fallback`, which says what was being attempted.
+ */
+
+import { isHttpError } from '@sveltejs/kit';
+
+export function messageOf(error: unknown, fallback: string): string {
+	return isHttpError(error) ? error.body.message : fallback;
+}
+
+/**
+ * What a `failed` snippet should say.
+ *
+ * SvelteKit hands the snippet an `App.Error` — `{ message }`, plus the `id`
+ * this app adds — but Svelte, which knows nothing of SvelteKit, types the
+ * parameter `unknown`. `(error as App.Error).message` would compile and
+ * would also compile if the shape were ever something else; checking costs
+ * one line and turns a wrong shape into a sentence instead of a blank.
+ */
+export function failureOf(error: unknown): string {
+	return typeof error === 'object' &amp;&amp;
+		error !== null &amp;&amp;
+		'message' in error &amp;&amp;
+		typeof error.message === 'string'
+		? error.message
+		: 'Something went wrong.';
+}</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why a catch block and a failed snippet read different fields</h4>
+	<p>Await a remote function in a handler — <code>await publish(id)</code>, <code>await form.submit()</code>, <code>await getPublished(id)</code> outside the markup — and a refusal rejects with SvelteKit’s <code>HttpError</code>: <code>{ status, body }</code>, where <code>body</code> is the <code>App.Error</code> the server’s hook produced. The sentence is <code>body.message</code>. It is not an <code>Error</code>, so <code>(e as Error).message</code> is <code>undefined</code> — an empty toast — and <code>e instanceof Error ? e.message : 'Something went wrong'</code> throws the server’s words away every time; this project had both. A boundary is the other shape. The SvelteKit docs say a <code>failed</code> snippet’s error “went through the <code>handleError</code> hook and is of type <code>App.Error</code>”: <code>{ status, message }</code>, read as <code>error.message</code>. Neither was taken on trust. In a built app, a query that threw <code>error(418, 'probe')</code> reached a <code>failed</code> snippet as a plain <code>{ status: 418, message: 'probe' }</code>, and a command that threw <code>error(409, …)</code> rejected its caller with an object whose own keys were <code>status</code> and <code>body</code>. In SvelteKit 2, sending render errors through <code>handleError</code> was an experimental option, <code>handleRenderingErrors</code>; in SvelteKit 3 it is how every boundary works, so the hook — not whatever was thrown — decides what a <code>failed</code> snippet shows. The module therefore has two functions, one per shape: <code>messageOf</code> for a <code>catch</code>, <code>failureOf</code> for a <code>failed</code> snippet, which Svelte hands an <code>unknown</code> and which reads the message after checking it is there, rather than with a cast that would compile whatever the shape.</p>
+</aside>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>
-	<ul><li>You can say what goes wrong if the hook types are imported from <code>@sveltejs/kit</code>.</li><li>You can explain how <code>/embed/</code> gets a different <code>frame-ancestors</code> from everything else.</li><li>You can list the four <code>kind</code>s and what each one gets from <code>handleError</code>.</li></ul>
+	<ul><li>You can say what <code>pnpm run check</code> reports if the hook types are imported from <code>@sveltejs/kit</code>, and the one kind of project where that mistake would go unnoticed.</li><li>You can explain how <code>/embed/</code> gets a different <code>frame-ancestors</code> from everything else.</li><li>You can list the four <code>kind</code>s and what each one gets from <code>handleError</code>, on the server and in the browser.</li><li>You can say what a <code>catch</code> around a remote call receives, what a <code>failed</code> snippet receives, and where the server’s sentence is in each.</li></ul>
 </aside>
 		</article>
 

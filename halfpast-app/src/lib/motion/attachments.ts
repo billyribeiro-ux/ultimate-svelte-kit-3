@@ -27,8 +27,9 @@ export interface RevealOptions {
  *
  * Uses `IntersectionObserver` rather than a scroll listener. A scroll handler
  * runs on the main thread on every scroll event and is the classic way to make
- * a page feel sticky on a mid-range phone; an observer is handed off to the
- * browser's compositor and costs nothing until it fires.
+ * a page feel sticky on a mid-range phone; an observer is worked out by the
+ * browser as part of rendering, and our code runs only when an element actually
+ * crosses the threshold.
  *
  * `once: true` in spirit — the observer disconnects after firing. An element
  * that re-animates every time you scroll past it is a novelty for ten seconds

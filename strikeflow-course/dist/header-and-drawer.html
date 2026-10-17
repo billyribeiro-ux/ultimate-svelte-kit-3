@@ -56,7 +56,7 @@
 	import Button from '#lib/components/ui/Button.svelte';
 
 	// …
-	let drawer = $state&lt;HTMLDialogElement | null&gt;(null);
+	let drawer: HTMLDialogElement | undefined;
 	let isOpen = $state(false);
 
 	// …
@@ -73,8 +73,9 @@
 
 	/**
 	 * The dialog fires `close` however it was closed — our button, the Escape key,
-	 * or a backdrop click. Syncing state here rather than in `closeDrawer` means we
-	 * can't get out of sync when the browser closes it behind our back.
+	 * or a backdrop click (`closedby=&quot;any&quot;`, below). Syncing state here rather than
+	 * in `closeDrawer` means we can't get out of sync when the browser closes it
+	 * behind our back.
 	 */
 	function handleClose() {
 		isOpen = false;
@@ -85,21 +86,48 @@
 	 *
 	 * Without this, tapping a link in the drawer changes the page underneath while
 	 * the drawer stays open on top of it — a classic SPA bug.
+	 *
+	 * SvelteKit 3 also fires the navigation hooks for *shallow* navigations —
+	 * `goto(url, { shallow: true, state })`, the replacement for `pushState`. Those
+	 * change `page.state`, not the page, so closing the drawer for one would be wrong.
+	 * The site has no shallow routing today; the guard is here so adding some later
+	 * can't quietly break the drawer.
 	 */
-	afterNavigate(() =&gt; {
+	afterNavigate((navigation) =&gt; {
+		if (navigation.shallow) return;
 		if (drawer?.open) drawer.close();
 	});
 
-	// …
+	/**
+	 * Is this link the page we're on?
+	 *
+	 * Compared by ROUTE ID, not by URL. Our nav already stores route IDs, and
+	 * `page.route.id` is the route being rendered — the same value on the server, in
+	 * the prerendered HTML, and in the browser, and untouched by any base path.
+	 *
+	 * Comparing `resolve(href)` with `page.url.pathname` looks equivalent and is
+	 * not: during server rendering `resolve()` returns a path relative to the page
+	 * (`./features`), which never equals `/features`. The prerendered HTML would
+	 * mark nothing as current, and only hydration would fix it — too late for
+	 * anyone without JavaScript, and for a screen reader that read the page first.
+	 *
+	 * The `startsWith` branch handles section highlighting: /blog stays marked as
+	 * current while you're reading /blog/[slug]. `null` (no route matched — the 404
+	 * page) marks nothing.
+	 */
 	function isCurrent(href: StaticRoute): boolean {
-		const target = resolve(href);
-		const here = page.url.pathname;
-		if (target === resolve('/')) return here === target;
-		return here === target || here.startsWith(`${target}/`);
+		const here = page.route.id;
+		if (href === '/') return here === '/';
+		return here === href || (here?.startsWith(`${href}/`) ?? false);
 	}
 &lt;/script&gt;</code></pre>
 </figure>
 <aside class="callout callout--note"><p><code>scrollY</code> from <code>svelte/reactivity/window</code> is a reactive wrapper around <code>window.scrollY</code>. It attaches its listener lazily — only while something is reading <code>.current</code> — and cleans up on its own. It is also SSR-safe: <code>.current</code> is <code>undefined</code> on the server rather than throwing. Much better than an <code>$effect</code> with <code>addEventListener</code>.</p></aside>
+
+<aside class="callout callout--why">
+	<h4>Why <code>drawer</code> is a plain <code>let</code>, and <code>isOpen</code> is <code>$state</code></h4>
+	<p><code>bind:this={drawer}</code> (in the markup below) puts the <code>&lt;dialog&gt;</code> element into the variable once it exists. Nothing on the page has to re-render when that happens: only <code>openDrawer</code>, <code>closeDrawer</code> and the navigation hook read it, and they run long afterwards. So it is an ordinary <code>let</code>. <code>isOpen</code> is different — the toggle button's <code>aria-expanded</code> reads it in the markup, so it must be <code>$state</code>, or the attribute would never change. The rule is the one from the Svelte docs: <code>$state</code> is for values the page reads reactively. And <code>bind:this</code> rather than an attachment, because an attachment is for work that starts when an element mounts and stops when it goes; we only need to hold on to the node.</p>
+</aside>
 <h3 id="markup">The markup</h3>
 
 <figure class="code">
@@ -107,7 +135,7 @@
 		<span class="code__file">src/lib/components/layout/SiteHeader.svelte</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">&lt;header class=&quot;header&quot; class:header--scrolled={isScrolled}&gt;
+	<pre><code class="lang-svelte">&lt;header class={['header', { 'header--scrolled': isScrolled }]}&gt;
 	&lt;div class=&quot;header__inner container container--wide&quot;&gt;
 		&lt;a class=&quot;header__brand&quot; href={resolve('/')} aria-label=&quot;StrikeFlow — home&quot;&gt;
 			&lt;Logo size={1.5} /&gt;
@@ -118,9 +146,12 @@
 			&lt;ul class=&quot;header__nav-list&quot; role=&quot;list&quot;&gt;
 				{#each primaryNav as link (link.href)}
 					&lt;li&gt;
+						&lt;!--
+							The active look is styled off `aria-current` itself (see the CSS),
+							so what is announced and what is shown cannot disagree.
+						--&gt;
 						&lt;a
 							class=&quot;header__nav-link&quot;
-							class:is-current={isCurrent(link.href)}
 							href={resolve(link.href)}
 							aria-current={isCurrent(link.href) ? 'page' : undefined}
 						&gt;
@@ -154,7 +185,13 @@
 &lt;/header&gt;
 
 &lt;!-- … --&gt;
-&lt;dialog bind:this={drawer} class=&quot;drawer&quot; onclose={handleClose} aria-label=&quot;Navigation menu&quot;&gt;
+&lt;dialog
+	bind:this={drawer}
+	class=&quot;drawer&quot;
+	closedby=&quot;any&quot;
+	onclose={handleClose}
+	aria-label=&quot;Navigation menu&quot;
+&gt;
 	&lt;!-- … --&gt;
 &lt;/dialog&gt;</code></pre>
 </figure>
@@ -163,7 +200,13 @@
 	<h4>Why the desktop nav is hidden with CSS, not removed from the DOM</h4>
 	<p>You could render one nav or the other depending on screen size. Then a crawler — which has no viewport — sees whichever branch happened to render, and your internal linking becomes a coin flip. One nav in the markup, hidden with CSS, is unambiguous.</p>
 </aside>
-<aside class="callout callout--note"><p><code>aria-current=&quot;page&quot;</code> on the active link is what tells a screen reader &quot;you are here&quot;. It is also a free CSS hook — we style the active state off the same attribute, so the visual and the announced state can never disagree.</p></aside>
+<aside class="callout callout--note"><p><code>aria-current=&quot;page&quot;</code> on the active link is what tells a screen reader &quot;you are here&quot;. It is also a free CSS hook: the desktop link's active look is <code>.header__nav-link[aria-current='page']</code>, and the drawer's is <code>.drawer__link[aria-current='page']</code>. There is no separate <code>is-current</code> class to keep in step, so the visual and the announced state can never disagree.</p></aside>
+
+<aside class="callout callout--why">
+	<h4>Why <code>isCurrent</code> compares route IDs, not URLs</h4>
+	<p>The obvious version is <code>resolve(href) === page.url.pathname</code>, and it works — in the browser. On the server it never matches, because during server rendering <code>resolve()</code> returns a path <em>relative to the page being rendered</em>. The <code>$app/paths</code> docs say so: &quot;During server rendering, the base path is relative and depends on the page currently being rendered.&quot; On <code>/features</code>, <code>resolve('/features')</code> is <code>./features</code>, which is not <code>/features</code>. Every page on this site is rendered on the server first — most of them once, at build time — so the HTML that ships would mark nothing as current; only hydration would fix it, which is too late for a visitor without JavaScript and for a screen reader that read the page first. <code>page.route.id</code> has neither problem. It is the route being rendered — <code>/features</code>, or <code>/blog/[slug]</code> on an article — and it is the same on the server and in the browser. Our nav already stores route IDs, so the comparison is direct. An end-to-end test in <code>e2e/header.e2e.ts</code> loads <code>/features</code> with JavaScript off and checks the link carries <code>aria-current=&quot;page&quot;</code>.</p>
+</aside>
+<aside class="callout callout--note"><p><code>closedby=&quot;any&quot;</code> on the <code>&lt;dialog&gt;</code> adds the one closing gesture <code>showModal()</code> does not give you by default: a click or tap on the backdrop. Browsers that do not support the attribute yet simply ignore it, and the drawer still closes with Escape and the close button. Whichever way it closes, the dialog fires <code>close</code>, and <code>handleClose</code> keeps <code>isOpen</code> honest.</p></aside>
 <h3 id="drawer-css">The drawer styles</h3>
 
 <figure class="code">

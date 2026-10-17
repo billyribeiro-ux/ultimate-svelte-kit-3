@@ -217,12 +217,13 @@ export const csr = false;</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/guides/[guide]/+page.ts<span class="code__lines">:1-23</span></span>
+		<span class="code__file">src/routes/guides/[guide]/+page.ts<span class="code__lines">:1-24</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">import { error } from '@sveltejs/kit';
 import type { EntryGenerator, PageLoad } from './$types';
 import { guideBySlug, guides } from '#lib/guides/index.ts';
+import { m } from '#lib/paraglide/messages.js';
 
 export const prerender = true;
 export const csr = false;
@@ -240,7 +241,7 @@ export const entries: EntryGenerator = () =&gt; guides.map((guide) =&gt; ({ guid
 
 export const load: PageLoad = ({ params }) =&gt; {
 	const guide = guideBySlug(params.guide);
-	if (!guide) error(404, 'There is no guide by that name.');
+	if (!guide) error(404, m.error_no_guide());
 	return { guide };
 };</code></pre>
 </figure>
@@ -248,13 +249,13 @@ export const load: PageLoad = ({ params }) =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/guides/+page.svelte<span class="code__lines">:1-47</span></span>
+		<span class="code__file">src/routes/guides/+page.svelte<span class="code__lines">:1-46</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
-	import { resolve } from '$app/paths';
 	import { m } from '#lib/paraglide/messages.js';
-	import { getLocale, localizeHref } from '#lib/paraglide/runtime.js';
+	import { href } from '#lib/href.ts';
+	import { getLocale } from '#lib/paraglide/runtime.js';
 	import { formatDate } from '#lib/domain/dates.ts';
 	import { guides } from '#lib/guides/index.ts';
 
@@ -268,28 +269,27 @@ export const load: PageLoad = ({ params }) =&gt; {
 
 &lt;section class=&quot;container guides stack stack--lg&quot;&gt;
 	&lt;header class=&quot;stack stack--sm&quot;&gt;
-		&lt;h1&gt;{m.guides_title()}&lt;/h1&gt;
+		&lt;h1 class=&quot;title-page&quot;&gt;{m.guides_title()}&lt;/h1&gt;
 		&lt;p class=&quot;lede&quot;&gt;{m.guides_lede()}&lt;/p&gt;
 	&lt;/header&gt;
 
 	&lt;ul class=&quot;list&quot; role=&quot;list&quot;&gt;
 		{#each guides as guide (guide.slug)}
-			&lt;li class=&quot;card card--pad stack stack--sm&quot;&gt;
+			&lt;li class=&quot;card card--pad card--link stack stack--sm&quot;&gt;
 				&lt;!--
 					`resolve` from `$app/paths` takes a route id and its parameters and
 					gives back a pathname — type-checked against the routes that exist,
 					so renaming the folder is a compile error here rather than a 404.
 				--&gt;
+				{#if guide.placeName}&lt;p&gt;&lt;span class=&quot;chip&quot;&gt;{guide.placeName}&lt;/span&gt;&lt;/p&gt;{/if}
 				&lt;h2 class=&quot;title&quot;&gt;
-					&lt;a href={localizeHref(resolve('/guides/[guide]', { guide: guide.slug }))}&gt;
+					&lt;a href={href('/guides/[guide]', { guide: guide.slug })}&gt;
 						{guide.title}
 					&lt;/a&gt;
 				&lt;/h2&gt;
-				&lt;p class=&quot;muted&quot;&gt;{guide.summary}&lt;/p&gt;
-				&lt;p class=&quot;cluster meta&quot;&gt;
-					{#if guide.placeName}&lt;span class=&quot;chip&quot;&gt;{guide.placeName}&lt;/span&gt;{/if}
+				&lt;p class=&quot;summary&quot;&gt;{guide.summary}&lt;/p&gt;
+				&lt;p class=&quot;meta dotted&quot;&gt;
 					&lt;span&gt;{m.guides_read_minutes({ minutes: guide.minutes })}&lt;/span&gt;
-					&lt;span&gt;·&lt;/span&gt;
 					&lt;time datetime={guide.published}&gt;{formatDate(guide.published, locale, 'long')}&lt;/time&gt;
 				&lt;/p&gt;
 			&lt;/li&gt;
@@ -302,15 +302,18 @@ export const load: PageLoad = ({ params }) =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/guides/[guide]/+page.svelte<span class="code__lines">:1-40</span></span>
+		<span class="code__file">src/routes/guides/[guide]/+page.svelte<span class="code__lines">:1-49</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
+	import { ArrowLeftIcon } from 'phosphor-svelte';
 	import { m } from '#lib/paraglide/messages.js';
-	import { getLocale, localizeHref } from '#lib/paraglide/runtime.js';
+	import { href } from '#lib/href.ts';
+	import { getLocale } from '#lib/paraglide/runtime.js';
 	import { formatDate } from '#lib/domain/dates.ts';
+	import type { PageProps } from './$types';
 
-	let { data } = $props();
+	let { data }: PageProps = $props();
 
 	const locale = getLocale();
 	/*
@@ -328,17 +331,23 @@ export const load: PageLoad = ({ params }) =&gt; {
 
 &lt;article class=&quot;container guide&quot;&gt;
 	&lt;header class=&quot;guide__header stack stack--sm&quot;&gt;
-		&lt;p&gt;&lt;a href={localizeHref('/guides')}&gt;← {m.guides_all()}&lt;/a&gt;&lt;/p&gt;
-		&lt;h1&gt;{data.guide.title}&lt;/h1&gt;
-		&lt;p class=&quot;lede&quot;&gt;{data.guide.summary}&lt;/p&gt;
-		&lt;p class=&quot;cluster meta&quot;&gt;
-			{#if data.guide.placeName}&lt;span class=&quot;chip&quot;&gt;{data.guide.placeName}&lt;/span&gt;{/if}
-			&lt;span&gt;{m.guides_read_minutes({ minutes: data.guide.minutes })}&lt;/span&gt;
-			&lt;span&gt;·&lt;/span&gt;
-			&lt;span&gt;
-				{m.guides_published({ date: formatDate(data.guide.published, locale, 'long') })}
-			&lt;/span&gt;
+		&lt;p class=&quot;back&quot;&gt;
+			&lt;a class=&quot;btn btn--ghost btn--sm&quot; href={href('/guides')}&gt;
+				&lt;ArrowLeftIcon size={14} aria-hidden=&quot;true&quot; /&gt;
+				{m.guides_all()}
+			&lt;/a&gt;
 		&lt;/p&gt;
+		&lt;h1 class=&quot;title-page&quot;&gt;{data.guide.title}&lt;/h1&gt;
+		&lt;p class=&quot;lede&quot;&gt;{data.guide.summary}&lt;/p&gt;
+		&lt;!-- The chip sits outside the dotted row: an item with a background would wear its dot inside it. --&gt;
+		&lt;div class=&quot;cluster meta&quot;&gt;
+			{#if data.guide.placeName}&lt;span class=&quot;chip&quot;&gt;{data.guide.placeName}&lt;/span&gt;{/if}
+			&lt;p class=&quot;dotted&quot;&gt;
+				&lt;span&gt;{m.guides_read_minutes({ minutes: data.guide.minutes })}&lt;/span&gt;
+				&lt;span&gt;{m.guides_published({ date: formatDate(data.guide.published, locale, 'long') })}&lt;/span
+				&gt;
+			&lt;/p&gt;
+		&lt;/div&gt;
 	&lt;/header&gt;
 
 	&lt;div class=&quot;prose&quot;&gt;
@@ -350,15 +359,16 @@ export const load: PageLoad = ({ params }) =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/guides/+layout.svelte<span class="code__lines">:1-43</span></span>
+		<span class="code__file">src/routes/guides/+layout.svelte<span class="code__lines">:1-51</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
 	import { CompassRoseIcon } from 'phosphor-svelte';
 	import { m } from '#lib/paraglide/messages.js';
-	import { localizeHref } from '#lib/paraglide/runtime.js';
+	import { href } from '#lib/href.ts';
 	import Footer from '#lib/ui/Footer.svelte';
 	import LocaleSwitcher from '#lib/ui/LocaleSwitcher.svelte';
+	import type { LayoutProps } from './$types';
 
 	/*
 	 * A CHROME THAT DOES NOT KNOW YOU
@@ -371,23 +381,30 @@ export const load: PageLoad = ({ params }) =&gt; {
 	 * plain links. It is a small, honest header for a small, static site
 	 * inside the app.
 	 */
-	let { children } = $props();
+	let { children }: LayoutProps = $props();
 &lt;/script&gt;
 
 &lt;a class=&quot;skip&quot; href=&quot;#main&quot;&gt;{m.nav_skip()}&lt;/a&gt;
 
+&lt;!--
+	Two rows on a phone, by design: the brand and the language codes on the
+	first, the three links under them. From 48em one row: brand, links,
+	languages.
+--&gt;
 &lt;header class=&quot;guides-header&quot;&gt;
-	&lt;div class=&quot;container cluster cluster--between&quot;&gt;
-		&lt;a class=&quot;brand&quot; href={localizeHref('/')}&gt;
+	&lt;div class=&quot;container guides-header__row&quot;&gt;
+		&lt;a class=&quot;brand&quot; href={href('/(site)')}&gt;
 			&lt;CompassRoseIcon size={22} weight=&quot;duotone&quot; aria-hidden=&quot;true&quot; /&gt;
 			{m.app_name()}
 		&lt;/a&gt;
-		&lt;nav class=&quot;cluster&quot; aria-label={m.nav_menu()}&gt;
-			&lt;a href={localizeHref('/guides')} aria-current=&quot;page&quot;&gt;{m.nav_guides()}&lt;/a&gt;
-			&lt;a href={localizeHref('/explore')}&gt;{m.nav_explore()}&lt;/a&gt;
-			&lt;a href={localizeHref('/trips')}&gt;{m.nav_trips()}&lt;/a&gt;
-			&lt;LocaleSwitcher keepSearch={false} /&gt;
+		&lt;nav class=&quot;guides-nav&quot; aria-label={m.nav_menu()}&gt;
+			&lt;a href={href('/guides')} aria-current=&quot;page&quot;&gt;{m.nav_guides()}&lt;/a&gt;
+			&lt;a href={href('/(site)/explore')}&gt;{m.nav_explore()}&lt;/a&gt;
+			&lt;a href={href('/(site)/(app)/trips')}&gt;{m.nav_trips()}&lt;/a&gt;
 		&lt;/nav&gt;
+		&lt;div class=&quot;guides-header__locales&quot;&gt;
+			&lt;LocaleSwitcher keepSearch={false} compact /&gt;
+		&lt;/div&gt;
 	&lt;/div&gt;
 &lt;/header&gt;
 
@@ -397,7 +414,7 @@ export const load: PageLoad = ({ params }) =&gt; {
 
 &lt;Footer /&gt;</code></pre>
 </figure>
-<p>A chrome that does not know you. These pages cannot depend on who is looking, so there is no “signed in as”, no theme button — the boot script still applies the stored theme — and the language links are plain links with <code>keepSearch={false}</code>. It is a small, honest header for a small, static site.</p>
+<p>A chrome that does not know you. These pages cannot depend on who is looking, so there is no “signed in as”, no theme button — the boot script still applies the stored theme — and the language links are plain links with <code>keepSearch={false}</code>. On a phone it is two rows by design — the brand and EN · DE · PT on the first, the three links under them — and one row from 48em. It is a small, honest header for a small, static site.</p>
 <h3 id="what-prerendering-forbids">Two errors that shaped the app</h3>
 
 <figure class="code code--terminal">

@@ -32,9 +32,12 @@ const LANGUAGE_LIKE = /^\/([a-z]{2,3})(?:-[A-Za-z]{2,4})?(\/|$)/;
  * and then sat empty while the browser retried a stream that could never exist.
  * Nothing logged an error; the reroute was doing exactly what it was told.
  *
- * Deriving this from the route manifest would be tidier and is not possible: the
- * universal hook runs in the browser too, where the manifest is not available.
- * A short explicit list, next to the code that needs it, is the honest version.
+ * Why not derive it from the routes? Two of the three could be: `$app/manifest`
+ * can be imported anywhere, the browser included, and its `routes` carry the
+ * ids that start `/api` and `/embed`. The third cannot. `b` is not a route at
+ * all — it is this hook's own short-link alias, rewritten below before the
+ * router ever sees it. A list half-derived and half-written is harder to read
+ * than three strings next to the code that needs them, so it stays explicit.
  */
 const RESERVED = new Set(['api', 'b', 'embed']);
 

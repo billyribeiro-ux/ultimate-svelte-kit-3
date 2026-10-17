@@ -35,7 +35,7 @@
 			<h1>The phone</h1>
 			<p class="lede">Mobile-first with <code>min-width</code> only, a bottom sheet that becomes a sidebar, and a missing <code>flex-direction</code> that made the board 200 pixels wide.</p>
 			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Make a canvas application genuinely usable on a 412-pixel screen, not merely not-broken.</p></aside>
-			<p>Every breakpoint in this project is a <code>min-width</code>, with one deliberate exception. That is not a style rule — it changes which layout is the one you *thought about*.</p>
+			<p>Every breakpoint in this project is a <code>min-width</code>. That is not a style rule — it changes which layout is the one you *thought about*.</p>
 
 <figure class="code">
 	<figcaption>
@@ -96,22 +96,27 @@
 }</code></pre>
 </figure>
 <p>And the toolbar uses <code>max(var(--space-4), env(safe-area-inset-bottom))</code>, so it clears the home indicator on a notched phone without adding a gap on a device that has none.</p>
-<h3 id="the-exception">The one <code>max-width</code></h3>
+<h3 id="the-exception">Added at a width, not removed below one</h3>
 
 <figure class="code">
 	<figcaption>
 		<span class="code__file">src/lib/components/Workspace.svelte</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-css">/* The export buttons are the first thing to go on a narrow screen: nobody
-   downloads a diagram on a phone, and the sync state has to stay visible. */
-@media (max-width: 47.99rem) {
+	<pre><code class="lang-css">/* The export buttons arrive from 48rem. Nobody downloads a diagram on a
+   phone, and on a narrow bar the sync state is what has to stay visible —
+   so the phone gets the bar without them, and the wider screen adds them. */
+.workspace__export {
+	display: none;
+	gap: var(--space-1);
+}
+
+@media (min-width: 48rem) {
 	.workspace__export {
-		display: none;
-	}
-}</code></pre>
+		display: flex;
+	}</code></pre>
 </figure>
-<p>A <code>max-width</code> is honest when the rule is genuinely &quot;remove this below a size&quot; rather than &quot;add this above one&quot;. Nobody downloads a diagram on a phone, and the sync state has to stay visible — so the export buttons are the first thing to go. Writing that as a <code>min-width</code> on the *other* elements would spread one decision across three selectors.</p>
+<p>Nobody downloads a diagram on a phone, and on a narrow bar the sync state is what has to stay visible, so the export buttons only exist from 48rem up. This used to be the project’s one <code>max-width</code> — hide them *below* 47.99rem — and it read naturally as “the first thing to go”. It was still the desktop layout with a phone exception bolted on, and the <code>.99</code> is a tell: a hand-picked gap between two breakpoints, which at some zoom levels and fractional widths both rules or neither rule match. Mobile-first is a direction of thought, not just a syntax. The phone layout is the default, <code>display: none</code>, and the wider screen *adds* something to it — one rule, one selector, and every <code>@media</code> in the project now reads the same way: <code>min-width</code>, upwards.</p>
 <h3 id="touch">Touch is not a small mouse</h3>
 <ul><li><strong>Two-finger pinch</strong> is handled explicitly in <code>gestures.ts</code>, keyed off <code>pointerType === 'touch'</code> and a <code>Map</code> of active pointers — pointer ids are not dense, so an array indexed by id is wrong.</li><li><strong>Every button is at least 40px tall.</strong> <code>min-height: 40px</code> on the tab strip is not decoration; it is the difference between a tab you can hit and one you keep missing.</li><li><strong>The tab strip scrolls horizontally</strong> rather than wrapping, so four tabs stay one row high and in a fixed, learnable order at every width.</li><li><strong><code>role=&quot;application&quot;</code> and a keyboard</strong> matter here too: a phone with a Bluetooth keyboard is a real configuration, and it is the same code path.</li></ul>
 <aside class="callout callout--note"><p>The end-to-end suite runs the entire thing twice, on <code>Desktop Chrome</code> and on a <code>Pixel 7</code> profile. Not a narrow window — a real device profile, because touch targets, device pixel ratio and pointer type all differ, and a canvas cares about all three. Half the mobile bugs in this project were found by that second project and by nothing else.</p></aside>

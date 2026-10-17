@@ -178,7 +178,7 @@
  */
 
 import type { RequestHandler } from './$types';
-import { error, json } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 import { eq } from 'drizzle-orm';
 import { BoardDocument, emptySnapshot, parseSnapshot } from '#lib/board/index.ts';
 import { newActorId } from '#lib/crdt/index.ts';
@@ -198,6 +198,25 @@ import { AccessError, requireAccess } from '#lib/server/rbac.ts';
 </figure>
 <p>This endpoint is the one place on the server that holds an opinion about a document’s contents, and it is confined to a read. It writes nothing back except a compacted snapshot — which is a cache of what the log already says.</p>
 <aside class="callout callout--note"><p>Compaction happens *here* rather than in a scheduled job, because this is the only place that already pays for the replay — and a board nobody reads does not need compacting. That is a nice example of putting maintenance work where the cost has already been incurred.</p></aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/api/boards/[board]/snapshot/+server.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">	/*
+	 * `Response.json`, not SvelteKit's `json()`.
+	 *
+	 * SvelteKit 3 deprecated its `json(...)` and `text(...)` helpers because the
+	 * platform caught up. `Response.json` serialises the body and sets the
+	 * content type, which is all this endpoint needs; SvelteKit's own helper
+	 * built its `Response` by hand and added a `content-length`, which nothing
+	 * here relies on. `setHeaders` above still applies — SvelteKit merges those
+	 * onto whatever the handler returns.
+	 */
+	return Response.json(snapshot);</code></pre>
+</figure>
+<p>Notice what is *not* imported from <code>@sveltejs/kit</code>: only <code>error</code>. SvelteKit 3 deprecated the <code>json()</code> and <code>text()</code> response helpers, because <code>Response.json(...)</code> and <code>new Response(text)</code> are the platform doing the job. They are not identical — SvelteKit’s <code>json()</code> built its <code>Response</code> by hand and also set a <code>content-length</code> — but <code>Response.json</code> serialises the body and sets the content type, which is everything this endpoint needs. <code>setHeaders</code> still applies — SvelteKit merges those headers onto whatever the handler returns.</p>
 <h3 id="ssr">The host page, and one dynamic import</h3>
 
 <figure class="code">
@@ -207,7 +226,9 @@ import { AccessError, requireAccess } from '#lib/server/rbac.ts';
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
 	import { onMount } from 'svelte';
-	import { page } from '$app/state';
+	import type { PageProps } from './$types';
+
+	let { params }: PageProps = $props();
 
 	/**
 	 * The embed host page.
@@ -240,11 +261,11 @@ import { AccessError, requireAccess } from '#lib/server/rbac.ts';
 		The element is used exactly as a host page would use it: an unknown tag with
 		plain attributes. Svelte has no idea what this is, which is the point.
 	--&gt;
-	&lt;tessera-board board={page.params.board} height=&quot;420&quot;&gt;&lt;/tessera-board&gt;
+	&lt;tessera-board board={params.board} height=&quot;420&quot;&gt;&lt;/tessera-board&gt;
 {/if}</code></pre>
 </figure>
 <aside class="callout callout--warn"><p>The import is dynamic and inside <code>onMount</code> for a reason: a Svelte custom element calls <code>customElements.define</code> at <strong>module scope</strong>, and <code>customElements</code> does not exist during server rendering. A static import crashes the SSR pass with <code>customElements is not defined</code>, which is a confusing error to get from a component you never rendered.</p></aside>
-<p>And note how the element is used in the markup: an unknown tag with plain attributes. Svelte has no idea what it is, which is exactly the point — that is how a host page will use it.</p>
+<p>And note how the element is used in the markup: an unknown tag with plain attributes. Svelte has no idea what it is, which is exactly the point — that is how a host page will use it. The board id comes from the page’s own <code>params</code>, typed by its <code>PageProps</code>, as on every route since chapter 30.</p>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>

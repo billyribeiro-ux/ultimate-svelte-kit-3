@@ -4,10 +4,10 @@
 	import Button from '#lib/components/Button.svelte';
 	import { WEEKDAY_NAMES } from '#lib/time/index.ts';
 	import { addHours, getHours, getTeam, removeHours } from '../studio.remote.ts';
-	import type { LayoutData } from '../$types';
+	import type { PageProps } from './$types';
 	import { messageFrom } from '#lib/errors.ts';
 
-	let { data }: { data: LayoutData } = $props();
+	let { data, params }: PageProps = $props();
 
 	/*
 	 * These four declarations sit ABOVE the awaited `$derived`s below, and the
@@ -36,7 +36,8 @@
 		// run exactly once to do what the initializer can do — the pattern the
 		// docs (and the autofixer) warn effects away from. Capturing the initial
 		// value is the point, hence the ignore: a draft must not change under
-		// the person filling it in.
+		// the person filling it in. (The autofixer calls this ignore unused; the
+		// compiler does warn `state_referenced_locally` here without it.)
 		// svelte-ignore state_referenced_locally
 		staffId: data.viewer.staffId,
 		weekday: 1,
@@ -44,8 +45,8 @@
 		end: '17:00'
 	});
 
-	const hours = $derived(await getHours({ slug: data.slug }));
-	const team = $derived(await getTeam(data.slug));
+	const hours = $derived(await getHours({ slug: params.slug }));
+	const team = $derived(await getTeam(params.slug));
 
 	/** `09:30` → 570. The input gives us wall-clock text; the API wants minutes. */
 	function toMinutes(value: string): number {
@@ -79,7 +80,7 @@
 		busy = true;
 		try {
 			await addHours({
-				slug: data.slug,
+				slug: params.slug,
 				staffId: draft.staffId,
 				weekday: draft.weekday,
 				startMinute: toMinutes(draft.start),
@@ -95,7 +96,7 @@
 	async function remove(ruleId: string) {
 		lastError = null;
 		try {
-			await removeHours({ slug: data.slug, ruleId });
+			await removeHours({ slug: params.slug, ruleId });
 		} catch (thrown) {
 			lastError = messageFrom(thrown, 'Could not remove that shift.');
 		}
@@ -163,8 +164,8 @@
 	</section>
 
 	{#each team.filter((member) => member.isActive) as member (member.id)}
-		{@const rules = byStaff.get(member.id) ?? []}
-		{@const canEdit = hours.canEdit.includes(member.id)}
+		{const rules = $derived(byStaff.get(member.id) ?? [])}
+		{const canEdit = $derived(hours.canEdit.includes(member.id))}
 		<section class="person" style="--hue: {member.colourHue}">
 			<h3>{member.displayName}</h3>
 

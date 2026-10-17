@@ -45,25 +45,56 @@
 	<pre><code class="lang-ts">import type { PageServerLoad } from './$types';
 import { verifyDownloadToken } from '#lib/server/tokens.ts';
 
+// …
 export const prerender = false;
 
 export const load: PageServerLoad = ({ url, setHeaders }) =&gt; {
-	const token = url.searchParams.get('t');
+	// A missing `t` becomes '', which verifies as 'malformed' like any other bad
+	// token — and keeps `token` a plain string for the valid branch below.
+	const token = url.searchParams.get('t') ?? '';
 	const result = verifyDownloadToken(token);
 
+	/*
+	 * Belt and braces on top of the `noindex` meta tag the page renders.
+	 *
+	 * The meta tag is in the HTML, so only a crawler that parses the HTML sees it.
+	 * An `X-Robots-Tag` header is read from the response itself, before any parsing.
+	 * Two mechanisms, because a gated page leaking into the index is embarrassing
+	 * and slow to undo. Both need the crawler to fetch the page, which is why
+	 * robots.txt deliberately does NOT disallow it — see `robots.txt/+server.ts`.
+	 */
 	setHeaders({
 		'X-Robots-Tag': 'noindex, nofollow',
 		'Cache-Control': 'private, no-store'
 	});
 
 	if (!result.valid) {
-		return { status: 'invalid' as const, reason: result.reason, downloadUrl: null, email: null };
+		return {
+			// Never echo the raw token back into the page — that's how a bad token ends
+			// up in an analytics URL, a referrer header, or a support screenshot.
+			status: 'invalid' as const,
+			reason: result.reason,
+			token: null,
+			email: null
+		};
 	}
 
 	return {
 		status: 'valid' as const,
 		reason: null,
-		downloadUrl: `/guide/download?t=${encodeURIComponent(token ?? '')}`,
+		// The token is re-used for the download route, which verifies it again.
+		// Every entry point validates independently — never trust that an earlier
+		// step in the flow did its job.
+		//
+		// We return the token, not a finished URL, and the page builds the link with
+		// `resolve()` as it renders. On the server `resolve()` returns a path relative
+		// to the request: `../guide/download?t=…` for a full page load, but
+		// `../../guide/download?t=…` for the `__data.json` request a client-side
+		// navigation makes, which is one level deeper. Serialised from here, that
+		// second answer reaches a page that is NOT one level deeper; it only lands
+		// on the right file today because a surplus `..` stops at the site root,
+		// and under a base path it would climb out of the base.
+		token,
 		email: result.email
 	};
 };</code></pre>
@@ -73,7 +104,40 @@ export const load: PageServerLoad = ({ url, setHeaders }) =&gt; {
 	<h4>Why validation happens here, not in the component</h4>
 	<p>A component could decode the token and read its expiry, but it could never verify the <strong>signature</strong> — that requires the secret, and anything the browser can read is not a secret. So the server decides, and the page just renders the verdict.</p>
 </aside>
-<aside class="callout callout--note"><p>Three layers keep this page out of the index: a <code>noindex</code> meta tag, a <code>Disallow</code> in robots.txt, and an <code>X-Robots-Tag</code> header. The header matters because it also covers the PDF response, and it works even if a crawler never executes far enough to read the meta tag.</p></aside>
+<p>The load hands the page the verified token, and the page builds the download link itself, with <code>resolve()</code>, as it renders:</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/guide/thank-you/+page.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
+	import { resolve } from '$app/paths';
+	// …
+	import type { PageProps } from './$types';
+
+	let { data }: PageProps = $props();
+
+	// …
+&lt;/script&gt;
+
+&lt;!-- … --&gt;
+&lt;a
+	class=&quot;thanks__download&quot;
+	href={resolve(`/guide/download?t=${encodeURIComponent(data.token)}`)}
+	download
+&gt;
+	&lt;DownloadSimpleIcon size={22} aria-hidden=&quot;true&quot; /&gt;
+	&lt;span&gt;Download the PDF (8 chapters)&lt;/span&gt;
+&lt;/a&gt;</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why <code>resolve()</code> belongs in the component, not in load data</h4>
+	<p>It is tempting to finish the URL in the load function and return <code>downloadUrl</code> ready to use; an earlier version of this file did exactly that. The trouble is what <code>resolve()</code> returns on the server. The <code>$app/paths</code> docs say: &quot;During server rendering, the base path is relative and depends on the page currently being rendered.&quot; So on the server <code>resolve('/guide/download?t=…')</code> is a <em>relative</em> path, worked out from the current request — and a load function runs for two different requests. A full page load asks for <code>/guide/thank-you</code>, and gets <code>../guide/download?t=…</code>. A visitor with JavaScript arrives by client-side navigation (the form redirects here), and then the load runs for <code>/guide/thank-you/__data.json</code>, one folder deeper, and gets <code>../../guide/download?t=…</code>. That string is then serialised and dropped into a page that is <em>not</em> one folder deeper. Today it still lands on the right file, only because a surplus <code>..</code> stops at the root of the site; deploy under a base path and the link would climb out of it. Data should be data. Return the token, and let the component — which knows exactly which page it is rendering — turn it into a link.</p>
+</aside>
+<aside class="callout callout--note"><p><code>PageProps</code> from <code>./$types</code> types everything the page receives — <code>data</code> from the load above, and <code>params</code>. It is generated from your load function, so <code>data.status === 'valid'</code> narrows <code>data.token</code> to a <code>string</code> inside the <code>{#if}</code> with no cast. (Older code writes <code>{ data: PageData }</code> by hand; <code>PageProps</code> replaced that in SvelteKit 2.16.)</p></aside>
+<aside class="callout callout--note"><p>Two layers keep this page out of the index: a <code>noindex</code> meta tag in the HTML, and an <code>X-Robots-Tag</code> header on the response itself, which a crawler reads before it parses anything. robots.txt is deliberately <em>not</em> a third layer. Both of the others only work on a crawler that is allowed to fetch the page, and a <code>Disallow</code> would stop it fetching — the self-defeating combination chapter 18 warned about.</p></aside>
 <h3 id="download">The download endpoint</h3>
 
 <figure class="code">
@@ -92,7 +156,7 @@ export const GET: RequestHandler = async ({ url }) =&gt; {
 	const result = verifyDownloadToken(url.searchParams.get('t'));
 
 	if (!result.valid) {
-		/* …403, not 404 — the caller just isn't allowed it… */
+		// …
 		error(
 			403,
 			result.reason === 'expired' ? 'This download link has expired' : 'Invalid download link'
@@ -121,6 +185,7 @@ export const GET: RequestHandler = async ({ url }) =&gt; {
 	});
 };</code></pre>
 </figure>
+<p>The <code>// …</code> inside <code>if (!result.valid)</code> stands for a comment explaining why that is a <strong>403, not a 404</strong>: the resource exists, the caller just is not allowed it. Hiding existence with a 404 suits genuinely secret resources, but the whole site advertises this PDF, so pretending otherwise would only confuse someone with an expired link. The two <code>// …</code> among the headers are short comments: <code>attachment</code> makes the browser save the file rather than display it, and <code>private</code> is explained below.</p>
 <aside class="callout callout--warn"><p><strong>The PDF is not in <code>static/</code>.</strong> Anything in <code>static/</code> is copied verbatim into the build and served directly by the CDN — it is public, full stop. The URL is guessable, and the moment one person shares it your email gate is decorative. So it lives in a top-level <code>private/</code> directory that never enters the client build.</p></aside>
 <aside class="callout callout--note"><p>We verify the token <strong>again</strong> here, even though the thank-you page already did. The two are independently reachable — someone can bookmark this URL or hit it directly. Every entry point validates for itself. Trusting that &quot;an earlier screen already checked&quot; is how authorisation bugs happen.</p></aside>
 <aside class="callout callout--note"><p><code>Cache-Control: private</code> is doing real work: it stops a shared CDN caching a response that required authorisation. Without it, a CDN could serve this PDF to the next person who requests the URL, token or no token.</p></aside>
@@ -137,46 +202,57 @@ export const GET: RequestHandler = async ({ url }) =&gt; {
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-js">import { chromium } from 'playwright';
+// …
+function renderHtml() {
+	// …
+}
 
-// …renderHtml() builds the document from ebook-content.js, then:
-
-// …CHROMIUM_PATH lets CI or Docker point at a system Chromium instead of downloading one…
-const executablePath = process.env.CHROMIUM_PATH;
-
-const browser = await chromium.launch(executablePath ? { executablePath } : {});
-try {
-	const page = await browser.newPage();
+async function main() {
+	await mkdir(outDir, { recursive: true });
 
 	// …
-	await page.setContent(renderHtml(), { waitUntil: 'networkidle' });
+	const executablePath = process.env.CHROMIUM_PATH;
 
-	await page.pdf({
-		path: outFile,
-		format: 'A4',
-		// Chromium's own margins set to zero so the stylesheet's @page rule is the
-		// only thing controlling layout. Two competing margin systems is a
-		// reliable way to produce a document that looks fine on screen and wrong
-		// on paper.
-		margin: { top: '0', bottom: '0', left: '0', right: '0' },
-		// Without this, Chromium strips background colours when printing — which
-		// would silently remove every callout box.
-		printBackground: true,
-		displayHeaderFooter: true,
-		headerTemplate: '&lt;div&gt;&lt;/div&gt;',
-		footerTemplate: `
-			&lt;div style=&quot;width:100%;font-size:8pt;color:#8590a8;padding:0 20mm;display:flex;justify-content:space-between;font-family:sans-serif;&quot;&gt;
-				&lt;span&gt;StrikeFlow — How to read options flow&lt;/span&gt;
-				&lt;span class=&quot;pageNumber&quot;&gt;&lt;/span&gt;
-			&lt;/div&gt;`
-	});
+	const browser = await chromium.launch(executablePath ? { executablePath } : {});
+	try {
+		const page = await browser.newPage();
+		// …
+		await page.setContent(renderHtml(), { waitUntil: 'networkidle' });
 
-	// …
-} finally {
-	// `finally` so a failed render still closes the browser. Leaked Chromium
-	// processes are a classic way to exhaust CI memory.
-	await browser.close();
-}</code></pre>
+		await page.pdf({
+			path: outFile,
+			format: 'A4',
+			// Chromium's own margins set to zero so the stylesheet's @page rule is the
+			// only thing controlling layout. Two competing margin systems is a
+			// reliable way to produce a document that looks fine on screen and wrong
+			// on paper.
+			margin: { top: '0', bottom: '0', left: '0', right: '0' },
+			// Without this, Chromium strips background colours when printing — which
+			// would silently remove every callout box.
+			printBackground: true,
+			displayHeaderFooter: true,
+			headerTemplate: '&lt;div&gt;&lt;/div&gt;',
+			footerTemplate: `
+				&lt;div style=&quot;width:100%;font-size:8pt;color:#8590a8;padding:0 20mm;display:flex;justify-content:space-between;font-family:sans-serif;&quot;&gt;
+					&lt;span&gt;StrikeFlow — How to read options flow&lt;/span&gt;
+					&lt;span class=&quot;pageNumber&quot;&gt;&lt;/span&gt;
+				&lt;/div&gt;`
+		});
+
+		const pages = await page.evaluate(() =&gt; document.querySelectorAll('.chapter').length);
+		console.log(`[ebook] ${pages} chapters rendered`);
+	} finally {
+		// `finally` so a failed render still closes the browser. Leaked Chromium
+		// processes are a classic way to exhaust CI memory.
+		await browser.close();
+	}
+
+	console.log(`[ebook] written to ${outFile}`);
+}
+
+await main();</code></pre>
 </figure>
+<p>The <code>// …</code> lines stand for the rest of the script: the other imports and paths, the body of <code>renderHtml()</code> — which builds the whole document as one HTML string from <code>ebook-content.js</code> — and two comments. The one above <code>CHROMIUM_PATH</code> explains the override: CI images, Docker builds and locked-down networks can point it at a Chromium they already have instead of downloading a second copy. The one above <code>setContent</code> explains <code>networkidle</code>: the document has no external resources today, but the day you add a logo or a web font, printing before it loads leaves a gap where it should be.</p>
 <p>The print stylesheet uses CSS most people never touch:</p>
 
 <figure class="code">
@@ -190,6 +266,19 @@ try {
 .chapter h3 { break-after: avoid; }   /* never orphan a heading at page bottom */
 .callout    { break-inside: avoid; }  /* never split a box across pages */
 p           { orphans: 2; widows: 2; } /* never leave one line alone */</code></pre>
+</figure>
+<p>Give the script a name in <code>package.json</code>, so nobody has to remember the path:</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">package.json</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-json">&quot;scripts&quot;: {
+	…
+	&quot;ebook:build&quot;: &quot;node scripts/build-ebook.js&quot;,
+	…
+},</code></pre>
 </figure>
 
 <figure class="code code--terminal">

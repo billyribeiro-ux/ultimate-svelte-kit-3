@@ -61,7 +61,16 @@
 	{@render children({ id, describedBy, invalid: Boolean(error) })}
 
 	{#if error}
-		<p id={errorId} class="error" role="alert">{error}</p>
+		<!--
+			The mark is a real element with `aria-hidden`, not CSS generated content.
+			Generated text is part of the accessible name, so `content: '!'` had this
+			read out as "exclamation mark, that does not look like an email address";
+			the component test caught it by reading the field's accessible
+			description.
+		-->
+		<p id={errorId} class="error" role="alert">
+			<span class="mark" aria-hidden="true">!</span>{error}
+		</p>
 	{/if}
 </div>
 
@@ -97,8 +106,7 @@
 	 * A shape as well as a colour. Roughly one man in twelve cannot reliably
 	 * distinguish red from the surrounding text, so red alone is not a signal.
 	 */
-	.error::before {
-		content: '!';
+	.mark {
 		display: grid;
 		place-items: center;
 		flex-shrink: 0;

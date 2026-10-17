@@ -1,10 +1,11 @@
 <script lang="ts">
-	import { T, useTask } from '@threlte/core';
+	import { T, useTask, useThrelte } from '@threlte/core';
 	import { OrbitControls, Stars, interactivity } from '@threlte/extras';
 	import { BackSide, BufferGeometry, Float32BufferAttribute, Vector3 } from 'three';
 	import type { PerspectiveCamera } from 'three';
 	import type { FeatureCollection, Geometry, Position } from 'geojson';
 	import { arc, distance, interpolate, type LngLat } from '@meridian/waypoint/geo';
+	import type { StopKind } from '#lib/domain/schemas.ts';
 
 	/**
 	 * THE SCENE
@@ -32,9 +33,29 @@
 	export interface GlobeStop {
 		readonly id: string;
 		readonly name: string;
+		readonly kind: StopKind;
 		readonly lng: number;
 		readonly lat: number;
 	}
+
+	/*
+	 * The route and the stops in the colours the map gives them: the route
+	 * in the sea, each stop in its kind's hue — the dark theme's values,
+	 * because the globe is a night scene whatever the page's theme. Copied
+	 * from `tokens.css` by hand, because a WebGL material cannot read a
+	 * token. The first version drew the arc in `--sun` and every stop in
+	 * `--coral`: the same route in two colours on two neighbouring tabs,
+	 * and two state colours spent as decoration.
+	 */
+	const ROUTE = '#2dd4bf';
+	const KIND: Record<StopKind, string> = {
+		place: '#2dd4bf',
+		lodging: '#a78bfa',
+		food: '#f59e0b',
+		transport: '#60a5fa',
+		activity: '#fb7185',
+		idea: '#8b95a5'
+	};
 
 	interface Props {
 		stops: readonly GlobeStop[];
@@ -44,9 +65,15 @@
 		reduced: boolean;
 		onselect: (id: string) => void;
 		onlanded: () => void;
+		/** The first rendered frame: the frame around the canvas fades it in on this. */
+		onfirstframe?: () => void;
 	}
 
-	let { stops, selected, world, flying, reduced, onselect, onlanded }: Props = $props();
+	let { stops, selected, world, flying, reduced, onselect, onlanded, onfirstframe }: Props =
+		$props();
+
+	/* Once. `useTask` runs every frame; the first one is the only one that matters here. */
+	let drawn = false;
 
 	interactivity();
 
@@ -107,7 +134,12 @@
 		})
 	);
 
-	/* One arc per leg, lifted off the surface in proportion to its length. */
+	/*
+	 * One arc per leg, lifted off the surface in proportion to its length,
+	 * and named by the two stops it joins: a stop is a row, so no two legs
+	 * of one route join the same pair, and that name is what the loop below
+	 * keys the arc by.
+	 */
 	const arcs = $derived(
 		legs.map(({ a, b }) => {
 			const lift = Math.min(0.12, distance(a, b) / 40_000_000);
@@ -115,14 +147,17 @@
 				const t = index / (all.length - 1);
 				return toVector(asLngLat(position), RADIUS + 0.004 + lift * Math.sin(Math.PI * t));
 			});
-			const geometry = new BufferGeometry().setFromPoints(points);
-			return geometry;
+			return { id: `${a.id}→${b.id}`, geometry: new BufferGeometry().setFromPoints(points) };
 		})
 	);
 
-	// Buffers are GPU memory; dispose the previous set when the legs change.
+	/*
+	 * Buffers are GPU memory; dispose the previous set when the legs change.
+	 * An effect for its cleanup: it computes nothing, and what it frees lives
+	 * outside Svelte, in WebGL.
+	 */
 	$effect(() => {
-		const current = [outlines, ...arcs];
+		const current = [outlines, ...arcs.map((leg) => leg.geometry)];
 		return () => current.forEach((geometry) => geometry.dispose());
 	});
 
@@ -130,10 +165,56 @@
 
 	let camera = $state<PerspectiveCamera>();
 
+	/*
+	 * WHERE THE CAMERA STARTS
+	 * -----------------------
+	 * Above the route, far enough back that the sphere fills about 80% of
+	 * the frame's shorter side. `FOV` is vertical; the horizontal one comes
+	 * from the canvas's aspect, so a portrait phone, where the width is the
+	 * short side, backs the camera off instead of cutting the globe at both
+	 * edges. A sphere of radius R fills an angle of 2·asin(R / d) from a
+	 * distance d, so d = R / sin(0.4 · fov).
+	 *
+	 * The aim is the route's centre: the mean of the stops as unit vectors,
+	 * which is the right "middle" on a sphere — an average of longitudes is
+	 * not, across the antimeridian. Until the person turns the globe
+	 * (`touched`), a resize re-frames it; after that it is theirs.
+	 */
+	const FOV = 42;
+	const { size } = useThrelte();
+	let touched = false;
+
+	const home = $derived.by(() => {
+		const { width, height } = $size;
+		const vertical = (FOV * Math.PI) / 180;
+		const aspect = width > 0 && height > 0 ? width / height : 1;
+		const horizontal = 2 * Math.atan(Math.tan(vertical / 2) * aspect);
+		const distanceAway = RADIUS / Math.sin(0.4 * Math.min(vertical, horizontal));
+		const centre = stops.reduce((sum, stop) => sum.add(toVector(stop)), new Vector3());
+		const aim = centre.lengthSq() > 1e-6 ? centre.normalize() : toVector({ lng: 0, lat: 20 });
+		return aim.multiplyScalar(distanceAway);
+	});
+
+	/*
+	 * The effects from here on write to the camera, which is three.js's
+	 * object and not Svelte state: they put a value *somewhere else*, which
+	 * is an effect's job, and none of them computes anything a template
+	 * reads. (`touched`, `leg` and `progress` are plain variables, for the
+	 * frame loop, and are never rendered.)
+	 */
+	$effect(() => {
+		// A selection or a flight moves the camera too, and it should not snap back afterwards.
+		if (flying || selected) touched = true;
+		if (!camera || touched) return;
+		camera.position.copy(home);
+		camera.lookAt(0, 0, 0);
+	});
+
 	/* Flight state: plain variables, advanced by the task and never rendered. */
 	let leg = 0;
 	let progress = 0;
 
+	// `flying` is a prop: the moment a flight starts is only visible here, so the frame loop is rewound here.
 	$effect(() => {
 		if (flying) {
 			leg = 0;
@@ -152,6 +233,10 @@
 	});
 
 	useTask((delta) => {
+		if (!drawn) {
+			drawn = true;
+			onfirstframe?.();
+		}
 		if (!camera) return;
 
 		if (flying) {
@@ -185,18 +270,22 @@
 
 <T.PerspectiveCamera
 	makeDefault
-	fov={42}
-	position={[0, 0.7, 2.7]}
+	fov={FOV}
 	bind:ref={camera}
-	oncreate={(ref) => ref.lookAt(0, 0, 0)}
+	oncreate={(ref) => {
+		ref.position.copy(home);
+		ref.lookAt(0, 0, 0);
+	}}
 >
+	<!-- Never closer than 1.4, and never so far that the home view could not be reached again. -->
 	<OrbitControls
 		enabled={!flying}
 		enablePan={false}
 		enableDamping={false}
 		minDistance={1.4}
-		maxDistance={4}
+		maxDistance={Math.max(4, home.length() * 1.2)}
 		rotateSpeed={0.5}
+		onstart={() => (touched = true)}
 	/>
 </T.PerspectiveCamera>
 
@@ -222,10 +311,10 @@
 	<T.LineBasicMaterial color="#9cc4dc" transparent opacity={0.55} />
 </T.LineSegments>
 
-<!-- The route -->
-{#each arcs as geometry, index (index)}
+<!-- The route, in the sea; the selected stop is white, the one thing lit. -->
+{#each arcs as { id, geometry } (id)}
 	<T.Line {geometry}>
-		<T.LineBasicMaterial color="#f2a65a" linewidth={2} />
+		<T.LineBasicMaterial color={ROUTE} linewidth={2} />
 	</T.Line>
 {/each}
 
@@ -237,6 +326,6 @@
 		onclick={() => onselect(stop.id)}
 	>
 		<T.SphereGeometry args={[0.011, 16, 16]} />
-		<T.MeshBasicMaterial color={stop.id === selected ? '#ffffff' : '#ff6b57'} />
+		<T.MeshBasicMaterial color={stop.id === selected ? '#ffffff' : KIND[stop.kind]} />
 	</T.Mesh>
 {/each}

@@ -157,7 +157,20 @@ const CROCKFORD = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
  * The layout is ULID-shaped: 48 bits of millisecond timestamp, then 80 bits of
  * randomness, encoded as 26 characters of Base32.
  *
- * …
+ * **Sortable** is not a nicety. Because the timestamp is most-significant,
+ * sorting these strings sorts them by creation time — so a database index on an
+ * id column is also an index on age, and every insert lands at the right-hand
+ * edge of the B-tree instead of scattering through it. A UUIDv4 primary key on
+ * a busy table fragments the index and turns inserts into random writes; this
+ * does not.
+ *
+ * **Unguessable** matters because these identifiers appear in URLs and API
+ * responses. 80 bits of entropy per millisecond is enough that enumerating
+ * other firms' orders is not a thing anybody will manage.
+ *
+ * `now` is a parameter rather than a call to `Date.now()` inside, purely so the
+ * tests can assert that two ids minted in the same millisecond still differ and
+ * that ids minted later sort after ids minted earlier.
  */
 export function newId(now: number = Date.now()): string {
 	if (!Number.isInteger(now) || now &lt; 0) {
@@ -175,7 +188,6 @@ export function newId(now: number = Date.now()): string {
 	}
 
 	// …
-
 	let carry = 0n;
 	for (const byte of bytes) carry = (carry &lt;&lt; 8n) | BigInt(byte);
 
@@ -197,12 +209,12 @@ export function newId(now: number = Date.now()): string {
 	</figcaption>
 	<pre><code class="lang-json">{
 	&quot;name&quot;: &quot;@sequent/protocol&quot;,
-	// …
+	…
 	&quot;exports&quot;: {
 		&quot;.&quot;: &quot;./src/index.ts&quot;,
 		&quot;./generate&quot;: &quot;./src/generate.ts&quot;
-	}
-	// …
+	},
+	…
 }</code></pre>
 </figure>
 <h3 id="keys">Composite keys, built not looked up</h3>
@@ -237,6 +249,11 @@ export function positionKey(accountId: AccountId, instrumentId: InstrumentId): s
 	return `${accountId}\0${instrumentId}`;
 }</code></pre>
 </figure>
+
+<aside class="callout callout--why">
+	<h4>A separator that cannot occur, written so you can see it</h4>
+	<p>Joining two identifiers needs a character neither of them can contain, or <code>(&quot;A&quot;, &quot;B.C&quot;)</code> and <code>(&quot;A.B&quot;, &quot;C&quot;)</code> build the same key. Every id in the protocol is printable text, so the NUL character — code point zero — is the one separator that is guaranteed never to appear in either half. It is written as the escape <code>\0</code> inside the template literal, never as the raw byte. The two produce an identical string, but a raw NUL in a source file makes git treat the whole file as binary — no diff, no blame, no review of the very functions that decide whose order is whose — and cannot be shown on a page like this one at all.</p>
+</aside>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>

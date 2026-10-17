@@ -1,0 +1,218 @@
+/*
+ * DATES
+ * =====
+ *
+ * The one look for a date in the product, shared by the trip's date range
+ * (`DateRangeField.svelte`) and the single date of an expense
+ * (`DateField.svelte`). Both are Bits UI pickers — segments you can type
+ * into, and a calendar in a popover — and Bits renders no styles, so every
+ * pixel is here. A stylesheet rather than a component's `<style>`: the two
+ * components are used on different pages, and a component's CSS only ships
+ * with the page that imports it.
+ */
+
+/*
+ * The field's shell: an input's border, holding the dates and a calendar
+ * button. `min-width: 0` lets it be as narrow as the column it is in; the
+ * dates inside wrap onto a second line rather than push the border out.
+ */
+.datefield {
+	display: flex;
+	align-items: center;
+	gap: var(--space-1);
+	min-width: 0;
+	min-height: var(--control);
+	padding: 0.25rem 0.25rem 0.25rem 0.75rem;
+	border: 1px solid var(--line-2);
+	border-radius: var(--radius);
+	background: var(--paper-2);
+	transition: border-color var(--dur-2) var(--ease-out);
+}
+
+/* One date, or two with a dash between: a row that wraps at the dash, never inside a date. */
+.datefield__dates {
+	display: flex;
+	flex: 1 1 auto;
+	flex-wrap: wrap;
+	align-items: center;
+	column-gap: var(--space-1);
+	min-width: 0;
+}
+
+.datefield__date {
+	display: inline-flex;
+	align-items: center;
+	white-space: nowrap;
+}
+
+.datefield:hover {
+	border-color: var(--line-3);
+}
+
+.datefield:focus-within {
+	border-color: var(--focus);
+	box-shadow: 0 0 0 3px var(--focus-halo);
+}
+
+.datefield--invalid {
+	border-color: var(--coral);
+}
+
+.datefield__input {
+	display: inline-flex;
+	align-items: center;
+	font-variant-numeric: tabular-nums;
+}
+
+/* A pixel either side: enough for the focus wash to have an edge, not so much that a date stops fitting a phone. */
+.datefield__segment {
+	padding: 0 1px;
+	border-radius: var(--radius-xs);
+	outline: none;
+}
+
+.datefield__segment[data-segment='literal'] {
+	color: var(--ink-3);
+}
+
+/*
+ * An empty segment shows its placeholder — "mm", "dd", "yyyy" — in the
+ * tertiary ink, so it reads as a hint and not as a value. `data-empty` is
+ * ours, written by `date-segments.ts` from what Bits says in its ARIA.
+ */
+.datefield__segment[data-empty] {
+	color: var(--ink-3);
+}
+
+/* The focused segment is the one thing in the field that is "selected", so it takes the sea. */
+.datefield__segment:focus {
+	background: var(--sea-soft);
+	color: var(--sea);
+}
+
+/* The calendar button sits at the far end of the field, and never shrinks to make room. */
+.datefield__trigger {
+	flex: none;
+	margin-inline-start: auto;
+}
+
+/*
+ * A tier-3 popover. `--z-popover` is above the dialog layer, not below it:
+ * a picker can open inside a dialog, and a calendar drawn under the scrim
+ * is a calendar nobody can pick from.
+ */
+.datefield__popover {
+	z-index: var(--z-popover);
+	padding: var(--space-3);
+	border: 1px solid var(--line);
+	border-radius: var(--radius-lg);
+	background: var(--paper-4);
+	box-shadow: var(--shadow-3), var(--ring-hairline);
+}
+
+.cal {
+	display: grid;
+	gap: var(--space-2);
+}
+
+.cal__header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+}
+
+.cal__heading {
+	font-weight: 600;
+	font-size: var(--text-sm);
+}
+
+.cal__grid {
+	border-collapse: collapse;
+}
+
+.cal__weekday {
+	width: 2.25rem;
+	font-size: var(--text-xs);
+	font-weight: 600;
+	letter-spacing: var(--tracking-caps);
+	text-transform: uppercase;
+	color: var(--ink-3);
+	text-align: center;
+}
+
+.cal__cell {
+	padding: 1px;
+	text-align: center;
+}
+
+/* 36px days for a pointer, 40px for a finger. */
+.cal__day {
+	position: relative;
+	display: grid;
+	place-items: center;
+	width: 2.25rem;
+	height: 2.25rem;
+	border-radius: var(--radius-sm);
+	font-size: var(--text-sm);
+	font-variant-numeric: tabular-nums;
+	cursor: pointer;
+}
+
+@media (pointer: coarse) {
+	.cal__weekday,
+	.cal__day {
+		width: 2.5rem;
+	}
+	.cal__day {
+		height: 2.5rem;
+	}
+}
+
+.cal__day:hover {
+	background: var(--paper-3);
+}
+
+.cal__day[data-outside-month] {
+	color: var(--ink-3);
+	opacity: 0.5;
+}
+
+.cal__day[data-disabled],
+.cal__day[data-unavailable] {
+	color: var(--ink-3);
+	opacity: 0.35;
+	cursor: not-allowed;
+}
+
+/* Today is a 4px dot under the number, not a box: a mark on the calendar, not a selection. */
+.cal__day[data-today]::after {
+	content: '';
+	position: absolute;
+	bottom: 4px;
+	width: 4px;
+	height: 4px;
+	border-radius: 50%;
+	background: var(--sea);
+}
+
+.cal__day[data-selected],
+.cal__day[data-highlighted] {
+	background: var(--sea-soft);
+	color: var(--sea);
+	border-radius: 0;
+}
+
+/* The ends of a range, and a single picked date, are solid sea. */
+.cal__day[data-selection-start],
+.cal__day[data-selection-end],
+.cal--single .cal__day[data-selected] {
+	background: var(--sea);
+	color: var(--on-sea);
+	border-radius: var(--radius-sm);
+}
+
+.cal__day[data-selection-start]::after,
+.cal__day[data-selection-end]::after,
+.cal--single .cal__day[data-selected]::after {
+	background: var(--on-sea);
+}

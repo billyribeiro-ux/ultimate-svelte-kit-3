@@ -18,7 +18,6 @@ import { createClient } from '@libsql/client';
 import { drizzle } from 'drizzle-orm/libsql';
 import { inArray } from 'drizzle-orm';
 import { hashPassword } from 'better-auth/crypto';
-import { createLocalAccountIssuer } from 'better-auth/db';
 import * as v from 'valibot';
 import { IdSchema } from '../src/lib/domain/schemas.ts';
 import * as auth from '../src/lib/server/db/auth.schema.ts';
@@ -101,6 +100,11 @@ console.log('· people');
  * password. `hashPassword` comes from Better Auth itself — the hash format is
  * its business, and a hand-rolled scrypt that is subtly different produces a
  * person who cannot log in and no error saying why.
+ *
+ * Until 1.7.2 this also set `issuer` with Better Auth's
+ * `createLocalAccountIssuer('credential')`; 1.7.3 withdrew the column and the
+ * helper with it, and migration `0001` drops the column (see `auth.schema.ts`).
+ * The row below is the whole of what sign-in reads.
  */
 const password = await hashPassword(DEMO_PASSWORD);
 for (const person of Object.values(USERS)) {
@@ -109,7 +113,6 @@ for (const person of Object.values(USERS)) {
 		id: `${person.id}-account`,
 		accountId: person.id,
 		providerId: 'credential',
-		issuer: createLocalAccountIssuer('credential'),
 		userId: person.id,
 		password
 	});

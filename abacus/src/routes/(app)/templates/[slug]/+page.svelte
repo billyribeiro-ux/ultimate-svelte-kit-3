@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import type { PageProps } from './$types.js';
 	import SheetTable from '#lib/components/SheetTable.svelte';
 	import { create } from '#lib/remote/sheets.remote.ts';
@@ -20,9 +21,23 @@
 			<p class="hint">{data.template.summary}</p>
 		</div>
 		<div class="cluster">
-			<a class="btn btn--primary" href="/sheet/local?template={data.template.slug}"
+			<a
+				class="btn btn--primary"
+				href={resolve(`/(app)/sheet/local?template=${data.template.slug}`)}
 				>Open a copy — no account</a
 			>
+			<!--
+				THE SAVE BUTTON ARRIVES WITH JAVASCRIPT
+				This page is prerendered: built once, for nobody in particular, so
+				there is no person to ask about at build time. The empty `pending`
+				snippet is what says so. On the server, a boundary with `pending`
+				renders that snippet and skips its content, so the build neither
+				awaits `whoAmI()` nor bakes a stranger's answer into the file; in the
+				browser the content renders once the answer arrives, and only for
+				somebody signed in. The link before it is the way in that needs no
+				script and no account. `failed` is empty for the same reason: if
+				nobody can be asked, the page still offers that link.
+			-->
 			<svelte:boundary>
 				{const me = $derived(await whoAmI())}
 				{#if me}
@@ -33,6 +48,7 @@
 					</form>
 				{/if}
 				{#snippet pending()}{/snippet}
+				{#snippet failed()}{/snippet}
 			</svelte:boundary>
 		</div>
 	</header>

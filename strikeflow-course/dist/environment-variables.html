@@ -130,9 +130,16 @@ LEADS_DIR=&quot;.data&quot;
 
 # Signs the ebook download links. Minimum 32 characters.
 # Generate one with:  node -e &quot;console.log(crypto.randomBytes(32).toString('hex'))&quot;
-# Leave unset in development and a throwaway key is generated at boot.
-EBOOK_TOKEN_SECRET=&quot;&quot;</code></pre>
+# Leave it commented out in development and a throwaway key is generated at boot.
+# Commented out, not set to &quot;&quot;: an empty string is a value, and it fails the
+# 32-character rule in src/env.ts, so every page would answer with env_invalid.
+# EBOOK_TOKEN_SECRET=</code></pre>
 </figure>
+
+<aside class="callout callout--why">
+	<h4>Why the secret is commented out rather than left empty</h4>
+	<p>Because an empty value is still a value. <code>cp .env.example .env</code> copies every line, and a line that reads <code>EBOOK_TOKEN_SECRET=&quot;&quot;</code> hands the server the string <code>''</code>. The schema in <code>src/env.ts</code> is <code>v.optional(v.pipe(v.string(), v.minLength(32)))</code>, and <code>optional</code> only steps in when the value is <em>missing</em> — <code>''</code> is present, is a string, and is 32 characters short of the minimum. SvelteKit validates environment variables before it renders anything, so every page would answer with an <code>env_invalid</code> error. Commented out, the variable is genuinely unset, <code>optional</code> lets it through, and <code>tokens.ts</code> generates its throwaway key. You could teach the schema to treat <code>''</code> as unset instead; we keep the schema strict and the example file honest, because in production an empty secret is a mistake worth failing loudly on.</p>
+</aside>
 <aside class="callout callout--note"><p>Commit <code>.env.example</code>, never <code>.env</code>. The example file is the documentation a new engineer reads before their first <code>pnpm dev</code>, and keeping it in sync with <code>src/env.ts</code> costs nothing.</p></aside>
 
 <figure class="code code--terminal">

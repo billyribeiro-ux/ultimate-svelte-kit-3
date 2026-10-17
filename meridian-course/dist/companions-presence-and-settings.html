@@ -39,7 +39,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/Companions.svelte<span class="code__lines">:10-38</span></span>
+		<span class="code__file">src/lib/trip/Companions.svelte<span class="code__lines">:14-49</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/**
@@ -69,13 +69,20 @@ const roleLabel: Record&lt;Role, () =&gt; string&gt; = {
 	viewer: m.role_viewer
 };
 
+const initials = (name: string) =&gt;
+	name
+		.split(/\s+/)
+		.slice(0, 2)
+		.map((part) =&gt; part[0]?.toUpperCase() ?? '')
+		.join('');
+
 let inviteRole: 'editor' | 'viewer' = $state('editor');
 let inviteUrl = $state&lt;string | null&gt;(null);</code></pre>
 </figure>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/Companions.svelte<span class="code__lines">:40-73</span></span>
+		<span class="code__file">src/lib/trip/Companions.svelte<span class="code__lines">:53-88</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">async function invite() {
@@ -83,7 +90,7 @@ let inviteUrl = $state&lt;string | null&gt;(null);</code></pre>
 		const result = await createInvite({ tripId: view.trip.id, role: inviteRole });
 		inviteUrl = result.url;
 	} catch (error) {
-		toast.error(error instanceof Error ? error.message : String(error));
+		toast.error(errorMessage(error));
 	}
 }
 
@@ -91,7 +98,9 @@ async function copy() {
 	if (!inviteUrl) return;
 	try {
 		await navigator.clipboard.writeText(inviteUrl);
-		toast(m.companions_copied());
+		toast.success(m.companions_copied());
+		copied = true;
+		setTimeout(() =&gt; (copied = false), 1600);
 	} catch {
 		// The link is on screen; a person can still select it.
 	}
@@ -101,7 +110,7 @@ async function setRole(userId: string, next: 'editor' | 'viewer') {
 	try {
 		await changeRole({ tripId: view.trip.id, userId, role: next });
 	} catch (error) {
-		toast.error(error instanceof Error ? error.message : String(error));
+		toast.error(errorMessage(error));
 	}
 }
 
@@ -109,39 +118,50 @@ async function remove(userId: string) {
 	try {
 		await removeMember({ tripId: view.trip.id, userId });
 	} catch (error) {
-		toast.error(error instanceof Error ? error.message : String(error));
+		toast.error(errorMessage(error));
 	}
 }</code></pre>
 </figure>
-<p>Making an invite is a <code>command</code> because the result exists to be copied — a link, on screen, with a button that writes it to the clipboard. Leaving is a <code>form</code>, because it is a page with a button and should work with JavaScript off. <code>here</code> is a set derived from the presence list, so the chip beside a companion who has the trip open appears and disappears with the stream.</p>
+<p>Making an invite is a <code>command</code> because the result exists to be copied — a link, on screen, with a button that writes it to the clipboard. Leaving is a <code>form</code>, because it is a page with a button and should work with JavaScript off. <code>here</code> is a set derived from the presence list, so the chip beside a companion who has the trip open appears and disappears with the stream. That chip is the only one in the sea colour — presence is live, and the sea already means live — while the role beside it is a fact, so a quiet chip. After a copy the button shows a check for 1.6 seconds and the toast says “Copied”; the toast is a live region already, so the button carries none of its own, which used to make a screen reader say it twice.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/Companions.svelte<span class="code__lines">:76-128</span></span>
+		<span class="code__file">src/lib/trip/Companions.svelte<span class="code__lines">:91-154</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;section class=&quot;stack stack--lg&quot;&gt;
-	&lt;h2&gt;{m.companions_title()}&lt;/h2&gt;
+	&lt;h2 class=&quot;companions__title&quot;&gt;{m.companions_title()}&lt;/h2&gt;
 
 	&lt;ul class=&quot;members&quot; role=&quot;list&quot;&gt;
 		{#each view.document.members as member (member.userId)}
 			&lt;li class=&quot;card member&quot;&gt;
-				&lt;div class=&quot;stack stack--sm&quot;&gt;
-					&lt;strong&gt;
+				&lt;!-- Initials on the sea; the owner wears a small crown on the avatar's corner. --&gt;
+				&lt;span class=&quot;member__avatar&quot; aria-hidden=&quot;true&quot;&gt;
+					{initials(member.name)}
+					{#if member.role === 'owner'}
+						&lt;span class=&quot;member__crown&quot;&gt;&lt;CrownSimpleIcon size={10} weight=&quot;fill&quot; /&gt;&lt;/span&gt;
+					{/if}
+				&lt;/span&gt;
+				&lt;div class=&quot;member__body&quot;&gt;
+					&lt;strong class=&quot;member__name&quot;&gt;
 						{member.name}
-						{#if member.userId === viewerId}&lt;span class=&quot;muted&quot;&gt;({m.companions_you()})&lt;/span&gt;{/if}
+						{#if member.userId === viewerId}&lt;span class=&quot;member__you&quot;&gt;({m.companions_you()})&lt;/span
+							&gt;{/if}
 					&lt;/strong&gt;
 					&lt;p class=&quot;cluster&quot;&gt;
-						&lt;span class=&quot;chip&quot; class:chip--sea={member.role === 'owner'}
-							&gt;{roleLabel[member.role]()}&lt;/span
-						&gt;
+						&lt;!-- A role is a fact, so a quiet chip: the sea is kept for &quot;here now&quot;, which is live. --&gt;
+						&lt;span class=&quot;chip&quot;&gt;{roleLabel[member.role]()}&lt;/span&gt;
 						{#if here.has(member.userId)}
-							&lt;span class=&quot;chip chip--sun&quot;&gt;{m.companions_here()}&lt;/span&gt;
+							&lt;!-- Presence is live, and the sea already means live. --&gt;
+							&lt;span class=&quot;chip chip--sea member__here&quot;&gt;
+								&lt;span class=&quot;member__dot&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;
+								{m.companions_here()}
+							&lt;/span&gt;
 						{/if}
 					&lt;/p&gt;
 				&lt;/div&gt;
 				{#if owner &amp;&amp; member.role !== 'owner'}
-					&lt;div class=&quot;cluster&quot;&gt;
+					&lt;div class=&quot;member__actions cluster&quot;&gt;
 						{#if member.role === 'editor'}
 							&lt;button
 								class=&quot;btn btn--sm&quot;
@@ -160,7 +180,7 @@ async function remove(userId: string) {
 							&lt;/button&gt;
 						{/if}
 						&lt;button
-							class=&quot;btn btn--sm btn--danger&quot;
+							class=&quot;btn btn--sm btn--ghost btn--danger&quot;
 							type=&quot;button&quot;
 							onclick={() =&gt; remove(member.userId)}
 							aria-label=&quot;{m.companions_remove()} {member.name}&quot;
@@ -177,14 +197,14 @@ async function remove(userId: string) {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/Companions.svelte<span class="code__lines">:130-162</span></span>
+		<span class="code__file">src/lib/trip/Companions.svelte<span class="code__lines">:156-200</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">{#if owner}
 	&lt;div class=&quot;card card--pad stack&quot;&gt;
 		&lt;h3&gt;{m.companions_invite()}&lt;/h3&gt;
-		&lt;div class=&quot;cluster&quot;&gt;
-			&lt;label class=&quot;field&quot;&gt;
+		&lt;div class=&quot;invite&quot;&gt;
+			&lt;label class=&quot;field invite__role&quot;&gt;
 				&lt;span class=&quot;label&quot;&gt;{m.companions_invite_role()}&lt;/span&gt;
 				&lt;select class=&quot;select&quot; bind:value={inviteRole}&gt;
 					&lt;option value=&quot;editor&quot;&gt;{m.companions_role_editor()}&lt;/option&gt;
@@ -197,37 +217,55 @@ async function remove(userId: string) {
 			&lt;/button&gt;
 		&lt;/div&gt;
 		{#if inviteUrl}
-			&lt;p class=&quot;muted&quot;&gt;{m.companions_link_ready()}&lt;/p&gt;
-			&lt;div class=&quot;cluster&quot;&gt;
-				&lt;code class=&quot;invite__url&quot;&gt;{inviteUrl}&lt;/code&gt;
-				&lt;button class=&quot;btn btn--sm&quot; type=&quot;button&quot; onclick={copy}&gt;
-					&lt;CopyIcon size={14} aria-hidden=&quot;true&quot; /&gt;
-					{m.companions_copy()}
-				&lt;/button&gt;
+			&lt;!-- The link block fades in; it does not grow — layout never animates. --&gt;
+			&lt;div class=&quot;stack stack--sm&quot; in:fade={{ duration: reducedMotion.current ? 0 : 240 }}&gt;
+				&lt;p class=&quot;muted&quot;&gt;{m.companions_link_ready()}&lt;/p&gt;
+				&lt;div class=&quot;invite__row&quot;&gt;
+					&lt;!--
+						A `&lt;code&gt;`, not a read-only input: the end-to-end suite reads its
+						text content, and `user-select: all` makes one tap select the lot.
+					--&gt;
+					&lt;code class=&quot;invite__url well tabular&quot;&gt;{inviteUrl}&lt;/code&gt;
+					&lt;!-- The toast says &quot;Copied&quot; to a screen reader; a live region in the button said it a second time. --&gt;
+					&lt;button class=&quot;btn btn--sm&quot; type=&quot;button&quot; onclick={copy}&gt;
+						{#if copied}
+							&lt;span class=&quot;copy__icon&quot; in:pop&gt;&lt;CheckIcon size={14} aria-hidden=&quot;true&quot; /&gt;&lt;/span&gt;
+						{:else}
+							&lt;span class=&quot;copy__icon&quot;&gt;&lt;CopyIcon size={14} aria-hidden=&quot;true&quot; /&gt;&lt;/span&gt;
+						{/if}
+						{m.companions_copy()}
+					&lt;/button&gt;
+				&lt;/div&gt;
 			&lt;/div&gt;
 		{/if}
 	&lt;/div&gt;
 {:else if role !== 'link'}
 	&lt;form {...leaveTrip}&gt;
 		&lt;input {...leaveTrip.fields.tripId.as('hidden', view.trip.id)} /&gt;
-		&lt;button class=&quot;btn btn--danger&quot; type=&quot;submit&quot;&gt;{m.trip_leave()}&lt;/button&gt;
+		&lt;button class=&quot;btn btn--danger btn--ghost&quot; type=&quot;submit&quot;&gt;{m.trip_leave()}&lt;/button&gt;
 	&lt;/form&gt;
 {/if}</code></pre>
 </figure>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/Presence.svelte<span class="code__lines">:1-25</span></span>
+		<span class="code__file">src/lib/trip/Presence.svelte<span class="code__lines">:1-42</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
 	import { m } from '#lib/paraglide/messages.js';
+	import { getLocale } from '#lib/paraglide/runtime.js';
 	import type { TripState } from './state.svelte.ts';
 
 	/**
-	 * Who else is looking at this trip right now: one chip per person, with
-	 * the stop under their pointer in the tooltip. Fed by the live query; the
+	 * Who else is looking at this trip right now: an overlapping stack of
+	 * initials, with the person's name beside each from 48em and visually
+	 * hidden below it — still read out, still found by a test. The stop
+	 * under their pointer is in the tooltip. Fed by the live query; the
 	 * server drops anybody who has not been heard from in thirty seconds.
+	 *
+	 * Nobody arrives with a bounce. A chip appearing is information; a chip
+	 * bouncing is a slot machine.
 	 */
 	interface Props {
 		view: TripState;
@@ -237,6 +275,17 @@ async function remove(userId: string) {
 	let { view, viewerId }: Props = $props();
 
 	const others = $derived(view.presence.filter((p) =&gt; p.userId !== viewerId));
+	/* Four faces, then &quot;+N&quot;: a crowd is a number, not a row of circles. */
+	const shown = $derived(others.slice(0, 4));
+	const more = $derived(others.length - shown.length);
+	/*
+	 * The people behind &quot;+N&quot; are still in the list, in words: &quot;and 2 more:
+	 * Ana and Cal&quot;. A list named &quot;here now&quot; has to contain everybody who is.
+	 */
+	const list = new Intl.ListFormat(getLocale(), { type: 'conjunction' });
+	const rest = $derived(
+		m.presence_more({ count: more, names: list.format(others.slice(4).map((p) =&gt; p.name)) })
+	);
 
 	const initials = (name: string) =&gt;
 		name
@@ -249,13 +298,15 @@ async function remove(userId: string) {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/Presence.svelte<span class="code__lines">:27-42</span></span>
+		<span class="code__file">src/lib/trip/Presence.svelte<span class="code__lines">:44-69</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">{#if others.length &gt; 0}
 	&lt;ul class=&quot;presence&quot; role=&quot;list&quot; aria-label={m.companions_here()}&gt;
-		{#each others as person (person.userId)}
-			{@const stop = person.stopId ? view.document.stops.find((s) =&gt; s.id === person.stopId) : null}
+		{#each shown as person (person.userId)}
+			{const stop = $derived(
+				person.stopId ? view.document.stops.find((s) =&gt; s.id === person.stopId) : null
+			)}
 			&lt;li
 				class=&quot;presence__chip&quot;
 				title={stop
@@ -266,25 +317,35 @@ async function remove(userId: string) {
 				&lt;span class=&quot;presence__name&quot;&gt;{person.name}&lt;/span&gt;
 			&lt;/li&gt;
 		{/each}
+		{#if more &gt; 0}
+			&lt;li class=&quot;presence__chip presence__more&quot; title={rest}&gt;
+				&lt;span class=&quot;presence__avatar presence__avatar--more tabular&quot; aria-hidden=&quot;true&quot;
+					&gt;+{more}&lt;/span
+				&gt;
+				&lt;span class=&quot;visually-hidden&quot;&gt;{rest}&lt;/span&gt;
+			&lt;/li&gt;
+		{/if}
 	&lt;/ul&gt;
 {/if}</code></pre>
 </figure>
-<p>Presence is one chip per other person, with the stop under their pointer in the tooltip, fed entirely by <code>view.presence</code> — which the server refreshes from its thirty-second time-to-live. The initials are computed from the name; there are no avatars in this app, and a coloured circle with two letters is what a person recognises across a table.</p>
+<p>Presence is an overlapping stack of initials, one circle per other person, with the stop under their pointer in the tooltip, fed entirely by <code>view.presence</code> — which the server refreshes from its thirty-second time-to-live. Four faces, then a “+N”: a crowd is a number, not a row of circles — and the people behind it are still in the list, in a visually hidden “and 2 more: Ana and Cal” built with <code>Intl.ListFormat</code>, because a list named “here now” has to contain everybody who is. The name beside each circle shows from 48em and is visually hidden below it, so a screen reader and the end-to-end test still find it. The initials are computed from the name; there are no avatars in this app, and a coloured circle with two letters is what a person recognises across a table. Nobody arrives with a bounce: a chip appearing is information, and a chip bouncing is a slot machine.</p>
 <h3 id="join">The join page</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(site)/(app)/join/[token]/+page.svelte<span class="code__lines">:1-46</span></span>
+		<span class="code__file">src/routes/(site)/(app)/join/[token]/+page.svelte<span class="code__lines">:1-50</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
-	import { page } from '$app/state';
 	import { m } from '#lib/paraglide/messages.js';
-	import { getLocale, localizeHref } from '#lib/paraglide/runtime.js';
+	import { href } from '#lib/href.ts';
+	import { getLocale } from '#lib/paraglide/runtime.js';
 	import { formatRange } from '#lib/domain/dates.ts';
 	import { acceptInvite, inviteByToken } from '#lib/remote/invites.remote.ts';
+	import type { PageProps } from './$types';
 
-	const token = $derived(page.params.token ?? '');
+	let { params }: PageProps = $props();
+	const token = $derived(params.token);
 	const locale = getLocale();
 &lt;/script&gt;
 
@@ -298,7 +359,7 @@ async function remove(userId: string) {
 	whether the link still works; one remote form accepts it — a real form,
 	so the button works on a phone that has not finished loading the script.
 --&gt;
-{const invite = await inviteByToken(token)}
+{const invite = $derived(await inviteByToken(token))}
 
 &lt;section class=&quot;container join&quot;&gt;
 	&lt;div class=&quot;card card--pad stack&quot;&gt;
@@ -308,7 +369,9 @@ async function remove(userId: string) {
 
 		{#if invite.alreadyMember}
 			&lt;p&gt;{m.join_already()}&lt;/p&gt;
-			&lt;a class=&quot;btn btn--primary&quot; href={localizeHref(`/t/${invite.trip.slug}`)}&gt;{m.join_open()}&lt;/a&gt;
+			&lt;a class=&quot;btn btn--primary&quot; href={href('/(site)/t/[slug=slug]', { slug: invite.trip.slug })}&gt;
+				{m.join_open()}
+			&lt;/a&gt;
 		{:else if invite.used}
 			&lt;p class=&quot;issue&quot;&gt;{m.join_used()}&lt;/p&gt;
 		{:else if invite.expired}
@@ -329,59 +392,65 @@ async function remove(userId: string) {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(site)/t/[slug=slug]/settings/+page.svelte<span class="code__lines">:1-33</span></span>
+		<span class="code__file">src/routes/(site)/t/[slug=slug]/settings/+page.svelte<span class="code__lines">:1-38</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
 	import { error } from '@sveltejs/kit';
-	import { page } from '$app/state';
+	import { m } from '#lib/paraglide/messages.js';
 	import { tripBySlug } from '#lib/remote/trips.remote.ts';
+	import type { PageProps } from './$types';
+	import DeleteTrip from './DeleteTrip.svelte';
 	import EmbedSection from './EmbedSection.svelte';
 	import SettingsForm from './SettingsForm.svelte';
 
-	const slug = $derived(page.params.slug ?? '');
-
-	/*
-	 * One query, read two ways. `await query` below gives the first render
-	 * its value and blocks the page until it is there. `query.current` is the
-	 * same value as a reactive read: when the form saves with
-	 * `.updates(tripBySlug(slug))`, the server sends the refreshed trip back
-	 * in the same response, the cache is set, and everything reading
-	 * `.current` — the embed section — re-renders with it. `undefined` only
-	 * before the first load, which the `await` has already waited out.
-	 */
-	const query = $derived(tripBySlug(slug));
-	const visibility = $derived(query.current?.document.trip.visibility ?? 'private');
+	// The route's own parameters, typed by the matcher in `src/params.ts` (chapter 14 says how).
+	let { params }: PageProps = $props();
 &lt;/script&gt;
 
 &lt;!--
+	ONE QUERY, FOLLOWED
+	-------------------
+	Both declarations are `$derived`. When the form saves with
+	`.updates(tripBySlug(slug))`, the server sends the refreshed trip back in
+	the same response, the query's value changes, and everything below that
+	reads `trip` — the form, and the embed section that only shows its code
+	for a trip visible by link — is drawn again from the new one. A bare
+	`{const}` would await the first answer and keep it for as long as the
+	page is open: the embed section would still say &quot;private&quot; after a save
+	that made the trip public.
+
 	Owner only. The remote function already refuses to *change* anything for
 	anybody else; this refuses to *show* the page, with a 403 rather than a
 	404 because a member who is not the owner already knows the trip exists.
 --&gt;
-{const initial = await query}
-{#if initial.role !== 'owner'}
-	{error(403, 'Only the owner can change a trip.')}
+{const { role, document } = $derived(await tripBySlug(params.slug))}
+{#if role !== 'owner'}
+	{error(403, m.error_owner_only())}
 {/if}
+{const trip = $derived(document.trip)}
 
-{#key slug}</code></pre>
+{#key params.slug}
+	&lt;SettingsForm {trip} /&gt;
+{/key}</code></pre>
 </figure>
-<p>The remote function already refuses to *change* anything for anybody but the owner. This page refuses to *show* itself, with a 403 rather than a 404, because a member who is not the owner already knows the trip exists — <code>error()</code> in markup, which SvelteKit turns into the right status on the server and the error page in the browser.</p>
+<p>The remote function already refuses to *change* anything for anybody but the owner. This page refuses to *show* itself, with a 403 rather than a 404, because a member who is not the owner already knows the trip exists — <code>error()</code> in markup, which SvelteKit turns into the right status on the server and the error page in the browser, where <code>+error.svelte</code> prints the sentence from <code>page.error.message</code>. That sentence is <code>m.error_owner_only()</code>, a Paraglide message: the error page prints it word for word, so a literal would have put an English sentence under a German heading. The slug is <code>params.slug</code> from <code>PageProps</code>, as on the trip page. Both declarations are <code>$derived</code>, so they follow the query: when the form below saves, the server refreshes <code>tripBySlug</code> in the same response, and <code>trip</code> — and everything drawn from it, the form’s heading and the embed section that only offers its code for a trip visible by link — is the saved trip. The first version read the query two ways, a template <code>await</code> for the first render and <code>query.current</code> for the embed section, and the comment that justified it outlived the code it described; one reactive read, declared once, is the version with nothing to keep in step.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(site)/t/[slug=slug]/settings/SettingsForm.svelte<span class="code__lines">:1-28</span></span>
+		<span class="code__file">src/routes/(site)/t/[slug=slug]/settings/SettingsForm.svelte<span class="code__lines">:1-29</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
-	import { resolve } from '$app/paths';
 	import { untrack } from 'svelte';
 	import { toast } from 'svelte-sonner';
+	import { errorMessage } from '#lib/ui/errors.ts';
+	import { ArrowLeftIcon, LinkIcon, LockSimpleIcon } from 'phosphor-svelte';
 	import { m } from '#lib/paraglide/messages.js';
-	import { localizeHref } from '#lib/paraglide/runtime.js';
+	import { href } from '#lib/href.ts';
 	import { CURRENCIES } from '#lib/domain/money.ts';
 	import type { Visibility } from '#lib/domain/schemas.ts';
-	import { deleteTrip, tripBySlug, updateTrip } from '#lib/remote/trips.remote.ts';
+	import { tripBySlug, updateTrip } from '#lib/remote/trips.remote.ts';
 	import type { Trip } from '#lib/server/db/schema.ts';
 	import DateRangeField from '#lib/ui/DateRangeField.svelte';
 
@@ -405,7 +474,7 @@ async function remove(userId: string) {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(site)/t/[slug=slug]/settings/SettingsForm.svelte<span class="code__lines">:30-55</span></span>
+		<span class="code__file">src/routes/(site)/t/[slug=slug]/settings/SettingsForm.svelte<span class="code__lines">:31-56</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">async function save(event: SubmitEvent) {
@@ -427,9 +496,9 @@ async function remove(userId: string) {
 			currency,
 			visibility
 		}).updates(tripBySlug(trip.slug));
-		toast(m.trip_saved());
+		toast.success(m.trip_saved());
 	} catch (error) {
-		toast.error(error instanceof Error ? error.message : String(error));
+		toast.error(errorMessage(error));
 	} finally {
 		saving = false;
 	}
@@ -439,27 +508,52 @@ async function remove(userId: string) {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(site)/t/[slug=slug]/settings/SettingsForm.svelte<span class="code__lines">:118-129</span></span>
+		<span class="code__file">src/routes/(site)/t/[slug=slug]/settings/+page.svelte<span class="code__lines">:40-47</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">&lt;!-- A remote form: deleting works with JavaScript off, and asks first when it is on. --&gt;
+	<pre><code class="lang-svelte">&lt;section class=&quot;container embed&quot;&gt;
+	&lt;EmbedSection slug={params.slug} visibility={trip.visibility} /&gt;
+&lt;/section&gt;
+
+&lt;!-- Last, after everything that can be undone. --&gt;
+&lt;section class=&quot;container danger-zone&quot;&gt;
+	&lt;DeleteTrip tripId={trip.id} /&gt;
+&lt;/section&gt;</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(site)/t/[slug=slug]/settings/DeleteTrip.svelte<span class="code__lines">:17-38</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;!--
+	A remote form: deleting works with JavaScript off, and asks first when it
+	is on. The question is asked inside `enhance`, the remote form's own hook,
+	and the submission happens only if the answer is yes. An `onsubmit` that
+	calls `preventDefault()` does not stop it: the form's attachment has a
+	submit listener of its own that never looks at `defaultPrevented`, so
+	&quot;Cancel&quot; deleted the trip anyway.
+--&gt;
 &lt;form
-	class=&quot;card card--pad cluster cluster--between&quot;
-	{...deleteTrip}
-	onsubmit={(event) =&gt; {
-		if (!confirm(m.trip_delete_confirm())) event.preventDefault();
-	}}
+	class=&quot;card card--pad danger stack&quot;
+	{...deleteTrip.enhance(async (form) =&gt; {
+		if (confirm(m.trip_delete_confirm())) await form.submit();
+	})}
 &gt;
-	&lt;input {...deleteTrip.fields.id.as('hidden', trip.id)} /&gt;
-	&lt;span class=&quot;muted&quot;&gt;{m.trip_delete_confirm()}&lt;/span&gt;
-	&lt;button class=&quot;btn btn--danger&quot; type=&quot;submit&quot;&gt;{m.trip_delete()}&lt;/button&gt;
+	&lt;input {...deleteTrip.fields.id.as('hidden', tripId)} /&gt;
+	&lt;!-- An h2: a section of the page of its own, not a part of the embed section before it. --&gt;
+	&lt;h2 class=&quot;danger__title&quot;&gt;{m.trip_delete()}&lt;/h2&gt;
+	&lt;p class=&quot;danger__text&quot;&gt;{m.settings_danger()}&lt;/p&gt;
+	&lt;div class=&quot;actions&quot;&gt;
+		&lt;button class=&quot;btn btn--danger&quot; type=&quot;submit&quot;&gt;{m.trip_delete()}&lt;/button&gt;
+	&lt;/div&gt;
 &lt;/form&gt;</code></pre>
 </figure>
-<p>Delete is a remote <code>form</code> with a <code>confirm()</code> in its <code>onsubmit</code>. With JavaScript off the form posts and the trip is gone; with it on, the browser asks first, and <code>preventDefault</code> cancels the submission if the person changes their mind. That is progressive enhancement in four lines, and it is the pattern for every destructive button in the app.</p>
+<p>Delete is a remote <code>form</code> whose question is asked inside <code>enhance</code>, the remote form’s own hook. With JavaScript off the form posts and the trip is gone; with it on, <code>enhance</code> is handed the form and submits it only if <code>confirm()</code> says yes. The first version put the <code>confirm()</code> in an <code>onsubmit</code> and called <code>preventDefault()</code> on a no — the way you would cancel a plain form — and “Cancel” deleted the trip anyway: the remote form’s attachment has a submit listener of its own, and it does not look at <code>defaultPrevented</code>. The end-to-end suite now dismisses the dialog first and checks the trip is still listed, then accepts it and checks it is gone (chapter 42). This is the one destructive *form* in the app; the smaller removals — a stop, an expense, a companion — are commands behind a button, with the person looking at the thing they remove, and ask nothing. It is a component of its own so the page can put it last, under the embed section: the one thing on the page that cannot be undone comes after everything that can, where nobody reaches it on the way to something else. Its heading is an <code>h2</code> at an <code>h3</code>’s size, so heading navigation files the danger zone as a section of its own and not as a part of the embed section above it.</p>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>
-	<ul><li>You can say why the invite is a command and leaving is a form.</li><li>You can explain the settings page’s 403 and where <code>error()</code> in markup is handled.</li><li>You can compare <code>untrack</code> in the settings form with assignable deriveds in the stop dialog and say when each is right.</li></ul>
+	<ul><li>You can say why the invite is a command and leaving is a form.</li><li>You can explain the settings page’s 403 and where <code>error()</code> in markup is handled.</li><li>You can compare <code>untrack</code> in the settings form with assignable deriveds in the stop dialog and say when each is right.</li><li>You can say why a <code>confirm()</code> belongs in a remote form’s <code>enhance</code> and not in an <code>onsubmit</code> with <code>preventDefault()</code>.</li></ul>
 </aside>
 		</article>
 

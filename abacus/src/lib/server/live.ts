@@ -27,12 +27,25 @@ export interface Presence {
 	cell: string | null;
 }
 
-export interface LiveMessage {
-	/** The sheet version after these operations. */
+/**
+ * One `send`: the operations it carried, and the version they produced.
+ *
+ * The version is what makes a batch recognisable. A browser can be handed
+ * the same batch twice — a reconnect replays everything since the page was
+ * loaded — and a batch it has already applied must not be applied again:
+ * cells written twice come out the same, but a row inserted twice is two
+ * rows.
+ */
+export interface Batch {
 	version: number;
-	ops: Op[];
-	/** Which tab sent them, so that tab can ignore its own echo. */
+	/** Which tab sent it, so that tab can skip its own echo; `null` from before it was recorded. */
 	client: string | null;
+	ops: Op[];
+}
+
+export interface LiveMessage {
+	/** Oldest first. Empty when all that changed is who is here. */
+	batches: Batch[];
 	present: Presence[];
 }
 
@@ -59,28 +72,24 @@ export function join(sheetId: string, presence: Presence, listener: Listener): (
 	};
 }
 
-export function broadcast(sheetId: string, message: Omit<LiveMessage, 'present'>): void {
+/** Tell the room about a batch — or, with `null`, only about who is here. */
+export function broadcast(sheetId: string, batch: Batch | null): void {
 	const room = rooms.get(sheetId);
 	if (!room) return;
-	const present = [...room.values()];
-	for (const listener of room.keys()) listener({ ...message, present });
+	const message: LiveMessage = { batches: batch ? [batch] : [], present: [...room.values()] };
+	for (const listener of room.keys()) listener(message);
 }
 
 /** A cursor moved: update that tab's presence and tell the room. */
-export function moveCursor(
-	sheetId: string,
-	client: string,
-	cell: string | null,
-	version: number
-): void {
+export function moveCursor(sheetId: string, client: string, cell: string | null): void {
 	const room = rooms.get(sheetId);
 	if (!room) return;
 	for (const presence of room.values()) if (presence.client === client) presence.cell = cell;
-	broadcast(sheetId, { version, ops: [], client: null });
+	broadcast(sheetId, null);
 }
 
 function announce(sheetId: string): void {
-	broadcast(sheetId, { version: -1, ops: [], client: null });
+	broadcast(sheetId, null);
 }
 
 export function openConnections(): number {

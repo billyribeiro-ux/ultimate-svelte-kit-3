@@ -5,14 +5,35 @@
 packages:
   - 'packages/*'
 
-# pnpm 11 refuses to run a dependency's install scripts unless you say so by
+# pnpm refuses to run a dependency's install scripts unless you say so by
 # name, which is the correct default: `postinstall` is arbitrary code from a
 # transitive dependency you have never read. esbuild needs it to unpack its
-# platform binary, and Vite needs esbuild.
+# platform binary, and Vite needs esbuild. (pnpm 12 also fails the install on
+# a key in this file it does not recognise, so every setting here is checked.)
 allowBuilds:
   esbuild: true
 
+# pnpm can refuse a version published less than `minimumReleaseAge` ago, so a
+# malicious release has time to be noticed and pulled before it reaches you.
+# These are the versions taken inside that window on purpose — each one was
+# the release that made the toolchain below line up — named so the policy
+# lets exactly them through and nothing else.
 minimumReleaseAgeExclude:
   - '@libsql/client@0.18.0'
   - '@libsql/core@0.18.0'
-  - maplibre-gl@6.7.0
+  - maplibre-gl@6.13.0
+  - '@types/node@24.19.2'
+  - eslint-plugin-svelte@3.23.1
+  - phosphor-svelte@3.1.1
+
+# Two libraries declare `@sveltejs/kit` as an *optional* peer and have not
+# widened the range past 2 yet: Better Auth 1.7.7 (`^2.0.0`) and runed 0.37.1
+# (`^2.21.0`). Both use only what did not change in Kit 3 — `svelteKitHandler`
+# takes `resolve` and `building` as arguments, runed reads `$app/state` — and
+# both are proved against 3.0.1 by the end-to-end suite, so the warning is
+# noise rather than information. Remove each line when its release notes say
+# "SvelteKit 3"; `pnpm peers check` will tell you when it is time.
+peerDependencyRules:
+  allowedVersions:
+    'better-auth>@sveltejs/kit': '3'
+    'runed>@sveltejs/kit': '3'

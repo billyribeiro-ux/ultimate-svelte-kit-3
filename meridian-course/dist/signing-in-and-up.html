@@ -39,13 +39,14 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(site)/(auth)/signin/+page.svelte<span class="code__lines">:1-18</span></span>
+		<span class="code__file">src/routes/(site)/(auth)/signin/+page.svelte<span class="code__lines">:1-19</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
 	import { page } from '$app/state';
+	import { WarningCircleIcon } from 'phosphor-svelte';
 	import { m } from '#lib/paraglide/messages.js';
-	import { localizeHref } from '#lib/paraglide/runtime.js';
+	import { href } from '#lib/href.ts';
 	import { keepTyped } from '#lib/forms/keep-typed.ts';
 	import { signIn } from '#lib/remote/auth.remote.ts';
 
@@ -64,7 +65,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(site)/(auth)/signin/+page.svelte<span class="code__lines">:20-66</span></span>
+		<span class="code__file">src/routes/(site)/(auth)/signin/+page.svelte<span class="code__lines">:21-73</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;svelte:head&gt;
@@ -76,9 +77,15 @@
 	off and progressively enhances with it on. `fields.x.as('email')` writes
 	the name, the type and the current value; `issues()` are the validation
 	messages for that field, from the schema or from `invalid()` on the server.
+
+	`novalidate`: the schema on the server is the one validator, and its
+	messages come back as the coral line under the field, the same with
+	JavaScript on or off — not the browser's own bubble, which looks like
+	nothing else in the product and says something slightly different.
 --&gt;
-&lt;form class=&quot;card card--pad stack&quot; {...signIn}&gt;
+&lt;form class=&quot;stack&quot; novalidate {...signIn}&gt;
 	&lt;h1&gt;{m.auth_sign_in()}&lt;/h1&gt;
+	&lt;p class=&quot;auth__lede&quot;&gt;{m.auth_sign_in_lede()}&lt;/p&gt;
 
 	&lt;input {...signIn.fields.redirectTo.as('hidden', redirectTo)} /&gt;
 
@@ -86,7 +93,7 @@
 		&lt;span class=&quot;label&quot;&gt;{m.auth_email()}&lt;/span&gt;
 		&lt;input class=&quot;input&quot; {...signIn.fields.email.as('email')} autocomplete=&quot;email&quot; required /&gt;
 		{#each signIn.fields.email.issues() ?? [] as issue (issue.message)}
-			&lt;span class=&quot;issue&quot;&gt;{issue.message}&lt;/span&gt;
+			&lt;span class=&quot;issue&quot;&gt;&lt;WarningCircleIcon size={14} aria-hidden=&quot;true&quot; /&gt;{issue.message}&lt;/span&gt;
 		{/each}
 	&lt;/label&gt;
 
@@ -99,7 +106,7 @@
 			required
 		/&gt;
 		{#each signIn.fields.password.issues() ?? [] as issue (issue.message)}
-			&lt;span class=&quot;issue&quot;&gt;{issue.message}&lt;/span&gt;
+			&lt;span class=&quot;issue&quot;&gt;&lt;WarningCircleIcon size={14} aria-hidden=&quot;true&quot; /&gt;{issue.message}&lt;/span&gt;
 		{/each}
 	&lt;/label&gt;
 
@@ -107,23 +114,30 @@
 		{m.auth_sign_in()}
 	&lt;/button&gt;
 
-	&lt;p class=&quot;muted&quot;&gt;
+	&lt;p class=&quot;muted auth__foot&quot;&gt;
 		{m.auth_no_account()}
-		&lt;a href={localizeHref(`/signup?redirectTo=${encodeURIComponent(redirectTo)}`)}&gt;
+		&lt;a href={href(`/(site)/(auth)/signup?redirectTo=${encodeURIComponent(redirectTo)}`)}&gt;
 			{m.auth_sign_up()}
 		&lt;/a&gt;
 	&lt;/p&gt;
 &lt;/form&gt;</code></pre>
 </figure>
-<p><code>fields.email.as(&quot;email&quot;)</code> writes the name, the type and the current value; <code>issues()</code> are the validation messages for that field — from the schema, or from <code>invalid()</code> on the server, which chapter 17 showed putting “That email and password do not match” on the password field. Where to go afterwards rides in a hidden field; the server sanitises it, so a crafted link cannot send somebody who has just typed a password to another site. <code>pending</code> disables the button while a submission is in flight.</p>
+<p><code>fields.email.as(&quot;email&quot;)</code> writes the name, the type and the current value; <code>issues()</code> are the validation messages for that field — from the schema, or from <code>invalid()</code> on the server, which chapter 17 showed putting “That email and password do not match” on the password field. Where to go afterwards rides in a hidden field; the server sanitises it, so a crafted link cannot send somebody who has just typed a password to another site. <code>pending</code> disables the button while a submission is in flight. The form is <code>novalidate</code>: the schema on the server is the one validator, so a bad email comes back as the coral line under the field, with its warning icon on the first line of the message, the same with JavaScript on or off — not as the browser’s own bubble, which looks like nothing else in the product.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(site)/(auth)/signup/+page.svelte<span class="code__lines">:17-63</span></span>
+		<span class="code__file">src/routes/(site)/(auth)/signup/+page.svelte<span class="code__lines">:18-71</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">&lt;form class=&quot;card card--pad stack&quot; {...signUp}&gt;
+	<pre><code class="lang-svelte">&lt;!--
+	`novalidate`: the schema on the server is the one validator, and its
+	messages come back as the coral line under the field, the same with
+	JavaScript on or off — not the browser's own bubble, which looks like
+	nothing else in the product and says something slightly different.
+--&gt;
+&lt;form class=&quot;stack&quot; novalidate {...signUp}&gt;
 	&lt;h1&gt;{m.auth_sign_up()}&lt;/h1&gt;
+	&lt;p class=&quot;auth__lede&quot;&gt;{m.auth_sign_up_lede()}&lt;/p&gt;
 
 	&lt;input {...signUp.fields.redirectTo.as('hidden', redirectTo)} /&gt;
 
@@ -131,7 +145,7 @@
 		&lt;span class=&quot;label&quot;&gt;{m.auth_name()}&lt;/span&gt;
 		&lt;input class=&quot;input&quot; {...signUp.fields.name.as('text')} autocomplete=&quot;name&quot; required /&gt;
 		{#each signUp.fields.name.issues() ?? [] as issue (issue.message)}
-			&lt;span class=&quot;issue&quot;&gt;{issue.message}&lt;/span&gt;
+			&lt;span class=&quot;issue&quot;&gt;&lt;WarningCircleIcon size={14} aria-hidden=&quot;true&quot; /&gt;{issue.message}&lt;/span&gt;
 		{/each}
 	&lt;/label&gt;
 
@@ -139,7 +153,7 @@
 		&lt;span class=&quot;label&quot;&gt;{m.auth_email()}&lt;/span&gt;
 		&lt;input class=&quot;input&quot; {...signUp.fields.email.as('email')} autocomplete=&quot;email&quot; required /&gt;
 		{#each signUp.fields.email.issues() ?? [] as issue (issue.message)}
-			&lt;span class=&quot;issue&quot;&gt;{issue.message}&lt;/span&gt;
+			&lt;span class=&quot;issue&quot;&gt;&lt;WarningCircleIcon size={14} aria-hidden=&quot;true&quot; /&gt;{issue.message}&lt;/span&gt;
 		{/each}
 	&lt;/label&gt;
 
@@ -154,7 +168,7 @@
 		/&gt;
 		&lt;span class=&quot;hint&quot;&gt;{m.auth_password_hint()}&lt;/span&gt;
 		{#each signUp.fields.password.issues() ?? [] as issue (issue.message)}
-			&lt;span class=&quot;issue&quot;&gt;{issue.message}&lt;/span&gt;
+			&lt;span class=&quot;issue&quot;&gt;&lt;WarningCircleIcon size={14} aria-hidden=&quot;true&quot; /&gt;{issue.message}&lt;/span&gt;
 		{/each}
 	&lt;/label&gt;
 
@@ -162,15 +176,15 @@
 		{m.auth_sign_up()}
 	&lt;/button&gt;
 
-	&lt;p class=&quot;muted&quot;&gt;
+	&lt;p class=&quot;muted auth__foot&quot;&gt;
 		{m.auth_have_account()}
-		&lt;a href={localizeHref(`/signin?redirectTo=${encodeURIComponent(redirectTo)}`)}&gt;
+		&lt;a href={href(`/(site)/(auth)/signin?redirectTo=${encodeURIComponent(redirectTo)}`)}&gt;
 			{m.auth_sign_in()}
 		&lt;/a&gt;
 	&lt;/p&gt;
 &lt;/form&gt;</code></pre>
 </figure>
-<p>Sign-up is the same shape with a name and a <code>minlength</code> on the password that matches the schema’s twelve — the browser refuses first, the schema refuses second, Better Auth refuses third, and the message under the field is the same in all three languages. <code>autocomplete=&quot;new-password&quot;</code> lets a password manager offer to generate one.</p>
+<p>Sign-up is the same shape with a name and a <code>minlength</code> on the password that matches the schema’s twelve — a hint to a password manager now that the form does not let the browser refuse: the schema refuses first, Better Auth second, and both answers arrive as the line under the field. <code>autocomplete=&quot;new-password&quot;</code> lets a password manager offer to generate one.</p>
 <h3 id="typed-early">What was typed before the page woke up</h3>
 
 <figure class="code">
@@ -193,12 +207,12 @@ export function keepTyped(...fields: readonly TextField[]): void {
 	}
 }</code></pre>
 </figure>
-<p>Both pages call <code>keepTyped()</code> at the top of their script, and it earns its place with a bug the end-to-end suite found. A server-rendered form is usable before the JavaScript arrives — that is the point of rendering it on the server — and on a slow connection a person can have typed their email by the time the bundle runs. Then hydration happens: the field spreads its *current* value onto the input, the current value is the empty string the server knew about, and what was typed is gone. The person presses the button and the browser says “Please fill out this field” about a field they filled. Playwright types faster than a bundle loads, so about one run in ten signed in with an email that had vanished.</p>
+<p>Both pages call <code>keepTyped()</code> at the top of their script, and it earns its place with a bug the end-to-end suite found. A server-rendered form is usable before the JavaScript arrives — that is the point of rendering it on the server — and on a slow connection a person can have typed their email by the time the bundle runs. Without it, hydration happened next: the field spread its *current* value onto the input, the current value was the empty string the server had known about, and what was typed was gone. The person pressed the button and the browser said “Please fill out this field” about a field they had filled. Playwright types faster than a bundle loads, so about one run in ten signed in with an email that had vanished.</p>
 <p>The fix uses an ordering guarantee worth knowing: a component’s <code>&lt;script&gt;</code> runs *before* its template is hydrated, while the server’s HTML is still on the page. So the helper reads what is in each input now, and makes it the field’s value with <code>set()</code>, and hydration writes the typed text back instead of nothing. It finds the input by the exact generated name the field’s own <code>as()</code> reports — <code>email/&lt;hash&gt;/signIn</code> — so a field on some other form can never be mistaken for this one, and on a client-side navigation there is no server HTML, the query finds nothing, and nothing happens.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">e2e/account.e2e.ts<span class="code__lines">:38-61</span></span>
+		<span class="code__file">e2e/account.e2e.ts<span class="code__lines">:45-68</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">test('what is typed before the page has hydrated is kept', async ({ page }) =&gt; {
@@ -230,28 +244,83 @@ export function keepTyped(...fields: readonly TextField[]): void {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(site)/(auth)/+layout.svelte<span class="code__lines">:1-21</span></span>
+		<span class="code__file">src/routes/(site)/(auth)/+layout.svelte<span class="code__lines">:1-76</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
-	let { children } = $props();
+	import { CompassRoseIcon } from 'phosphor-svelte';
+	import { m } from '#lib/paraglide/messages.js';
+	import type { LayoutProps } from './$types';
+
+	let { children }: LayoutProps = $props();
 &lt;/script&gt;
 
-&lt;!-- One centred card for both sign-in and sign-up; the pages own the form. --&gt;
+&lt;!--
+	Both sign-in and sign-up sit here: the brand mark above, the form below.
+	On a phone the form sits straight on the paper — a card inside a page
+	inside a screen was a form in a box in a box — and from 40em it becomes
+	one card with room around it. The pages own the form and its words.
+--&gt;
 &lt;div class=&quot;auth container&quot;&gt;
-	{@render children()}
+	&lt;div class=&quot;auth__panel&quot;&gt;
+		&lt;p class=&quot;auth__brand&quot;&gt;
+			&lt;CompassRoseIcon size={28} weight=&quot;duotone&quot; aria-hidden=&quot;true&quot; /&gt;
+			&lt;span class=&quot;visually-hidden&quot;&gt;{m.app_name()}&lt;/span&gt;
+		&lt;/p&gt;
+		{@render children()}
+	&lt;/div&gt;
 &lt;/div&gt;
 
 &lt;style&gt;
 	.auth {
 		display: grid;
-		place-items: center;
-		padding-block: var(--space-7);
-		max-width: 28rem;
+		place-items: start center;
+		padding-block: var(--section);
+		max-width: 26rem;
 	}
 
-	.auth &gt; :global(*) {
+	.auth__panel {
 		width: 100%;
+		display: grid;
+		gap: var(--space-5);
+	}
+
+	.auth__brand {
+		display: flex;
+		justify-content: center;
+		color: var(--sea);
+	}
+
+	/* The page's h1 and lede are centred under the mark; the form below them is not. */
+	.auth__panel :global(h1),
+	.auth__panel :global(.auth__lede) {
+		text-align: center;
+		max-inline-size: none;
+	}
+
+	.auth__panel :global(.auth__lede) {
+		color: var(--ink-2);
+		margin-block-start: calc(-1 * var(--space-2));
+	}
+
+	/* The primary button on these two pages is the tallest in the product: 48px, full width. */
+	.auth__panel :global(.btn--primary) {
+		min-height: 3rem;
+		font-size: var(--text-md);
+	}
+
+	.auth__panel :global(.auth__foot) {
+		text-align: center;
+	}
+
+	@media (min-width: 40em) {
+		.auth__panel {
+			padding: var(--space-6);
+			border: 1px solid var(--line);
+			border-radius: var(--radius-xl);
+			background: var(--paper-2);
+			box-shadow: var(--shadow-2);
+		}
 	}
 &lt;/style&gt;</code></pre>
 </figure>
@@ -289,31 +358,39 @@ export const load: LayoutServerLoad = ({ locals, url }) =&gt; {
 	return {};
 };</code></pre>
 </figure>
-<p>The <code>(auth)</code> group is a centred card; the <code>(app)</code> group is a guard. Every route under <code>(app)</code> needs a person, and checking once in a layout <code>load</code> means no page inside can forget — and it happens before rendering starts, so the answer is a real 303 with <code>redirectTo</code> carrying the page they wanted. The remote functions check too, with <code>requireUser()</code>, because a remote function can be called from anywhere. The trip page is deliberately not in the group: a trip visible by link is readable without an account.</p>
+<p>The <code>(auth)</code> group is the brand mark over the form — straight on the paper on a phone, where a card inside a page inside a screen was a box in a box, and one card from 40em; the <code>(app)</code> group is a guard. Every route under <code>(app)</code> needs a person, and checking once in a layout <code>load</code> means no page inside can forget — and it happens before rendering starts, so the answer is a real 303 with <code>redirectTo</code> carrying the page they wanted. The remote functions check too, with <code>requireUser()</code>, because a remote function can be called from anywhere. The trip page is deliberately not in the group: a trip visible by link is readable without an account.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/ui/Header.svelte<span class="code__lines">:68-83</span></span>
+		<span class="code__file">src/lib/ui/Header.svelte<span class="code__lines">:152-175</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">&lt;div class=&quot;nav__account&quot;&gt;
+	<pre><code class="lang-svelte">&lt;div class=&quot;nav__account&quot; style:--i={links.length + 1}&gt;
 	{#if user}
-		&lt;a class=&quot;btn btn--primary btn--sm&quot; href={localizeHref('/trips/new')}&gt;
-			&lt;PlusIcon size={14} aria-hidden=&quot;true&quot; /&gt;
+		&lt;a
+			class=&quot;btn btn--primary&quot;
+			href={href('/(site)/(app)/trips/new')}
+			aria-current={onNewTrip ? 'page' : undefined}
+		&gt;
+			&lt;PlusIcon size={16} aria-hidden=&quot;true&quot; /&gt;
 			{m.nav_new_trip()}
 		&lt;/a&gt;
 		&lt;!-- A form, so signing out works with JavaScript off too. --&gt;
 		&lt;form {...signOut}&gt;
-			&lt;button class=&quot;btn btn--ghost btn--sm&quot; type=&quot;submit&quot; title={user.name}&gt;
+			&lt;button class=&quot;btn btn--ghost&quot; type=&quot;submit&quot; title={user.name}&gt;
 				{m.auth_sign_out()}
 			&lt;/button&gt;
 		&lt;/form&gt;
 	{:else}
-		&lt;a class=&quot;btn btn--sm&quot; href={localizeHref('/signin')}&gt;{m.auth_sign_in()}&lt;/a&gt;
+		&lt;a
+			class=&quot;btn&quot;
+			href={href('/(site)/(auth)/signin')}
+			aria-current={onSignIn ? 'page' : undefined}&gt;{m.auth_sign_in()}&lt;/a
+		&gt;
 	{/if}
 &lt;/div&gt;</code></pre>
 </figure>
-<p>Signing out is a <code>&lt;form&gt;</code> spread from <code>signOut</code>, a remote form with no fields, so the button in the header works before any JavaScript has loaded and after it has failed to. It redirects home; the layout’s <code>load</code> runs again and the header renders the signed-out state.</p>
+<p>Signing out is a <code>&lt;form&gt;</code> spread from <code>signOut</code>, a remote form with no fields, so the button in the header works before any JavaScript has loaded and after it has failed to. It redirects home; the layout’s <code>load</code> runs again and the header renders the signed-out state. The header’s account corner is the same on every page — “New trip” for a person, “Sign in” for a stranger — so nothing in the header moves when the page changes under it. On its own page the action says so with <code>aria-current=&quot;page&quot;</code>: <code>onNewTrip</code> and <code>onSignIn</code> read <code>page.route.id</code>, which is the same in every language, so <code>/de/signin</code> is recognised without a German string in the check.</p>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>

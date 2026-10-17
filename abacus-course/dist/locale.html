@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>What a person typed, in their language — Building Abacus</title>
-<meta name="description" content="A German types `1.234,56` and an American types `1,234.56` and they mean the same number. Nothing here knows any locale: it asks `Intl` how the locale writes a number and a date, and reads the answer backwards.">
+<meta name="description" content="A German types 1.234,56 and an American types 1,234.56 and they mean the same number. Nothing here knows any locale: it asks Intl how the locale writes a number and a date, and reads the answer backwards.">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -81,7 +81,7 @@ export function separators(locale: string): Separators {
 	return found;
 }</code></pre>
 </figure>
-<p>The trick in <code>separators</code> is the whole philosophy of the module: format a known number with <code>Intl.NumberFormat</code> and read the decimal and group characters out of the *parts*. The browser already knows that German groups with a dot; a table in this file would be a table that is wrong for the locale nobody tested.</p>
+<p>The trick in <code>separators</code> is the whole philosophy of the module: format a known number with <code>Intl.NumberFormat</code> and read the decimal and group characters out of the <em>parts</em>. The browser already knows that German groups with a dot; a table in this file would be a table that is wrong for the locale nobody tested.</p>
 
 <figure class="code">
 	<figcaption>
@@ -163,7 +163,7 @@ export function parseNumber(text: string, locale: string): number | null {
 	return Number.isFinite(n) ? sign * n : null;
 }</code></pre>
 </figure>
-<p>Parsing a number backwards from the locale’s notation. Group separators are optional but, if present, must be *consistent*: <code>1,2,3</code> is not a number in any locale, and the point of the check is that a typo becomes text rather than a silently wrong number. A narrow no-break space is accepted as a group mark because that is what French <code>Intl</code> produces and no keyboard has a key for it.</p>
+<p>Parsing a number backwards from the locale’s notation. Group separators are optional but, if present, must be <em>consistent</em>: <code>1,2,3</code> is not a number in any locale, and the point of the check is that a typo becomes text rather than a silently wrong number. A narrow no-break space is accepted as a group mark because that is what French <code>Intl</code> produces and no keyboard has a key for it.</p>
 
 <figure class="code">
 	<figcaption>
@@ -210,7 +210,7 @@ export function parseInput(text: string, locale: string): Parsed {
 	return { value: text };
 }</code></pre>
 </figure>
-<p><code>parseInput</code> is the entry point the engine is given as its <code>parseLiteral</code>. It decides what a typed string *means* and, when the text implies a format — <code>12%</code>, <code>$40</code>, a date — says so, so that a cell typed as a percentage stays a percentage. A leading apostrophe forces text, which is how a person keeps a phone number from becoming a number.</p>
+<p><code>parseInput</code> is the entry point the engine is given as its <code>parseLiteral</code>. It decides what a typed string <em>means</em> and, when the text implies a format — <code>12%</code>, <code>$40</code>, a date — says so, so that a cell typed as a percentage stays a percentage. A leading apostrophe forces text, which is how a person keeps a phone number from becoming a number.</p>
 <h3 id="formatting">How a value looks</h3>
 
 <figure class="code">

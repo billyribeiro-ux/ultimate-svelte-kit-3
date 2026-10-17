@@ -27,10 +27,11 @@
  * starts with a screenshot can still find the log line.
  */
 
-import type { RequestEvent, RequestHandler } from '@sveltejs/kit';
+import { isHttpError, type RequestEvent, type RequestHandler } from '@sveltejs/kit';
 import { getRequestEvent } from '$app/server';
 import {
 	bucketFor,
+	NotAllowed,
 	rateLimitHeaders,
 	RateLimiter,
 	viewerFromApiKey,
@@ -310,11 +311,10 @@ export async function jsonBody(request: Request): Promise<Record<string, unknown
 export function apiErrorFrom(thrown: unknown): ApiError {
 	if (thrown instanceof ApiError) return thrown;
 
-	const reason = (thrown as { reason?: string })?.reason;
-
-	if (reason === 'not_found') return new ApiError('not_found', 'Not found.');
-	if (reason !== undefined) {
-		return new ApiError('forbidden', thrown instanceof Error ? thrown.message : 'Forbidden.');
+	if (thrown instanceof NotAllowed) {
+		return thrown.reason === 'not_found'
+			? new ApiError('not_found', 'Not found.')
+			: new ApiError('forbidden', thrown.message);
 	}
 
 	throw thrown;
@@ -325,7 +325,8 @@ export function apiErrorFrom(thrown: unknown): ApiError {
  *
  * `HttpError` is `{ status, body: { message } }` and — the part that catches
  * everybody — does **not** extend `Error`, so `instanceof Error` is false for
- * every deliberate error the server threw.
+ * every deliberate error the server threw. `isHttpError` is Kit's own guard
+ * for it, and it narrows `body` to `App.Error` without a cast.
  *
  * Anything with a status we do not publish is re-thrown, which sends it to the
  * handler's unknown branch: logged with a request id, and answered with a
@@ -333,11 +334,11 @@ export function apiErrorFrom(thrown: unknown): ApiError {
  * publish a status we never documented.
  */
 export function fromHttpError(thrown: unknown, fallback: string): never {
-	const http = thrown as { status?: number; body?: { message?: string } };
-	const code = http.status === undefined ? undefined : CODE_FOR.get(http.status);
-
-	if (code !== undefined && code !== 'internal') {
-		throw new ApiError(code, http.body?.message ?? fallback);
+	if (isHttpError(thrown)) {
+		const code = CODE_FOR.get(thrown.status);
+		if (code !== undefined && code !== 'internal') {
+			throw new ApiError(code, thrown.body.message || fallback);
+		}
 	}
 
 	throw thrown;

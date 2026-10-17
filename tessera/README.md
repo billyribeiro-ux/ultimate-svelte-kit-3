@@ -7,8 +7,8 @@ signal. When the train comes out of the tunnel, both boards agree — without a
 merge dialogue, without a "your changes could not be saved", and without either
 person having thought about it.
 
-Requires **Node 24.20.0** (the current LTS, pinned in `.nvmrc` and `engines`)
-and **pnpm 11+**.
+Requires **Node 24.21.0** (the current LTS, pinned in `.nvmrc` and `engines`)
+and **pnpm 12** (pinned in `packageManager`, so Corepack picks it for you).
 
 ## Quick start
 
@@ -21,7 +21,8 @@ pnpm run dev
 ```
 
 The seed prints two sign-ins — an owner and a viewer on the same board — and the
-board's short link. Open it in two windows and drag something.
+board's short link. Open it in two windows and drag something. (The viewer also
+owns an empty board of their own, as every account made through sign-up does.)
 
 ## What is interesting in here
 

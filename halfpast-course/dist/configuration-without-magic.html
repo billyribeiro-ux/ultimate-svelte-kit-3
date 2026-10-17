@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Configuration without magic — Building Halfpast</title>
-<meta name="description" content="SvelteKit 3 deleted `svelte.config.js` and the `$env` modules. What replaced them is better, and stricter.">
+<meta name="description" content="SvelteKit 3 no longer supports svelte.config.js, and it deprecates the $env modules. What replaced them is better, and stricter.">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -33,11 +33,11 @@
 		<article>
 			<p class="eyebrow">Chapter 15</p>
 			<h1>Configuration without magic</h1>
-			<p class="lede">SvelteKit 3 deleted <code>svelte.config.js</code> and the <code>$env</code> modules. What replaced them is better, and stricter.</p>
+			<p class="lede">SvelteKit 3 no longer supports <code>svelte.config.js</code>, and it deprecates the <code>$env</code> modules. What replaced them is better, and stricter.</p>
 			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Every environment variable declared, validated and typed — and an app that refuses to start with a bad one.</p></aside>
-			<p>Two things you may have muscle memory for no longer exist in SvelteKit 3.</p>
+			<p>Two things you may have muscle memory for have changed in SvelteKit 3: one is gone, the other is on its way out.</p>
 <h3 id="no-config-file">One config file, not two</h3>
-<p>There is no <code>svelte.config.js</code>. Everything that used to live in it now goes inside the <code>sveltekit()</code> plugin in <code>vite.config.ts</code>.</p>
+<p>There is no <code>svelte.config.js</code>, because SvelteKit 3 no longer supports one. Everything that lived in it in SvelteKit 2 now goes inside the <code>sveltekit()</code> plugin in <code>vite.config.ts</code>, and the options that used to sit under <code>kit</code> are top-level plugin options now, side by side with <code>compilerOptions</code>.</p>
 
 <figure class="code">
 	<figcaption>
@@ -95,14 +95,14 @@
 });</code></pre>
 </figure>
 <p>Three details in there are worth knowing before they cost you an evening:</p>
-<ul><li>The config is a <strong>function</strong>, so it can call <code>loadEnv</code>. It has to be, because <code>paths.origin</code> needs a value from <code>.env</code> and Vite has not loaded those when a plain object literal is evaluated. Note <code>...process.env</code> last — a real environment variable must win over a checked-in <code>.env</code> file.</li><li><code>sveltePhosphorOptimize()</code> comes <strong>after</strong> <code>sveltekit()</code>. Icon plugins rewrite imports that SvelteKit has to see first; reverse them and you get a build that succeeds and ships every icon in the library.</li><li><code>ssr.external</code> tells Vite not to bundle the native libSQL binary. Together with keeping it in <code>dependencies</code>, this is what stops the runtime <code>Cannot find module</code> we met in chapter 10.</li></ul>
+<ul><li>The config is a <strong>function</strong>, so it can call <code>loadEnv</code>. It has to be, because <code>paths.origin</code> needs a value from <code>.env</code> and Vite has not loaded those when a plain object literal is evaluated. Note <code>...process.env</code> last — a real environment variable must win over a checked-in <code>.env</code> file.</li><li><code>sveltePhosphorOptimize()</code> comes <strong>after</strong> <code>sveltekit()</code>. It rewrites <code>import { CalendarIcon } from 'phosphor-svelte'</code> into a deep import, so the dev server does not crawl thousands of icon components on a cold start, and it parses its input as JavaScript. Vite runs <code>transform</code> hooks in array order, so put it first and it is handed raw <code>.svelte</code> source and dies on the first <code>&lt;h1&gt;</code>. A loud failure, at least.</li><li><code>ssr.external</code> tells Vite not to bundle the native libSQL binary. Together with keeping it in <code>dependencies</code>, this is what stops the runtime <code>Cannot find module</code> we met in chapter 10.</li></ul>
 
 <aside class="callout callout--why">
 	<h4>paths.origin — new in 3.0, and not optional here</h4>
-	<p>It is the origin SvelteKit trusts for cross-site request checks. <code>@sveltejs/adapter-node</code> v6 no longer reads an <code>ORIGIN</code> environment variable at runtime; the value is baked in at build time from this setting, and the header fallback <strong>assumes https</strong>. A plain-HTTP preview server therefore computes <code>https://localhost:4173</code>, the browser sends <code>http://localhost:4173</code>, they disagree, and *every* form post comes back 403 &quot;Cross-site remote requests are forbidden&quot;. Setting <code>paths.origin</code> fixes it in one line and is genuinely hard to diagnose without knowing.</p>
+	<p>It is the origin SvelteKit trusts for cross-site request checks. Up to v5, <code>@sveltejs/adapter-node</code> read that origin from an <code>ORIGIN</code> environment variable at runtime; v6, the adapter for SvelteKit 3, removed it, so the value is baked in at build time from this setting, and the header fallback <strong>assumes https</strong>. (This app still declares an <code>ORIGIN</code> of its own in <code>src/env.ts</code>, for Better Auth in the next chapter; the adapter no longer looks at it.) So the built server, <code>node build</code>, served over plain HTTP computes <code>https://localhost:4173</code>, the browser sends <code>http://localhost:4173</code>, they disagree, and <em>every</em> form post comes back 403 &quot;Cross-site remote requests are forbidden&quot;. (<code>pnpm preview</code> will not show you this: <code>vite preview</code> takes its protocol from Vite's own <code>preview.https</code> setting and gets <code>http</code> right. It is adapter-node's handler that assumes <code>https</code>, which is why the end-to-end tests, which run <code>node build</code>, were the ones that met it.) Setting <code>paths.origin</code> fixes it in one line and is genuinely hard to diagnose without knowing.</p>
 </aside>
 <h3 id="env">Environment variables, declared</h3>
-<p>The <code>$env/static/private</code> and <code>$env/dynamic/private</code> modules are gone. In their place: a file you write, listing every variable the app reads.</p>
+<p>In SvelteKit 2, environment variables came from the <code>$env/static/private</code> and <code>$env/dynamic/private</code> modules. SvelteKit 3 deprecates them, and SvelteKit 4 will remove them, in favour of <code>$app/env/private</code> and <code>$app/env/public</code>; this app never imports the old ones. Behind the new modules: a file you write, listing every variable the app reads.</p>
 
 <figure class="code">
 	<figcaption>
@@ -110,10 +110,16 @@
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">import { defineEnvVars } from '@sveltejs/kit/env';
+import { building } from '$app/env';
 import * as v from 'valibot';
 
 /** A non-empty string, with surrounding whitespace stripped. */
 const required = v.pipe(v.string(), v.trim(), v.minLength(1));
+
+// …
+function neededAtRuntime&lt;Schema extends v.GenericSchema&lt;string, string&gt;&gt;(schema: Schema) {
+	return building ? v.optional(schema) : schema;
+}
 
 // …
 
@@ -122,18 +128,20 @@ export const variables = defineEnvVars({
 
 	DATABASE_URL: {
 		description:
-			'libSQL connection string. `file:local.db` in development, a `libsql://…` Turso URL in production.',
-		schema: required
+			'libSQL connection string. `file:local.db` in development, a `libsql://…` Turso URL in production. Not needed to build.',
+		schema: neededAtRuntime(required)
 	},
 
 	// …
 
 	BETTER_AUTH_SECRET: {
 		description:
-			'Signing key for session tokens. Generate with `openssl rand -base64 32`. See https://www.better-auth.com/docs/installation.',
-		schema: v.pipe(
-			required,
-			v.minLength(32, 'BETTER_AUTH_SECRET must be at least 32 characters of high entropy')
+			'Signing key for session tokens. Generate with `openssl rand -base64 32`. See https://www.better-auth.com/docs/installation. Not needed to build.',
+		schema: neededAtRuntime(
+			v.pipe(
+				required,
+				v.minLength(32, 'BETTER_AUTH_SECRET must be at least 32 characters of high entropy')
+			)
 		)
 	},
 
@@ -153,7 +161,15 @@ export const variables = defineEnvVars({
 	// …
 });</code></pre>
 </figure>
-<ul><li><strong>Nothing is implicit.</strong> A variable not declared here cannot be imported. That is a *type error*, not a runtime <code>undefined</code> three weeks later.</li><li><strong>Each one carries a schema.</strong> The app refuses to start with a bad value, rather than failing at 3am when the first request reaches that branch.</li><li><strong><code>public: true</code> is an explicit, reviewable act.</strong> You cannot leak a secret to the browser by accident; you have to type the word <code>public</code> next to it.</li></ul>
+<ul><li><strong>Nothing is implicit.</strong> A variable not declared here cannot be imported. That is a <em>type error</em>, not a runtime <code>undefined</code> three weeks later.</li><li><strong>Each one carries a schema.</strong> The app refuses to start with a bad value, rather than failing at 3am when the first request reaches that branch.</li><li><strong><code>public: true</code> is an explicit, reviewable act.</strong> You cannot leak a secret to the browser by accident; you have to type the word <code>public</code> next to it.</li></ul>
+<h3 id="building">Required to run, not to build</h3>
+<p>The schemas run at build time as well as at start-up, because SvelteKit analyses the app during <code>vite build</code> by running it. For the two public variables that is right: <code>static: true</code> inlines them into the bundle, so they have to be the real values when you build. The three private ones are different. Nothing inlines them, the build never uses them, and a CI job that builds the app should not need a database address or a signing secret to do it.</p>
+<p>The SvelteKit docs give the way out in the same paragraph that says a bad value fails the build: &quot;use <code>building</code> from <code>$app/env</code> along with a validator that accepts an optional value: <code>schema: building ? v.optional(v.string()) : v.string()</code>&quot;. <code>neededAtRuntime</code> is that sentence as a function, wrapped round the three private schemas. While building, a missing value is fine; once the server starts, <code>building</code> is <code>false</code> and a missing or malformed one stops it on the spot, exactly as before.</p>
+
+<aside class="callout callout--why">
+	<h4>Why accept a weaker type</h4>
+	<p>Each of the three now imports as <code>string | undefined</code>, because at build time it can be, so the two modules that read them check <code>building</code> themselves — chapter 10 showed the database one, and the next chapter shows Better Auth's. That is a real cost, paid in a few lines, and it buys a build that needs no secret and reaches no database. The alternative is to feed the build placeholder values, which is where this project started; chapter 35 tells how that ended, with a build that could talk to production.</p>
+</aside>
 
 <figure class="code">
 	<figcaption>

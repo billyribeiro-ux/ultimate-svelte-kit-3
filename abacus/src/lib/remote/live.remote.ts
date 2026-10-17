@@ -9,9 +9,9 @@
  * runs the `finally` and leaves the room.
  *
  * Operations go the other way through `send`, a command that applies them
- * to the stored document, numbers them, and broadcasts them. The sending
- * tab receives its own operations back with its `client` id and ignores
- * them; every other tab applies them without an undo entry.
+ * to the stored document, numbers them, and broadcasts them as a batch. The
+ * sending tab receives its own batch back with its `client` id and ignores
+ * it; every other tab applies it without an undo entry.
  */
 
 import * as v from 'valibot';
@@ -42,12 +42,7 @@ class Mailbox {
 			return;
 		}
 		this.#pending = this.#pending
-			? {
-					version: Math.max(this.#pending.version, message.version),
-					ops: [...this.#pending.ops, ...message.ops],
-					client: message.ops.length > 0 ? message.client : this.#pending.client,
-					present: message.present
-				}
+			? { batches: [...this.#pending.batches, ...message.batches], present: message.present }
 			: message;
 	}
 
@@ -81,17 +76,25 @@ class Mailbox {
 	}
 }
 
+/** One id per tab, so a tab can recognise its own operations coming back. Stored with each batch. */
+const ClientSchema = v.pipe(v.string(), v.minLength(4), v.maxLength(40));
+
 const WatchSchema = v.object({
 	id: v.string(),
-	/** One id per tab, so a tab can recognise its own operations coming back. */
-	client: v.pipe(v.string(), v.minLength(4), v.maxLength(40)),
-	/** The version this tab already has; operations after it are replayed first. */
+	client: ClientSchema,
+	/**
+	 * The version this tab loaded; every batch after it is replayed first. It is
+	 * fixed for the life of the query, so a reconnect replays from here again —
+	 * which is why every batch carries its version, and the browser skips the
+	 * ones it has.
+	 */
 	since: v.pipe(v.number(), v.integer(), v.minValue(0))
 });
 
 export const watchSheet = query.live(WatchSchema, async function* ({ id, client, since }) {
 	const user = requireUser();
-	const sheet = await requireSheet(id, user);
+	// Whoever may open the sheet may watch it, and nobody else.
+	await requireSheet(id, user);
 
 	const mailbox = new Mailbox();
 	const leave = join(id, { client, userId: user.id, name: user.name, cell: null }, (m) =>
@@ -107,13 +110,7 @@ export const watchSheet = query.live(WatchSchema, async function* ({ id, client,
 
 	try {
 		// Catch up first: whatever happened between the page load and now.
-		const missed = await opsSince(id, since);
-		yield {
-			version: sheet.version,
-			ops: missed.flatMap((m) => m.ops),
-			client: null,
-			present: presentIn(id)
-		} satisfies LiveMessage;
+		yield { batches: await opsSince(id, since), present: presentIn(id) } satisfies LiveMessage;
 
 		while (true) {
 			const message = await mailbox.next();
@@ -128,20 +125,20 @@ export const watchSheet = query.live(WatchSchema, async function* ({ id, client,
 export const send = command(
 	v.object({
 		id: v.string(),
-		client: v.string(),
+		client: ClientSchema,
 		ops: v.pipe(v.array(OpSchema), v.minLength(1), v.maxLength(100))
 	}),
 	async ({ id, client, ops }) => {
-		const { version } = await applySheetOps(id, requireUser(), ops);
-		broadcast(id, { version, ops, client });
+		const { version } = await applySheetOps(id, requireUser(), client, ops);
+		broadcast(id, { version, client, ops });
 		return { version };
 	}
 );
 
 export const setCursor = command(
-	v.object({ id: v.string(), client: v.string(), cell: v.nullable(v.string()) }),
+	v.object({ id: v.string(), client: ClientSchema, cell: v.nullable(v.string()) }),
 	async ({ id, client, cell }) => {
-		const sheet = await requireSheet(id, currentUser());
-		moveCursor(id, client, cell, sheet.version);
+		await requireSheet(id, currentUser());
+		moveCursor(id, client, cell);
 	}
 );

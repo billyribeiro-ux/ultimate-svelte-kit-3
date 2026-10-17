@@ -153,3 +153,57 @@ test('a template can be saved straight into an account', async ({ page }) => {
 	await expect(page.getByLabel('Sheet title')).toHaveText('Loan schedule');
 	await device.detach();
 });
+
+/**
+ * The criterion `vite.config.ts` names for turning `forkPreloads` back on. In
+ * another project, with that flag on, a back navigation like this one
+ * completed — URL changed, `navigation.complete` resolved — with the old page
+ * still on screen. The sheet page has a top-level `await`, which is what a
+ * forked preload has to get right.
+ */
+test('back from a sheet shows the workspace, and forward shows the sheet', async ({ page }) => {
+	const device = await attachAuthenticator(page);
+	await register(page, 'Katherine');
+	const id = await createSheet(page, 'Round trip');
+	await expect(page.getByLabel('Sheet title')).toHaveText('Round trip');
+
+	await page.goBack();
+	await expect(page).toHaveURL(/\/sheets$/);
+	await expect(page.getByRole('heading', { name: 'Your sheets' })).toBeVisible();
+	await expect(page.getByLabel('Sheet title')).toHaveCount(0);
+
+	await page.goForward();
+	await expect(page).toHaveURL(new RegExp(`/sheet/${id}$`));
+	await expect(page.getByLabel('Sheet title')).toHaveText('Round trip');
+	await expect(page.getByRole('heading', { name: 'Your sheets' })).toHaveCount(0);
+
+	await device.detach();
+});
+
+test('the sharing setting is a form that works with JavaScript off', async ({ page, browser }) => {
+	const device = await attachAuthenticator(page);
+	await register(page, 'Mary');
+	const id = await createSheet(page, 'Shared by a form');
+
+	// The same person — the same session cookie — in a browser with no JavaScript.
+	const plain = await browser.newContext({
+		javaScriptEnabled: false,
+		storageState: await page.context().storageState()
+	});
+	const tab = await plain.newPage();
+	await tab.goto(`/sheet/${id}`);
+	// `popovertarget` is HTML: the menu opens with no script at all.
+	await tab.getByRole('button', { name: 'Share' }).click();
+	await tab.getByLabel('Anyone signed in with the link can edit').check();
+	await tab.getByRole('button', { name: 'Save sharing' }).click();
+	await expect(tab.getByLabel('Anyone signed in with the link can edit')).toBeChecked();
+
+	// Stored, not just checked: the workspace, with JavaScript, says so.
+	await page.goto('/sheets');
+	await expect(page.getByRole('link', { name: /Shared by a form/ })).toContainText(
+		'shared by link'
+	);
+
+	await plain.close();
+	await device.detach();
+});

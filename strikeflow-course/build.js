@@ -11,6 +11,8 @@
  *   - It works with JavaScript off
  *
  * Run:  node strikeflow-course/build.js
+ * Then: node strikeflow-course/verify.js — checks every quoted block in the
+ *       built pages against ../strikeflow-site (see that file's header).
  */
 
 import { mkdir, writeFile, rm, cp } from 'node:fs/promises';
@@ -36,15 +38,26 @@ function esc(value) {
 }
 
 /**
- * Inline markup for prose: `code`, **bold**, [text](url).
+ * Inline markup for prose: `code`, **bold**, *italic*, [text](url).
  * Escaping happens FIRST, so the source text can never inject HTML.
+ *
+ * Code spans are parked behind placeholders while the emphasis rules run, so an
+ * asterisk inside one — `*.svelte`, `a * b` — is never read as markup, while
+ * an emphasis may still contain a code span (*MUST come after `sveltekit()`*).
+ * Bold runs first and may hold an italic (**read the *why* boxes**). An italic
+ * needs a non-space just inside each asterisk and no letter just outside, so a
+ * lone `*` in prose stays an asterisk.
  * @param {string} text
  */
 function inline(text) {
+	/** @type {string[]} */
+	const codes = [];
 	return esc(text)
-		.replace(/`([^`]+)`/g, '<code>$1</code>')
-		.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-		.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+		.replace(/`([^`]+)`/g, (_, code) => `\u0000${codes.push(code) - 1}\u0000`)
+		.replace(/\*\*((?:[^*]|\*(?!\*))+)\*\*/g, '<strong>$1</strong>')
+		.replace(/(^|[^*\w])\*(?![\s*])([^*]+?)(?<![\s*])\*(?![*\w])/g, '$1<em>$2</em>')
+		.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+		.replace(/\u0000(\d+)\u0000/g, (_, i) => `<code>${codes[Number(i)]}</code>`);
 }
 
 /* ------------------------------------------------------------------ */
@@ -269,7 +282,7 @@ function renderIndex(all) {
 
 	<div class="home__meta">
 		<span>${all.length} chapters</span>
-		<span>SvelteKit 3 RC</span>
+		<span>SvelteKit 3.0.1</span>
 		<span>Svelte 5</span>
 		<span>TypeScript strict</span>
 	</div>

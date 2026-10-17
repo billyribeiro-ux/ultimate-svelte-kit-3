@@ -14,7 +14,7 @@
  * as wrong to a reader as a stale paste, and no amount of byte-comparison
  * notices.
  *
- * So this checks six things a person would otherwise have to check by eye:
+ * So this checks seven things a person would otherwise have to check by eye:
  *
  *   1. the file exists;
  *   2. the range is inside it;
@@ -25,7 +25,11 @@
  *      cheap and surprisingly effective proxy for "this is a whole thing";
  *   6. every chapter has at least one code or terminal block, because a chapter
  *      of pure prose in a course about building something is usually a chapter
- *      that lost its code in an edit.
+ *      that lost its code in an edit;
+ *   7. it does not end inside a block comment — a slice that stops above the
+ *      line that closes the comment shows half a doc comment and none of what
+ *      it documents. This holds for `partial` blocks too: cutting through code
+ *      on purpose is a choice, cutting through a sentence never is.
  *
  * Run:  node ostinato-course/verify.js
  */
@@ -39,7 +43,7 @@ let quoted = 0;
 let illustrative = 0;
 
 /**
- * Do the brackets balance?
+ * Do the brackets balance, and is every block comment closed by the end?
  *
  * Deliberately crude: it counts characters and ignores those inside strings and
  * comments, which it detects with a small state machine rather than a regular
@@ -49,9 +53,11 @@ let illustrative = 0;
  * worth avoiding.
  *
  * @param {string} text
+ * @returns {{ balanced: boolean, openComment: boolean }}
  */
-function balanced(text) {
+function scan(text) {
 	let depth = 0;
+	let underflow = false;
 	let inString = /** @type {string | null} */ (null);
 	let inLine = false;
 	let inBlock = false;
@@ -96,11 +102,12 @@ function balanced(text) {
 		if (ch === '}' || ch === ')' || ch === ']') depth -= 1;
 
 		// A slice that closes more than it opens is cut off at the front, which is
-		// worth reporting even if it ends up balanced by the end.
-		if (depth < 0) return false;
+		// worth reporting even if it ends up balanced by the end. The scan carries
+		// on, because whether a comment is left open is a separate question.
+		if (depth < 0) underflow = true;
 	}
 
-	return depth === 0;
+	return { balanced: !underflow && depth === 0, openComment: inBlock };
 }
 
 for (const chapter of chapters) {
@@ -150,10 +157,16 @@ for (const chapter of chapters) {
 		}
 
 		const body = lines.slice(block.from - 1, block.to).join('\n');
+		const shape = scan(body);
+
+		if (shape.openComment) {
+			problems.push(`${where}: ends inside a block comment — its \`*/\` is below the range`);
+		}
+
 		// `partial: true` is the author saying "this slice cuts through something on
 		// purpose" — the opening of a config object, the middle of a long function.
 		// Everything else is claiming to be a whole thing, and is held to it.
-		if (!block.partial && !balanced(body)) {
+		if (!block.partial && !shape.balanced) {
 			problems.push(`${where}: brackets do not balance — the slice cuts through something`);
 		}
 	}

@@ -39,7 +39,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/domain/schemas.ts<span class="code__lines">:1-36</span></span>
+		<span class="code__file">src/lib/domain/schemas.ts<span class="code__lines">:1-63</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -54,10 +54,23 @@
  * not under `server/`.
  *
  * valibot, because it is a set of small functions the bundler can shake:
- * the browser gets the eight it uses, not a schema runtime.
+ * the browser gets the ones these schemas call, not a schema runtime.
+ *
+ * MESSAGES IN THE PERSON'S LANGUAGE
+ * ---------------------------------
+ * Every message a person can read is a *function* that returns a Paraglide
+ * message, never a string. valibot calls it when the issue happens, not
+ * when the schema is built — and `m.issue_email()` called during a request
+ * reads the locale that request's middleware stored (`hooks.server.ts`), so
+ * the same schema object answers in German for `/de/signin` and in English
+ * for `/signin`. A string here would be English for everybody, decided once
+ * when the module loaded. The messages that are only ever read by a
+ * developer — an id that is not a uuid, a link that is not a slug — stay
+ * plain strings: they mean a bug or an attack, not a typo.
  */
 
 import * as v from 'valibot';
+import { m } from '#lib/paraglide/messages.js';
 import { isIsoDate } from './dates.ts';
 import { CURRENCIES } from './money.ts';
 import { SLUG } from './ids.ts';
@@ -66,24 +79,44 @@ export const IdSchema = v.pipe(v.string(), v.uuid('Expected an id'));
 export const SlugSchema = v.pipe(v.string(), v.regex(SLUG, 'Expected a trip link'));
 
 export const IsoDateSchema = v.pipe(
-	v.string(),
-	v.check(isIsoDate, 'Expected a date like 2026-05-10')
+	v.string(() =&gt; m.issue_date()),
+	v.check(isIsoDate, () =&gt; m.issue_date())
 );
 
 export const LngSchema = v.pipe(v.number(), v.minValue(-180), v.maxValue(180));
 export const LatSchema = v.pipe(v.number(), v.minValue(-90), v.maxValue(90));
 
-const shortText = (max: number) =&gt; v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(max));
+/* Trimmed first, so &quot;   &quot; is empty — the browser's `required` lets three spaces through. */
+const shortText = (max: number, missing: () =&gt; string = () =&gt; m.issue_required()) =&gt;
+	v.pipe(
+		v.string(missing),
+		v.trim(),
+		v.minLength(1, missing),
+		v.maxLength(max, () =&gt; m.issue_too_long())
+	);
 const optionalText = (max: number) =&gt;
-	v.optional(v.pipe(v.string(), v.trim(), v.maxLength(max)), '');
+	v.optional(
+		v.pipe(
+			v.string(),
+			v.trim(),
+			v.maxLength(max, () =&gt; m.issue_too_long())
+		),
+		''
+	);
 
-export const CurrencySchema = v.picklist(CURRENCIES, 'Pick a currency');</code></pre>
+export const CurrencySchema = v.picklist(CURRENCIES, () =&gt; m.issue_currency());</code></pre>
 </figure>
-<p>valibot over zod because valibot is a set of small functions the bundler can shake: the browser bundle contains the eight validators it uses, not a schema runtime. The primitives at the top are the vocabulary — an id is a UUID, a slug matches <code>SLUG</code>, a date is an ISO string that <code>isIsoDate</code> accepts, a longitude is a number in range. <code>shortText</code> and <code>optionalText</code> are the two shapes of a text field, with <code>trim()</code> built in so <code>&quot;  Lisbon &quot;</code> is stored as <code>&quot;Lisbon&quot;</code> without every form remembering to do it.</p>
+<p>valibot over zod because valibot is a set of small functions the bundler can shake: the browser bundle contains the functions these schemas call — <code>pipe</code>, <code>object</code>, <code>string</code>, <code>trim</code>, <code>maxLength</code>, <code>picklist</code> and the rest of the twenty-two in this file — and not a schema runtime. The primitives at the top are the vocabulary — an id is a UUID, a slug matches <code>SLUG</code>, a date is an ISO string that <code>isIsoDate</code> accepts, a longitude is a number in range. <code>shortText</code> and <code>optionalText</code> are the two shapes of a text field, with <code>trim()</code> built in so <code>&quot;  Lisbon &quot;</code> is stored as <code>&quot;Lisbon&quot;</code> without every form remembering to do it — and, because the trim comes before the length check, so that three spaces are an empty field. The browser’s <code>required</code> is satisfied by three spaces; this is not.</p>
+<p>Now look at the second argument of almost every validator: not a string but a function, <code>() =&gt; m.issue_date()</code>. That is how a schema speaks three languages. valibot accepts a message as either, and calls the function only when the issue actually happens. By then the request is being handled, Paraglide’s middleware has stored that request’s locale (chapter 14 shows where), and <code>m.issue_date()</code> reads it — so the one schema object, created once when the module loaded, answers “Wähle ein Datum” to a form on <code>/de/trips/new</code> and “Pick a date” to one on <code>/trips/new</code>. A plain string would have been decided at import time, in English, for everybody; that is what this file did until a German sign-in page answered “Enter an email address”.</p>
+
+<aside class="callout callout--why">
+	<h4>Why not translate on the client instead?</h4>
+	<p>Because the message is decided where the check runs, and the check runs on the server for every form, with JavaScript or without. A form that posts with JavaScript off gets its issues back in the HTML the server renders; there is no client code to do any translating. Putting the locale-aware message in the schema makes the server’s answer right first time, and the browser, when it runs the same schema as a preflight (chapter 29), gets the same words for free. The messages that stay plain strings — “Expected an id” — are the ones no person should ever see: they mean a bug or somebody probing the endpoint, and <code>handleError</code> replaces them with a sentence of its own anyway.</p>
+</aside>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/domain/schemas.ts<span class="code__lines">:38-65</span></span>
+		<span class="code__file">src/lib/domain/schemas.ts<span class="code__lines">:65-95</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/* ---------------------------------------------------------------------- */
@@ -99,13 +132,16 @@ export const TripInputSchema = v.pipe(
 		currency: CurrencySchema
 	}),
 	v.forward(
-		v.check((trip) =&gt; trip.endDate &gt;= trip.startDate, 'The trip cannot end before it starts'),
+		v.check(
+			(trip) =&gt; trip.endDate &gt;= trip.startDate,
+			() =&gt; m.issue_trip_order()
+		),
 		['endDate']
 	),
 	v.forward(
 		v.check(
 			(trip) =&gt; new Date(trip.endDate).getTime() - new Date(trip.startDate).getTime() &lt; 366 * 864e5,
-			'A trip is at most a year'
+			() =&gt; m.issue_trip_length()
 		),
 		['endDate']
 	)
@@ -119,7 +155,7 @@ export type Visibility = v.InferOutput&lt;typeof VisibilitySchema&gt;;</code></p
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/domain/schemas.ts<span class="code__lines">:67-111</span></span>
+		<span class="code__file">src/lib/domain/schemas.ts<span class="code__lines">:97-147</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/* ---------------------------------------------------------------------- */
@@ -148,7 +184,13 @@ export const StopPatchSchema = v.object({
 	kind: v.optional(StopKindSchema),
 	lng: v.optional(LngSchema),
 	lat: v.optional(LatSchema),
-	notes: v.optional(v.pipe(v.string(), v.trim(), v.maxLength(1000)))
+	notes: v.optional(
+		v.pipe(
+			v.string(),
+			v.trim(),
+			v.maxLength(1000, () =&gt; m.issue_too_long())
+		)
+	)
 });
 export type StopPatch = v.InferOutput&lt;typeof StopPatchSchema&gt;;
 
@@ -172,7 +214,7 @@ export type MoveStop = v.InferOutput&lt;typeof MoveStopSchema&gt;;</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/domain/schemas.ts<span class="code__lines">:113-150</span></span>
+		<span class="code__file">src/lib/domain/schemas.ts<span class="code__lines">:149-216</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/* ---------------------------------------------------------------------- */
@@ -180,24 +222,54 @@ export type MoveStop = v.InferOutput&lt;typeof MoveStopSchema&gt;;</code></pre>
 /* ---------------------------------------------------------------------- */
 
 export const EXPENSE_CATEGORIES = ['food', 'lodging', 'transport', 'activity', 'other'] as const;
-export const ExpenseCategorySchema = v.picklist(EXPENSE_CATEGORIES);
+export const ExpenseCategorySchema = v.picklist(EXPENSE_CATEGORIES, () =&gt; m.issue_category());
 export type ExpenseCategory = v.InferOutput&lt;typeof ExpenseCategorySchema&gt;;
 
 export const ExpenseInputSchema = v.object({
 	tripId: IdSchema,
-	title: shortText(120),
+	title: shortText(120, () =&gt; m.issue_expense_title()),
 	amountMinor: v.pipe(
-		v.number(),
-		v.integer('Amounts are whole minor units'),
-		v.minValue(1, 'Enter an amount'),
-		v.maxValue(1_000_000_000, 'That is more than a trip costs')
+		v.number(() =&gt; m.issue_amount()),
+		v.integer(() =&gt; m.issue_amount_whole()),
+		v.minValue(1, () =&gt; m.issue_amount()),
+		v.maxValue(1_000_000_000, () =&gt; m.issue_amount_large())
 	),
 	category: ExpenseCategorySchema,
 	date: IsoDateSchema,
-	paidBy: v.string(),
-	participants: v.pipe(v.array(v.string()), v.minLength(1, 'Somebody has to share it'))
+	paidBy: v.string(() =&gt; m.issue_payer()),
+	participants: v.pipe(
+		v.array(v.string(), () =&gt; m.issue_participants()),
+		v.minLength(1, () =&gt; m.issue_participants())
+	)
 });
 export type ExpenseInput = v.InferOutput&lt;typeof ExpenseInputSchema&gt;;
+
+/**
+ * The &quot;Add an expense&quot; form, as the browser sends it: an amount in major
+ * units (euros, not cents — the server converts), and every other field as
+ * the form names it. It lives here, not in `expenses.remote.ts`, because
+ * the form also runs it in the browser as a *preflight* (`Expenses.svelte`),
+ * and a remote module may export nothing but remote functions.
+ */
+export const ExpenseFormSchema = v.object({
+	tripId: IdSchema,
+	title: shortText(120, () =&gt; m.issue_expense_title()),
+	amount: v.pipe(
+		v.number(() =&gt; m.issue_amount()),
+		v.minValue(0.01, () =&gt; m.issue_amount()),
+		v.maxValue(10_000_000, () =&gt; m.issue_amount_large())
+	),
+	category: ExpenseCategorySchema,
+	date: IsoDateSchema,
+	paidBy: v.pipe(
+		v.string(() =&gt; m.issue_payer()),
+		v.minLength(1, () =&gt; m.issue_payer())
+	),
+	participants: v.pipe(
+		v.array(v.string(), () =&gt; m.issue_participants()),
+		v.minLength(1, () =&gt; m.issue_participants())
+	)
+});
 
 /* ---------------------------------------------------------------------- */
 /* Notes                                                                   */
@@ -214,11 +286,11 @@ export const NoteDocSchema = v.pipe(
 );
 export type NoteDoc = v.InferOutput&lt;typeof NoteDocSchema&gt;;</code></pre>
 </figure>
-<p>The messages on the expense schema are the ones a person sees — <code>Enter an amount</code>, <code>Somebody has to share it</code> — because a form field shows the first issue it has. <code>NoteDocSchema</code> is deliberately loose: Tiptap validates its own document tree when it loads, so this only insists on the root node and on a size, because a note is a page and not a book and two hundred kilobytes of JSON is where a page stops.</p>
+<p>The expense has two schemas, and the difference is the boundary. <code>ExpenseInputSchema</code> is the stored shape, in whole minor units. <code>ExpenseFormSchema</code> is what the “Add an expense” form sends — an amount in euros, the fields as the form names them — and it lives here rather than in <code>expenses.remote.ts</code> because the browser runs it too, as the form’s *preflight* (chapter 29): a remote module may export nothing but remote functions. Its messages are the ones a person sees, “Enter an amount”, “Somebody has to share it”, each a Paraglide function like the rest. <code>NoteDocSchema</code> is deliberately loose: Tiptap validates its own document tree when it loads, so this only insists on the root node and on a size, because a note is a page and not a book and two hundred kilobytes of JSON is where a page stops.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/domain/schemas.ts<span class="code__lines">:152-208</span></span>
+		<span class="code__file">src/lib/domain/schemas.ts<span class="code__lines">:218-280</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/* ---------------------------------------------------------------------- */
@@ -246,16 +318,16 @@ export type Presence = v.InferOutput&lt;typeof PresenceSchema&gt;;
 /* ---------------------------------------------------------------------- */
 
 export const EmailSchema = v.pipe(
-	v.string(),
+	v.string(() =&gt; m.issue_email()),
 	v.trim(),
 	v.toLowerCase(),
-	v.email('Enter an email address')
+	v.email(() =&gt; m.issue_email())
 );
 
 export const PasswordSchema = v.pipe(
-	v.string(),
-	v.minLength(12, 'Use at least twelve characters'),
-	v.maxLength(256)
+	v.string(() =&gt; m.issue_password_short()),
+	v.minLength(12, () =&gt; m.issue_password_short()),
+	v.maxLength(256, () =&gt; m.issue_too_long())
 );
 
 /** What the owner may change after the fact. Every field optional; the same checks when both dates are present. */
@@ -263,7 +335,13 @@ export const TripPatchSchema = v.pipe(
 	v.object({
 		id: IdSchema,
 		name: v.optional(shortText(80)),
-		description: v.optional(v.pipe(v.string(), v.trim(), v.maxLength(500))),
+		description: v.optional(
+			v.pipe(
+				v.string(),
+				v.trim(),
+				v.maxLength(500, () =&gt; m.issue_too_long())
+			)
+		),
 		startDate: v.optional(IsoDateSchema),
 		endDate: v.optional(IsoDateSchema),
 		currency: v.optional(CurrencySchema),
@@ -272,7 +350,7 @@ export const TripPatchSchema = v.pipe(
 	v.forward(
 		v.check(
 			(patch) =&gt; !patch.startDate || !patch.endDate || patch.endDate &gt;= patch.startDate,
-			'The trip cannot end before it starts'
+			() =&gt; m.issue_trip_order()
 		),
 		['endDate']
 	)

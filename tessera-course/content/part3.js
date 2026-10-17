@@ -531,7 +531,13 @@ export class NodeView {
 	/** The materialised text of the label. The characters live in the CRDT. */
 	label = $state('');
 
-	constructor(readonly id: NodeId) {}
+	readonly id: NodeId;
+
+	// A field and an assignment, not \`constructor(readonly id: NodeId)\`: see the
+	// note on parameter properties in \`crdt/clock.ts\`.
+	constructor(id: NodeId) {
+		this.id = id;
+	}
 
 	/** Bounds, as a plain object — handy for geometry that should not be reactive. */
 	get rect(): Rect {
@@ -542,6 +548,10 @@ export class NodeView {
 			{
 				type: 'p',
 				text: 'Every field is its own signal. That granularity is the whole point: a drag writes `x` and `y` sixty times a second, and nothing that reads only `fill` should re-run because of it.'
+			},
+			{
+				type: 'p',
+				text: '`id` is the one field that is not `$state`: it never changes, so there is nothing to notify. It is a declared field assigned in the constructor rather than `constructor(readonly id: NodeId)` — the same rule as chapter 06’s clock, and since `erasableSyntaxOnly` is on, the compiler holds it for you.'
 			},
 			{
 				type: 'note',

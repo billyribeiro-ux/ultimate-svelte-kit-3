@@ -45,6 +45,26 @@ test('the explore page filters a hundred places by name or country', async ({ pa
 	await expect(page).toHaveURL(/\/guides\//);
 });
 
+test('a filter typed before the explore page has hydrated is kept', async ({ page }) => {
+	// The sign-in form's race (account.e2e.ts), on a plain `bind:value`: hold the client bundle
+	// back, type into the server's HTML, then let the page wake up.
+	let release: () => void = () => {};
+	const held = new Promise<void>((resolve) => (release = resolve));
+	await page.route('**/_app/immutable/entry/start.*.js', async (route) => {
+		await held;
+		await route.continue();
+	});
+
+	await page.goto('/explore');
+	await page.getByPlaceholder('Filter places').fill('Kyoto');
+	await expect(page.locator('html[data-hydrated]')).toHaveCount(0);
+
+	release();
+	await expect(page.locator('html[data-hydrated]')).toHaveCount(1);
+	await expect(page.getByPlaceholder('Filter places')).toHaveValue('Kyoto');
+	await expect(page.getByText('1 place', { exact: false })).toBeVisible();
+});
+
 test('a trip visible by link is readable; a private one is a 404', async ({ page }) => {
 	await page.goto(`/t/${TRIPS.japan}`);
 	await expect(page.getByRole('heading', { level: 1, name: 'Japan in autumn' })).toBeVisible();
@@ -68,6 +88,76 @@ test('a language switch is a full navigation that changes the document language'
 	await expect(page.getByRole('heading', { name: 'Ausgaben' })).toBeVisible();
 });
 
+/*
+ * THE SERVER'S OWN LINKS
+ * ======================
+ *
+ * With JavaScript off, the page is exactly the HTML the server sent. Every
+ * internal link goes through `href()` — `resolve()`, then Paraglide's
+ * `localizeHref` — and on the server, with SvelteKit's default
+ * `paths.relative`, `resolve()` answered `./explore`, which `localizeHref`
+ * turned into `http://localhost:4173/explore`: a whole URL at the build's
+ * origin, in the server's HTML and in every prerendered guide. The header
+ * compares the page's pathname with each link, so it never marked the page
+ * it was on until the browser had drawn it again.
+ */
+test.describe('without JavaScript', () => {
+	test.use({ javaScriptEnabled: false });
+
+	test('links are paths, and the header marks the page it is on', async ({ page }) => {
+		await page.goto('/de/explore');
+		const explore = page
+			// Hidden behind the menu on a phone, and still in the HTML.
+			.getByRole('navigation', { name: 'Primary', includeHidden: true })
+			.getByRole('link', { name: 'Entdecken', includeHidden: true });
+		await expect(explore).toHaveAttribute('href', '/de/explore');
+		await expect(explore).toHaveAttribute('aria-current', 'page');
+		await expect(page.locator('a[href^="/de/trips/new?place="]').first()).toBeAttached();
+		await expect(page.locator('a[href^="http://localhost"]')).toHaveCount(0);
+
+		// A prerendered page was rendered by the same server, at build time.
+		await page.goto('/guides');
+		await expect(page.getByRole('link', { name: 'Lisbon in three days' })).toHaveAttribute(
+			'href',
+			'/guides/lisbon-in-three-days'
+		);
+		await expect(page.locator('a[href^="http://localhost"]')).toHaveCount(0);
+	});
+});
+
+/*
+ * A CHUNK THAT NEVER ARRIVES
+ * ==========================
+ *
+ * The globe is the one part of the app loaded on demand, so it is the one
+ * part a dropped connection can take away after the page is up. The failure
+ * happens in the browser and never reaches the server, so the words for it
+ * come from `handleError` in `src/hooks.client.ts`: the product's sentence,
+ * in the page's language. Without that hook the boundary would print
+ * SvelteKit's own, `Internal Error`, in English on a German page.
+ *
+ * The chunk's name is a hash, so it is found by what only it contains.
+ */
+test('a chunk that never arrives is explained in the page’s language', async ({ page }) => {
+	await page.route('**/_app/immutable/**/*.js', async (route) => {
+		const response = await route.fetch();
+		const body = await response.text();
+		if (body.includes('globe__status')) return route.abort();
+		return route.fulfill({ response, body });
+	});
+	const logged: string[] = [];
+	page.on('console', (message) => {
+		if (message.type() === 'error') logged.push(message.text());
+	});
+
+	await page.goto(`/de/t/${TRIPS.japan}?tab=globe`);
+	const status = page.locator('.night__status.issue');
+	await expect(status).toContainText('Etwas ist schiefgelaufen');
+	await expect(status.getByRole('button', { name: 'Neu verbinden' })).toBeVisible();
+	// The detail went where somebody debugging looks.
+	expect(logged.some((text) => text.startsWith('[meridian]'))).toBe(true);
+});
+
 test('health, the route API and the embed frame answer for machines', async ({ page, request }) => {
 	const health = await request.get('/healthz');
 	expect(health.ok()).toBeTruthy();
@@ -86,6 +176,11 @@ test('health, the route API and the embed frame answer for machines', async ({ p
 	expect(frame?.headers()['content-security-policy']).toContain('frame-ancestors *');
 	await expect(page.getByRole('link', { name: 'Planned with Meridian' })).toBeVisible();
 	expect(await page.locator('script[src]').count()).toBe(0);
+	// Styled, though it ships no script: the page's own stylesheet came with it. A frame
+	// compiled as a custom element once shipped without it. Only that stylesheet makes the card
+	// 22rem and takes the list's indent away — the root layout's CSS is linked either way.
+	await expect(page.locator('article.embed')).toHaveCSS('max-width', '352px');
+	await expect(page.locator('.embed__stops')).toHaveCSS('padding-inline-start', '0px');
 
 	const framedPrivate = await page.goto(`/embed/${TRIPS.iberia}`);
 	expect(framedPrivate?.status()).toBe(404);

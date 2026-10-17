@@ -43,7 +43,7 @@ const LOOKAHEAD_S = 0.1;
 
 export class Scheduler {
 	#engine: AudioEngine;
-	#pattern: () => Pattern;
+	#pattern: () => Pattern | null;
 	#outputs: Outputs;
 
 	#timer: ReturnType<typeof setInterval> | null = null;
@@ -70,9 +70,11 @@ export class Scheduler {
 	 * every tick, so a step toggled while playing is heard the next time the
 	 * playhead reaches it. Reading `$state` inside a timer is untracked, which
 	 * is what we want: nothing should re-run because the pattern changed —
-	 * the next tick simply sees the new one.
+	 * the next tick simply sees the new one. It may answer `null` — the
+	 * embeddable player has nothing to play while it fetches — and a tick that
+	 * finds nothing stops the transport rather than reading `null.bpm`.
 	 */
-	constructor(engine: AudioEngine, pattern: () => Pattern, outputs: Outputs) {
+	constructor(engine: AudioEngine, pattern: () => Pattern | null, outputs: Outputs) {
 		this.#engine = engine;
 		this.#pattern = pattern;
 		this.#outputs = outputs;
@@ -112,6 +114,7 @@ export class Scheduler {
 	#tick(): void {
 		const ctx = this.#engine.context;
 		const pattern = this.#pattern();
+		if (!pattern) return this.stop();
 
 		while (this.#nextTime < ctx.currentTime + LOOKAHEAD_S) {
 			const at = scheduleStep(ctx, this.#outputs, pattern, this.#nextStep, this.#nextTime);

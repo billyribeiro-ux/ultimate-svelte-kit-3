@@ -29,8 +29,17 @@
 	 */
 	let { sheet, readonly = false }: { sheet: Sheet; readonly?: boolean } = $props();
 
+	/*
+	 * The element, because completion and the keys act on it from handlers, after
+	 * it has mounted: focus, the caret, blur. `bind:this` is the handle for that;
+	 * an attachment, which the autofixer suggests, would only rebuild it.
+	 */
 	let input = $state<HTMLInputElement>();
 	let caret = $state(0);
+
+	/** Unique per instance and the same on server and client, so the ARIA ids below cannot collide. */
+	const uid = $props.id();
+	const listId = `${uid}-suggestions`;
 
 	/** What the bar shows: the edit in progress, or the anchor cell's input. */
 	const text = $derived.by(() => {
@@ -118,6 +127,18 @@
 		return 0;
 	});
 
+	/**
+	 * THE ACTIVE-DESCENDANT PATTERN
+	 * The caret never leaves the input — a person is still typing — so the
+	 * suggestion the arrow keys reach cannot take focus. Instead the input
+	 * names it: `aria-activedescendant` holds the id of the highlighted option,
+	 * and a screen reader announces that option as though it were focused.
+	 * The ids exist only while the list does, and so do the attributes that
+	 * point at them.
+	 */
+	const open = $derived(suggestions.length > 0);
+	const optionId = (i: number) => `${listId}-${i}`;
+
 	function accept(name: string) {
 		if (!sheet.editing || !prefix) return;
 		const before = text.slice(0, prefix.start);
@@ -196,8 +217,9 @@
 			role="combobox"
 			aria-label="Formula"
 			aria-autocomplete="list"
-			aria-expanded={suggestions.length > 0}
-			aria-controls="formula-suggestions"
+			aria-expanded={open}
+			aria-controls={open ? listId : undefined}
+			aria-activedescendant={open ? optionId(highlighted) : undefined}
 			spellcheck="false"
 			autocomplete="off"
 			{readonly}
@@ -213,23 +235,30 @@
 			onclick={updateCaret}
 		/>
 
-		{#if suggestions.length > 0}
-			<ul class="suggestions" id="formula-suggestions" role="listbox">
+		{#if open}
+			<!--
+				An option is the thing that is chosen, so it takes the pointer itself.
+				A <button> inside it would be a second control where the pattern has
+				one — and an option's children are presentational, so assistive
+				technology would hear a button that is not there. The keys belong to
+				the input (see `keydown`), which is why the options need no handler
+				of their own and no place in the tab order.
+			-->
+			<ul class="suggestions" id={listId} role="listbox" aria-label="Functions">
 				{#each suggestions as name, i (name)}
-					{@const spec = FUNCTIONS.get(name)}
+					{const spec = FUNCTIONS.get(name)}
+					<!-- svelte-ignore a11y_click_events_have_key_events -->
 					<li
+						id={optionId(i)}
 						role="option"
+						tabindex="-1"
 						aria-selected={i === highlighted}
-						class={{ 'suggestion--active': i === highlighted }}
+						class={['suggestion', { 'suggestion--active': i === highlighted }]}
+						onpointerdown={(e) => e.preventDefault()}
+						onclick={() => accept(name)}
 					>
-						<button
-							type="button"
-							onpointerdown={(e) => e.preventDefault()}
-							onclick={() => accept(name)}
-						>
-							<span class="mono">{spec?.signature}</span>
-							<span class="hint">{spec?.description}</span>
-						</button>
+						<span class="mono">{spec?.signature}</span>
+						<span class="hint">{spec?.description}</span>
 					</li>
 				{/each}
 			</ul>
@@ -334,20 +363,16 @@
 		box-shadow: var(--shadow-lg);
 	}
 
-	.suggestions button {
+	.suggestion {
 		display: flex;
 		flex-direction: column;
-		width: 100%;
 		padding: var(--space-1) var(--space-2);
-		border: 0;
 		border-radius: var(--radius-sm);
-		background: transparent;
-		text-align: left;
 		cursor: pointer;
 	}
 
-	.suggestion--active button,
-	.suggestions button:hover {
+	.suggestion--active,
+	.suggestion:hover {
 		background: var(--surface-hover);
 	}
 

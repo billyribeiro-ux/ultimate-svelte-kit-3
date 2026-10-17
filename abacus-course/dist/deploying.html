@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Deploying: a container that migrates, listens and stops — Building Abacus</title>
-<meta name="description" content="A three-stage Dockerfile that bakes the origin in, runs as `node`, migrates before it listens and answers SIGTERM; a compose file; and a workflow that runs the suite, builds the image, probes the health check and stops the container cleanly.">
+<meta name="description" content="A three-stage Dockerfile that bakes the origin in, runs as node, migrates before it listens and answers SIGTERM; a compose file; and a workflow that runs the suite, builds the image, probes the health check and stops the container cleanly.">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -60,7 +60,7 @@
 #   docker run -e SESSION_SECRET=… -e DATABASE_URL=file:/data/abacus.db \
 #              -v abacus-data:/data -p 3000:3000 abacus
 
-ARG NODE_VERSION=24.20.0
+ARG NODE_VERSION=24.21.0
 
 # ---------------------------------------------------------------------------
 FROM node:${NODE_VERSION}-slim AS deps
@@ -75,7 +75,41 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
     pnpm install --frozen-lockfile</code></pre>
 </figure>
-<p>Three stages so the image that runs holds only what running needs. The origin is a *build* argument because SvelteKit bakes <code>paths.origin</code> into the server and the passkey relying-party id is derived from it: build one image per origin. <code>--frozen-lockfile</code> fails the build if the lockfile disagrees with <code>package.json</code> instead of resolving something newer.</p>
+<p>Three stages so the image that runs holds only what running needs. The origin is a <em>build</em> argument because SvelteKit bakes <code>paths.origin</code> into the server and the passkey relying-party id is derived from it: build one image per origin. <code>--frozen-lockfile</code> fails the build if the lockfile disagrees with <code>package.json</code> instead of resolving something newer.</p>
+<p>adapter-node 6.0 serves <code>build/client</code> from a list it records at build time — each file with a content-hash <code>ETag</code>, no <code>Last-Modified</code>, and only to <code>GET</code> and <code>HEAD</code> (anything else is a 405). A file copied into the directory after the build is not served, and a replaced one keeps its old size and tag. That is the right answer for an image that is built once and started many times, and the reason the Dockerfile copies <code>build</code> as a unit: there is nothing to patch in place, and runtime configuration goes through environment variables.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">pnpm-workspace.yaml<span class="code__lines">:1-25</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts"># Not a workspace — a single package. pnpm 12 reads its own settings from
+# this file, and this project has two.
+#
+# pnpm 12 refuses to run a dependency's install scripts unless you say so by
+# name, which is the correct default: `postinstall` is arbitrary code from a
+# transitive dependency you have never read. esbuild's script puts its
+# platform binary in place, and drizzle-kit needs that binary — directly, and
+# through tsx — to read `drizzle.config.ts` and the schema, so the `db:*`
+# scripts depend on this line. Vite 8 does not: it transforms with Oxc and
+# bundles with Rolldown, and lists esbuild only as an optional peer.
+allowBuilds:
+  esbuild: true
+
+# pnpm 12 also waits before it will install a version that was published very
+# recently — a supply-chain delay, so a compromised release has time to be
+# noticed and pulled before it reaches a lockfile. The versions below were
+# younger than that when they were pinned; pnpm appends each one here when it
+# installs it, and the entry is the record that somebody chose to take it early.
+minimumReleaseAgeExclude:
+  - '@libsql/client@0.18.0'
+  - '@libsql/core@0.18.0'
+  - '@simplewebauthn/browser@14.0.0'
+  - '@types/node@24.19.2'
+  - eslint-plugin-svelte@3.23.1
+  - phosphor-svelte@3.1.1</code></pre>
+</figure>
+<p>pnpm reads <code>package.json</code>, the lockfile, <code>.npmrc</code> — which here holds a single setting npm shares, <code>engine-strict</code> — and this file, for the settings that are pnpm’s own. <code>allowBuilds</code> names the single dependency allowed to run an install script, because <code>postinstall</code> is arbitrary code from something you have never read, and the comment gives the reason it is esbuild: drizzle-kit loads the config and the schema through it. It is not Vite’s reason any more — Vite 8 transforms with Oxc and bundles with Rolldown, and esbuild is only an optional peer. <code>minimumReleaseAgeExclude</code> is pnpm 12’s supply-chain delay showing: a version published very recently is held back until it has had time to be noticed and pulled, and the list is the record of the ones this project took early. pnpm appends each one as it installs it, and removes nothing, so the list is kept honest by hand — the entry for <code>@simplewebauthn/server@14.0.0</code> went when the lockfile moved on to 14.0.3.</p>
 
 <figure class="code">
 	<figcaption>
@@ -380,7 +414,7 @@ defaults:
       - if: failure()
         run: docker logs abacus || true</code></pre>
 </figure>
-<p>The <code>image</code> job builds the Dockerfile, starts the container the way compose does, waits for the health check, and then *stops it with SIGTERM and checks the exit code*. A Dockerfile that is never built is documentation; a graceful shutdown that is never exercised is a hope.</p>
+<p>The <code>image</code> job builds the Dockerfile, starts the container the way compose does, waits for the health check, and then <em>stops it with SIGTERM and checks the exit code</em>. A Dockerfile that is never built is documentation; a graceful shutdown that is never exercised is a hope.</p>
 
 <figure class="code">
 	<figcaption>

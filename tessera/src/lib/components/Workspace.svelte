@@ -74,6 +74,12 @@
 
 	$effect(() => {
 		/*
+		 * An effect, not a `$derived`, though it assigns `sync` and `editor`.
+		 * Opening a board is a side effect with a lifetime — a stream that has to be
+		 * closed, presence that has to stop — and only an effect has a teardown to
+		 * close it in. The two assignments are its result arriving, not a value
+		 * that could have been computed from other state.
+		 *
 		 * Opening is asynchronous — IndexedDB, then a stream — and the effect can be
 		 * torn down before it finishes. Navigating away from a board while it is
 		 * still opening is not exotic; it is what happens when somebody clicks the
@@ -180,7 +186,7 @@
 			<div class="workspace__export">
 				<Button size="sm" onclick={exportSvg}>SVG</Button>
 				<Button size="sm" disabled={exporting} onclick={exportPng}>
-					{exporting ? 'Exporting…' : 'PNG'}
+					{exporting ? t.board.exporting : 'PNG'}
 				</Button>
 			</div>
 		</div>
@@ -206,13 +212,13 @@
 
 		{#if editor}
 			<aside class="workspace__panel">
-				<div class="workspace__tabs" role="tablist" aria-label="Panel">
-					{#each [['inspector', 'Properties'], ['outline', t.a11y.outline], ['comments', t.comments.heading], ['history', t.history.heading]] as const as [key, label] (key)}
+				<div class="workspace__tabs" role="tablist" aria-label={t.a11y.panel}>
+					{#each [['inspector', t.inspector.heading], ['outline', t.a11y.outline], ['comments', t.comments.heading], ['history', t.history.heading]] as const as [key, label] (key)}
 						<button
 							type="button"
 							role="tab"
 							aria-selected={panel === key}
-							class:workspace__tab--on={panel === key}
+							class={{ 'workspace__tab--on': panel === key }}
 							onclick={() => (panel = key)}
 						>
 							{label}
@@ -266,16 +272,17 @@
 		min-width: 0;
 	}
 
+	/* The export buttons arrive from 48rem. Nobody downloads a diagram on a
+	   phone, and on a narrow bar the sync state is what has to stay visible —
+	   so the phone gets the bar without them, and the wider screen adds them. */
 	.workspace__export {
-		display: flex;
+		display: none;
 		gap: var(--space-1);
 	}
 
-	/* The export buttons are the first thing to go on a narrow screen: nobody
-	   downloads a diagram on a phone, and the sync state has to stay visible. */
-	@media (max-width: 47.99rem) {
+	@media (min-width: 48rem) {
 		.workspace__export {
-			display: none;
+			display: flex;
 		}
 	}
 

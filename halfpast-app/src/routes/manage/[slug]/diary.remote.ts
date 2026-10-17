@@ -3,7 +3,7 @@ import { and, eq } from 'drizzle-orm';
 import { error } from '@sveltejs/kit';
 import { command, form, getRequestEvent, query } from '$app/server';
 import { db } from '#lib/server/db/index.ts';
-import { booking, staff } from '#lib/server/db/schema.ts';
+import { booking, staff, type BookingStatus } from '#lib/server/db/schema.ts';
 import { assertCanManageDiaryOf, requireStaff } from '#lib/server/guards.ts';
 import { BookingError, cancelBooking, loadDiary } from '#lib/server/scheduling.ts';
 import { publishDiaryChange, watchDiary } from '#lib/server/diary-events.ts';
@@ -49,7 +49,8 @@ export interface DiaryEntry {
 	blockEndsAt: number;
 	priceCents: number;
 	currency: string;
-	status: string;
+	/** Narrowed to the four the schema allows, not any string. */
+	status: BookingStatus;
 }
 
 export interface DiaryResult {

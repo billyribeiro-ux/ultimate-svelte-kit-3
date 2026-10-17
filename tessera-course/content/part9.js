@@ -1,6 +1,6 @@
 /**
  * PART 9 — Proving it, and running it
- * (chapters 42–45)
+ * (chapters 41–44)
  *
  * A phone, two browser contexts, the verification gate, and a last chapter on
  * what to do with all of this. The theme of this part is that a collaborative
@@ -18,7 +18,7 @@ export const part9 = [
 		blocks: [
 			{
 				type: 'p',
-				text: 'Every breakpoint in this project is a `min-width`, with one deliberate exception. That is not a style rule — it changes which layout is the one you *thought about*.'
+				text: 'Every breakpoint in this project is a `min-width`. That is not a style rule — it changes which layout is the one you *thought about*.'
 			},
 			{
 				type: 'code',
@@ -90,23 +90,28 @@ export const part9 = [
 				text: 'And the toolbar uses `max(var(--space-4), env(safe-area-inset-bottom))`, so it clears the home indicator on a notched phone without adding a gap on a device that has none.'
 			},
 
-			{ type: 'h3', id: 'the-exception', text: 'The one `max-width`' },
+			{ type: 'h3', id: 'the-exception', text: 'Added at a width, not removed below one' },
 			{
 				type: 'code',
 				file: 'src/lib/components/Workspace.svelte',
 				lang: 'css',
 				code: `
-/* The export buttons are the first thing to go on a narrow screen: nobody
-   downloads a diagram on a phone, and the sync state has to stay visible. */
-@media (max-width: 47.99rem) {
+/* The export buttons arrive from 48rem. Nobody downloads a diagram on a
+   phone, and on a narrow bar the sync state is what has to stay visible —
+   so the phone gets the bar without them, and the wider screen adds them. */
+.workspace__export {
+	display: none;
+	gap: var(--space-1);
+}
+
+@media (min-width: 48rem) {
 	.workspace__export {
-		display: none;
-	}
-}`
+		display: flex;
+	}`
 			},
 			{
 				type: 'p',
-				text: 'A `max-width` is honest when the rule is genuinely "remove this below a size" rather than "add this above one". Nobody downloads a diagram on a phone, and the sync state has to stay visible — so the export buttons are the first thing to go. Writing that as a `min-width` on the *other* elements would spread one decision across three selectors.'
+				text: 'Nobody downloads a diagram on a phone, and on a narrow bar the sync state is what has to stay visible, so the export buttons only exist from 48rem up. This used to be the project’s one `max-width` — hide them *below* 47.99rem — and it read naturally as “the first thing to go”. It was still the desktop layout with a phone exception bolted on, and the `.99` is a tell: a hand-picked gap between two breakpoints, which at some zoom levels and fractional widths both rules or neither rule match. Mobile-first is a direction of thought, not just a syntax. The phone layout is the default, `display: none`, and the wider screen *adds* something to it — one rule, one selector, and every `@media` in the project now reads the same way: `min-width`, upwards.'
 			},
 
 			{ type: 'h3', id: 'touch', text: 'Touch is not a small mouse' },
@@ -320,7 +325,7 @@ export default defineConfig({
 	testMatch: '**/*.e2e.ts',
 
 	webServer: {
-		command: 'npm run build && node build/index.js',
+		command: 'pnpm run build && node build/index.js',
 		port: PORT,
 		env: {
 			DATABASE_URL: 'file:e2e.db',
@@ -358,12 +363,115 @@ export default defineConfig({
 				text: 'One worker, deliberately. Every test in the other suites shares one seeded board and several assert on its contents; in parallel, one test’s new shape appears in another’s count and the suite fails while the application behaves perfectly. The concurrency that actually matters — two replicas editing at once — is exercised *inside* a single test, which is the right level to test it at.'
 			},
 
+			{ type: 'h3', id: 'around-the-interface', text: 'A test that cannot pass for the wrong reason' },
+			{
+				type: 'p',
+				text: 'The permission test is the one that goes around the interface: a viewer’s toolbar is disabled, so it posts an operation to `pushOps` directly, and expects the server to refuse. For a long time it passed without ever reaching the server’s permission check. It posted to `/_app/remote/pushOps`, which is not where a remote function lives; it sent the argument as plain JSON, which is not how a remote function reads one; it used the `request` fixture, which carries none of the page’s cookies; and it accepted any of 400, 403 or 404. It got a 404 from the router, and was green.'
+			},
+			{
+				type: 'code',
+				file: 'e2e/permissions.e2e.ts',
+				lang: 'ts',
+				code: `
+const presence = page.waitForRequest('**/_app/remote/*/announcePresence');
+await openBoard(page);
+const endpoint = (await presence).url().replace(/\\/announcePresence$/, '/pushOps');
+
+const before = await page.locator('[data-node]').count();
+
+/*
+ * A well-formed operation, encoded the way the client encodes a command
+ * argument, and sent with the viewer's own session — \`page.request\` shares
+ * the page's cookies. The stamp has the 26-character shape the clock
+ * produces, so the schema accepts it and the request reaches the permission
+ * check, which is the thing under test: a 403, not a 400 for a malformed
+ * body, a 401 for a missing session or a 404 for a wrong URL.
+ */
+const stamp = \`\${String(Date.now()).padStart(13, '0')}00000zzzzzzzz\`;
+const argument = {
+	boardId: BOARD,
+	actor: 'zzzzzzzz',
+	ops: [{ kind: 'node.remove', stamp, target: stamp, observed: [] }]
+};
+
+const response = await page.request.fetch(endpoint, {
+	method: 'POST',
+	headers: { 'content-type': 'application/json', origin: new URL(page.url()).origin },
+	data: { payload: Buffer.from(flatten(argument)).toString('base64url'), refreshes: [] },
+	failOnStatusCode: false
+});
+
+/*
+ * A remote function's failure travels in the body, as \`{ type: 'error',
+ * error }\` — the client turns it into the \`HttpError\` it rejects with — so
+ * the status to check is the one inside: the \`App.Error\`'s.
+ */
+expect(await response.json()).toMatchObject({
+	type: 'error',
+	error: { status: 403, message: 'You have view-only access to this board.' }
+});`
+			},
+			{
+				type: 'code',
+				file: 'e2e/permissions.e2e.ts',
+				lang: 'ts',
+				code: `
+/**
+ * A value in devalue's wire format — the one SvelteKit sends remote function
+ * arguments in: a flat JSON array whose first entry is the value, with every
+ * object and array holding the indexes of its children. This is the plain-data
+ * subset, which is all an operation needs.
+ */
+function flatten(value: unknown): string {
+	const entries: unknown[] = [];
+
+	const add = (item: unknown): number => {
+		const index = entries.push(null) - 1;
+		entries[index] = Array.isArray(item)
+			? item.map(add)
+			: item !== null && typeof item === 'object'
+				? Object.fromEntries(Object.entries(item).map(([key, child]) => [key, add(child)]))
+				: item;
+		return index;
+	};
+
+	add(value);
+	return JSON.stringify(entries);
+}`
+			},
+			{
+				type: 'ul',
+				items: [
+					'**The real endpoint.** A remote function is served at `/_app/remote/<hash of its file>/<export name>`. The page calls `announcePresence`, from the same file as `pushOps`, the moment a board opens, so its URL with the name swapped is the address a viewer with devtools would find.',
+					'**The real encoding.** SvelteKit sends a command’s argument as devalue — a flat JSON array of values and indexes — base64url-encoded in a `payload` field. `flatten` writes the plain-data subset of that format, which is all an operation needs.',
+					'**The real session.** `page.request` shares the page’s cookies; the `request` fixture is a separate client with none, and would have been answered 401.',
+					'**One answer accepted.** A remote function’s failure comes back in the body as `{ type: \'error\', error }`, so the assertion is on the `App.Error` inside it: status 403, and the server’s sentence.'
+				]
+			},
+			{
+				type: 'terminal',
+				code: `
+$ # let a viewer through both checks: requireAccess(…, 'viewer') in pushOps, mayApply → true
+$ pnpm exec playwright test e2e/permissions.e2e.ts -g bypassed --project desktop
+
+  -   "type": "error",
+  +   "type": "result",
+
+  1 failed            ← the old version of this test stayed green against the same change`
+			},
+			{
+				type: 'why',
+				title: 'Break it on purpose',
+				text: 'A test is only evidence if it can fail. The way to find out is to break the thing it claims to protect and watch — here, letting a viewer through both the route’s `requireAccess` and ingest’s per-operation `mayApply` — and a test that accepts three status codes is usually a test that has never been watched failing. Every new test in this suite was run against the code before its fix, and this one against the code with its check removed, before it was trusted.'
+			},
+
 			{
 				type: 'checkpoint',
 				items: [
 					'Two contexts, one board, and a shape crossing between them.',
 					'Every destructive test owns its data.',
-					'The suite runs against the artefact you would deploy.'
+					'The suite runs against the artefact you would deploy.',
+					'The permission test fails when the permission check is removed.'
 				]
 			}
 		]
@@ -381,20 +489,24 @@ export default defineConfig({
 				file: 'package.json',
 				lang: 'json',
 				code: `
-"verify": "npm run check && npm run lint && npm run test:unit -- --run && npm run build && npm run test:e2e"`
+"verify": "pnpm run check && pnpm run lint && pnpm run test:unit --run && pnpm run build && pnpm run test:e2e"`
 			},
 			{
 				type: 'p',
-				text: 'Five steps, in an order chosen so the fastest thing that can fail fails first. Running it takes about ninety seconds, which is short enough that there is no excuse.'
+				text: 'Five steps, in an order chosen so the fastest thing that can fail fails first. Running it takes about two minutes, which is short enough that there is no excuse.'
+			},
+			{
+				type: 'note',
+				text: 'Every step is `pnpm run`, like the `pnpm run build` in chapter 42’s Playwright config. `npm run` would work too — npm comes with Node — but a project pinned to one package manager should not quietly call another, and `pnpm run test:unit --run` passes `--run` straight through to Vitest without npm’s `--` in between.'
 			},
 			{
 				type: 'ul',
 				items: [
 					'**`check`** — `svelte-kit sync`, then `svelte-check`, then `tsc` over the service worker with its own config. The last is separate because a service worker has `WebWorker` lib and no DOM, and type-checking it with the app’s `tsconfig` is meaningless in both directions.',
 					'**`lint`** — `prettier --check .` and `eslint .`. Formatting is checked rather than applied, so a badly formatted commit fails rather than silently rewriting somebody’s working tree.',
-					'**`test:unit`** — 115 tests in about a second and a half, of which the interesting four are a few hundred thousand delivery schedules.',
+					'**`test:unit`** — 117 tests in two Vitest projects. 115 run in plain Node in about a second, and the interesting four of those are a few hundred thousand delivery schedules. The other two are component tests in a real Chromium, for chapter 35’s caret — the one place where a DOM emulator with no selection model would have passed a broken editor.',
 					'**`build`** — the real one, including the service worker’s separate Vite environment and the adapter.',
-					'**`test:e2e`** — 28 tests across two device profiles, against that build.'
+					'**`test:e2e`** — 42 tests across two device profiles, against that build.'
 				]
 			},
 			{
@@ -402,17 +514,17 @@ export default defineConfig({
 				code: `
 $ pnpm run verify
 
-  svelte-check   1530 files, 0 errors, 0 warnings
+  svelte-check   1525 files, 0 errors, 0 warnings
   prettier       all matched files use Prettier code style
   eslint         clean
-  vitest         Test Files 9 passed (9) · Tests 115 passed (115)   1.36s
-  vite build     ✓ built in 889ms   (+ service worker, 42ms)
-  playwright     28 passed (42.6s)`
+  vitest         Test Files 10 passed (10) · Tests 117 passed (117)   2.95s
+  vite build     ✓ built in 1.26s   (+ service worker, 42ms)
+  playwright     42 passed (60.0s)`
 			},
 			{
 				type: 'why',
 				title: 'Why the service worker gets its own tsconfig',
-				text: 'It runs in a `WebWorker` global scope: no `document`, no `window`, a different `self`, and `caches` in the global namespace. Checked against the application’s config, every service-worker global is an error and every DOM API is wrongly available. `tsconfig.service-worker.json` is eight lines and it turns that file from unchecked into checked, which for a file that can serve a stale application to everybody is worth having.'
+				text: 'It runs in a `WebWorker` global scope: no `document`, no `window`, a different `self`, and `caches` in the global namespace. Checked against the application’s config, every service-worker global is an error and every DOM API is wrongly available. `src/service-worker/tsconfig.json` sits beside the worker, extends `$app/tsconfig/service-worker`, and turns that file from unchecked into checked, which for a file that can serve a stale application to everybody is worth having.'
 			},
 
 			{ type: 'h3', id: 'what-it-misses', text: 'What the gate does not check' },
@@ -449,7 +561,7 @@ $ pnpm run verify
 			{
 				type: 'checkpoint',
 				items: [
-					'One command, ninety seconds, and a green result you can describe precisely.',
+					'One command, two minutes, and a green result you can describe precisely.',
 					'You can name four things the gate does not cover.',
 					'The service worker is type-checked.'
 				]
@@ -512,7 +624,7 @@ node build/index.js`
 				type: 'ol',
 				items: [
 					'**The server owns permission; the data structure owns merging.** Almost every design question in a collaborative system resolves to "which of those two is this?", and the answer is usually obvious once the question is asked.',
-					'**Before removing work, say out loud what would have to be true for the removal to be safe.** Three of the four bugs in chapter 25 would have died at that sentence.',
+					'**Before removing work, say out loud what would have to be true for the removal to be safe.** Three of the four bugs in chapter 24 would have died at that sentence.',
 					'**When two failure directions have different costs, pick the algorithm that can only fail in the cheap one.** Deliver twice rather than risk delivering zero; echo an operation rather than risk dropping one.',
 					'**A guard belongs where the bad thing can still be prevented, and where the party being refused is the party at fault.** The clock check was in the wrong tier for a fortnight and read as defensive the whole time.',
 					'**Determinism beats polish in a shared document.** Hysteresis on arrow routing would look better and would make two people see different diagrams.',
@@ -525,7 +637,7 @@ node build/index.js`
 				type: 'ul',
 				items: [
 					'**Add a seventh node kind.** It touches `types.ts`, one schema in `ops.ts`, one switch in `NodeShape.svelte` and three catalogues — and nothing else. If it touches anything else, that is a layering bug worth finding.',
-					'**Add a fourth language.** One folder, per chapter 34. Time yourself.',
+					'**Add a fourth language.** One folder, per chapter 33. Time yourself.',
 					'**Break something on purpose.** Put the echo filter back in `client.svelte.ts` and watch the restore test fail *only after a reload*. Then delete a line from the convergence spec’s shuffle and watch two hundred seeds stop finding anything.',
 					'**Make the hub multi-instance.** It is one file, and it is the most realistic piece of production work left in the project.'
 				]

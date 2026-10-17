@@ -152,7 +152,8 @@
 						<ul class="team__links" role="list">
 							{#each person.sameAs as profile (profile)}
 								<li>
-									<a href={profile} target="_blank" rel="noopener noreferrer">
+									<!-- `external`: another site, not a route — see SiteFooter. -->
+									<a href={profile} target="_blank" rel="external noopener noreferrer">
 										{new URL(profile).hostname.replace('www.', '')}
 									</a>
 								</li>

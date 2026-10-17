@@ -1,4 +1,6 @@
 <script lang="ts">
+	// Aliased: `resolve` in this file is the time-range resolver from `#lib/time/range.ts`.
+	import { resolve as resolvePath } from '$app/paths';
 	import { runQuery } from '#lib/remote/query.remote.ts';
 	import RangePicker from '#lib/components/RangePicker.svelte';
 	import { formatDuration, formatTimestamp, resolve } from '#lib/time/range.ts';
@@ -38,7 +40,6 @@
 		].join(' ')
 	);
 
-	const result = $derived(await runQuery({ tenant: data.tenant, q, range }));
 	const window_ = $derived(resolve(range));
 </script>
 
@@ -71,7 +72,23 @@
 
 	<p class="page__query mono">{q}</p>
 
+	<!--
+		The query is awaited here, inside the boundary, and not in the script.
+
+		In the script, the server waited for it — every `await` there settles before
+		anything renders — and then drew this boundary's `pending` snippet in place
+		of the list it had, because "during server-side rendering, a boundary with a
+		`pending` snippet renders that snippet and ignores the rest of its content".
+		A link to this page said "Loading…", and with JavaScript off it said so for
+		good. With the `await` here and no `pending`, the server renders the list,
+		and a refusal is this boundary's `failed`, on the server and in the browser.
+
+		Changing the order or the range keeps the old list up until the new one is
+		in, because Svelte holds an update back until its `await`s have settled.
+	-->
 	<svelte:boundary>
+		{const result = $derived(await runQuery({ tenant: data.tenant, q, range }))}
+
 		{#if result.rows.length === 0}
 			<p class="empty">No traces in this range.</p>
 		{:else}
@@ -80,14 +97,19 @@
 					<li>
 						<a
 							class="trace"
-							href="/{data.tenant}/traces/{encodeURIComponent(String(row.trace_id))}"
+							href={resolvePath('/[tenant]/traces/[traceId]', {
+								tenant: data.tenant,
+								traceId: encodeURIComponent(String(row.trace_id))
+							})}
 						>
 							<span class="trace__name truncate">
 								<span class="trace__service">{row.service}</span>
 								{row.name}
 							</span>
 							<span class="trace__time">{formatTimestamp(Number(row.timestamp), window_)}</span>
-							<span class="trace__duration" class:trace__duration--error={row.status === 'error'}>
+							<span
+								class={['trace__duration', { 'trace__duration--error': row.status === 'error' }]}
+							>
 								{formatDuration(Number(row.duration))}
 							</span>
 						</a>
@@ -96,14 +118,14 @@
 			</ul>
 		{/if}
 
-		{#snippet pending()}
-			<p class="empty" role="status">Loading…</p>
-		{/snippet}
-
+		<!--
+			An `App.Error`, not the `HttpError` that was thrown: SvelteKit runs every
+			boundary's error through `handleError` first, so the server's own words
+			are on `message` and there is no `body` to look in. Svelte types the
+			argument `unknown`, which is why it is cast rather than annotated.
+		-->
 		{#snippet failed(error)}
-			<p class="empty" role="alert">
-				{(error as { body?: { message?: string } })?.body?.message ?? 'Could not load traces.'}
-			</p>
+			<p class="empty" role="alert">{(error as App.Error).message}</p>
 		{/snippet}
 	</svelte:boundary>
 </div>

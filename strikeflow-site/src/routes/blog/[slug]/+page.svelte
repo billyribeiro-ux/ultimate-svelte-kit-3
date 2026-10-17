@@ -9,9 +9,9 @@
 	import Badge from '#lib/components/ui/Badge.svelte';
 	import PostBody from '#lib/components/blog/PostBody.svelte';
 	import CtaBand from '#lib/components/marketing/CtaBand.svelte';
-	import type { PageData } from './$types';
+	import type { PageProps } from './$types';
 
-	let { data }: { data: PageData } = $props();
+	let { data }: PageProps = $props();
 
 	const post = $derived(data.post);
 	const author = $derived(data.author);
@@ -95,8 +95,12 @@
 				<div class="post__byline-text">
 					<p class="post__author">
 						<!-- The author name links to their section on /about, which is the
-						     stable author page the Person schema points at. -->
-						<a href={`${resolve('/about')}#${author.id}`}>
+						     stable author page the Person schema points at. The hash goes
+						     INSIDE resolve(): SvelteKit 3 accepts a route ID with a `#hash`
+						     or `?search` suffix, so the whole href stays typed — and the
+						     lint rule can see it is a resolved link, which it can't through
+						     string concatenation. -->
+						<a href={resolve(`/about#${author.id}`)}>
 							{author.name}{#if author.credentials}, {author.credentials}{/if}
 						</a>
 					</p>

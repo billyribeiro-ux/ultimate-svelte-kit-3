@@ -1,8 +1,6 @@
 <script lang="ts">
-	import { untrack } from 'svelte';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
-	import { goto } from '$app/navigation';
 	import { browser } from '$app/env';
 	import { PUBLIC_DEFAULT_TIME_ZONE } from '$app/env/public';
 	import { CaretLeftIcon, MapPinIcon, BroadcastIcon } from 'phosphor-svelte';
@@ -11,9 +9,11 @@
 	import Button from '#lib/components/Button.svelte';
 	import Field from '#lib/components/Field.svelte';
 	import DateStrip from '#lib/components/booking/DateStrip.svelte';
-	import SlotGrid, { type SlotOption } from '#lib/components/booking/SlotGrid.svelte';
+	import SlotGrid, { slotValue, type SlotOption } from '#lib/components/booking/SlotGrid.svelte';
 	import { reveal } from '#lib/motion/index.ts';
 	import {
+		addDays,
+		daysBetween,
 		detectTimeZone,
 		formatDuration,
 		formatIsoDate,
@@ -21,48 +21,35 @@
 		formatTime,
 		instantToIsoDate,
 		offsetLabel,
+		parseIsoDate,
 		sameWallClock,
 		todayIn,
 		type IsoDate
 	} from '#lib/time/index.ts';
 
 	import { book, getAvailability, getBookingPage } from './booking.remote.ts';
+	import type { PageProps } from './$types';
 
-	let { data }: { data: { slug: string } } = $props();
+	/*
+	 * `params` is the route's own parameter, typed from the folder name by the
+	 * generated `./$types`. A remote function cannot read the URL for itself, so
+	 * the page passes `params.slug` to every query as an argument.
+	 */
+	let { params }: PageProps = $props();
 
-	/* ---------------------------------------------------------------- state */
+	/* ------------------------------------------------------- the URL is the state */
 
-	/**
-	 * The chosen service lives in the URL, not in component state.
+	/*
+	 * Every choice on this page lives in the query string, not in component
+	 * state: `?service=cut-and-finish&with=<staff id>&day=2026-10-20`.
 	 *
-	 * That is a deliberate trade. It costs a navigation, and it buys: a
-	 * shareable link to a specific service, a back button that steps back through
-	 * the choice, and a page that works with JavaScript disabled — because the
-	 * service list is a list of ordinary links.
+	 * That is a deliberate trade. Each choice costs a navigation, and it buys: a
+	 * shareable link to a specific service and day, a refresh that keeps the
+	 * customer's place, and a page that works with JavaScript disabled — because
+	 * every choice before the time itself is an ordinary link, and the server
+	 * renders whatever the URL says.
 	 */
 	const serviceSlug = $derived(page.url.searchParams.get('service'));
-
-	/**
-	 * This page's own address, computed once and guarded.
-	 *
-	 * The guard is not defensive padding — without it this page intermittently
-	 * destroys itself, and the failure is thoroughly misleading.
-	 *
-	 * When SvelteKit navigates away from here, the outgoing component re-renders
-	 * once before it is torn down, and by then `data` belongs to the *incoming*
-	 * route — so `data.slug` is `undefined`. Most expressions shrug at that.
-	 * `resolve()` does not: given `{ slug: undefined }` it throws `Missing
-	 * parameter 'slug' in route /book/[slug]`, which kills the render.
-	 *
-	 * What makes it hard to find is where the wreckage lands. The URL has already
-	 * changed, so the error is reported against the page you were navigating *to*
-	 * — a 500 on the confirmation page, thrown by the page you just left, with an
-	 * empty server log because the server was never involved.
-	 *
-	 * The general rule: inside a template, any expression that reads route data
-	 * *and can throw* must tolerate that data being momentarily absent.
-	 */
-	const shopHref = $derived(data.slug ? resolve('/book/[slug]', { slug: data.slug }) : '');
 
 	/**
 	 * The viewer's own time zone.
@@ -75,40 +62,104 @@
 	 */
 	const viewerZone = $derived(browser ? detectTimeZone() : PUBLIC_DEFAULT_TIME_ZONE);
 
-	let staffId = $state<string | null>(null);
-
-	/**
-	 * The chosen time, read back out of the form.
-	 *
-	 * Not a separate `$state`. The radio group *is* the selection, and SvelteKit's
-	 * form fields already track it — keeping a parallel copy means two sources of
-	 * truth that agree until they do not.
-	 */
-	const selectedValue = $derived(book.fields.slot.value());
-	const selectedStart = $derived(
-		selectedValue ? Number(selectedValue.slice(0, selectedValue.indexOf('.'))) : null
-	);
-
-	// The visible week, and the day within it.
-	let weekFrom = $state<IsoDate>(todayIn(PUBLIC_DEFAULT_TIME_ZONE));
-	let selectedDay = $state<IsoDate>(todayIn(PUBLIC_DEFAULT_TIME_ZONE));
-
 	/* ------------------------------------------------------------ page data */
 
 	/**
 	 * `await` inside `$derived` is the whole reason this page server-renders.
 	 *
-	 * SvelteKit waits for the boundary in the root layout to settle before it
-	 * sends any HTML, so a customer — and a search engine — receives a fully
+	 * SvelteKit waits for the boundary it wraps around this page to settle before
+	 * it sends any HTML, so a customer — and a search engine — receives a fully
 	 * rendered list of services rather than an empty div that fills in later.
 	 * Reading `.ready` / `.current` instead would render nothing on the server
 	 * and hydrate into content, which is a blank first paint and no SEO at all.
 	 */
-	const shop = $derived(await getBookingPage(data.slug));
+	const shop = $derived(await getBookingPage(params.slug));
 
 	const service = $derived(
 		serviceSlug ? (shop.services.find((entry) => entry.slug === serviceSlug) ?? null) : null
 	);
+
+	/** The people who offer the chosen service, in the studio's own order. */
+	const offeredBy = $derived(
+		service ? shop.team.filter((person) => service.staffIds.includes(person.id)) : []
+	);
+
+	/**
+	 * `?with=` — one person, or `null` for "anyone".
+	 *
+	 * Checked against who actually offers the service. A link shared from a
+	 * stylist who has since stopped doing colour falls back to "anyone" rather
+	 * than asking the server for a combination it will never offer.
+	 */
+	const staffId = $derived.by(() => {
+		const asked = page.url.searchParams.get('with');
+		return asked !== null && offeredBy.some((person) => person.id === asked) ? asked : null;
+	});
+
+	/**
+	 * `?day=` — the day being looked at, in the viewer's calendar.
+	 *
+	 * Today when it is missing, mangled, or already in the past. The week on
+	 * screen is worked out from it rather than kept separately: weeks are counted
+	 * in sevens from today, so the strip always contains the chosen day and
+	 * paging a week moves both together.
+	 */
+	const today = $derived(todayIn(viewerZone));
+	const selectedDay = $derived.by(() => {
+		const asked = parseIsoDate(page.url.searchParams.get('day'));
+		return asked !== null && asked >= today ? asked : today;
+	});
+	const weekFrom = $derived(addDays(today, 7 * Math.floor(daysBetween(today, selectedDay) / 7)));
+
+	/**
+	 * A link to this page with the given choices — built by `resolve()`, and guarded.
+	 *
+	 * `resolve` takes a route ID with a query string attached: `[slug]` is still
+	 * filled in from the params, and the query rides along. That keeps every
+	 * internal link on this page typed and base-path-aware, which is what the
+	 * `svelte/no-navigation-without-resolve` lint rule insists on — and it is
+	 * right to: a hand-assembled `href` is the one that breaks the day the app is
+	 * deployed under a sub-path. `URLSearchParams` does the encoding, so a value
+	 * with an `&` in it cannot split itself into two parameters.
+	 *
+	 * Built from the choices, not by copying `page.url` and editing it. In
+	 * SvelteKit 3 `page.url` is a `ReadonlyURL`: its `searchParams` has no `set`
+	 * or `delete`, and assigning to `pathname` throws. That is a good change —
+	 * mutating the page's URL object never did anything useful and silently
+	 * looked like it might — and the habit it breaks, copy the URL, poke the
+	 * query string, hand the copy to `goto`, has this better replacement.
+	 *
+	 * The guard is not defensive padding — without it this page intermittently
+	 * destroys itself, and the failure is thoroughly misleading.
+	 *
+	 * When SvelteKit navigates away from here, the outgoing component re-renders
+	 * once before it is torn down, and by then its props belong to the *incoming*
+	 * route — so `params.slug` is `undefined`. Most expressions shrug at that.
+	 * `resolve()` does not: given `{ slug: undefined }` it throws `Missing
+	 * parameter 'slug' in route /book/[slug]`, which kills the render.
+	 *
+	 * What makes it hard to find is where the wreckage lands. The URL has already
+	 * changed, so the error is reported against the page you were navigating *to*
+	 * — a 500 on the confirmation page, thrown by the page you just left, with an
+	 * empty server log because the server was never involved.
+	 *
+	 * The general rule: inside a template, any expression that reads route data
+	 * *and can throw* must tolerate that data being momentarily absent. Returning
+	 * `undefined` renders a link with no `href` for that one frame, which is
+	 * harmless; returning `''` would widen the type to a plain string and lose the
+	 * connection to `resolve()` that the linter checks for.
+	 */
+	function bookingHref(choice: { service?: string; with?: string | null; day?: IsoDate }) {
+		if (!params.slug) return undefined;
+		if (!choice.service) return resolve('/book/[slug]', { slug: params.slug });
+
+		const chosen = Object.entries(choice).filter(
+			(entry): entry is [string, string] => typeof entry[1] === 'string' && entry[1] !== ''
+		);
+		const query = new URLSearchParams(chosen).toString();
+
+		return resolve(`/book/[slug]?${query}`, { slug: params.slug });
+	}
 
 	/**
 	 * The live availability stream.
@@ -122,7 +173,7 @@
 	const availabilityQuery = $derived(
 		service
 			? getAvailability({
-					slug: data.slug,
+					slug: params.slug,
 					serviceId: service.id,
 					staffId: staffId ?? undefined,
 					from: weekFrom,
@@ -191,38 +242,27 @@
 	const daySlots = $derived(slotsByDay.get(selectedDay) ?? []);
 
 	/**
-	 * Forget the chosen time whenever the thing it referred to changes.
+	 * The chosen time — if it is still on screen to be chosen.
 	 *
-	 * `untrack` around the write is load-bearing, and leaving it out produces a
-	 * bug that looks like the radio buttons are broken.
+	 * The radio group *is* the selection: SvelteKit's form field holds the value,
+	 * so there is no parallel `$state` to keep in step. What is derived here is
+	 * whether that value is one of the times offered right now. Look at another
+	 * day, or narrow to another person, and the chosen radio is no longer
+	 * rendered; somebody else books it and the live grid drops it. In every one
+	 * of those cases this becomes `null` and the page stops talking about a time
+	 * the customer cannot see.
 	 *
-	 * An effect re-runs when anything it *read* changes. `fields.slot.set(...)`
-	 * reads the field's current value internally, so without `untrack` this
-	 * effect subscribes to the very thing it is writing: the customer clicks a
-	 * time, the field changes, the effect wakes up and immediately clears it
-	 * again. The selection never survives a single frame, and nothing in the
-	 * console says why.
-	 *
-	 * `untrack` says "run this, but do not count what it reads as a dependency",
-	 * which leaves the effect depending on exactly the three things named above.
+	 * An earlier version cleared the field from two `$effect`s instead — one when
+	 * the service, person or day changed, one when the live grid dropped the
+	 * time. Both were state written in reaction to other state, which is what
+	 * `$derived` is for, and the first needed `untrack` to stop it waking itself
+	 * up. Deriving the answer removed both effects and the trap with them.
 	 */
-	$effect(() => {
-		void service?.id;
-		void staffId;
-		void selectedDay;
-		untrack(() => book.fields.slot.set(''));
-	});
+	const selectedValue = $derived(book.fields.slot.value());
+	const selected = $derived(daySlots.find((slot) => slotValue(slot) === selectedValue) ?? null);
 
-	/**
-	 * If the chosen slot vanishes underneath us — somebody else took it while the
-	 * customer was typing their name — drop the selection rather than let them
-	 * submit a time that is gone. The live query is what makes this reachable.
-	 */
-	$effect(() => {
-		if (selectedStart === null) return;
-		if (daySlots.some((slot) => slot.start === selectedStart)) return;
-		untrack(() => book.fields.slot.set(''));
-	});
+	/** The server's answer about the chosen time, when it refused it. */
+	const slotIssue = $derived(book.fields.slot.issues()?.[0]?.message);
 
 	/* ---------------------------------------------------------- presentation */
 
@@ -234,29 +274,8 @@
 	 * Lisbon is essential.
 	 */
 	const zonesDiffer = $derived(
-		selectedStart !== null && !sameWallClock(selectedStart, viewerZone, businessZone)
+		selected !== null && !sameWallClock(selected.start, viewerZone, businessZone)
 	);
-
-	function pickService(slug: string | null) {
-		/*
-		 * `page.url` is a `ReadonlyURL` in SvelteKit 3 — its `searchParams` has no
-		 * `set` or `delete`, and assigning to `pathname` throws. That is a good
-		 * change: mutating the page's URL object never did anything useful and
-		 * silently looked like it might. Copy it through `href` to get a real one.
-		 */
-		const url = new URL(page.url.href);
-		if (slug) url.searchParams.set('service', slug);
-		else url.searchParams.delete('service');
-
-		/*
-		 * `reset: false` keeps the scroll position and the focused element.
-		 * SvelteKit 3 replaced the old `noScroll` and `keepFocus` pair with this
-		 * one option, because wanting one without the other was almost always a
-		 * mistake — a page that stays put but throws focus to `<body>` strands a
-		 * keyboard user in a place they cannot see.
-		 */
-		void goto(url, { reset: false });
-	}
 
 	const countFor = (day: IsoDate) => slotsByDay.get(day)?.length ?? 0;
 </script>
@@ -289,7 +308,7 @@
 			<ul class="services" role="list">
 				{#each shop.services as entry (entry.id)}
 					<li>
-						<a class="service" href="{shopHref}?service={entry.slug}">
+						<a class="service" href={bookingHref({ service: entry.slug })}>
 							<span class="service-main">
 								<span class="service-name">{entry.name}</span>
 								{#if entry.description}
@@ -313,22 +332,22 @@
 		</section>
 	{:else}
 		<!-- ------------------------------------- steps 2–4: when and who -->
-		<form {...book} class="stack stack-lg">
+		<form {...book} class="booking stack stack-lg">
 			<!--
 				Every control inside a remote form must be built by `fields.<name>.as()`.
 				A hand-written `<input name="slug">` throws at runtime — SvelteKit needs
 				to own the name and value to construct the submitted data. `hidden`,
 				`radio` and `submit` inputs take their value as the second argument.
 			-->
-			<input {...book.fields.slug.as('hidden', data.slug)} />
+			<input {...book.fields.slug.as('hidden', params.slug)} />
 			<input {...book.fields.serviceId.as('hidden', service.id)} />
 			<input {...book.fields.viewerTimeZone.as('hidden', viewerZone)} />
 
 			<section class="step">
-				<button type="button" class="back" onclick={() => pickService(null)}>
+				<a class="back" href={bookingHref({})}>
 					<CaretLeftIcon weight="bold" aria-hidden="true" />
 					All services
-				</button>
+				</a>
 
 				<div class="chosen">
 					<h2>{service.name}</h2>
@@ -341,33 +360,43 @@
 				</div>
 			</section>
 
-			{#if service.staffIds.length > 1}
+			{#if offeredBy.length > 1}
 				<section class="step">
 					<h3>Who with?</h3>
-					<div class="who" role="radiogroup" aria-label="Choose who with">
-						<button
-							type="button"
-							role="radio"
-							aria-checked={staffId === null}
-							class="who-option"
-							class:selected={staffId === null}
-							onclick={() => (staffId = null)}
-						>
-							Anyone
-						</button>
-						{#each shop.team.filter( (person) => service.staffIds.includes(person.id) ) as person (person.id)}
-							<button
-								type="button"
-								role="radio"
-								aria-checked={staffId === person.id}
+					<!--
+						Links, like the day strip: each one is this page with `?with=` changed,
+						so the choice works without JavaScript, survives a refresh, and is a
+						plain Tab stop that Enter follows. `aria-current` marks the one in
+						force and carries the styling too, so the two cannot drift apart.
+					-->
+					<ul
+						class="who"
+						role="list"
+						aria-label="Choose who with"
+						data-sveltekit-reset="false"
+						data-sveltekit-replacestate
+					>
+						<li>
+							<a
 								class="who-option"
-								class:selected={staffId === person.id}
-								onclick={() => (staffId = person.id)}
+								href={bookingHref({ service: service.slug, day: selectedDay })}
+								aria-current={staffId === null ? 'true' : undefined}
 							>
-								{person.displayName}
-							</button>
+								Anyone
+							</a>
+						</li>
+						{#each offeredBy as person (person.id)}
+							<li>
+								<a
+									class="who-option"
+									href={bookingHref({ service: service.slug, with: person.id, day: selectedDay })}
+									aria-current={staffId === person.id ? 'true' : undefined}
+								>
+									{person.displayName}
+								</a>
+							</li>
 						{/each}
-					</div>
+					</ul>
 				</section>
 			{/if}
 
@@ -382,104 +411,126 @@
 					{/if}
 				</div>
 
-				<DateStrip bind:from={weekFrom} bind:selected={selectedDay} zone={viewerZone} {countFor} />
+				<DateStrip
+					from={weekFrom}
+					selected={selectedDay}
+					zone={viewerZone}
+					{countFor}
+					hrefFor={(day) => bookingHref({ service: service.slug, with: staffId, day })}
+				/>
 
 				<p class="day-label">{formatIsoDate(selectedDay)}</p>
 
+				<!--
+					A time the server refused: taken in the last few seconds, or no longer
+					on offer. It is said here, beside the grid, because the remedy is to
+					pick another time — and the details below are still filled in.
+				-->
+				{#if slotIssue && selected === null}
+					<Alert tone="error"><p>{slotIssue}</p></Alert>
+				{/if}
+
 				<SlotGrid slots={daySlots} zone={viewerZone} field={book.fields.slot} />
 
-				{#if zonesDiffer && selectedStart !== null}
+				{#if zonesDiffer && selected !== null}
 					<p class="zone-note">
-						That is {formatTime(selectedStart, businessZone)} at the studio ({offsetLabel(
-							selectedStart,
+						That is {formatTime(selected.start, businessZone)} at the studio ({offsetLabel(
+							selected.start,
 							businessZone
 						)}), and
-						{formatTime(selectedStart, viewerZone)} where you are.
+						{formatTime(selected.start, viewerZone)} where you are.
 					</p>
 				{/if}
 			</section>
 
-			{#if selectedStart !== null}
-				<section class="step details" {@attach reveal({ y: 14 })}>
-					<h3>Your details</h3>
+			<!--
+				Always rendered, and hidden by CSS until a time is checked: see
+				`.booking:not(:has(...)) .details` below. The browser knows which radio
+				is checked with or without JavaScript, so the same rule reveals the form
+				on a page whose script never arrived — where an `{#if}` on the chosen
+				time could never change, and the fields would never appear at all.
+			-->
+			<section class="step details" {@attach reveal({ y: 14 })}>
+				<h3>Your details</h3>
 
+				{#if selected !== null}
 					<p class="summary">
 						<strong>{service.name}</strong> ·
-						{formatIsoDate(instantToIsoDate(selectedStart, viewerZone))} at
-						{formatTime(selectedStart, viewerZone, { withZone: zonesDiffer })}
+						{formatIsoDate(instantToIsoDate(selected.start, viewerZone))} at
+						{formatTime(selected.start, viewerZone, { withZone: zonesDiffer })}
 					</p>
+				{/if}
 
-					{#if book.result === undefined && book.fields.allIssues()?.length}
-						<Alert tone="error" title="Please check the form">
-							<p>Some details need another look.</p>
-						</Alert>
-					{/if}
+				{#if book.result === undefined && book.fields.allIssues()?.length}
+					<Alert tone="error" title="Please check the form">
+						<p>Some details need another look.</p>
+					</Alert>
+				{/if}
 
-					<div class="stack">
-						<Field label="Your name" required error={book.fields.name.issues()?.[0]?.message}>
-							{#snippet children({ id, describedBy, invalid })}
-								<input
-									{...book.fields.name.as('text')}
-									{id}
-									aria-describedby={describedBy}
-									aria-invalid={invalid}
-									autocomplete="name"
-									placeholder="Sam Okafor"
-								/>
-							{/snippet}
-						</Field>
+				<div class="stack">
+					<Field label="Your name" required error={book.fields.name.issues()?.[0]?.message}>
+						{#snippet children({ id, describedBy, invalid })}
+							<input
+								{...book.fields.name.as('text')}
+								{id}
+								aria-describedby={describedBy}
+								aria-invalid={invalid}
+								autocomplete="name"
+								placeholder="Sam Okafor"
+							/>
+						{/snippet}
+					</Field>
 
-						<Field
-							label="Email"
-							required
-							hint="We send your confirmation and a link to change or cancel."
-							error={book.fields.email.issues()?.[0]?.message}
-						>
-							{#snippet children({ id, describedBy, invalid })}
-								<input
-									{...book.fields.email.as('email')}
-									{id}
-									aria-describedby={describedBy}
-									aria-invalid={invalid}
-									autocomplete="email"
-									placeholder="sam@example.com"
-								/>
-							{/snippet}
-						</Field>
+					<Field
+						label="Email"
+						required
+						hint="We send your confirmation and a link to change or cancel."
+						error={book.fields.email.issues()?.[0]?.message}
+					>
+						{#snippet children({ id, describedBy, invalid })}
+							<input
+								{...book.fields.email.as('email')}
+								{id}
+								aria-describedby={describedBy}
+								aria-invalid={invalid}
+								autocomplete="email"
+								placeholder="sam@example.com"
+							/>
+						{/snippet}
+					</Field>
 
-						<Field label="Phone" error={book.fields.phone.issues()?.[0]?.message}>
-							{#snippet children({ id, describedBy, invalid })}
-								<input
-									{...book.fields.phone.as('tel')}
-									{id}
-									aria-describedby={describedBy}
-									aria-invalid={invalid}
-									autocomplete="tel"
-								/>
-							{/snippet}
-						</Field>
+					<Field label="Phone" error={book.fields.phone.issues()?.[0]?.message}>
+						{#snippet children({ id, describedBy, invalid })}
+							<input
+								{...book.fields.phone.as('tel')}
+								{id}
+								aria-describedby={describedBy}
+								aria-invalid={invalid}
+								autocomplete="tel"
+							/>
+						{/snippet}
+					</Field>
 
-						<Field label="Anything we should know?" error={book.fields.note.issues()?.[0]?.message}>
-							{#snippet children({ id, describedBy, invalid })}
-								<textarea
-									{...book.fields.note.as('text')}
-									{id}
-									aria-describedby={describedBy}
-									aria-invalid={invalid}
-									rows="3"
-									placeholder="Growing out a fringe, allergic to the blue dye, running late…"
-								></textarea>
-							{/snippet}
-						</Field>
-					</div>
+					<Field label="Anything we should know?" error={book.fields.note.issues()?.[0]?.message}>
+						{#snippet children({ id, describedBy, invalid })}
+							<textarea
+								{...book.fields.note.as('text')}
+								{id}
+								aria-describedby={describedBy}
+								aria-invalid={invalid}
+								rows="3"
+								placeholder="Growing out a fringe, allergic to the blue dye, running late…"
+							></textarea>
+						{/snippet}
+					</Field>
+				</div>
 
-					<Button type="submit" size="lg" full loading={book.pending > 0}>Book this time</Button>
+				<Button type="submit" size="lg" full loading={book.pending > 0}>Book this time</Button>
 
-					<p class="small text-faint">
-						You can cancel free up to {shop.business.cancellationNoticeHours} hours beforehand.
-					</p>
-				</section>
-			{/if}
+				<p class="small text-faint">
+					You can cancel free up to {shop.business.cancellationNoticeHours} hours beforehand.
+				</p>
+			</section>
 		</form>
 	{/if}
 </div>
@@ -607,6 +658,7 @@
 		align-self: flex-start;
 		font-size: var(--text-sm);
 		color: var(--ink-muted);
+		text-decoration: none;
 		padding: var(--space-2) 0;
 	}
 
@@ -630,9 +682,18 @@
 		display: flex;
 		flex-wrap: wrap;
 		gap: var(--space-2);
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	.who li + li {
+		margin: 0;
 	}
 
 	.who-option {
+		display: inline-flex;
+		align-items: center;
 		padding: var(--space-2) var(--space-4);
 		min-height: 2.75rem;
 		background: var(--surface);
@@ -641,16 +702,18 @@
 		font-size: var(--text-sm);
 		font-weight: var(--weight-medium);
 		color: var(--ink);
+		text-decoration: none;
 		transition:
 			background-color var(--dur-fast) var(--ease-standard),
 			border-color var(--dur-fast) var(--ease-standard);
 	}
 
-	.who-option:hover:not(.selected) {
+	.who-option:hover:not([aria-current='true']) {
 		border-color: var(--accent);
+		color: var(--ink);
 	}
 
-	.who-option.selected {
+	.who-option[aria-current='true'] {
 		background: var(--accent);
 		border-color: var(--accent);
 		color: var(--on-accent);
@@ -709,6 +772,18 @@
 	.details {
 		padding-block-start: var(--space-2);
 		border-block-start: var(--border) solid var(--line);
+	}
+
+	/*
+	 * Nothing to ask for until there is something to book. `:has()` asks the
+	 * browser whether any time in the grid is checked — a question it can answer
+	 * with or without JavaScript — and the grid's radios live in another
+	 * component, hence `:global` inside it. A browser without `:has()` simply
+	 * shows the details all the time, which is a worse layout and the same
+	 * working form.
+	 */
+	.booking:not(:has(:global(.slot input:checked))) .details {
+		display: none;
 	}
 
 	.summary {

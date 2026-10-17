@@ -45,7 +45,7 @@
 			<label data-motion="field">
 				Password
 				<input
-					{...signIn.fields.password.as('password')}
+					{...signIn.fields._password.as('password')}
 					autocomplete="current-password"
 					required
 				/>

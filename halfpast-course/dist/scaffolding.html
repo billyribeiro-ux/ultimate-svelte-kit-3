@@ -35,14 +35,14 @@
 			<h1>Scaffolding the project</h1>
 			<p class="lede">One command, and a tour of what it produced.</p>
 			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>A running SvelteKit 3 project with a database, authentication and a test runner already wired in.</p></aside>
-			<p>The Svelte CLI can set up far more than an empty app. Everything after <code>--add</code> is an *addon*: a preset that installs packages, writes config, and stitches them together correctly.</p>
+			<p>The Svelte CLI can set up far more than an empty app. Everything after <code>--add</code> is an <em>addon</em>: a preset that installs packages, writes config, and stitches them together correctly.</p>
 
 <figure class="code code--terminal">
 	<figcaption>
 		<span class="code__file">terminal</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code>npx -y sv@next create halfpast-app \
+	<pre><code>npx -y sv create halfpast-app \
   --template minimal --types ts \
   --add prettier eslint &quot;vitest=usages:unit,component&quot; playwright \
         &quot;sveltekit-adapter=adapter:node&quot; \
@@ -78,7 +78,7 @@
 
 <aside class="callout callout--why">
 	<h4>src/lib/server is a real boundary</h4>
-	<p>Anything under it is a server-only module. Import one from a component and the build *fails* — it does not warn, it does not tree-shake it away and hope. That is what stops a database URL or a signing key reaching the browser, and it is why the database client lives there.</p>
+	<p>Anything under it is a server-only module. Import one from a component and the build <em>fails</em> — it does not warn, it does not tree-shake it away and hope. That is what stops a database URL or a signing key reaching the browser, and it is why the database client lives there.</p>
 </aside>
 <h3 id="no-config-file">The missing svelte.config.js</h3>
 <p>If you have used SvelteKit 2, the absence of <code>svelte.config.js</code> will be the first surprise. In Kit 3 every framework option is an argument to the <code>sveltekit()</code> plugin in <code>vite.config.ts</code>.</p>
@@ -117,7 +117,7 @@
 	};
 });</code></pre>
 </figure>
-<p>Notice the outer shape before anything else: the config is a *function* of <code>({ mode })</code> that returns the object, not the object itself. That shape is load-bearing, not stylistic — the function form is what lets the config read the environment with <code>loadEnv</code> before building, which <code>paths.origin</code> needs.</p>
+<p>Notice the outer shape before anything else: the config is a <em>function</em> of <code>({ mode })</code> that returns the object, not the object itself. That shape is load-bearing, not stylistic — the function form is what lets the config read the environment with <code>loadEnv</code> before building, which <code>paths.origin</code> needs.</p>
 <p>This is not cosmetic tidying. In Kit 2 the Vite plugin had to asynchronously load your config file before it could do anything, which made a whole family of setup-ordering bugs possible. Now Vite hands the config straight to the plugin.</p>
 <h3 id="cleanup">Clearing the demo</h3>
 <p>The addons leave working examples behind. Read them once, then delete them — they will otherwise sit in your routes forever, and a demo login page in a real app is a liability.</p>

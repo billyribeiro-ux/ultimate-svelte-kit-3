@@ -63,15 +63,19 @@
 	<span class="label">{@render children()}</span>
 {/snippet}
 
+<!--
+	One `class` attribute, written as an array: the fixed name, the two props
+	that are class names already, and an object for the two on/off states.
+	Svelte joins it with clsx, so there is no string to build and no `class:`
+	directive beside it.
+-->
 {#if isLink}
-	<a class="btn {variant} {size}" class:full class:loading {...rest as HTMLAnchorAttributes}>
+	<a class={['btn', variant, size, { full, loading }]} {...rest as HTMLAnchorAttributes}>
 		{@render body()}
 	</a>
 {:else}
 	<button
-		class="btn {variant} {size}"
-		class:full
-		class:loading
+		class={['btn', variant, size, { full, loading }]}
 		{...rest as HTMLButtonAttributes}
 		disabled={loading || (rest as HTMLButtonAttributes).disabled}
 	>

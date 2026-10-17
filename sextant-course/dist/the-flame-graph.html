@@ -76,17 +76,21 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/components/FlameGraph.svelte<span class="code__lines">:105-135</span></span>
+		<span class="code__file">src/lib/components/FlameGraph.svelte<span class="code__lines">:105-139</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">{#snippet flame(node: SpanNode, depth: number)}
 	{#if depth &lt;= MAX_DEPTH}
 		&lt;button
 			type=&quot;button&quot;
-			class=&quot;bar&quot;
-			class:bar--error={node.status === 'error'}
-			class:bar--selected={selected === node.spanId}
-			class:bar--synthetic={node.synthetic}
+			class={[
+				'bar',
+				{
+					'bar--error': node.status === 'error',
+					'bar--selected': selected === node.spanId,
+					'bar--synthetic': node.synthetic
+				}
+			]}
 			style:left=&quot;{offsetOf(node)}%&quot;
 			style:width=&quot;{widthOf(node)}%&quot;
 			style:top=&quot;{depth * 20}px&quot;

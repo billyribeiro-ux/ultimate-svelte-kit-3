@@ -98,8 +98,8 @@ export const part0 = [
 			{
 				type: 'ul',
 				items: [
-					'**Node 24 LTS** — we use its ability to run TypeScript directly, with no build step for the server-side code',
-					'**pnpm** — the workspace is a monorepo and pnpm handles that better than the alternatives',
+					'**Node 24 LTS**, 24.21 or newer (the root `package.json` says so in `engines`) — we use its ability to run TypeScript directly, with no build step for the server-side code',
+					'**pnpm 12** — the workspace is a monorepo and pnpm handles that better than the alternatives. `packageManager` in the root `package.json` pins the exact release',
 					'A terminal, an editor, and a browser',
 					'No prior knowledge of finance. Every term is defined the first time it appears.'
 				]
@@ -269,7 +269,19 @@ packages:
 # letting a transitive dependency satisfy an undeclared import.
 linkWorkspacePackages: true
 
-# …`
+# Releases younger than the global \`minimumReleaseAge\` that we have read the
+# changelogs for and want anyway. pnpm 12 appends to this list itself when an
+# install picks one, so the entries are a record of what was waved through, not
+# a wish list — remove one and the next install that resolves it waits for the
+# release to age. An entry the lockfile no longer resolves records nothing, and
+# goes when the upgrade that replaced it lands.
+minimumReleaseAgeExclude:
+  - '@types/node@24.19.2'
+  - eslint-plugin-svelte@3.23.1`
+			},
+			{
+				type: 'p',
+				text: 'The first two settings are the ones this chapter is about. The last block is housekeeping that pnpm 12 does for you: it records the few releases younger than the global `minimumReleaseAge` that were read and accepted anyway. pnpm appends to it itself when an install picks one, so treat it as a log of what was waved through rather than a list to edit by hand. The one hand edit it does need is pruning. Each entry names an exact version, so when an upgrade moves past it the entry matches nothing — this list once still waved through a Svelte patch release the lockfile had already replaced, recording a decision that no longer described anything installed. Removing it changed nothing an install could see: a frozen install still checks every locked version against the age policy, and still printed `Lockfile passes supply-chain policies`.'
 			},
 
 			{ type: 'h3', id: 'the-six', text: 'The six packages' },
@@ -339,7 +351,7 @@ linkWorkspacePackages: true
 		"verbatimModuleSyntax": true,
 		"isolatedModules": true,
 
-		// …
+		…
 		"skipLibCheck": true,
 		"resolveJsonModule": true
 	}
@@ -749,7 +761,20 @@ const CROCKFORD = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
  * The layout is ULID-shaped: 48 bits of millisecond timestamp, then 80 bits of
  * randomness, encoded as 26 characters of Base32.
  *
- * …
+ * **Sortable** is not a nicety. Because the timestamp is most-significant,
+ * sorting these strings sorts them by creation time — so a database index on an
+ * id column is also an index on age, and every insert lands at the right-hand
+ * edge of the B-tree instead of scattering through it. A UUIDv4 primary key on
+ * a busy table fragments the index and turns inserts into random writes; this
+ * does not.
+ *
+ * **Unguessable** matters because these identifiers appear in URLs and API
+ * responses. 80 bits of entropy per millisecond is enough that enumerating
+ * other firms' orders is not a thing anybody will manage.
+ *
+ * \`now\` is a parameter rather than a call to \`Date.now()\` inside, purely so the
+ * tests can assert that two ids minted in the same millisecond still differ and
+ * that ids minted later sort after ids minted earlier.
  */
 export function newId(now: number = Date.now()): string {
 	if (!Number.isInteger(now) || now < 0) {
@@ -767,7 +792,6 @@ export function newId(now: number = Date.now()): string {
 	}
 
 	// …
-
 	let carry = 0n;
 	for (const byte of bytes) carry = (carry << 8n) | BigInt(byte);
 
@@ -791,12 +815,12 @@ export function newId(now: number = Date.now()): string {
 				code: `
 {
 	"name": "@sequent/protocol",
-	// …
+	…
 	"exports": {
 		".": "./src/index.ts",
 		"./generate": "./src/generate.ts"
-	}
-	// …
+	},
+	…
 }`
 			},
 
@@ -830,6 +854,11 @@ export function clientKey(firmId: FirmId, clientOrderId: ClientOrderId): string 
 export function positionKey(accountId: AccountId, instrumentId: InstrumentId): string {
 	return \`\${accountId}\\0\${instrumentId}\`;
 }`
+			},
+			{
+				type: 'why',
+				title: 'A separator that cannot occur, written so you can see it',
+				text: 'Joining two identifiers needs a character neither of them can contain, or `("A", "B.C")` and `("A.B", "C")` build the same key. Every id in the protocol is printable text, so the NUL character — code point zero — is the one separator that is guaranteed never to appear in either half. It is written as the escape `\\0` inside the template literal, never as the raw byte. The two produce an identical string, but a raw NUL in a source file makes git treat the whole file as binary — no diff, no blame, no review of the very functions that decide whose order is whose — and cannot be shown on a page like this one at all.'
 			},
 			{
 				type: 'checkpoint',

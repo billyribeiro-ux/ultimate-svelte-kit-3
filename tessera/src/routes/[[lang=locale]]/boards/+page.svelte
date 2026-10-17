@@ -1,25 +1,26 @@
 <script lang="ts">
 	import PlusIcon from 'phosphor-svelte/lib/Plus';
-	import { ago, messages } from '#lib/i18n/index.ts';
+	import { ago, langParam, messages } from '#lib/i18n/index.ts';
 	import { createBoard, myBoards } from '#lib/remote/boards.remote.ts';
 	import Button from '#lib/components/Button.svelte';
-	import type { PageData } from './$types';
+	import type { PageProps } from './$types';
+	import { resolve } from '$app/paths';
 
-	interface Props {
-		data: PageData;
-	}
-
-	let { data }: Props = $props();
+	let { data }: PageProps = $props();
 	const t = $derived(messages(data.locale));
-	const prefix = $derived(data.locale === 'en' ? '' : `/${data.locale}`);
+	// See the layout for why links are built with `resolve()` and `langParam`.
+	const lang = $derived(langParam(data.locale));
 
 	/**
 	 * A live query, so a board created in another tab — or by a colleague in a
 	 * workspace you belong to — appears here without a reload.
 	 *
-	 * `boards.current` is the latest value the stream has yielded. It is
-	 * `undefined` until the first arrives, which is what the boundary below is
-	 * for.
+	 * Awaited in the markup, inside the boundary, rather than read through
+	 * `boards.current`. Awaiting a live query is not a one-off: every value the
+	 * stream yields resolves it again, so the list still updates in place. What
+	 * `await` adds is that the boundary sees the wait (its `pending` snippet) and
+	 * the failure (its `failed` snippet). `.current` is `undefined` in both cases
+	 * and says nothing — a stream that fails just leaves an empty page.
 	 */
 	const boards = myBoards();
 </script>
@@ -43,13 +44,15 @@
 			<!--
 				Even hidden inputs go through `fields.x.as(...)`.
 
-				An enhanced form refuses a field it did not create: "Form contained a
-				field that wasn't created with form.fields.as(...)". It is a good rule —
-				it is what lets the form know its own shape, report per-field issues and
-				keep values across a failed submission — and it is easy to trip over,
-				because a hand-written `<input type="hidden">` looks like the most
-				harmless markup in the file. Without JavaScript it submits fine, so the
-				failure only appears once hydration has finished.
+				A remote form refuses a field it did not create. A field made by
+				`.as(...)` carries the form's id in its `name`, and a hand-written one
+				does not: with JavaScript the error is "Form contained a field that
+				wasn't created with form.fields.as(...)", and without it the server
+				rejects the whole submission. It is a good rule — it is what lets the
+				form know its own shape, report per-field issues and keep values
+				across a failed submission — and it is easy to trip over, because a
+				hand-written `<input type="hidden">` looks like the most harmless
+				markup in the file.
 			-->
 			<input {...createBoard.fields.workspaceId.as('hidden', data.workspaceId ?? '')} />
 			<input {...createBoard.fields.title.as('hidden', t.board.untitled)} />
@@ -58,11 +61,15 @@
 	</header>
 
 	<svelte:boundary>
-		{#if boards.current && boards.current.length > 0}
+		{const list = $derived(await boards)}
+		{#if list.length > 0}
 			<ul class="boards__list auto-grid" style="--min-column: 15rem">
-				{#each boards.current as board (board.id)}
+				{#each list as board (board.id)}
 					<li>
-						<a class="boards__card" href="{prefix}/boards/{board.id}">
+						<a
+							class="boards__card"
+							href={resolve('/[[lang=locale]]/boards/[board]', { lang, board: board.id })}
+						>
 							<span class="boards__title truncate">{board.title}</span>
 							<span class="boards__meta">
 								{board.workspaceName} · {t.board.lastEdited(ago(data.locale, board.updatedAt))}
@@ -72,7 +79,7 @@
 					</li>
 				{/each}
 			</ul>
-		{:else if boards.current}
+		{:else}
 			<p class="boards__empty">{t.board.empty}</p>
 		{/if}
 
@@ -80,8 +87,15 @@
 			<p class="boards__empty">{t.sync.connecting}</p>
 		{/snippet}
 
+		<!--
+			An `App.Error`, already through `handleError`, so the text is its
+			`message`. Svelte types `error` as `unknown` — it cannot know what
+			SvelteKit's `transformError` returns — hence the cast.
+		-->
 		{#snippet failed(error)}
-			<p class="boards__empty">{t.errors.generic} <small>{String(error)}</small></p>
+			<p class="boards__empty">
+				{t.errors.generic} <small>{(error as App.Error).message}</small>
+			</p>
 		{/snippet}
 	</svelte:boundary>
 </div>

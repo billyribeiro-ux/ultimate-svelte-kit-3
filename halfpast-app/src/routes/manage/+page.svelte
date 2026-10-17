@@ -2,9 +2,9 @@
 	import { resolve } from '$app/paths';
 	import Alert from '#lib/components/Alert.svelte';
 	import { reveal } from '#lib/motion/index.ts';
-	import type { PageData } from './$types';
+	import type { PageProps } from './$types';
 
-	let { data }: { data: PageData } = $props();
+	let { data }: PageProps = $props();
 </script>
 
 <svelte:head>

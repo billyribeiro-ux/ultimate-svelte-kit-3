@@ -67,7 +67,7 @@ input:focus   { }  /* an input, while it is selected */
 <aside class="callout callout--note"><p>A <strong>class</strong> is a label you put on elements: <code>&lt;div class=&quot;card&quot;&gt;</code>. You can use the same class on as many elements as you like, and one element can have several. Classes are the workhorse of CSS.</p></aside>
 <h3 id="box-model">The box model</h3>
 <p>Every element is a rectangle with four layers, from the inside out:</p>
-<ul><li><strong>Content</strong> — the text or image itself.</li><li><strong>Padding</strong> — space *inside* the box, between the content and the border. Background colour extends through it.</li><li><strong>Border</strong> — a line around the padding.</li><li><strong>Margin</strong> — space *outside* the box, pushing other elements away. Always transparent.</li></ul>
+<ul><li><strong>Content</strong> — the text or image itself.</li><li><strong>Padding</strong> — space <em>inside</em> the box, between the content and the border. Background colour extends through it.</li><li><strong>Border</strong> — a line around the padding.</li><li><strong>Margin</strong> — space <em>outside</em> the box, pushing other elements away. Always transparent.</li></ul>
 
 <aside class="callout callout--why">
 	<h4>Padding or margin?</h4>
@@ -83,9 +83,9 @@ input:focus   { }  /* an input, while it is selected */
 	box-sizing: border-box;
 }</code></pre>
 </figure>
-<aside class="callout callout--warn"><p>By default, <code>width: 300px</code> means the *content* is 300px, and any padding and border are <strong>added on top</strong> — so your 300px box is actually 340px and your layout breaks. <code>border-box</code> makes width mean the whole box, which is what everyone assumes it means. It is not the default only for historical reasons. Put this in every project.</p></aside>
+<aside class="callout callout--warn"><p>By default, <code>width: 300px</code> means the <em>content</em> is 300px, and any padding and border are <strong>added on top</strong> — so your 300px box is actually 340px and your layout breaks. <code>border-box</code> makes width mean the whole box, which is what everyone assumes it means. It is not the default only for historical reasons. Put this in every project.</p></aside>
 <h3 id="cascade">The cascade: which rule wins</h3>
-<p>CSS stands for *Cascading* Style Sheets. When two rules target the same element, the conflict is settled in this order:</p>
+<p>CSS stands for <em>Cascading</em> Style Sheets. When two rules target the same element, the conflict is settled in this order:</p>
 <ol><li><strong>Specificity.</strong> A more specific selector wins. An id (<code>#main</code>) beats a class (<code>.card</code>), which beats an element (<code>p</code>).</li><li><strong>Order.</strong> If specificity ties, whichever comes later in the file wins.</li><li><strong><code>!important</code>.</strong> Overrides everything. Almost always a sign something has gone wrong — you are fighting your own stylesheet.</li></ol>
 <aside class="callout callout--note"><p>This project writes <code>!important</code> exactly three times, all in one place: the reduced-motion kill-switch in <code>reset.css</code>, which must override every animation on the site no matter how specific the selector that set it — the one canonical legitimate use. If you reach for it anywhere else, the real problem is usually a selector that is more specific than it needs to be somewhere else.</p></aside>
 <h3 id="variables">Custom properties (CSS variables)</h3>
@@ -113,7 +113,7 @@ input:focus   { }  /* an input, while it is selected */
 	<p>Change <code>--brand-blue</code> in one place and every button, link and border using it updates. Without variables, changing a brand colour means find-and-replacing a hex code across fifty files, missing three, and creating a site where two blues are almost-but-not-quite the same. Chapter 12 builds our entire design system out of these.</p>
 </aside>
 <h3 id="units">Units</h3>
-<ul><li><code>px</code> — pixels. Fixed. Fine for borders, bad for text.</li><li><code>rem</code> — relative to the browser's base font size (normally 16px, so <code>1rem</code> = 16px). <strong>Use this for text and spacing.</strong> If a user increases their default font size for readability, <code>rem</code> respects it and <code>px</code> ignores it.</li><li><code>em</code> — relative to the *current element's* font size. Useful for spacing that should scale with its own text.</li><li><code>%</code> — relative to the parent.</li><li><code>vw</code> / <code>vh</code> — 1% of the viewport width / height.</li><li><code>ch</code> — the width of a <code>0</code> character. <code>max-width: 70ch</code> caps a paragraph at about 70 characters, which is the readable range.</li></ul>
+<ul><li><code>px</code> — pixels. Fixed. Fine for borders, bad for text.</li><li><code>rem</code> — relative to the browser's base font size (normally 16px, so <code>1rem</code> = 16px). <strong>Use this for text and spacing.</strong> If a user increases their default font size for readability, <code>rem</code> respects it and <code>px</code> ignores it.</li><li><code>em</code> — relative to the <em>current element's</em> font size. Useful for spacing that should scale with its own text.</li><li><code>%</code> — relative to the parent.</li><li><code>vw</code> / <code>vh</code> — 1% of the viewport width / height.</li><li><code>ch</code> — the width of a <code>0</code> character. <code>max-width: 70ch</code> caps a paragraph at about 70 characters, which is the readable range.</li></ul>
 <aside class="callout callout--warn"><p>Use <code>rem</code> rather than <code>px</code> for font sizes. Setting text in <code>px</code> overrides a user's accessibility settings — for someone with low vision who has increased their default size, your site simply ignores them. It is also a WCAG failure.</p></aside>
 <h3 id="layout">Flexbox and Grid, briefly</h3>
 <p>Two layout systems. You will use both, and the rule of thumb is simple.</p>
@@ -142,7 +142,7 @@ input:focus   { }  /* an input, while it is selected */
 	gap: 1.5rem;
 }</code></pre>
 </figure>
-<aside class="callout callout--note"><p><strong>Flexbox</strong> for a row or a column — one direction. <strong>Grid</strong> when you need rows *and* columns. <code>gap</code> works in both and is far better than putting margins on children, because it never leaves a stray margin on the last item.</p></aside>
+<aside class="callout callout--note"><p><strong>Flexbox</strong> for a row or a column — one direction. <strong>Grid</strong> when you need rows <em>and</em> columns. <code>gap</code> works in both and is far better than putting margins on children, because it never leaves a stray margin on the last item.</p></aside>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>

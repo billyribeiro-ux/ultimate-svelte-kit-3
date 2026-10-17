@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { scale } from 'svelte/transition';
 	import { flip } from 'svelte/animate';
+	import { prefersReducedMotion } from 'svelte/motion';
 	import { online } from 'svelte/reactivity/window';
-	import { page } from '$app/state';
-	import type { RouteParams } from '$app/types';
+	import type { PageProps } from './$types.js';
 	import { becomeArtist, whoAmI } from '#lib/remote/artist.remote.ts';
 	import {
 		fillRoomTrack,
@@ -13,13 +13,20 @@
 		toggleRoomMute,
 		watchRoom
 	} from '#lib/remote/rooms.remote.ts';
+	import { messageOf } from '#lib/errors.ts';
 	import { cycleVelocity } from '#lib/pattern/model.ts';
 	import { PRESET_NAMES, preset } from '#lib/pattern/presets.ts';
 	import Player from '#lib/studio/Player.svelte';
 	import StepGrid from '#lib/studio/StepGrid.svelte';
 	import { toast } from '#lib/toast/toast.ts';
 
-	const params = $derived(page.params as RouteParams<'/(app)/jam/[room]'>);
+	/*
+	 * `params` is a prop, typed from the folder name by the generated
+	 * `PageProps`: `{ room: string }`, no cast, and a compile error if the
+	 * folder is renamed. `data.name` is what the `load` beside this file found
+	 * out — that the room exists, and what it is called.
+	 */
+	let { data, params }: PageProps = $props();
 
 	/**
 	 * THE LIVE QUERY
@@ -32,17 +39,28 @@
 	 */
 	const room = $derived(watchRoom(params.room));
 
+	/**
+	 * Every edit is a `command`, and a command the server refuses rejects with
+	 * an `HttpError` — not an `Error` — whose sentence is on `body.message`.
+	 * `messageOf` reads it, so a click on a track somebody else has just
+	 * replaced says "No such track in this room" rather than nothing at all.
+	 */
 	async function run(action: Promise<unknown>) {
 		try {
 			await action;
 		} catch (e) {
-			toast((e as Error).message, 'error');
+			toast(messageOf(e, 'That change did not reach the room'), 'error');
 		}
 	}
+
+	// Transitions run on the Web Animations API, out of reach of the
+	// stylesheet's reduced-motion rule, so they ask for themselves.
+	const flipDuration = $derived(prefersReducedMotion.current ? 0 : 200);
+	const scaleDuration = $derived(prefersReducedMotion.current ? 0 : 160);
 </script>
 
 <svelte:head>
-	<title>Jam: {params.room} — Ostinato</title>
+	<title>Jam: {data.name} — Ostinato</title>
 </svelte:head>
 
 <div class="page jam">
@@ -89,8 +107,8 @@
 			{#each snapshot.present as who (who.id)}
 				<span
 					class="chip chip--on"
-					animate:flip={{ duration: 200 }}
-					transition:scale={{ duration: 160 }}
+					animate:flip={{ duration: flipDuration }}
+					transition:scale={{ duration: scaleDuration }}
 				>
 					@{who.handle}
 				</span>
@@ -189,8 +207,16 @@
 			<p class="hint">Joining the room…</p>
 		{/snippet}
 
+		<!--
+			The other shape: a boundary is handed the `App.Error` that `handleError`
+			made — `{ status, message }` — so whatever the stream failed with is
+			`error.message`, with no `body` in between. (A room that does not exist
+			never gets this far: the `load` answers it with the error page.) The
+			cast is the type the documentation writes on the parameter, which
+			today's `Snippet<[unknown, …]>` typing refuses there.
+		-->
 		{#snippet failed(error, reset)}
-			<p class="issue">{(error as Error).message}</p>
+			<p class="issue">{(error as App.Error).message}</p>
 			<button type="button" class="btn" onclick={reset}>Try again</button>
 		{/snippet}
 	</svelte:boundary>

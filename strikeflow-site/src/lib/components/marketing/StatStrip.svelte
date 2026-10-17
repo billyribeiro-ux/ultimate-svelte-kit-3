@@ -32,7 +32,7 @@
 	let { stats, bordered = true, animated = false }: Props = $props();
 </script>
 
-<dl class="stats" class:stats--bordered={bordered}>
+<dl class={['stats', { 'stats--bordered': bordered }]}>
 	{#each stats as stat (stat.label)}
 		<div class="stats__item">
 			<dt class="stats__label">{stat.label}</dt>

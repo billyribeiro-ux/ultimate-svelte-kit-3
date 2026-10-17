@@ -12,7 +12,7 @@
  * it — the same data is on the pattern's page for anyone to look at.
  */
 
-import { error, json } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types.js';
 import { toDto } from '#lib/pattern/dto.ts';
 import { getPattern } from '#lib/server/patterns.ts';
@@ -27,7 +27,8 @@ export const GET: RequestHandler = async ({ params, setHeaders }) => {
 		'access-control-allow-origin': '*'
 	});
 
-	return json({
+	// `Response.json`, the platform's own; SvelteKit 3 deprecated its `json()`.
+	return Response.json({
 		id: published.id,
 		title: published.title,
 		artist: published.artist.handle,

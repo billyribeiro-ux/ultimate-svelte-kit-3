@@ -36,22 +36,51 @@ export interface SpanRecord {
  * usually the bug. Here it is the point: the ring *is* the cross-request
  * memory, it contains nothing private to any one request, and it is read only
  * by the diagnostics page.
+ *
+ * It hangs off `globalThis` rather than off this module, and that is the
+ * adapter's doing. SvelteKit 3 configures a server as module-level state, so
+ * one module graph can hold one server — and `adapters/ostinato` deploys three.
+ * It therefore bundles each function on its own, as a real platform would, and
+ * the instrumentation file separately again: four copies of this module in one
+ * process — three functions and one instrumentation bundle, which is what
+ * `grep -rl __ostinato_spans build/` finds — one of which records spans and
+ * another of which reads them. The process is the only scope they share, so
+ * the ring lives there.
  */
-const ring: SpanRecord[] = [];
-let capacity = 200;
+const shared = globalThis as typeof globalThis & {
+	__ostinato_spans?: { ring: SpanRecord[]; capacity: number };
+};
+const spans = (shared.__ostinato_spans ??= { ring: [], capacity: 200 });
+const ring = spans.ring;
 
 export function setCapacity(size: number): void {
-	capacity = size;
-	while (ring.length > capacity) ring.shift();
+	spans.capacity = size;
+	while (ring.length > spans.capacity) ring.shift();
 }
 
 /** `[seconds, nanoseconds]` → milliseconds. */
 const ms = ([s, ns]: readonly [number, number]) => s * 1000 + ns / 1e6;
 
+/**
+ * Where a request went, without what it carried. A query string is where a
+ * remote query's argument travels, and where a share link keeps its pattern;
+ * the diagnostics page is public, so the ring keeps the path and drops the
+ * rest.
+ */
+function pathOnly(value: string): string {
+	try {
+		const url = new URL(value);
+		return url.origin + url.pathname;
+	} catch {
+		return value;
+	}
+}
+
 export function record(span: ReadableSpan): void {
 	const attributes: SpanRecord['attributes'] = {};
 	for (const [key, value] of Object.entries(span.attributes)) {
-		if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+		if (key === 'http.url' && typeof value === 'string') attributes[key] = pathOnly(value);
+		else if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
 			attributes[key] = value;
 		}
 	}
@@ -68,11 +97,11 @@ export function record(span: ReadableSpan): void {
 		attributes
 	});
 
-	while (ring.length > capacity) ring.shift();
+	while (ring.length > spans.capacity) ring.shift();
 }
 
 /** Newest first. A copy, so a reader cannot reach into the ring. */
-export function recentSpans(limit = capacity): SpanRecord[] {
+export function recentSpans(limit = spans.capacity): SpanRecord[] {
 	return ring.slice(-limit).reverse();
 }
 

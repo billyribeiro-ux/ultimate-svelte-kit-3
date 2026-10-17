@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Engine } from '#lib/engine/engine.ts';
-	import { ErrorValue } from '#lib/formula/values.ts';
+	import { ErrorValue, type Scalar } from '#lib/formula/values.ts';
 	import Section from '#lib/components/Section.svelte';
 	import { ReactiveSheet } from '#lib/lesson/reactive.svelte.ts';
 	import { parseA1 } from '#lib/sheet/address.ts';
@@ -10,9 +10,10 @@
 	 * ===============
 	 *
 	 * Two three-by-three sheets with the same formulas. The left one is the
-	 * hand-written engine of chapter 10; the right one is nine `$derived`s.
-	 * Type into either and both update — and each says how many cells it
-	 * evaluated to do so, which is the number that makes the point.
+	 * hand-written engine; the right one is nine `$derived`s. Type into either
+	 * and both update — and each says how many formulas it evaluated to do so,
+	 * counted the same way on both sides, which is the number that makes the
+	 * point.
 	 */
 	const starting: Record<string, string> = {
 		A1: '10',
@@ -38,7 +39,6 @@
 	let engineVersion = $state(engine.version);
 	let engineEvaluated = $state(0);
 	let reactiveEvaluated = $state(0);
-	let lastReactive = 0;
 
 	function edit(name: string, input: string) {
 		const { row, col } = parseA1(name)!;
@@ -49,14 +49,26 @@
 		// Read every reactive value so that the deriveds run now, then count.
 		for (const cell of reactive.cells.values()) void cell.value;
 		reactiveEvaluated = reactive.evaluations - before;
-		lastReactive = reactive.evaluations;
+	}
+
+	/**
+	 * What was typed into an engine cell, and what it comes to. The engine is
+	 * not reactive, so both read `engineVersion` first: the number `edit` bumps
+	 * is what makes the template ask again — the same one-signal contract the
+	 * grid has with the sheet.
+	 */
+	function engineInput(row: number, col: number): string {
+		void engineVersion;
+		return engine.get(row, col)?.input ?? '';
+	}
+
+	function engineValue(row: number, col: number): Scalar {
+		void engineVersion;
+		return engine.value(row, col);
 	}
 
 	const show = (value: unknown) =>
 		value === null ? '' : value instanceof ErrorValue ? value.code : String(value);
-
-	// Silence the "assigned but never read" warning honestly: it is read by `edit`.
-	void lastReactive;
 </script>
 
 <svelte:head>
@@ -68,10 +80,10 @@
 		<p class="prose">
 			On the left, the engine this project wrote by hand: cells in a <code>Map</code>, edges
 			recorded when a formula is parsed, a dirty set, a topological sort. On the right, nine
-			<code>$derived</code>s that read each other through a lookup function and nothing else. Change
-			a cell in either and watch the other follow — and watch the count of cells each one evaluated.
-			They agree, because they are the same algorithm: Svelte's runtime is a spreadsheet engine with
-			the cells hidden.
+			<code>$derived</code>s that read each other through a lookup function, and nothing else to put
+			them in order. Change a cell in either and watch the other follow — and watch the count of
+			formulas each one evaluated. They agree, because they are the same algorithm: Svelte's runtime
+			is a spreadsheet engine with the cells hidden.
 		</p>
 
 		<div class="twins">
@@ -82,21 +94,20 @@
 						{#each [1, 2, 3] as r (r)}
 							<tr>
 								{#each ['A', 'B', 'C'] as c (c)}
-									{@const name = `${c}${r}`}
-									{@const a = parseA1(name)!}
+									{const name = `${c}${r}`}
+									{const a = parseA1(name)!}
+									{const value = $derived(engineValue(a.row, a.col))}
 									<td>
 										<label>
 											<span class="visually-hidden">{name}</span>
 											<input
 												class="cell"
-												value={engine.get(a.row, a.col)?.input ?? ''}
+												value={engineInput(a.row, a.col)}
 												onchange={(e) => edit(name, e.currentTarget.value)}
 											/>
 										</label>
-										<output
-											class={['shown', { error: engine.value(a.row, a.col) instanceof ErrorValue }]}
-										>
-											{(void engineVersion, show(engine.value(a.row, a.col)))}
+										<output class={['shown', { error: value instanceof ErrorValue }]}>
+											{show(value)}
 										</output>
 									</td>
 								{/each}
@@ -116,8 +127,8 @@
 						{#each [1, 2, 3] as r (r)}
 							<tr>
 								{#each ['A', 'B', 'C'] as c (c)}
-									{@const name = `${c}${r}`}
-									{@const cell = reactive.cells.get(name)!}
+									{const name = `${c}${r}`}
+									{const cell = reactive.cells.get(name)!}
 									<td>
 										<label>
 											<span class="visually-hidden">{name}</span>
@@ -127,14 +138,15 @@
 												onchange={(e) => edit(name, e.currentTarget.value)}
 											/>
 										</label>
-										<svelte:boundary>
-											<output class={['shown', { error: cell.value instanceof ErrorValue }]}
-												>{show(cell.value)}</output
-											>
-											{#snippet failed(error)}
-												<output class="shown error" title={(error as Error).message}>cycle!</output>
-											{/snippet}
-										</svelte:boundary>
+										<!--
+											No <svelte:boundary> around this. A cycle is a value (see
+											`reachesItself` in reactive.svelte.ts), and an exception thrown inside
+											a $derived goes to the boundary of the effect that created it — this
+											page — not to one around the markup that read it.
+										-->
+										<output class={['shown', { error: cell.value instanceof ErrorValue }]}
+											>{show(cell.value)}</output
+										>
 									</td>
 								{/each}
 							</tr>
@@ -142,7 +154,7 @@
 					</tbody>
 				</table>
 				<p class="hint" role="status">
-					Last edit evaluated <strong>{reactiveEvaluated}</strong> deriveds.
+					Last edit evaluated <strong>{reactiveEvaluated}</strong> formula cells.
 				</p>
 			</div>
 		</div>
@@ -158,10 +170,22 @@
 					another cell.
 				</li>
 				<li>
-					Type <code>=C3</code> into <code>A1</code>. The engine marks the cycle as
-					<code>#CYCLE!</code> and carries on; the reactive sheet throws, and the boundary around that
-					cell catches it. A spreadsheet must tolerate a person's mistake; a program must not tolerate
-					its own.
+					Type <code>5.0</code> into <code>A2</code> while it holds 5. Different text, the same number.
+					The engine evaluates the five formulas downstream of an edited cell regardless; the deriveds
+					evaluate none, because Svelte compares each new value with the old one and an equal value notifies
+					nobody. That is the one place the two part ways on a sheet with no cycle, and it is Svelte doing
+					less.
+				</li>
+				<li>
+					Type <code>=C3</code> into <code>A1</code>. Both sides mark the cycle as
+					<code>#CYCLE!</code>, and both need a graph to do it. Svelte's own answer to a derived
+					that reads itself is an exception — <code>derived_references_self</code> in development;
+					in a production build the deriveds call each other until the stack runs out — so each cell
+					on the right also derives, from the formulas' references, whether it is on a cycle, and a
+					cell that is answers <code>#CYCLE!</code> without reading another. That is the engine's bookkeeping
+					again. Both counts drop to two: the six cells on the cycle are marked, not evaluated, and only
+					A3 and B3, which read the cycle from outside it, are worked out. A spreadsheet must tolerate
+					a person's mistake; a program must not tolerate its own.
 				</li>
 				<li>
 					Notice that <code>C2</code>, which reads four cells, is evaluated once per change, never

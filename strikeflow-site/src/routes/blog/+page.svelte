@@ -52,7 +52,7 @@
 	<div class="container container--wide">
 		<ul class="posts" role="list" {@attach revealGroup('.posts__item', { scale: true })}>
 			{#each postsByDate as post (post.slug)}
-				{@const author = getPerson(post.authorId)}
+				{const author = $derived(getPerson(post.authorId))}
 				<li class="posts__item">
 					<article class="post-card">
 						<div class="post-card__meta">

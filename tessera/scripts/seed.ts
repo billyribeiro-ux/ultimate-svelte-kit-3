@@ -6,6 +6,12 @@
  * try to move a box, and watch the server refuse it while the board keeps
  * rendering.
  *
+ * The viewer also owns a workspace of their own, with one empty board in it,
+ * because every account made through the sign-up form does: a person is rarely
+ * *only* a viewer. That is the shape a permission bug hides in — a check that
+ * asks "may this person comment on the board they named?" and then writes to
+ * a row on some other board — so the fixture has it.
+ *
  * Run with `node scripts/seed.ts`. No transpiler: Node 24 strips TypeScript
  * types on the fly. Types are erased rather than checked — that is
  * `svelte-check`'s job — and the syntax that would need emitting rather than
@@ -176,6 +182,28 @@ await db
 	.values({ id: boardId, workspaceId, title: 'Checkout, end to end' })
 	.onConflictDoNothing();
 
+// The viewer's own workspace and board, as `signUp` in `auth.remote.ts` would
+// have made them.
+await db
+	.insert(schema.workspace)
+	.values({ id: 'mo-workspace', name: "Mo Iqbal's workspace", slug: 'mo-workspace' })
+	.onConflictDoNothing();
+
+await db
+	.insert(schema.membership)
+	.values({
+		id: `mo-workspace:${viewerId}`,
+		workspaceId: 'mo-workspace',
+		userId: viewerId,
+		role: 'owner'
+	})
+	.onConflictDoNothing();
+
+await db
+	.insert(schema.board)
+	.values({ id: 'mo-board', workspaceId: 'mo-workspace', title: 'Scratch' })
+	.onConflictDoNothing();
+
 // Idempotent: the (board, stamp) unique index means re-running the seed adds
 // nothing, so `pnpm run db:seed` is safe to type twice.
 await db
@@ -194,5 +222,5 @@ await db
 
 console.log(`[seed] ${operations.length} operations on "${boardId}"`);
 console.log(`[seed] owner  ada@tessera.test / ${PASSWORD}`);
-console.log(`[seed] viewer mo@tessera.test  / ${PASSWORD}`);
+console.log(`[seed] viewer mo@tessera.test  / ${PASSWORD}  (and owner of "mo-board")`);
 console.log(`[seed] board  ${process.env.PUBLIC_ORIGIN ?? 'http://localhost:5173'}/b/${boardId}`);

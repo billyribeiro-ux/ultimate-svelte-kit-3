@@ -14,7 +14,6 @@
  * the pattern is deleted, and a stale hit then lands on a 404 that says so.
  */
 
-import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types.js';
 import { resolveVanity } from '#lib/server/patterns.ts';
 
@@ -25,5 +24,6 @@ export const GET: RequestHandler = async ({ url, setHeaders }) => {
 	const id = await resolveVanity(handle.toLowerCase(), slug.toLowerCase());
 
 	setHeaders({ 'cache-control': id ? 'public, max-age=3600' : 'no-store' });
-	return json({ pathname: id ? `/p/${id}` : null });
+	// `Response.json`, the platform's own; SvelteKit 3 deprecated its `json()`.
+	return Response.json({ pathname: id ? `/p/${id}` : null });
 };

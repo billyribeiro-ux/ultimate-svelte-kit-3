@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import Section from '#lib/components/Section.svelte';
 	import { TEMPLATES } from '#lib/sheet/templates.ts';
 </script>
@@ -16,13 +17,21 @@
 		<ul class="cards">
 			{#each Object.values(TEMPLATES) as template (template.slug)}
 				<li class="card stack">
-					<h3><a href="/templates/{template.slug}">{template.title}</a></h3>
+					<h3>
+						<a href={resolve('/(app)/templates/[slug]', { slug: template.slug })}
+							>{template.title}</a
+						>
+					</h3>
 					<p class="hint">{template.summary}</p>
 					<div class="cluster">
-						<a class="btn btn--sm btn--primary" href="/sheet/local?template={template.slug}"
-							>Open a copy</a
+						<a
+							class="btn btn--sm btn--primary"
+							href={resolve(`/(app)/sheet/local?template=${template.slug}`)}>Open a copy</a
 						>
-						<a class="btn btn--sm" href="/templates/{template.slug}">Preview</a>
+						<a
+							class="btn btn--sm"
+							href={resolve('/(app)/templates/[slug]', { slug: template.slug })}>Preview</a
+						>
 					</div>
 				</li>
 			{/each}

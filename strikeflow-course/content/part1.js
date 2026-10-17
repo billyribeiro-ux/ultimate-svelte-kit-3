@@ -37,7 +37,7 @@ export const part1 = [
 			{
 				type: 'ul',
 				items: [
-					'**SvelteKit 3** (release candidate) and **Svelte 5** — the current versions, with all the things that changed in 3',
+					'**SvelteKit 3** (3.0.1, the first stable release) and **Svelte 5** — the current versions, with all the things that changed in 3',
 					'**TypeScript**, strict, plus a couple of extra flags most people skip',
 					'**Vanilla CSS** — no Tailwind. You will understand every line you write',
 					'**Phosphor Icons** via `phosphor-svelte`',
@@ -59,15 +59,15 @@ export const part1 = [
 			},
 			{
 				type: 'p',
-				text: 'You need **Node 24.20.0**, the current LTS — SvelteKit 3 itself refuses anything below 22.17. Check with:'
+				text: 'You need **Node 24.21.0**, the current LTS — SvelteKit 3 itself refuses anything below 22.17. Check with:'
 			},
-			{ type: 'terminal', code: 'node -v\n# should print v24.20.0 or higher' },
+			{ type: 'terminal', code: 'node -v\n# should print v24.21.0 or higher' },
 			{
 				type: 'p',
 				text: "If it's older, install the current LTS from [nodejs.org](https://nodejs.org) or use a version manager like `nvm` or `fnm`."
 			},
 			{ type: 'p', text: "We'll use **pnpm**. If you don't have it:" },
-			{ type: 'terminal', code: 'npm install -g pnpm\npnpm -v   # should be 10 or higher' },
+			{ type: 'terminal', code: 'npm install -g pnpm\npnpm -v   # should print 12 or newer' },
 			{
 				type: 'note',
 				text: "You can use npm or yarn instead — nothing here depends on pnpm specifically. Just translate `pnpm run x` to `npm run x` as you go. I use pnpm because it's fast and its strict `node_modules` layout catches a class of dependency bug the others hide."
@@ -87,11 +87,11 @@ export const part1 = [
 			},
 			{
 				type: 'warn',
-				text: "One honest note about SvelteKit 3: it's a release candidate as of August 2026. It's stable enough to build on and the API is settled, but the docs live at [next.svelte.dev](https://next.svelte.dev) rather than svelte.dev. If you search for a SvelteKit answer, most results will describe version 2 — I'll flag every place they differ."
+				text: "One honest note about SvelteKit 3: it went stable on 1 October 2026 and this project is on 3.0.1, the first patch release. The docs now live at [svelte.dev](https://svelte.dev/docs/kit) — but most search results, and most blog posts, still describe version 2 or the long 3.0 prerelease. I'll flag every place they differ."
 			},
 			{
 				type: 'checkpoint',
-				text: '`node -v` prints 24.20.0 or newer, and `pnpm -v` prints 10 or higher. That is all you need. Next we scaffold the project.'
+				text: '`node -v` prints 24.21.0 or newer, and `pnpm -v` prints 12 or newer. That is all you need. Next we scaffold the project.'
 			}
 		]
 	},
@@ -106,11 +106,11 @@ export const part1 = [
 		blocks: [
 			{
 				type: 'p',
-				text: "Make a folder for the course, and let the Svelte CLI create the project inside it. Note the `@next` — that's what gets you SvelteKit 3 rather than 2."
+				text: "Make a folder for the course, and let the Svelte CLI create the project inside it. Now that SvelteKit 3 is stable, plain `sv create` scaffolds it — the `@next` tag you will still see in older tutorials was only needed during the prerelease."
 			},
 			{
 				type: 'terminal',
-				code: 'mkdir strikeflow-course && cd strikeflow-course\n\nnpx sv@next create strikeflow-site'
+				code: 'mkdir strikeflow-course && cd strikeflow-course\n\nnpx sv create strikeflow-site'
 			},
 			{
 				type: 'p',
@@ -118,7 +118,7 @@ export const part1 = [
 			},
 			{
 				type: 'terminal',
-				code: `npx sv@next create strikeflow-site \\
+				code: `npx sv create strikeflow-site \\
   --template minimal \\
   --types ts \\
   --add prettier eslint "vitest=usages:unit,component" playwright \\
@@ -169,6 +169,31 @@ export const part1 = [
 				title: "There's no svelte.config.js",
 				text: 'If you have used SvelteKit before, this is the first thing you will notice missing. In SvelteKit 3 all configuration moved into the `sveltekit()` plugin inside `vite.config.ts`. Vite can now hand the config straight to the plugin instead of loading a separate file asynchronously, which removes a whole category of setup-ordering bug.'
 			},
+			{ type: 'h3', id: 'pin', text: 'Pin the toolchain' },
+			{
+				type: 'p',
+				text: "Now that the project has a `package.json`, record which Node and which pnpm it is built with. Add two fields:"
+			},
+			{
+				type: 'code',
+				file: 'package.json',
+				lang: 'json',
+				code: `{
+	…
+	"engines": {
+		"node": ">=24.21.0"
+	},
+	"packageManager": "pnpm@12.10.1",
+	…
+}`
+			},
+			{
+				type: 'ul',
+				items: [
+					"`engines` states the oldest Node the project supports, so tools — pnpm included — can tell you when yours is too old, instead of failing later with a confusing error.",
+					"`packageManager` pins the exact pnpm. Any recent pnpm that finds it switches to that version for this project by itself, so everyone who clones it installs with the same tool and gets the same lockfile. That is why chapter 7 only asked for pnpm 12 or newer: from here on, the project chooses."
+				]
+			},
 			{ type: 'h3', id: 'cleanup', text: 'A little cleanup' },
 			{
 				type: 'p',
@@ -197,15 +222,17 @@ export const part1 = [
 			{ type: 'h3', id: 'config', text: '1. Configuration lives in vite.config.ts' },
 			{
 				type: 'p',
-				text: 'There is no `svelte.config.js`. Open `vite.config.ts` and you will find everything inside the `sveltekit()` plugin call:'
+				text: 'In SvelteKit 2, configuration lived in `svelte.config.js`. SvelteKit 3 no longer supports that file: open `vite.config.ts` and you will find everything inside the `sveltekit()` plugin call:'
 			},
 			{
 				type: 'code',
 				file: 'vite.config.ts',
 				lang: 'ts',
 				code: `import { defineConfig } from 'vitest/config';
+// …
 import adapter from '@sveltejs/adapter-node';
 import { sveltekit } from '@sveltejs/kit/vite';
+// …
 
 export default defineConfig({
 	plugins: [
@@ -214,12 +241,21 @@ export default defineConfig({
 				// …
 				experimental: { async: true }
 			},
+
 			adapter: adapter(),
+
 			experimental: {
+				// …
 				remoteFunctions: true
-			}
-		})
-	]
+			},
+
+			// …
+		}),
+
+		// …
+	],
+
+	// …
 });`
 			},
 			{
@@ -236,10 +272,12 @@ export default defineConfig({
 				file: 'package.json',
 				lang: 'json',
 				code: `{
+	…
 	"imports": {
 		"#lib": "./src/lib/index.js",
 		"#lib/*": "./src/lib/*"
-	}
+	},
+	…
 }`
 			},
 			{
@@ -282,8 +320,10 @@ const img = assets + '/logo.png';
 
 // SvelteKit 3 — base, assets and resolveRoute are gone
 import { resolve, asset } from '$app/paths';
-const url = resolve('/blog/[slug]', { slug });
-const img = asset('logo.png');   // note: no leading slash`
+const url = resolve('/blog/[slug]', { slug });   // a route ID — leading slash
+const page = resolve('about');                   // a pathname — no leading slash
+const link = resolve('/about#team');             // either may carry ?search or #hash
+const img = asset('logo.png');                   // note: no leading slash`
 			},
 			{ type: 'h3', id: 'nav', text: '5. Navigation consolidated into goto()' },
 			{
@@ -302,7 +342,32 @@ await refreshAll();`
 			},
 			{
 				type: 'p',
+				text: 'In 3, `pushState`, `replaceState` and `invalidateAll` are deprecated rather than removed, so older code still runs — but write new code the 3 way, because `refreshAll` differs in one useful respect: unlike `invalidateAll`, it does not reset `page.state`. Shallow navigations now run `beforeNavigate`, `onNavigate` and `afterNavigate` too. A hook that should ignore them — the header drawer, which closes on navigation — checks `navigation.shallow` first.'
+			},
+			{ type: 'h3', id: 'modules', text: '6. $app/stores is gone, and $app/environment is now $app/env' },
+			{
+				type: 'code',
+				lang: 'ts',
+				file: 'the difference',
+				code: `// SvelteKit 2
+import { page } from '$app/stores'; // a store, read as $page
+import { browser } from '$app/environment';
+
+// SvelteKit 3
+import { page } from '$app/state'; // Svelte 5 state, read as page
+import { browser } from '$app/env';`
+			},
+			{
+				type: 'p',
+				text: "Both are removals, not deprecations: paste either SvelteKit 2 line and you get a module-not-found error, not a warning. `$app/state` gives you `page`, `navigating` and `updated` as Svelte 5 state, so you write `page.url.pathname` where older code wrote `$page.url.pathname`, and only the parts you read cause updates. `$app/env` is the old module under a new name — `browser`, `dev`, `building` and `version` — and it can now be imported inside a service worker too. We use `page` in the header (chapter 20) and `browser` in the motion loader (chapter 32)."
+			},
+			{
+				type: 'p',
 				text: "Also: `error(404, { message: 'Not found' })` became `error(404, 'Not found')`, with any extra properties in a third argument. And `page.url` is now read-only — clone it if you need to change a search param."
+			},
+			{
+				type: 'note',
+				text: "Two more things changed between the long 3.0 prerelease and the 3.0.1 we use, so even Kit 3 tutorials from the summer get them wrong. First, single-flight refreshes that the *client* asks for — `submit().updates(getPosts)` on a `form`, or `myCommand().updates(getPosts)` on a `command` — must be accepted on the server with `requested(getPosts, limit)`. The `limit` is required: the client controls that list, and each entry makes the server validate an argument and usually re-fetch, so an unbounded one is a denial-of-service risk. Loop over it — `for (const { arg, query, ignore } of requested(getPosts, 10))`, calling `query.refresh()`, `query.set(...)` or `ignore()` per entry — or use the shorthands `requested(getPosts, 10).refreshAll()` and `.ignoreAll()`. An entry you neither refresh nor ignore puts *that query* into an error state on the client; the command or form itself still succeeds. Our guide form never calls `.updates()`, so there is nothing to handle, but you will meet this the day you add one. Second, `adapter-node` no longer reads an `ORIGIN` environment variable; the public origin is `paths.origin` in `vite.config.ts` (chapter 37)."
 			},
 			{
 				type: 'note',
@@ -325,38 +390,58 @@ await refreshAll();`
 		blocks: [
 			{
 				type: 'p',
-				text: 'Open `tsconfig.json`. The scaffold gives you something short, because most of the configuration comes from a file SvelteKit generates:'
+				text: 'Open `tsconfig.json`. The scaffold gives you something short, because most of the configuration comes from a module SvelteKit generates, `$app/tsconfig`, which your file extends:'
 			},
 			{
 				type: 'code',
-				file: 'tsconfig.json (generated)',
+				file: 'tsconfig.json, as scaffolded',
 				lang: 'json',
 				code: `{
 	"extends": "$app/tsconfig",
 	"compilerOptions": {
-		"sourceMap": true,
 		"strict": true
-	}
+	},
+	"include": ["src", "vite.config.ts"]
 }`
 			},
 			{
 				type: 'p',
-				text: "`strict: true` is doing a lot of work — it turns on `strictNullChecks`, `noImplicitAny` and half a dozen others. We're going to add four more, and one required section."
+				text: "`strict: true` is doing a lot of work — it turns on `strictNullChecks`, `noImplicitAny` and half a dozen others. We're going to add four more flags and `sourceMap`, spell out exactly which files are checked, and add an `exclude`."
 			},
 			{
 				type: 'code',
 				file: 'tsconfig.json',
 				lang: 'json',
 				code: `{
+	// SvelteKit generates a base config into \`node_modules/$app/tsconfig\` on every
+	// \`svelte-kit sync\`. It already sets module resolution, the DOM libs, and the
+	// generated route types — so we only add what's specific to this project.
 	"extends": "$app/tsconfig",
 	"compilerOptions": {
 		"sourceMap": true,
+
+		// The big one. Turns on strictNullChecks, noImplicitAny and friends.
 		"strict": true,
+
+		// Reading \`array[0]\` gives you \`T | undefined\` rather than \`T\`.
+		// Annoying for about a day, then it starts catching real crashes —
+		// because \`array[0]\` genuinely can be undefined and pretending otherwise
+		// is how you get "cannot read properties of undefined" in production.
 		"noUncheckedIndexedAccess": true,
+
+		// A subclass method that overrides a parent must say \`override\`.
 		"noImplicitOverride": true,
+
+		// A \`case\` that falls through to the next one must be deliberate.
 		"noFallthroughCasesInSwitch": true,
+
+		// Every code path in a function that returns a value must return a value.
 		"noImplicitReturns": true
 	},
+
+	// SvelteKit 3 requires these to be explicit — the generated config no longer
+	// guesses. Without them, \`svelte-check\` happily type-checks your minified
+	// production output in \`build/\` and reports thousands of meaningless errors.
 	"include": [
 		"src/**/*.ts",
 		"src/**/*.js",
@@ -375,7 +460,7 @@ await refreshAll();`
 			},
 			{
 				type: 'p',
-				text: 'The `include` and `exclude` arrays are not optional in SvelteKit 3. The generated config no longer guesses them. Leave them out and `svelte-check` will happily type-check your **minified production build** in `build/` and report a couple of thousand meaningless errors — which is a genuinely bewildering first experience.'
+				text: 'The `include` and `exclude` arrays are not optional in SvelteKit 3. In SvelteKit 2 the generated config guessed them for you; `$app/tsconfig` deliberately does not, which is why the scaffold already writes an `include`. Ours lists the source patterns explicitly — adding `scripts/` and the config files — and adds an `exclude` for generated output and the service worker. Leave them out and `svelte-check` will happily type-check your **minified production build** in `build/` and report a couple of thousand meaningless errors — which is a genuinely bewildering first experience.'
 			},
 			{ type: 'h3', id: 'check', text: 'Checking your work' },
 			{
@@ -389,7 +474,7 @@ await refreshAll();`
 			},
 			{
 				type: 'checkpoint',
-				text: '`pnpm run check` prints `0 errors`. If it reports thousands, you have not added the `exclude` array.'
+				text: '`pnpm run check` prints `0 errors`. If it reports thousands, it is type-checking the minified output in `build/`: your `include` is missing or too broad, and nothing in `exclude` rules `build` out.'
 			}
 		]
 	},
@@ -451,6 +536,7 @@ import { fileURLToPath } from 'node:url';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const outDir = join(root, 'static', 'fonts');
 
+/** The only font files this site ships. Latin subset, variable weight axis. */
 const FONTS = [
 	{
 		from: '@fontsource-variable/montserrat/files/montserrat-latin-wght-normal.woff2',
@@ -466,16 +552,18 @@ mkdirSync(outDir, { recursive: true });
 
 for (const font of FONTS) {
 	const source = join(root, 'node_modules', font.from);
+
 	if (!existsSync(source)) {
 		console.error(\`[sync-fonts] missing: \${font.from}\`);
 		console.error('[sync-fonts] did you run \`pnpm install\`?');
 		process.exit(1);
 	}
+
 	copyFileSync(source, join(outDir, font.to));
 	console.log(\`[sync-fonts] \${font.to}\`);
 }
 
-// …`
+console.log(\`[sync-fonts] done — \${FONTS.length} files in static/fonts\`);`
 			},
 			{
 				type: 'p',
@@ -486,9 +574,11 @@ for (const font of FONTS) {
 				file: 'package.json',
 				lang: 'json',
 				code: `"scripts": {
+	…
 	"fonts:sync": "node scripts/sync-fonts.js",
-	"prepare": "node scripts/sync-fonts.js && (svelte-kit sync || echo '')"
-}`
+	"prepare": "node scripts/sync-fonts.js && (svelte-kit sync || echo '')",
+	…
+},`
 			},
 			{ type: 'terminal', code: 'pnpm run fonts:sync' },
 			{ type: 'h3', id: 'face', text: 'Declaring the fonts' },
@@ -507,9 +597,8 @@ for (const font of FONTS) {
 	font-weight: 100 900;
 	src: url('/fonts/montserrat-latin-wght-normal.woff2') format('woff2-variations');
 	unicode-range:
-		U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
-		U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
-		U+2212, U+2215, U+FEFF, U+FFFD;
+		U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+		U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
 @font-face {
@@ -519,9 +608,8 @@ for (const font of FONTS) {
 	font-weight: 1 1000;
 	src: url('/fonts/sofia-sans-latin-wght-normal.woff2') format('woff2-variations');
 	unicode-range:
-		U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
-		U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
-		U+2212, U+2215, U+FEFF, U+FFFD;
+		U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+		U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }`
 			},
 			{
@@ -546,8 +634,8 @@ for (const font of FONTS) {
 	font-family: 'Montserrat Fallback';
 	src: local('Arial');
 	size-adjust: 110.2%;
-	ascent-override: 88%;      /* 0.97 / 1.102 */
-	descent-override: 22.7%;   /* 0.25 / 1.102 */
+	ascent-override: 88%; /* 0.97 / 1.102 */
+	descent-override: 22.7%; /* 0.25 / 1.102 */
 	line-gap-override: 0%;
 }
 
@@ -556,8 +644,8 @@ for (const font of FONTS) {
 	font-family: 'Sofia Sans Fallback';
 	src: local('Arial');
 	size-adjust: 96.7%;
-	ascent-override: 93.1%;    /* 0.90 / 0.967 */
-	descent-override: 31%;     /* 0.30 / 0.967 */
+	ascent-override: 93.1%; /* 0.90 / 0.967 */
+	descent-override: 31%; /* 0.30 / 0.967 */
 	line-gap-override: 0%;
 }`
 			},
@@ -650,22 +738,29 @@ for (const font of FONTS) {
 				file: 'src/lib/styles/tokens.css',
 				lang: 'css',
 				code: `:root {
+	/* ---------------------------------------------------------------
+	 * PALETTE — raw colour values.
+	 * These are never used directly by components. See "SEMANTIC" below.
+	 * --------------------------------------------------------------- */
+
 	/* Neutrals. A trading product lives in the dark; these are cool-tinted
 	   near-blacks rather than pure grey, which reads as more deliberate. */
 	--ink-950: #05070c;
 	--ink-900: #080b12;
 	--ink-850: #0b0f18;
 	--ink-800: #10151f;
-	/* … */
+	--ink-750: #131926;
 	--ink-700: #171d2a;
 	--ink-600: #202839;
 	--ink-500: #2b3549;
 	--ink-400: #3a465e;
 
 	--paper-50: #f4f7fc;
-	/* … */
+	--paper-100: #e4eaf5;
+	--paper-200: #c9d3e5;
 	--paper-300: #b9c3d6;
 	--paper-400: #7f8ba3;
+	--paper-500: #626e86;
 
 	/* Brand. Deliberately blue/indigo — NOT green and NOT red.
 	   In a trading product green and red already mean something (up and down).
@@ -674,14 +769,21 @@ for (const font of FONTS) {
 	--brand-400: #6e93ff;
 	--brand-500: #4f7dff;
 	--brand-600: #3b63e8;
-	/* … */
+	--brand-700: #2c4cbe;
+
+	--violet-400: #a78bfa;
+	--violet-500: #8b5cf6;
 
 	/* Market semantics. These encode data, never decoration. */
+	--bull-400: #34e0a1;
 	--bull-500: #16c784;
-	/* … */
+	--bull-600: #0f9f68;
+	--bear-400: #ff5c66;
 	--bear-500: #ea3943;
-	/* … */
+	--bear-600: #c22630;
+	--warn-400: #f5cb4a;
 	--warn-500: #f0b90b;
+	/* … */
 }`
 			},
 			{
@@ -733,15 +835,24 @@ for (const font of FONTS) {
 	--font-body: 'Sofia Sans Variable', 'Sofia Sans Fallback', system-ui, sans-serif;
 	--font-mono: ui-monospace, 'SF Mono', 'Cascadia Mono', 'Roboto Mono', Menlo, monospace;
 
-	--fs-xs:   clamp(0.75rem,  0.735rem + 0.08vw, 0.8125rem);
-	--fs-sm:   clamp(0.875rem, 0.855rem + 0.1vw,  0.9375rem);
-	--fs-base: clamp(1rem,     0.965rem + 0.18vw, 1.0625rem);
-	--fs-md:   clamp(1.0625rem, 1.01rem + 0.28vw, 1.1875rem);
-	--fs-lg:   clamp(1.25rem,   1.16rem + 0.45vw, 1.5rem);
-	--fs-xl:   clamp(1.5rem,    1.35rem + 0.75vw, 1.9375rem);
-	--fs-2xl:  clamp(1.875rem,  1.62rem + 1.25vw, 2.5rem);
-	--fs-3xl:  clamp(2.25rem,   1.83rem + 2.1vw,  3.25rem);
-	--fs-4xl:  clamp(2.625rem,  1.95rem + 3.4vw,  4.25rem);
+	/*
+	 * Fluid type scale.
+	 *
+	 * Each step is \`clamp(min, preferred, max)\`. The middle value grows with the
+	 * viewport, so text scales smoothly between phone and desktop instead of
+	 * jumping at breakpoints. The \`rem\` part of the preferred value is what keeps
+	 * it accessible: a pure \`vw\` value would ignore the user's font-size setting,
+	 * which is a WCAG 1.4.4 failure.
+	 */
+	--fs-xs: clamp(0.75rem, 0.735rem + 0.08vw, 0.8125rem);
+	--fs-sm: clamp(0.875rem, 0.855rem + 0.1vw, 0.9375rem);
+	--fs-base: clamp(1rem, 0.965rem + 0.18vw, 1.0625rem);
+	--fs-md: clamp(1.0625rem, 1.01rem + 0.28vw, 1.1875rem);
+	--fs-lg: clamp(1.25rem, 1.16rem + 0.45vw, 1.5rem);
+	--fs-xl: clamp(1.5rem, 1.35rem + 0.75vw, 1.9375rem);
+	--fs-2xl: clamp(1.875rem, 1.62rem + 1.25vw, 2.5rem);
+	--fs-3xl: clamp(2.25rem, 1.83rem + 2.1vw, 3.25rem);
+	--fs-4xl: clamp(2.625rem, 1.95rem + 3.4vw, 4.25rem);
 
 	--lh-tight: 1.08;
 	--lh-snug: 1.22;
@@ -773,34 +884,74 @@ for (const font of FONTS) {
 				type: 'code',
 				file: 'src/lib/styles/tokens.css',
 				lang: 'css',
-				code: `	/* 4px scale */
-	--space-1: 0.25rem;  --space-2: 0.5rem;   --space-3: 0.75rem;
-	--space-4: 1rem;     --space-5: 1.25rem;  --space-6: 1.5rem;
-	--space-8: 2rem;     --space-10: 2.5rem;  --space-12: 3rem;
-	--space-16: 4rem;    --space-20: 5rem;    --space-24: 6rem;
-	/* … */
+				code: `	/* ---------------------------------------------------------------
+	 * SPACE — a 4px-based scale.
+	 * Restricting spacing to a scale is what makes a layout feel designed
+	 * rather than nudged into place.
+	 * --------------------------------------------------------------- */
+	--space-1: 0.25rem;
+	--space-2: 0.5rem;
+	--space-3: 0.75rem;
+	--space-4: 1rem;
+	--space-5: 1.25rem;
+	--space-6: 1.5rem;
+	--space-8: 2rem;
+	--space-10: 2.5rem;
+	--space-12: 3rem;
+	--space-16: 4rem;
+	--space-20: 5rem;
+	--space-24: 6rem;
+	--space-32: 8rem;
 
 	/* Vertical rhythm between page sections — fluid, so mobile isn't wastefully airy. */
 	--section-y: clamp(3.5rem, 2.4rem + 5.5vw, 7rem);
 
-	--container-max: 75rem;
-	--container-narrow: 46rem;
-	/* … */
+	/* ---------------------------------------------------------------
+	 * LAYOUT
+	 * --------------------------------------------------------------- */
+	--container-max: 75rem; /* 1200px */
+	--container-narrow: 46rem; /* 736px — comfortable measure for prose */
+	--container-wide: 87.5rem; /* 1400px */
 	--gutter: clamp(1rem, 0.55rem + 2.2vw, 2rem);
+
 	--header-height: 4rem;
 
-	--radius-sm: 0.375rem; --radius-md: 0.625rem;
-	--radius-lg: 0.875rem; --radius-xl: 1.25rem;
+	/* ---------------------------------------------------------------
+	 * SHAPE & DEPTH
+	 * --------------------------------------------------------------- */
+	--radius-sm: 0.375rem;
+	--radius-md: 0.625rem;
+	--radius-lg: 0.875rem;
+	--radius-xl: 1.25rem;
 	--radius-full: 9999px;
-	/* … */
 
-	--dur-fast: 120ms; --dur-base: 200ms; --dur-slow: 320ms;
+	--shadow-sm: 0 1px 2px rgb(0 0 0 / 0.35);
+	--shadow-md: 0 4px 16px -4px rgb(0 0 0 / 0.45);
+	--shadow-lg: 0 18px 48px -12px rgb(0 0 0 / 0.6);
+	--shadow-glow: 0 0 48px -12px color-mix(in srgb, var(--brand-500) 55%, transparent);
+
+	/* ---------------------------------------------------------------
+	 * MOTION
+	 * Durations are short on purpose. Marketing sites that animate slowly
+	 * feel slow, and "feels slow" is indistinguishable from "is slow".
+	 * --------------------------------------------------------------- */
+	--dur-fast: 120ms;
+	--dur-base: 200ms;
+	--dur-slow: 320ms;
 	--ease-out: cubic-bezier(0.22, 1, 0.36, 1);
-	/* … */
+	--ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
 
-	/* Named z-indexes. If you ever type \`z-index: 9999\`, you've lost. */
-	/* … */
-	--z-header: 200; --z-drawer: 300; --z-modal: 400; --z-skip-link: 600;`
+	/* ---------------------------------------------------------------
+	 * LAYERS
+	 * Named z-indexes. If you ever type \`z-index: 9999\`, you've lost.
+	 * --------------------------------------------------------------- */
+	--z-base: 1;
+	--z-sticky: 100;
+	--z-header: 200;
+	--z-drawer: 300;
+	--z-modal: 400;
+	--z-toast: 500;
+	--z-skip-link: 600;`
 			},
 			{
 				type: 'checkpoint',
@@ -826,11 +977,29 @@ for (const font of FONTS) {
 				type: 'code',
 				file: 'src/lib/styles/reset.css',
 				lang: 'css',
-				code: `*, *::before, *::after { box-sizing: border-box; }
-* { margin: 0; }
+				code: `/* \`border-box\` means "when I say width: 300px, I mean 300px" — padding and border
+   are included rather than added on top. This is what everyone assumes the box model
+   does, and it isn't the default only for historical reasons. */
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
+}
+
+/* Browsers apply margins to headings, paragraphs and lists that vary between
+   engines. We zero everything and re-apply margin intentionally in base.css. */
+* {
+	margin: 0;
+}
 
 html {
+	/* … */
+	/* Sticky headers overlap anchor targets. This tells the browser to stop
+	   scrolling a header's height early so the heading isn't hidden underneath.
+	   Unlike smooth scrolling, this is pure layout and has no timing behaviour. */
 	scroll-padding-top: calc(var(--header-height) + var(--space-4));
+
+	/* Prevent iOS Safari from silently inflating text in landscape. */
 	-webkit-text-size-adjust: 100%;
 }
 
@@ -842,12 +1011,23 @@ body {
 	text-rendering: optimizeLegibility;
 }
 
-img, picture, video, canvas, svg {
+/* Media elements are inline by default, which leaves a mysterious ~4px gap under
+   them (it's the space for a text descender). \`block\` removes it. \`max-width\`
+   stops any asset from forcing a horizontal scrollbar on a phone. */
+img,
+picture,
+video,
+canvas,
+svg {
 	display: block;
 	max-width: 100%;
 }
 
-input, button, textarea, select {
+/* Form controls don't inherit typography from the page. They should. */
+input,
+button,
+textarea,
+select {
 	font: inherit;
 	color: inherit;
 	letter-spacing: inherit;
@@ -858,20 +1038,41 @@ button {
 	border: none;
 	padding: 0;
 	cursor: pointer;
+	/* iOS renders buttons with its own rounded chrome unless told otherwise. */
 	-webkit-appearance: none;
 	appearance: none;
 }
 
-p, h1, h2, h3, h4, h5, h6, li, dd, dt { overflow-wrap: break-word; }
+/* Long unbroken strings (a URL, a stray hash) can blow out a mobile layout.
+   \`overflow-wrap\` lets the browser break them as a last resort. */
+p,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+li,
+dd,
+dt {
+	overflow-wrap: break-word;
+}
 
-ul[role='list'], ol[role='list'] { list-style: none; padding: 0; }
+ul[role='list'],
+ol[role='list'] {
+	list-style: none;
+	padding: 0;
+}
 
+/* Anything focused via keyboard gets our one ring. \`:focus-visible\` (rather than
+   \`:focus\`) means mouse users don't see a ring on click, but keyboard users always do. */
 :focus-visible {
 	outline: none;
 	box-shadow: var(--focus-ring);
 	border-radius: var(--radius-sm);
 }
 
+/* Root stacking context for the app shell. */
 #svelte-app {
 	isolation: isolate;
 }`
@@ -887,7 +1088,7 @@ ul[role='list'], ol[role='list'] { list-style: none; padding: 0; }
 			},
 			{
 				type: 'warn',
-				text: "**Do not add `scroll-behavior: smooth` to `html`.** It is the most popular one-liner in web development and it causes real problems: it breaks scroll restoration on back navigation, and it deadlocks any code that scrolls then measures. We hit this in chapter 36 — it hung the entire e2e suite. If you want smooth scrolling, ask for it per call: `element.scrollIntoView({ behavior: 'smooth' })`."
+				text: "**Do not add `scroll-behavior: smooth` to `html`.** It is the most popular one-liner in web development and it causes real problems: it breaks scroll restoration on back navigation, and it deadlocks any code that scrolls then measures. We hit this in chapter 36 — it hung the entire e2e suite. If you want smooth scrolling, ask for it per call: `element.scrollIntoView({ behavior: 'smooth' })`. (The `/* … */` inside the `html` rule above stands for the long comment in the real file that records exactly this, so the next person does not add it back.)"
 			},
 			{
 				type: 'p',
@@ -898,7 +1099,9 @@ ul[role='list'], ol[role='list'] { list-style: none; padding: 0; }
 				file: 'src/lib/styles/reset.css (continued)',
 				lang: 'css',
 				code: `@media (prefers-reduced-motion: reduce) {
-	*, *::before, *::after {
+	*,
+	*::before,
+	*::after {
 		animation-duration: 0.01ms !important;
 		animation-iteration-count: 1 !important;
 		transition-duration: 0.01ms !important;
@@ -928,13 +1131,21 @@ body {
 	font-synthesis-weight: none;
 }
 
-h1, h2, h3, h4, h5, h6 {
+/* ---------------------------------------------------------------
+ * HEADINGS — Montserrat, tight and confident.
+ * --------------------------------------------------------------- */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
 	font-family: var(--font-heading);
 	color: var(--text-primary);
 	font-weight: var(--weight-bold);
 	line-height: var(--lh-snug);
 	letter-spacing: var(--tracking-snug);
-	text-wrap: balance;
+	text-wrap: balance; /* stops a heading ending in one orphaned word */
 }
 
 h1 {
@@ -951,13 +1162,34 @@ h2 {
 	letter-spacing: var(--tracking-tight);
 }
 
-h3 { font-size: var(--fs-xl); }
+h3 {
+	font-size: var(--fs-xl);
+}
 
-p { text-wrap: pretty; }
+h4 {
+	font-size: var(--fs-lg);
+	font-weight: var(--weight-semibold);
+}
+
+h5,
+h6 {
+	font-size: var(--fs-md);
+	font-weight: var(--weight-semibold);
+}
+
+/* ---------------------------------------------------------------
+ * PROSE
+ * --------------------------------------------------------------- */
+p {
+	text-wrap: pretty; /* avoids single-word last lines */
+}
 
 /* \`ch\` units measure character width, so this caps a paragraph at roughly
    70 characters — the range typographers consider most readable. */
-p, li { max-width: 70ch; }`
+p,
+li {
+	max-width: 70ch;
+}`
 			},
 			{
 				type: 'why',
@@ -977,28 +1209,76 @@ p, li { max-width: 70ch; }`
 				type: 'code',
 				file: 'src/lib/styles/utilities.css',
 				lang: 'css',
-				code: `.container {
+				code: `/* ---------------------------------------------------------------
+ * CONTAINER — horizontal centring with responsive gutters.
+ * --------------------------------------------------------------- */
+.container {
 	width: 100%;
 	max-width: var(--container-max);
 	margin-inline: auto;
 	padding-inline: var(--gutter);
 }
 
-.section { padding-block: var(--section-y); }
+.container--narrow {
+	max-width: var(--container-narrow);
+}
 
-/* \`> * + *\` reads as "every child that follows another child". It adds space
-   *between* items without adding a trailing margin after the last one, which is
-   what you actually want and what \`margin-bottom\` on every child gets wrong. */
-.stack > * + * { margin-block-start: var(--stack-space, var(--space-4)); }
+.container--wide {
+	max-width: var(--container-wide);
+}
 
-/* \`auto-fit\` + \`minmax()\` lets the grid decide how many columns fit. On a phone
-   … */
+/* ---------------------------------------------------------------
+ * SECTION — consistent vertical rhythm between page bands.
+ * --------------------------------------------------------------- */
+.section {
+	padding-block: var(--section-y);
+}
+
+.section--tight {
+	padding-block: calc(var(--section-y) * 0.6);
+}
+
+/* ---------------------------------------------------------------
+ * STACK — vertical spacing via the owl selector.
+ *
+ * \`> * + *\` reads as "every child that follows another child". It adds space
+ * *between* items without adding a trailing margin after the last one, which is
+ * what you actually want and what \`margin-bottom\` on every child gets wrong.
+ * --------------------------------------------------------------- */
+.stack > * + * {
+	margin-block-start: var(--stack-space, var(--space-4));
+}
+
+.stack-sm {
+	--stack-space: var(--space-2);
+}
+.stack-md {
+	--stack-space: var(--space-6);
+}
+.stack-lg {
+	--stack-space: var(--space-10);
+}
+
+/* ---------------------------------------------------------------
+ * AUTO GRID — responsive columns with no media queries at all.
+ *
+ * \`auto-fit\` + \`minmax()\` lets the grid decide how many columns fit. On a phone
+ * that's one; on a desktop it's however many clear the minimum width. This is
+ * more robust than breakpoints because it responds to the *container*, not the
+ * viewport — so it still works if you drop the grid into a narrow sidebar.
+ *
+ * \`min()\` guards the one failure case: if --grid-min is wider than the screen,
+ * plain minmax() would overflow. min(100%, ...) clamps it.
+ * --------------------------------------------------------------- */
 .auto-grid {
 	display: grid;
 	gap: var(--grid-gap, var(--space-6));
 	grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--grid-min, 17rem)), 1fr));
 }
 
+/* ---------------------------------------------------------------
+ * CLUSTER — horizontal group that wraps gracefully.
+ * --------------------------------------------------------------- */
 .cluster {
 	display: flex;
 	flex-wrap: wrap;
@@ -1016,8 +1296,18 @@ p, li { max-width: 70ch; }`
 				type: 'code',
 				file: 'src/lib/styles/utilities.css (continued)',
 				lang: 'css',
-				code: `/* Do NOT use \`display: none\` or \`visibility: hidden\` for this — both remove the
-   … */
+				code: `/* ---------------------------------------------------------------
+ * ACCESSIBILITY HELPERS
+ * --------------------------------------------------------------- */
+
+/*
+ * Visually hidden, but still read by screen readers.
+ *
+ * Do NOT use \`display: none\` or \`visibility: hidden\` for this — both remove the
+ * element from the accessibility tree, which defeats the entire purpose. This
+ * clip-based recipe is the accepted way to hide something visually while keeping
+ * it announced.
+ */
 .visually-hidden:not(:focus):not(:active) {
 	position: absolute;
 	width: 1px;
@@ -1030,8 +1320,13 @@ p, li { max-width: 70ch; }`
 	border: 0;
 }
 
-/* Skip link — the first focusable thing on the page.
-   … */
+/*
+ * Skip link — the first focusable thing on the page.
+ *
+ * A keyboard user landing on a page shouldn't have to tab through the whole nav
+ * on every single page to reach the content. This is off-screen until focused,
+ * then flies in. WCAG 2.4.1.
+ */
 .skip-link {
 	position: absolute;
 	top: var(--space-2);
@@ -1048,7 +1343,9 @@ p, li { max-width: 70ch; }`
 	transition: transform var(--dur-base) var(--ease-out);
 }
 
-.skip-link:focus { transform: translateY(0); }`
+.skip-link:focus {
+	transform: translateY(0);
+}`
 			},
 			{
 				type: 'warn',

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Published sheets, the embed, the API and the health check — Building Abacus</title>
-<meta name="description" content="Pages with `csr = false` ship no JavaScript: a published sheet as a table that prints, an embed reset to the root layout and allowed inside an iframe, a `QUERY` handler beside a `GET`, and a health endpoint that reports the build version.">
+<meta name="description" content="Pages with csr = false ship no JavaScript: a published sheet as a table that prints, an embed reset to the root layout and allowed inside an iframe, a QUERY handler beside a GET, and a health endpoint that reports the build version.">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -62,10 +62,11 @@ export const load: PageLoad = async ({ params }) =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/s/[id]/+page.svelte<span class="code__lines">:1-43</span></span>
+		<span class="code__file">src/routes/(app)/s/[id]/+page.svelte<span class="code__lines">:1-54</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
+	import { resolve } from '$app/paths';
 	import type { PageProps } from './$types.js';
 	import SheetTable from '#lib/components/SheetTable.svelte';
 
@@ -98,11 +99,21 @@ export const load: PageLoad = async ({ params }) =&gt; {
 			&lt;/p&gt;
 		&lt;/div&gt;
 		&lt;div class=&quot;cluster no-print&quot;&gt;
-			&lt;a class=&quot;btn btn--primary&quot; href=&quot;/sheet/local?from={data.published.id}&quot;
+			&lt;!--
+				Three shapes of a resolved link. A route id may carry its query
+				string (`resolve` keeps it); a route id with `[id]` in it takes the
+				params as a second argument, checked by name; and an API route is a
+				route like any other.
+			--&gt;
+			&lt;a class=&quot;btn btn--primary&quot; href={resolve(`/(app)/sheet/local?from=${data.published.id}`)}
 				&gt;Make a copy to edit&lt;/a
 			&gt;
-			&lt;a class=&quot;btn&quot; href=&quot;/api/sheets/{data.published.id}/export.csv&quot;&gt;Download CSV&lt;/a&gt;
-			&lt;a class=&quot;btn btn--ghost&quot; href=&quot;/embed/{data.published.id}&quot;&gt;Embed&lt;/a&gt;
+			&lt;a class=&quot;btn&quot; href={resolve('/api/sheets/[id]/export.csv', { id: data.published.id })}
+				&gt;Download CSV&lt;/a
+			&gt;
+			&lt;a class=&quot;btn btn--ghost&quot; href={resolve('/(app)/embed/[id]', { id: data.published.id })}
+				&gt;Embed&lt;/a
+			&gt;
 		&lt;/div&gt;
 	&lt;/header&gt;
 
@@ -130,10 +141,11 @@ export const load: PageLoad = async ({ params }) =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/embed/[id]/+page@.svelte<span class="code__lines">:1-27</span></span>
+		<span class="code__file">src/routes/(app)/embed/[id]/+page@.svelte<span class="code__lines">:1-30</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
+	import { resolve } from '$app/paths';
 	import type { PageProps } from './$types.js';
 	import SheetTable from '#lib/components/SheetTable.svelte';
 
@@ -156,8 +168,10 @@ export const load: PageLoad = async ({ params }) =&gt; {
 &lt;div class=&quot;embed&quot;&gt;
 	&lt;SheetTable rendered={data.rendered} caption={data.published.title} /&gt;
 	&lt;p class=&quot;embed__foot hint&quot;&gt;
-		&lt;a href=&quot;/s/{data.published.id}&quot; target=&quot;_blank&quot; rel=&quot;noopener&quot;&gt;{data.published.title}&lt;/a&gt; · by {data
-			.published.owner} · made with Abacus
+		&lt;a href={resolve('/(app)/s/[id]', { id: data.published.id })} target=&quot;_blank&quot; rel=&quot;noopener&quot;
+			&gt;{data.published.title}&lt;/a
+		&gt;
+		· by {data.published.owner} · made with Abacus
 	&lt;/p&gt;
 &lt;/div&gt;</code></pre>
 </figure>
@@ -166,7 +180,7 @@ export const load: PageLoad = async ({ params }) =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/api/published/+server.ts<span class="code__lines">:1-23</span></span>
+		<span class="code__file">src/routes/api/published/+server.ts<span class="code__lines">:1-28</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -178,12 +192,17 @@ export const load: PageLoad = async ({ params }) =&gt; {
  *
  * `QUERY` is the HTTP method for &quot;a read with a body&quot; — a GET may not carry
  * one, and a POST says &quot;this changes something&quot;, which a search does not.
- * SvelteKit 3.0.0-next.24 added it to the methods a `+server.ts` may export.
+ * SvelteKit 3 added it to the methods a `+server.ts` may export.
+ *
+ * Responses are built with the platform's `Response.json(…)`. SvelteKit 3
+ * deprecated its own `json(…)` helper because the two had become the same
+ * thing, and a handler that reaches for the standard one reads the same in
+ * any runtime.
  */
 
 import * as v from 'valibot';
 import { desc, sql } from 'drizzle-orm';
-import { error, json } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types.js';
 import { db, schema } from '#lib/server/db/index.ts';
 
@@ -196,12 +215,12 @@ export const _SearchSchema = v.object({
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/api/published/+server.ts<span class="code__lines">:42-67</span></span>
+		<span class="code__file">src/routes/api/published/+server.ts<span class="code__lines">:47-72</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">export const GET: RequestHandler = async ({ setHeaders }) =&gt; {
 	setHeaders({ 'cache-control': 'public, max-age=60' });
-	return json({ sheets: await list(20) });
+	return Response.json({ sheets: await list(20) });
 };
 
 export const QUERY: RequestHandler = async ({ request }) =&gt; {
@@ -223,10 +242,10 @@ export const QUERY: RequestHandler = async ({ request }) =&gt; {
 				!needle || s.title.toLowerCase().includes(needle) || s.owner.toLowerCase().includes(needle)
 		)
 		.slice(0, limit);
-	return json({ sheets: matched, total: matched.length });
+	return Response.json({ sheets: matched, total: matched.length });
 };</code></pre>
 </figure>
-<p><code>QUERY</code> is the HTTP method for a read with a body — a GET may not carry one, and a POST says “this changes something”. The schema is exported with a leading underscore, SvelteKit’s escape hatch for “not a handler”, so the test beside the route can import it; since 3.0.0-next.19 a <code>+</code> file with <code>.test.</code> in its name is not a route.</p>
+<p><code>QUERY</code> is the HTTP method for a read with a body — a GET may not carry one, and a POST says “this changes something”. The schema is exported with a leading underscore, SvelteKit’s escape hatch for “not a handler”, so the test beside the route can import it; in SvelteKit 3 a <code>+</code> file with <code>.test.</code> in its name is not a route. The responses are <code>Response.json(…)</code>, the platform’s own: SvelteKit 3 deprecated its <code>json(…)</code> helper because the two had become the same thing, and a handler written against the standard reads the same in any runtime.</p>
 
 <figure class="code">
 	<figcaption>
@@ -238,8 +257,8 @@ import * as v from 'valibot';
 import { _SearchSchema } from './+server.ts';
 
 /**
- * A test beside a route. Since SvelteKit 3.0.0-next.19 a `+` file with
- * `.test.` in its name is not a route, so a schema's defaults get a fast
+ * A test beside a route. In SvelteKit 3 a `+` file with `.test.` in its
+ * name is not a route, so a schema's defaults get a fast
  * unit test next to the thing they describe.
  */
 const parse = (body: unknown) =&gt; v.parse(_SearchSchema, body);
@@ -257,7 +276,7 @@ describe('the search body', () =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/healthz/+server.ts<span class="code__lines">:1-25</span></span>
+		<span class="code__file">src/routes/healthz/+server.ts<span class="code__lines">:1-41</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -271,22 +290,43 @@ describe('the search body', () =&gt; {
  * first question in every incident.
  */
 
-import { json } from '@sveltejs/kit';
 import { version } from '$app/env';
 import type { RequestHandler } from './$types.js';
 import { client } from '#lib/server/db/index.ts';
 
+/*
+ * `Response.json(…)` is the platform's own: the same `content-type` and the
+ * same serialisation SvelteKit's `json(…)` helper wrapped, which is why
+ * SvelteKit 3 deprecated the helper. One fewer import, and a handler that
+ * reads the same in a Worker, in Deno, or in a test with no framework in it.
+ */
 export const GET: RequestHandler = async ({ setHeaders }) =&gt; {
 	setHeaders({ 'cache-control': 'no-store' });
 	try {
 		await client.execute('select 1');
-		return json({ ok: true, version, uptime: Math.round(process.uptime()) });
+		return Response.json({ ok: true, version, uptime: Math.round(process.uptime()) });
 	} catch (error) {
-		return json({ ok: false, version, error: (error as Error).message }, { status: 503 });
+		/*
+		 * The reason goes to the log, under a reference; the caller gets the
+		 * reference and a fixed sentence. This endpoint answers anybody, and a
+		 * driver's message can carry a file path or a connection string —
+		 * which is why `handleError` keeps unexpected messages back too.
+		 */
+		const id = crypto.randomUUID();
+		console.error(`[${id}] health check: the database did not answer`, error);
+		return Response.json(
+			{ ok: false, version, error: 'database unreachable', id },
+			{ status: 503 }
+		);
 	}
 };</code></pre>
 </figure>
 <p>The health check touches the database and returns the build version — the commit hash from the config — because “which version is running” is the first question in every incident. The container chapter probes it.</p>
+
+<aside class="callout callout--why">
+	<h4>Why a failed health check says so little</h4>
+	<p>This endpoint answers anybody, signed in or not, and the error a database driver throws can carry a file path, a host name or a connection string. The first version put <code>(error as Error).message</code> straight into the response — the cast chapter 29 warns about, on the one route with no access check at all. Now the reason goes to the server’s log under a fresh reference, and the caller gets <code>ok: false</code>, the version, a fixed “database unreachable” and the reference: enough for a load balancer to stop sending traffic and for whoever is on call to find the log line, and nothing for anybody else. It is the same choice <code>handleError</code> makes for an unexpected error, for the same reason.</p>
+</aside>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>

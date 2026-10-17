@@ -15,6 +15,19 @@ export type Locale = (typeof LOCALES)[number];
 
 export const DEFAULT_LOCALE: Locale = 'en';
 
+/**
+ * The value of the `[[lang=locale]]` route parameter for a link in this language.
+ *
+ * English is the unprefixed default — `/boards`, not `/en/boards` — and the
+ * segment is *optional*, so `resolve()` leaves it out when the parameter is
+ * `undefined`. One call yields `/boards` for English and `/fr/boards` for French,
+ * and the "is this the default?" question is asked here, once, instead of at
+ * every link and every redirect.
+ */
+export function langParam(locale: Locale): Locale | undefined {
+	return locale === DEFAULT_LOCALE ? undefined : locale;
+}
+
 export function isLocale(value: string | undefined): value is Locale {
 	return value !== undefined && (LOCALES as readonly string[]).includes(value);
 }

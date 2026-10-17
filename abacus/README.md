@@ -7,6 +7,13 @@ out, and a container that deploys it.
 
 Project 7 of _Ultimate SvelteKit 3_. Its course is in `../abacus-course`.
 
+## Toolchain
+
+Node 24.21 LTS (`.nvmrc`, `engines`), pnpm 12.10.1 (`packageManager`, so
+`corepack` picks it), SvelteKit 3.0.1 on Svelte 5.57, Vite 8.3, Vitest 5,
+TypeScript 6 and Playwright 1.64. Every version is pinned by `pnpm-lock.yaml`;
+`pnpm install --frozen-lockfile` is what the Dockerfile and CI run.
+
 ## Run it
 
 ```bash
@@ -59,7 +66,7 @@ code.
 | `src/lib/lesson`                       | The same engine written out of `$derived`, for the lesson page                                                   |
 | `src/hooks.server.ts` / `src/hooks.ts` | `sequence`, a font `preload` filter, a per-route `frame-ancestors`, `handleError` by `kind`, `init`, `transport` |
 | `scripts/`                             | `migrate.ts` (what the container runs), `seed.ts`, `prepare-e2e-db.js`                                           |
-| `e2e/`                                 | Twenty-three scenarios on desktop and a Pixel 7 profile, including real passkeys and two browsers on one sheet   |
+| `e2e/`                                 | Twenty-seven scenarios on desktop and a Pixel 7 profile, including real passkeys and two browsers on one sheet   |
 
 ## Environment
 

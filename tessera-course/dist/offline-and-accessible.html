@@ -38,7 +38,7 @@
 			
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/service-worker.ts</span>
+		<span class="code__file">src/service-worker/index.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -72,21 +72,42 @@
  * SvelteKit 3 split the old `$service-worker` module apart: the build manifest
  * is `$app/manifest` (`immutable`, `assets`, `prerendered`, `routes`), the build
  * id is `version` from `$app/env`, and `$app/service-worker` now exports only a
- * correctly-typed `self`. Bringing the SvelteKit 2 import forward gives four
- * &quot;has no exported member&quot; errors at once, which at least says so plainly.
- */</code></pre>
+ * correctly-typed `self`. Bring the SvelteKit 2 import forward unchanged and the
+ * type checker cannot find `$service-worker` at all; repoint the same names at
+ * `$app/service-worker` and it reports four &quot;has no exported member&quot; errors
+ * instead. Either way it says so plainly, and either way the answer is the same:
+ * the names moved, to `$app/manifest` and `$app/env`.
+ *
+ * WHY THIS IS A DIRECTORY
+ * -----------------------
+ * `src/service-worker/index.ts`, not `src/service-worker.ts`. SvelteKit 3
+ * accepts both; the directory is the one that lets the worker's own
+ * `tsconfig.json` sit next to the only file it governs. That config extends
+ * `$app/tsconfig/service-worker`, which swaps the DOM lib for `WebWorker` and
+ * is what makes `self` below a `ServiceWorkerGlobalScope` rather than a
+ * `Window` — and the root `tsconfig.json` excludes this directory so the file
+ * is never checked against an environment it will not run in. SvelteKit
+ * bundles the result and registers it with `{ type: 'module' }`, which is why
+ * plain `import` statements are fine here.
+ */
+
+import { self } from '$app/service-worker';
+import { version } from '$app/env';
+import { assets, immutable } from '$app/manifest';
+import { resolve } from '$app/paths';</code></pre>
 </figure>
+<p>A directory, not a file. <code>src/service-worker.ts</code> still works in SvelteKit 3, but <code>src/service-worker/index.ts</code> is the layout the framework documents, because it gives the worker somewhere to keep its own <code>tsconfig.json</code> — the one that extends <code>$app/tsconfig/service-worker</code> and swaps the DOM lib for <code>WebWorker</code>. The root <code>tsconfig.json</code> excludes the directory, and the <code>check</code> script runs <code>tsc</code> against the worker’s config explicitly, since <code>svelte-check</code> only ever reads the root one. The worker is bundled and registered as <code>{ type: 'module' }</code>, which is why plain <code>import</code> statements are fine inside it.</p>
 <p>Tessera already works offline — the document is in IndexedDB and edits queue in an outbox. What it cannot do without this file is <strong>start</strong> while offline: the browser has no HTML, no JavaScript and no CSS to run any of that with.</p>
 
 <aside class="callout callout--why">
 	<h4>One job, and the discipline to keep it</h4>
 	<p>A worker that also cached API responses would become a <strong>third cache</strong> with its own idea of the truth, alongside IndexedDB and the server. The three rules are what keep it out: hashed assets cache-first forever, navigations network-first, and everything else straight through. That last rule is what keeps the operation stream and the remote functions out of here entirely.</p>
 </aside>
-<aside class="callout callout--warn"><p>SvelteKit 3 split the old <code>$service-worker</code> module apart. The build manifest is <code>$app/manifest</code> (<code>immutable</code>, <code>assets</code>, <code>prerendered</code>, <code>routes</code>), the build id is <code>version</code> from <code>$app/env</code>, and <code>$app/service-worker</code> now exports only a correctly-typed <code>self</code>. Bringing the SvelteKit 2 import forward gives four &quot;has no exported member&quot; errors at once, which at least says so plainly.</p></aside>
+<aside class="callout callout--warn"><p>SvelteKit 3 removed the old <code>$service-worker</code> module and split what it exported apart. The build manifest is <code>$app/manifest</code> (<code>immutable</code>, <code>assets</code>, <code>prerendered</code>, <code>routes</code>), the build id is <code>version</code> from <code>$app/env</code>, and <code>$app/service-worker</code> is new, and exports only a correctly-typed <code>self</code>. Leave the SvelteKit 2 import exactly as it was and the type checker says <code>$service-worker</code> cannot be found at all. Repoint the same names at <code>$app/service-worker</code>, which is the obvious-looking fix, and you get four &quot;has no exported member&quot; errors instead, one each for <code>build</code>, <code>files</code>, <code>prerendered</code> and <code>version</code>. Both mean the same thing: the names moved, to <code>$app/manifest</code> and <code>$app/env</code>.</p></aside>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/service-worker.ts</span>
+		<span class="code__file">src/service-worker/index.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/*
@@ -102,9 +123,27 @@ const CACHE = `tessera-${version}`;
  *
  * `immutable` is Vite's hashed output; `assets` is whatever is in `static/`,
  * which for this application is the two font files. Both arrive as
- * `{ path }` objects rather than bare strings.
+ * `{ path }` objects rather than bare strings — and the path is relative to
+ * the base path, with no leading slash: `_app/immutable/…`, `fonts/…`.
+ *
+ * `resolve()` turns each into the absolute pathname the browser will actually
+ * request, which is what `url.pathname` is compared with in the fetch handler.
+ * Skip it and that comparison never matches. Nothing fails loudly:
+ * `cache.addAll` resolves the relative paths against the worker's own URL, so
+ * the shell is still cached and the application still starts offline — but
+ * the &quot;cache-first, forever&quot; rule has silently become network-first for every
+ * hashed asset, which is the kind of regression no test notices and everybody
+ * on a slow connection pays for.
+ *
+ * Typed as `string[]` on purpose. `resolve()` returns `ResolvedPathname`, a
+ * template-literal type — a `/` followed by one of the app's known paths —
+ * which is what lets a link be checked, and exactly wrong for a list whose only
+ * job is to be compared with `url.pathname`, a plain string.
+ * `Array.prototype.includes` is typed with the element type, so a
+ * `ResolvedPathname[]` refuses a plain string at compile time. Widening here
+ * says once what these are: the pathnames the browser will actually request.
  */
-const PRECACHE = [...immutable, ...assets].map((entry) =&gt; entry.path);
+const PRECACHE: string[] = [...immutable, ...assets].map((entry) =&gt; resolve(entry.path));
 
 self.addEventListener('install', (event) =&gt; {
 	event.waitUntil(
@@ -130,10 +169,11 @@ self.addEventListener('activate', (event) =&gt; {
 });</code></pre>
 </figure>
 <p>The cache is named after <code>version</code>, which is unique per build, so a new deployment gets a new cache and the old one is deleted on activate. Naming it anything stable is how a service worker ends up serving an application from two releases ago with no way to clear it short of asking people to open devtools.</p>
+<aside class="callout callout--warn"><p>The paths in <code>$app/manifest</code> are relative to the base path — <code>_app/immutable/…</code>, no leading slash — and <code>url.pathname</code> in the fetch handler is absolute. <code>resolve()</code> from <code>$app/paths</code> is what makes the two comparable — the pathname form of chapter 33’s <code>resolve()</code>, without the leading slash — and it is easy to leave out because nothing fails when you do: <code>cache.addAll</code> resolves relative paths against the worker’s own URL, so the shell still caches and the app still starts offline. What silently goes wrong is the first rule — hashed assets become network-first — and no test notices. The <code>string[]</code> annotation is the other half: <code>resolve()</code> returns a <code>ResolvedPathname</code>, a template-literal type, and <code>includes</code> will not compare one with the plain string <code>url.pathname</code> is.</p></aside>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/service-worker.ts</span>
+		<span class="code__file">src/service-worker/index.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">async function respond(request: Request, url: URL): Promise&lt;Response&gt; {
@@ -205,9 +245,7 @@ self.addEventListener('activate', (event) =&gt; {
 --&gt;
 &lt;!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions --&gt;
 &lt;div
-	bind:this={surface}
-	class=&quot;board&quot;
-	class:board--connecting={editor.tool === 'connect'}
+	class={['board', { 'board--connecting': editor.tool === 'connect' }]}
 	data-canvas
 	role=&quot;application&quot;
 	aria-label={t.a11y.canvas}
@@ -229,6 +267,7 @@ self.addEventListener('activate', (event) =&gt; {
 	<h4>What <code>role=&quot;application&quot;</code> obliges you to do</h4>
 	<p>It tells a screen reader to <strong>stop interpreting keystrokes itself</strong> and pass them through, which a canvas whose entire interface is keys genuinely needs. It is also the strongest claim in ARIA: you have taken away the navigation somebody relies on everywhere else. The obligation that comes with it is to offer the same capabilities another way — and if you cannot, you should not use the role.</p>
 </aside>
+<aside class="callout callout--note"><p>Two smaller things in that opening tag. The class is the attribute’s array-and-object form, <code>class={['board', { 'board--connecting': … }]}</code>, which Svelte has accepted since 5.16 and now prefers to the <code>class:</code> directive: “unless you’re using an older version of Svelte, consider avoiding <code>class:</code>, since the attribute is more powerful and composable.” And there is no <code>bind:this</code>. Every handler is attached to this element, so each one reads <code>event.currentTarget</code> — typed as the <code>&lt;div&gt;</code> itself — instead of an element variable that is <code>null</code> until mount and has to be checked in every handler.</p></aside>
 
 <figure class="code">
 	<figcaption>

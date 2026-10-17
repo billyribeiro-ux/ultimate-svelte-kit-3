@@ -1,7 +1,9 @@
 <script lang="ts">
 	import * as v from 'valibot';
 	import { PlusIcon, TrashIcon } from 'phosphor-svelte';
+	import { resolve } from '$app/paths';
 	import Section from '#lib/components/Section.svelte';
+	import { failureOf, messageOf } from '#lib/errors.ts';
 	import { create, getMine, remove, rename } from '#lib/remote/sheets.remote.ts';
 	import { TEMPLATES } from '#lib/sheet/templates.ts';
 	import { toast } from '#lib/toast/toast.ts';
@@ -15,6 +17,9 @@
 	 * pending delete disables its own button and no other; the optimistic
 	 * override takes the card off the screen before the server has answered,
 	 * and a failure puts it back.
+	 *
+	 * A failed submission rejects with an `HttpError`, and what the server
+	 * said is in its `body.message` — `messageOf` reads it (see `#lib/errors.ts`).
 	 */
 	const newSheet = create
 		.preflight(
@@ -28,7 +33,7 @@
 			try {
 				await form.submit();
 			} catch (e) {
-				toast((e as Error).message, 'error');
+				toast(messageOf(e, 'Could not make that sheet'), 'error');
 			}
 		});
 
@@ -74,10 +79,10 @@
 		<svelte:boundary>
 			<ul class="cards">
 				{#each await getMine() as sheet (sheet.id)}
-					{@const del = remove.for(sheet.id)}
-					{@const ren = rename.for(sheet.id)}
+					{const del = remove.for(sheet.id)}
+					{const ren = rename.for(sheet.id)}
 					<li class="card sheetcard">
-						<a class="sheetcard__link" href="/sheet/{sheet.id}">
+						<a class="sheetcard__link" href={resolve('/(app)/sheet/[id]', { id: sheet.id })}>
 							<h3>{sheet.title}</h3>
 							<p class="hint">
 								{sheet.cellCount.toLocaleString()} cells · edited {when(sheet.updatedAt)}
@@ -105,8 +110,8 @@
 												getMine().withOverride((list) => list.filter((s) => s.id !== sheet.id))
 											);
 										toast('Deleted');
-									} catch {
-										toast('Could not delete that', 'error');
+									} catch (e) {
+										toast(messageOf(e, 'Could not delete that'), 'error');
 									}
 								})}
 							>
@@ -123,15 +128,22 @@
 					</li>
 				{:else}
 					<li class="hint">
-						No sheets yet. Make one above, or <a href="/sheet/local">start without saving</a>.
+						No sheets yet. Make one above, or
+						<a href={resolve('/(app)/sheet/local')}>start without saving</a>.
 					</li>
 				{/each}
 			</ul>
 			{#snippet pending()}
 				<p class="hint">Loading your sheets…</p>
 			{/snippet}
+			<!--
+				What `failed` receives has been through `handleError`: an `App.Error`,
+				not an `HttpError`, so the sentence is its `message`. Svelte types it
+				`unknown`, because without SvelteKit it could be anything, and
+				`failureOf` reads it without a cast.
+			-->
 			{#snippet failed(error, reset)}
-				<p class="issue">{(error as Error).message}</p>
+				<p class="issue">{failureOf(error)}</p>
 				<button type="button" class="btn btn--sm" onclick={reset}>Try again</button>
 			{/snippet}
 		</svelte:boundary>

@@ -214,8 +214,13 @@ export default defineConfig(({ mode }) => {
 					 * `getBoundingClientRect()`, and jsdom has no layout: every element is
 					 * 0×0, so a virtualizer under jsdom renders zero rows and passes every
 					 * assertion you thought to write.
+					 *
+					 * No `extends` line. Since Vitest 5 an inline project inherits the
+					 * config that declares it — the plugins, `ssr.external`, the `#lib`
+					 * imports — so naming this file again would load the SvelteKit plugin
+					 * twice and earn a warning. `extends: false` is the only thing left to
+					 * say, and it would be wrong here.
 					 */
-					extends: './vite.config.ts',
 					test: {
 						name: 'client',
 						browser: {
@@ -230,8 +235,8 @@ export default defineConfig(({ mode }) => {
 				{
 					// Pure logic — plain Node, no browser, fast. The query language, the
 					// sketches and the downsampler live here, and these are the tests that
-					// matter most.
-					extends: './vite.config.ts',
+					// matter most. Inherits this config like the project above, for the
+					// same reason.
 					test: {
 						name: 'server',
 						environment: 'node',

@@ -25,9 +25,7 @@
 
 <svelte:element
 	this={as}
-	class="card"
-	class:card--highlighted={highlighted}
-	class:card--interactive={interactive}
+	class={['card', { 'card--highlighted': highlighted, 'card--interactive': interactive }]}
 >
 	{@render children()}
 </svelte:element>

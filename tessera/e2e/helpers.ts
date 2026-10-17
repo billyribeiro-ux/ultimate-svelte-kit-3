@@ -5,6 +5,9 @@ export const VIEWER = { email: 'mo@tessera.test', password: 'tessera-demo-2026' 
 
 export const BOARD = 'demo-board';
 
+/** A board the viewer owns, in a workspace of their own — see `scripts/seed.ts`. */
+export const VIEWER_BOARD = 'mo-board';
+
 /** Every shape `scripts/seed.ts` writes, by label. */
 export const SEEDED = [
 	'Web',

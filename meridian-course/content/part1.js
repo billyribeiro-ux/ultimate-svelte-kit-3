@@ -68,10 +68,10 @@ export const part1 = [
 			},
 
 			{ type: 'h3', id: 'formatting', text: 'A distance a person can read' },
-			code(GEO, 279, 326),
+			code(GEO, 279, 330),
 			{
 				type: 'p',
-				text: 'The last thing that happens to a distance is formatting, and it happens with `Intl.NumberFormat` and `style: "unit"`. That is not a convenience; it is the only correct way to do it. German writes `343 km` with a non-breaking space, Portuguese writes `343 km` the same way, English writes `343 km` too but `2.5 mi` with a point where German uses a comma — and the library never carries a table of any of that. Chapter 21 makes the same argument for dates and money.'
+				text: 'The last thing that happens to a distance is formatting, and it happens with `Intl.NumberFormat` and `style: "unit"`. That is not a convenience; it is the only correct way to do it. German writes `343 km` with a non-breaking space, Portuguese writes `343 km` the same way, English writes `343 km` too but `2.5 mi` with a point where German uses a comma — and the library never carries a table of any of that. Each formatter is built once per locale, unit and precision, and kept in a map: building one loads the locale’s data, and an app may format a distance per card on every render. Chapter 21 makes the same argument for dates and money.'
 			},
 			code('packages/waypoint/src/lib/geo/geo.spec.ts', 19, 45),
 			{
@@ -150,20 +150,20 @@ export const part1 = [
 			code('packages/waypoint/src/lib/Compass.svelte', 1, 19),
 			{
 				type: 'p',
-				text: '`class` is a reserved word, so the prop is renamed on the way in — `class: className` — and forwarded onto the root element beside the library’s own class, which is namespaced `waypoint-compass` so it cannot collide with anything the consumer has. Both derived values are cheap and pure; the point of deriving them rather than computing in the markup is that `point` is used twice — once as data, once in the accessible name — and must be the same value both times.'
+				text: '`class` is a reserved word, so the prop is renamed on the way in — `class: className` — and forwarded onto the root element beside the library’s own class, which is namespaced `waypoint-compass` so it cannot collide with anything the consumer has. Both derived values are cheap and pure; the point of deriving them rather than computing in the markup is that `point` is used twice — once as data, once in the accessible name — and must be the same value both times. The class is a string, `class="waypoint-compass {className}"`, and not the `class={[…]}` array an app in this course would write — the comment above the `<svg>` says why, and chapter 08 explains the promise behind it.'
 			},
-			code('packages/waypoint/src/lib/Compass.svelte', 21, 44),
+			code('packages/waypoint/src/lib/Compass.svelte', 27, 50),
 			{
 				type: 'p',
 				text: '`role="img"` with an `aria-label` that says `92 degrees, E` makes the needle readable by a screen reader — an SVG with no name is silence. `style:transform` rotates the needle by the heading; `data-point` exposes the compass point to CSS and to tests without a class per direction.'
 			},
-			code('packages/waypoint/src/lib/Compass.svelte', 46, 61),
+			code('packages/waypoint/src/lib/Compass.svelte', 52, 67),
 			{
 				type: 'p',
 				text: 'The transition on the needle is the one bit of motion in the library, and it is turned off under `prefers-reduced-motion`. A library that animates has to make that choice for people who cannot make it themselves, because the consuming app may not know the animation is there.'
 			},
 			code('packages/waypoint/src/lib/Sparkline.svelte', 1, 39),
-			code('packages/waypoint/src/lib/Sparkline.svelte', 41, 60),
+			code('packages/waypoint/src/lib/Sparkline.svelte', 47, 66),
 			{
 				type: 'p',
 				text: 'The sparkline is the argument against a chart library, in twelve hundred bytes: a path through the values, scaled to a box, with `vector-effect="non-scaling-stroke"` so the line stays hairline when the SVG is stretched. Fewer than two values draws nothing, and the test checks that, because “nothing” is a case a chart library would have thrown on.'
@@ -204,7 +204,7 @@ export const part1 = [
 			code('packages/waypoint/package.json', 28, 39, { partial: true }),
 			{
 				type: 'p',
-				text: '`svelte` is a peer dependency — a library must use the consumer’s copy, never bring its own. The `package` script runs `svelte-kit sync` first because `svelte-package` needs the generated ambient types to build declarations. `package:check` is two tools and three commands, and each one caught something during development: publint found the missing `types` condition; arethetypeswrong found that the root entry’s `.d.ts` imports `.svelte` files, which Node 16’s resolver would refuse — real, and unfixable while a `.d.ts` re-exports a component, so the rule is ignored for the root entry only and enforced for `./geo`.'
+				text: '`svelte` is a peer dependency — a library must use the consumer’s copy, never bring its own. Its range, `^5.0.0`, is the widest the library supports, and it is a promise kept by reading the source: runes in a class, `$derived.by`, `$state.snapshot` — nothing that arrived after 5.0. That is why the two components build their `class` as a string rather than as `class={[…]}`, which arrived in 5.16: the most idiomatic line in the file would quietly have narrowed who can install it. The devDependency, `^5.57.2`, is the version the library is *tested* with; the peer range is the one it *promises*, and the two are allowed to differ. The `package` script runs `svelte-kit sync` first because `svelte-package` needs the generated ambient types to build declarations. `package:check` is two tools and three commands, and each one caught something during development: publint found the missing `types` condition; arethetypeswrong found that the root entry’s `.d.ts` imports `.svelte` files, which Node 16’s resolver would refuse — real, and unfixable while a `.d.ts` re-exports a component, so the rule is ignored for the root entry only and enforced for `./geo`.'
 			},
 			code('packages/waypoint/vite.config.ts', 1, 54),
 			{

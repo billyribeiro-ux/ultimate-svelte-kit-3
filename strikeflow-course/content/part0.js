@@ -609,7 +609,7 @@ const label = plan.label ?? 'Untitled';`
 			{
 				type: 'code',
 				lang: 'js',
-				file: 'async / await',
+				file: 'async and await',
 				code: `async function loadPosts() {
 	const response = await fetch('/api/posts');
 	const posts = await response.json();
@@ -696,11 +696,11 @@ mkdir new-thing  # make a directory`
 			{
 				type: 'terminal',
 				code: `node -v
-# v24.20.0  — this project requires 24.20.0 or higher`
+# v24.21.0  — this project requires 24.21.0 or higher`
 			},
 			{
 				type: 'warn',
-				text: 'SvelteKit 3 itself runs on Node 22.17 or newer, but this project sets its floor at the current LTS — its `package.json` declares `"engines": { "node": ">=24.20.0" }`. If yours is older, get the LTS from [nodejs.org](https://nodejs.org). "LTS" means Long Term Support — the stable version, which is what you want.'
+				text: 'SvelteKit 3 on its own accepts an older Node (its floor is 22.17), but this project sets its floor at the current LTS — its `package.json` declares `"engines": { "node": ">=24.21.0" }`. If yours is older, get the LTS from [nodejs.org](https://nodejs.org). "LTS" means Long Term Support — the stable version, which is what you want.'
 			},
 			{ type: 'h3', id: 'packages', text: 'Packages and the package manager' },
 			{
@@ -720,7 +720,7 @@ mkdir new-thing  # make a directory`
 			{ type: 'h3', id: 'package-json', text: 'package.json' },
 			{
 				type: 'p',
-				text: "Every project has one. It is the project's identity card and instruction manual."
+				text: "Every project has one. It is the project's identity card and instruction manual. Here is ours, trimmed to the parts that matter right now — each `…` line stands for entries left out. You will not see the whole file in one go: each of the other entries appears in the chapter that needs it, from the toolchain pins in chapter 8 to the PDF script in chapter 29."
 			},
 			{
 				type: 'code',
@@ -728,16 +728,24 @@ mkdir new-thing  # make a directory`
 				file: 'package.json',
 				code: `{
 	"name": "strikeflow-site",
+	…
 	"type": "module",
+	…
 	"scripts": {
 		"dev": "vite dev",
-		"build": "vite build"
-	},
-	"dependencies": {
-		"gsap": "^3.15.0"
+		"build": "vite build",
+		…
 	},
 	"devDependencies": {
-		"vite": "^8.2.2"
+		…
+		"vite": "^8.3.4",
+		…
+	},
+	…
+	"dependencies": {
+		…
+		"gsap": "^3.15.0",
+		…
 	}
 }`
 			},
@@ -778,7 +786,7 @@ mkdir new-thing  # make a directory`
 			},
 			{
 				type: 'checkpoint',
-				text: '`node -v` shows 24.20.0+, `pnpm -v` shows 10+, and you can explain what the `^` in a version number means.'
+				text: '`node -v` shows 24.21.0 or newer, `pnpm -v` shows 12 or newer, and you can explain what the `^` in a version number means.'
 			}
 		]
 	},

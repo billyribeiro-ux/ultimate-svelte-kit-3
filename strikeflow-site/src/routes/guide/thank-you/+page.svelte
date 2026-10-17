@@ -4,9 +4,9 @@
 
 	import Seo from '#lib/seo/Seo.svelte';
 	import Button from '#lib/components/ui/Button.svelte';
-	import type { PageServerData } from './$types';
+	import type { PageProps } from './$types';
 
-	let { data }: { data: PageServerData } = $props();
+	let { data }: PageProps = $props();
 
 	const messages = {
 		expired: {
@@ -29,9 +29,9 @@
 
 	It's a gated confirmation page. If it were indexed, Google would send people
 	straight here from search, bypassing the form — which both breaks the flow (they
-	arrive with no valid token) and makes the gate pointless. `robots.txt` also
-	disallows it, and the server sets an X-Robots-Tag header. Three layers, because
-	the cost of each is one line.
+	arrive with no valid token) and makes the gate pointless. The server also sets
+	an X-Robots-Tag header. Two layers, and robots.txt deliberately is not a third:
+	a crawler barred from the page could never read either of them.
 -->
 <Seo
 	title="Your guide is ready"
@@ -59,8 +59,16 @@
 						`download` asks the browser to save the file rather than navigate to
 						it. Without it, a PDF opens in the browser's built-in viewer and a
 						chunk of people never realise they can keep it.
+
+						The href is built here, at render time, not in the load function:
+						`resolve()` answers relative to the page being rendered, and only the
+						component knows which page that is. See +page.server.ts.
 					-->
-					<a class="thanks__download" href={data.downloadUrl} download>
+					<a
+						class="thanks__download"
+						href={resolve(`/guide/download?t=${encodeURIComponent(data.token)}`)}
+						download
+					>
 						<DownloadSimpleIcon size={22} aria-hidden="true" />
 						<span>Download the PDF (8 chapters)</span>
 					</a>
@@ -76,7 +84,7 @@
 				</div>
 			</div>
 		{:else}
-			{@const message = messages[data.reason ?? 'malformed']}
+			{const message = $derived(messages[data.reason ?? 'malformed'])}
 			<div class="thanks__panel">
 				<span class="thanks__icon thanks__icon--warn" aria-hidden="true">
 					<WarningCircleIcon size={38} weight="duotone" />

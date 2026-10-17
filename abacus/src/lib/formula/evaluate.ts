@@ -6,8 +6,7 @@
  * cells it needs come through a `Context`, which the engine provides — and a
  * test provides a `Map`. That separation is what makes the language testable
  * in a millisecond, and what lets the same evaluator run in the engine, in
- * the `$derived` demonstration of chapter 12, and on the server for a
- * published sheet.
+ * the `$derived` lesson, and on the server for a published sheet.
  */
 
 import type { CellRef, Node, RangeRef } from './ast.ts';

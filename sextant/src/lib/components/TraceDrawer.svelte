@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { pushState } from '$app/navigation';
+	import type { Attachment } from 'svelte/attachments';
+	import { resolve } from '$app/paths';
 	import FlameGraph from './FlameGraph.svelte';
 	import Waterfall from './Waterfall.svelte';
 	import { trace as traceQuery } from '#lib/remote/query.remote.ts';
@@ -39,14 +40,11 @@
 	let { tenant, traceId }: Props = $props();
 
 	let selected = $state<string | null>(null);
-	let panel = $state<HTMLElement | null>(null);
-
-	const assembled = $derived(await traceQuery({ tenant, traceId }));
 
 	function close(): void {
-		// `history.back()` and not `pushState('', {})`, because the drawer *was*
-		// opened with a push: going back removes that entry, where a second push
-		// would add another and make the back button reopen it.
+		// `history.back()` and not a shallow `goto` to an empty state, because the
+		// drawer *was* opened with a push: going back removes that entry, where a
+		// second push would add another and make the back button reopen it.
 		history.back();
 	}
 
@@ -55,18 +53,24 @@
 	 *
 	 * A dialog that opens without moving focus leaves a screen reader reading the
 	 * page behind it, and leaves a keyboard user tabbing through the results table
-	 * that is now covered. This is the minimum; the `inert` on the background is
-	 * what stops Tab from reaching it at all.
+	 * that is now covered. It is the minimum: Tab can still walk out of the panel
+	 * into the page behind it, and stopping that would take `inert` on everything
+	 * the drawer covers.
+	 *
+	 * An attachment, because this is about one element's time on the page: it
+	 * runs when the panel is mounted, and what it returns runs when the panel is
+	 * removed. A `bind:this` and an `$effect` said the same thing in two places.
+	 * `document.activeElement` is typed `Element | null`, and `instanceof`
+	 * narrows it where a cast would only have asserted what it was.
 	 */
-	$effect(() => {
-		const element = panel;
-		if (!element) return;
+	const holdFocus: Attachment<HTMLElement> = (panel) => {
+		const previous = document.activeElement;
+		panel.focus();
 
-		const previous = document.activeElement as HTMLElement | null;
-		element.focus();
-
-		return () => previous?.focus?.();
-	});
+		return () => {
+			if (previous instanceof HTMLElement) previous.focus();
+		};
+	};
 </script>
 
 <svelte:window
@@ -103,7 +107,7 @@
 	aria-modal="true"
 	aria-label="Trace {traceId}"
 	tabindex="-1"
-	bind:this={panel}
+	{@attach holdFocus}
 >
 	<header class="drawer__head">
 		<div>
@@ -112,16 +116,25 @@
 		</div>
 
 		<div class="drawer__actions">
+			<!--
+				A link, and nothing else — no `onclick`.
+
+				The first version hijacked the click: it prevented the default and pushed
+				shallow state for the URL the address bar already showed, a no-op that
+				*looked* like navigation. Migrating `pushState` to SvelteKit 3's
+				`goto(url, { shallow: true })` is what made that visible — `shallow` is
+				now a word in the call, and the word was wrong: leaving the drawer for the
+				full page is the one *real* navigation in this file. The router does that
+				from a plain `href`, and keeps a modifier-click or a middle-click meaning
+				what it always means — "open in a new tab" is exactly what somebody does
+				with a trace they want to keep while they look at the next one.
+			-->
 			<a
 				class="btn btn--sm"
-				href="/{tenant}/traces/{encodeURIComponent(traceId)}"
-				onclick={(event) => {
-					// A modifier-click or a middle-click must keep its normal meaning:
-					// hijacking every click is how a link stops being a link.
-					if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return;
-					event.preventDefault();
-					pushState(`/${tenant}/traces/${encodeURIComponent(traceId)}`, { trace: traceId });
-				}}
+				href={resolve('/[tenant]/traces/[traceId]', {
+					tenant,
+					traceId: encodeURIComponent(traceId)
+				})}
 			>
 				Open full page
 			</a>
@@ -129,9 +142,20 @@
 		</div>
 	</header>
 
+	<!--
+		The trace is awaited inside this boundary, so the drawer opens at once and
+		says it is loading. Awaited in the script instead, the drawer appeared only
+		once the trace had arrived, and this `pending` snippet never showed: an
+		`await` in a component's script is waited for by whatever boundary holds the
+		component, not by the boundaries it draws. The drawer is only ever drawn in
+		the browser, from `page.state`, so the server's way with `pending` does not
+		come into it.
+	-->
 	<svelte:boundary>
+		{const assembled = $derived(await traceQuery({ tenant, traceId }))}
+
 		{#if assembled}
-			{@const totals = serviceTotals(assembled)}
+			{const totals = $derived(serviceTotals(assembled))}
 
 			<div class="drawer__body">
 				<!--
@@ -165,10 +189,9 @@
 			<p class="drawer__empty" role="status">Loading the trace…</p>
 		{/snippet}
 
+		<!-- An `App.Error`, not an `HttpError`: the server's words are on `message`. Why: the traces page. -->
 		{#snippet failed(error)}
-			<p class="drawer__empty" role="alert">
-				{(error as { body?: { message?: string } })?.body?.message ?? 'The trace could not load.'}
-			</p>
+			<p class="drawer__empty" role="alert">{(error as App.Error).message}</p>
 		{/snippet}
 	</svelte:boundary>
 </div>

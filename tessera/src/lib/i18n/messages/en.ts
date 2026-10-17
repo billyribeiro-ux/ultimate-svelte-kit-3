@@ -36,7 +36,8 @@ export const en = {
 		open: 'Open',
 		empty: 'Nothing here yet. Press N to add your first box.',
 		nodes: (count: number) => (count === 1 ? '1 shape' : `${count} shapes`),
-		lastEdited: (when: string) => `Edited ${when}`
+		lastEdited: (when: string) => `Edited ${when}`,
+		exporting: 'Exporting…'
 	},
 
 	sync: {
@@ -76,6 +77,11 @@ export const en = {
 		colour: 'Colour'
 	},
 
+	inspector: {
+		heading: 'Properties',
+		empty: 'Select a shape to edit it.'
+	},
+
 	comments: {
 		heading: 'Comments',
 		placeholder: 'Leave a comment',
@@ -83,7 +89,10 @@ export const en = {
 		resolve: 'Resolve',
 		reopen: 'Reopen',
 		resolved: 'Resolved',
-		none: 'No comments yet'
+		none: 'No comments yet',
+		reply: 'Reply',
+		replyPlaceholder: 'Reply…',
+		onShape: 'on a shape'
 	},
 
 	history: {
@@ -101,7 +110,8 @@ export const en = {
 		selected: (label: string) => `${label}, selected`,
 		joined: (name: string) => `${name} joined`,
 		left: (name: string) => `${name} left`,
-		skip: 'Skip to the board'
+		skip: 'Skip to the board',
+		panel: 'Panel'
 	},
 
 	/**
@@ -121,8 +131,8 @@ export const en = {
 
 	errors: {
 		notFound: 'That board does not exist, or you do not have access to it.',
-		forbidden: 'You do not have permission to do that.',
-		generic: 'Something went wrong. The board on this device is unchanged.'
+		generic: 'Something went wrong. The board on this device is unchanged.',
+		retry: 'Try rendering again'
 	}
 };
 

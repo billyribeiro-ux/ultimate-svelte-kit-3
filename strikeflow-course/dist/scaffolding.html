@@ -35,7 +35,7 @@
 			<h1>Scaffolding the project</h1>
 			<p class="lede">One command creates the project. We go through every flag, then take a tour of what it gave us.</p>
 			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>You'll have a running SvelteKit 3 app and understand every file in it.</p></aside>
-			<p>Make a folder for the course, and let the Svelte CLI create the project inside it. Note the <code>@next</code> — that's what gets you SvelteKit 3 rather than 2.</p>
+			<p>Make a folder for the course, and let the Svelte CLI create the project inside it. Now that SvelteKit 3 is stable, plain <code>sv create</code> scaffolds it — the <code>@next</code> tag you will still see in older tutorials was only needed during the prerelease.</p>
 
 <figure class="code code--terminal">
 	<figcaption>
@@ -44,7 +44,7 @@
 	</figcaption>
 	<pre><code>mkdir strikeflow-course &amp;&amp; cd strikeflow-course
 
-npx sv@next create strikeflow-site</code></pre>
+npx sv create strikeflow-site</code></pre>
 </figure>
 <p>It'll ask you a series of questions. You can answer them interactively, but I'd rather show you the flags so you know what each answer means:</p>
 
@@ -53,7 +53,7 @@ npx sv@next create strikeflow-site</code></pre>
 		<span class="code__file">terminal</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code>npx sv@next create strikeflow-site \
+	<pre><code>npx sv create strikeflow-site \
   --template minimal \
   --types ts \
   --add prettier eslint &quot;vitest=usages:unit,component&quot; playwright \
@@ -63,7 +63,7 @@ npx sv@next create strikeflow-site</code></pre>
 </figure>
 <h3 id="flags">What each flag does</h3>
 <ul><li><code>--template minimal</code> — an empty app. The <code>demo</code> template adds example pages we would only delete.</li><li><code>--types ts</code> — TypeScript. Non-negotiable for a project you intend to maintain.</li><li><code>prettier</code> and <code>eslint</code> — formatting and linting. Configured for you.</li><li><code>vitest=usages:unit,component</code> — unit tests in Node, component tests in a real browser.</li><li><code>playwright</code> — end-to-end tests. We lean on these heavily later.</li><li><code>sveltekit-adapter=adapter:node</code> — build to a Node server. Runs anywhere, no vendor lock-in.</li><li><code>experimental=features:async,remoteFunctions</code> — the two big Svelte 5 / SvelteKit 3 features. We use both.</li></ul>
-<aside class="callout callout--warn"><p>The add-on syntax is fussy. Options are <code>addon=name:value</code>, and multiple options join with <code>+</code>. Writing <code>vitest=unit,component</code> (leaving out the option name <code>usages</code>) fails with *&quot;missing their option name or value&quot;*, which is a confusing error the first time you hit it.</p></aside>
+<aside class="callout callout--warn"><p>The add-on syntax is fussy. Options are <code>addon=name:value</code>, and multiple options join with <code>+</code>. Writing <code>vitest=unit,component</code> (leaving out the option name <code>usages</code>) fails with <em>&quot;missing their option name or value&quot;</em>, which is a confusing error the first time you hit it.</p></aside>
 <h3 id="run-it">Run it</h3>
 
 <figure class="code code--terminal">
@@ -82,6 +82,24 @@ pnpm run dev</code></pre>
 	<h4>There's no svelte.config.js</h4>
 	<p>If you have used SvelteKit before, this is the first thing you will notice missing. In SvelteKit 3 all configuration moved into the <code>sveltekit()</code> plugin inside <code>vite.config.ts</code>. Vite can now hand the config straight to the plugin instead of loading a separate file asynchronously, which removes a whole category of setup-ordering bug.</p>
 </aside>
+<h3 id="pin">Pin the toolchain</h3>
+<p>Now that the project has a <code>package.json</code>, record which Node and which pnpm it is built with. Add two fields:</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">package.json</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-json">{
+	…
+	&quot;engines&quot;: {
+		&quot;node&quot;: &quot;&gt;=24.21.0&quot;
+	},
+	&quot;packageManager&quot;: &quot;pnpm@12.10.1&quot;,
+	…
+}</code></pre>
+</figure>
+<ul><li><code>engines</code> states the oldest Node the project supports, so tools — pnpm included — can tell you when yours is too old, instead of failing later with a confusing error.</li><li><code>packageManager</code> pins the exact pnpm. Any recent pnpm that finds it switches to that version for this project by itself, so everyone who clones it installs with the same tool and gets the same lockfile. That is why chapter 7 only asked for pnpm 12 or newer: from here on, the project chooses.</li></ul>
 <h3 id="cleanup">A little cleanup</h3>
 <p>The Playwright add-on generates a demo route and Vitest generates some example tests. They're useful to look at once, then they're noise. Delete them:</p>
 

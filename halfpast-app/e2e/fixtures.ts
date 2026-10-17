@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { expect, test as base, type Page } from '@playwright/test';
+import { expect, test as base, type Locator, type Page } from '@playwright/test';
 
 /**
  * Shared fixtures and helpers for the end-to-end suite.
@@ -20,17 +20,30 @@ export const STAFF = { email: 'ben@willowlane.test', password: 'halfpast-demo-20
 
 export const test = base.extend<{ emptyDiary: void; reportBrowserErrors: void }>({
 	/**
-	 * Surface browser-side errors in the test output.
+	 * Surface browser-side errors in the test output — and fail on an uncaught one.
 	 *
-	 * A remote query that rejects during a client-side navigation renders
-	 * SvelteKit's error page and writes nothing to the server log — the server was
-	 * never involved. Without this, such a failure appears in Playwright as
-	 * "expected a button, found a page saying 500" and the actual message is
-	 * sitting in a browser console nobody is reading.
+	 * A bug that throws in the browser during a client-side navigation renders
+	 * the error page and writes nothing to the server log — the server was never
+	 * involved. Without this, such a failure appears in Playwright as "expected a
+	 * button, found a page saying 500" and the actual message is sitting in a
+	 * browser console nobody is reading.
+	 *
+	 * Printing was not enough. The booking page's live stream once died with
+	 * "Live query connection was interrupted" in the middle of an unrelated
+	 * test, and this fixture printed it under a green suite. Sign out threw
+	 * `remote_command_redirect` in the page for as long as it was a command, and
+	 * would have been printed and passed the same way had any test pressed it.
+	 * An exception nothing caught is a bug whether or not the assertion that
+	 * follows happens to notice, so the test that produced it fails.
 	 */
 	reportBrowserErrors: [
 		async ({ page }, use) => {
-			page.on('pageerror', (error) => console.error('[browser] uncaught:', error.message));
+			const uncaught: string[] = [];
+
+			page.on('pageerror', (error) => {
+				uncaught.push(error.message);
+				console.error('[browser] uncaught:', error.message);
+			});
 			page.on('console', (message) => {
 				if (message.type() === 'error') console.error('[browser]', message.text());
 			});
@@ -48,6 +61,8 @@ export const test = base.extend<{ emptyDiary: void; reportBrowserErrors: void }>
 			});
 
 			await use();
+
+			expect(uncaught, 'the page threw an error nothing caught').toEqual([]);
 		},
 		{ auto: true }
 	],
@@ -104,8 +119,63 @@ export async function signIn(page: Page, who: { email: string; password: string 
 
 export { expect };
 
+/**
+ * Arrive at `path` by following a link inside the running app, not by loading it.
+ *
+ * For a test about the client-side path, and for a page whose buttons must work
+ * the moment they are visible. Neither is safe straight after `page.goto`: the
+ * HTML arrives before SvelteKit has started, a page that awaits its data gets
+ * its click handlers only once those awaits resume, and nothing on screen says
+ * when that has happened. A page SvelteKit renders in the browser after a
+ * client-side navigation has its handlers from the moment it exists.
+ *
+ * `history.scrollRestoration` becomes `'manual'` on the first line of the
+ * function that starts SvelteKit's router, so once it reads `'manual'` a click
+ * on a link is a client-side navigation. The home page is the starting point
+ * because nothing on it can fail. The flag set on `window` survives only if no
+ * page load happened, which is checked rather than assumed.
+ */
+export async function arriveClientSide(page: Page, path: string): Promise<void> {
+	await page.goto('/');
+	await page.waitForFunction(() => history.scrollRestoration === 'manual');
+
+	await page.evaluate((href) => {
+		Object.assign(window, { arrivedClientSide: true });
+		const link = document.createElement('a');
+		link.href = href;
+		link.textContent = 'Follow this link';
+		document.body.append(link);
+	}, path);
+	await page.getByRole('link', { name: 'Follow this link' }).click();
+
+	await page.waitForURL((url) => url.pathname === path);
+	expect(
+		await page.evaluate(() => 'arrivedClientSide' in window),
+		'the link caused a page load'
+	).toBe(true);
+}
+
 /** The demo studio's public booking page. */
 export const SHOP = '/book/willow-lane';
+
+/** The booking page's strip of days, a list of links named "Choose a day". */
+const dayStrip = (page: Page) => page.getByRole('list', { name: 'Choose a day' });
+
+/**
+ * Follow a link that changes one choice on the booking page, and wait for it.
+ *
+ * Every choice before the time — the day, the person — is a link that puts
+ * the choice in the URL, and the page marks the one in force with
+ * `aria-current`. Waiting for that is waiting for the page to have finished:
+ * with JavaScript the navigation, and any fresh availability it needed, have
+ * settled, because the attribute only changes in the same update that shows
+ * the new times; without it, the next page has loaded. Reading the grid before
+ * then would read the old day's times.
+ */
+async function follow(link: Locator): Promise<void> {
+	await link.click();
+	await expect(link).toHaveAttribute('aria-current', 'true');
+}
 
 /**
  * Pick a bookable time, starting from `fromDayIndex` days into the strip.
@@ -115,20 +185,21 @@ export const SHOP = '/book/willow-lane';
  * about cancelling has to book further out. Hard-coding a date instead would rot
  * the first time the suite ran on a Sunday.
  *
+ * Works the same with JavaScript off: the day links are ordinary links, the
+ * radio is a native radio, and the details appear because CSS sees it checked.
+ *
  * Returns the label of the chosen slot, e.g. `09:00`.
  */
 export async function chooseAvailableSlot(page: Page, fromDayIndex = 0): Promise<string> {
-	const strip = page.getByRole('radiogroup', { name: 'Choose a day' });
+	const strip = dayStrip(page);
 	await expect(strip).toBeVisible();
 
-	const days = strip.getByRole('radio');
+	// Days before today are drawn but are not links, so they are not counted.
+	const days = strip.getByRole('link');
 	const dayCount = await days.count();
 
 	for (let index = fromDayIndex; index < dayCount; index += 1) {
-		const day = days.nth(index);
-		if (await day.isDisabled()) continue;
-
-		await day.click();
+		await follow(days.nth(index));
 
 		const slots = page.locator('label.slot');
 		if ((await slots.count()) === 0) continue;
@@ -157,12 +228,9 @@ export async function chooseAvailableSlot(page: Page, fromDayIndex = 0): Promise
  * tests quietly started looking at the wrong day.
  */
 export async function selectedDay(page: Page): Promise<string> {
-	const day = await page
-		.getByRole('radiogroup', { name: 'Choose a day' })
-		.getByRole('radio', { checked: true })
-		.getAttribute('data-day');
+	const day = await dayStrip(page).locator('a[aria-current="true"]').getAttribute('data-day');
 
-	if (!day) throw new Error('No day is selected, or the day buttons have lost their data-day.');
+	if (!day) throw new Error('No day is selected, or the day links have lost their data-day.');
 	return day;
 }
 
@@ -175,12 +243,40 @@ export async function selectedDay(page: Page): Promise<string> {
  * measuring the wrong day and, in one case, passing because of it.
  */
 export async function chooseDay(page: Page, day: string): Promise<void> {
-	const button = page
-		.getByRole('radiogroup', { name: 'Choose a day' })
-		.locator(`[data-day="${day}"]`);
+	const link = dayStrip(page).locator(`[data-day="${day}"]`);
 
-	await expect(button, `day ${day} is not in the strip`).toHaveCount(1);
-	await button.click();
+	await expect(link, `day ${day} is not in the strip`).toHaveCount(1);
+	await follow(link);
+}
+
+/** Narrow the booking page to one person, by the name on their link. */
+export async function chooseWho(page: Page, name: string): Promise<void> {
+	await follow(
+		page.getByRole('list', { name: 'Choose who with' }).getByRole('link', { name, exact: true })
+	);
+}
+
+/**
+ * Step the diary forward until it shows `day`, an ISO date.
+ *
+ * The diary keeps its day in component state, so the way there is the "Next
+ * day" button, pressed until the `<time datetime>` in the day bar says `day`.
+ * Each press waits for that attribute to move on: the new day's diary is a
+ * fresh live query, and the label changes in the same update that shows it.
+ */
+export async function showDiaryDay(page: Page, day: string): Promise<void> {
+	const showing = page.locator('.daylabel time');
+
+	for (let step = 0; step <= 31; step += 1) {
+		const current = await showing.getAttribute('datetime');
+		if (current === day) return;
+		if (current === null || current > day) break;
+
+		await page.getByRole('button', { name: 'Next day' }).click();
+		await expect(showing).not.toHaveAttribute('datetime', current);
+	}
+
+	throw new Error(`The diary never showed ${day}`);
 }
 
 /** Fill in the customer details and submit. Returns nothing; assert on the URL. */

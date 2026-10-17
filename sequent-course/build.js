@@ -15,6 +15,11 @@
  *   - It works with JavaScript off
  *
  * Run:  node sequent-course/build.js
+ *
+ * Then: node sequent-course/verify.js — reads the pages just written to `dist/`
+ * and fails if any block that names a file is not in that file, verbatim or as
+ * an excerpt whose every gap is marked with an elision line. Run it after every
+ * build; the course drifted from the code once already without it.
  */
 
 import { mkdir, writeFile, rm, cp } from 'node:fs/promises';
@@ -37,7 +42,7 @@ const COURSE = {
 		construction, and the entire venue can be replayed from its log and arrive
 		at exactly the same state. Built from an empty folder, with every bug found
 		along the way written down.`,
-	badges: ['SvelteKit 3 RC', 'Event sourcing', 'Node 24 LTS', 'Three processes'],
+	badges: ['SvelteKit 3.0', 'Event sourcing', 'Node 24 LTS', 'Three processes'],
 	closing: `Every chapter shows the real code from the finished project in
 		<code>sequent</code>. Type it out rather than pasting where you can — the
 		errors you make and fix are the part that sticks. Roughly a dozen chapters

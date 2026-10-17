@@ -79,7 +79,7 @@
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;ul class=&quot;feature-grid auto-grid&quot; role=&quot;list&quot;&gt;
 	{#each items as feature (feature.id)}
-		{@const Icon = featureIcons[feature.icon]}
+		{const Icon = $derived(featureIcons[feature.icon])}
 		&lt;li class=&quot;feature-grid__item&quot;&gt;
 			&lt;Card as=&quot;article&quot;&gt;
 				&lt;span class=&quot;feature-grid__icon&quot; aria-hidden=&quot;true&quot;&gt;
@@ -114,7 +114,7 @@
 		<span class="code__file">src/lib/components/marketing/StatStrip.svelte</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">&lt;dl class=&quot;stats&quot; class:stats--bordered={bordered}&gt;
+	<pre><code class="lang-svelte">&lt;dl class={['stats', { 'stats--bordered': bordered }]}&gt;
 	{#each stats as stat (stat.label)}
 		&lt;div class=&quot;stats__item&quot;&gt;
 			&lt;dt class=&quot;stats__label&quot;&gt;{stat.label}&lt;/dt&gt;
@@ -181,43 +181,109 @@
 }
 .faq__summary::-webkit-details-marker { display: none; }  /* older Safari */</code></pre>
 </figure>
-<h3 id="pricing">PricingTable: a real radiogroup</h3>
+<h3 id="pricing">PricingTable: a real radio group</h3>
+<p>The monthly/annual switch looks like a pill with two segments, but it answers one question with exactly one answer. HTML has a control for that: radio buttons. So that is what it is.</p>
 
 <figure class="code">
 	<figcaption>
 		<span class="code__file">src/lib/components/marketing/PricingTable.svelte</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">&lt;div class=&quot;pricing__toggle&quot; role=&quot;radiogroup&quot; aria-label=&quot;Billing period&quot;&gt;
-	&lt;button
-		type=&quot;button&quot;
-		role=&quot;radio&quot;
-		aria-checked={billing === 'monthly'}
-		class=&quot;pricing__toggle-option&quot;
-		class:is-active={billing === 'monthly'}
-		onclick={() =&gt; (billing = 'monthly')}
-	&gt;
+	<pre><code class="lang-svelte">&lt;fieldset class=&quot;pricing__toggle&quot;&gt;
+	&lt;legend class=&quot;visually-hidden&quot;&gt;Billing period&lt;/legend&gt;
+
+	&lt;label class=&quot;pricing__toggle-option&quot;&gt;
+		&lt;input
+			class=&quot;pricing__toggle-input&quot;
+			type=&quot;radio&quot;
+			name={radioName}
+			value=&quot;monthly&quot;
+			bind:group={billing}
+		/&gt;
 		Monthly
-	&lt;/button&gt;
-	&lt;button
-		type=&quot;button&quot;
-		role=&quot;radio&quot;
-		aria-checked={billing === 'annual'}
-		class=&quot;pricing__toggle-option&quot;
-		class:is-active={billing === 'annual'}
-		onclick={() =&gt; (billing = 'annual')}
-	&gt;
+	&lt;/label&gt;
+	&lt;label class=&quot;pricing__toggle-option&quot;&gt;
+		&lt;input
+			class=&quot;pricing__toggle-input&quot;
+			type=&quot;radio&quot;
+			name={radioName}
+			value=&quot;annual&quot;
+			bind:group={billing}
+		/&gt;
 		Annual
 		&lt;span class=&quot;pricing__saving&quot;&gt;save {bestSaving}%&lt;/span&gt;
-	&lt;/button&gt;
-&lt;/div&gt;</code></pre>
+	&lt;/label&gt;
+&lt;/fieldset&gt;</code></pre>
 </figure>
-<p><code>role=&quot;radiogroup&quot;</code> plus <code>role=&quot;radio&quot;</code> gives assistive tech the right mental model — &quot;one of two options&quot;, rather than &quot;two unrelated buttons&quot;.</p>
+<ul><li><code>&lt;fieldset&gt;</code> and <code>&lt;legend&gt;</code> are the native wrapper for &quot;these controls answer one question&quot;. The legend becomes the group's name, so a screen reader announces &quot;Billing period, radio group&quot;. It is visually hidden only because the two labels already explain themselves on screen.</li><li>Wrapping each <code>&lt;input&gt;</code> in its <code>&lt;label&gt;</code> makes the whole segment clickable and names the radio after its text.</li><li><code>bind:group={billing}</code> keeps the <code>billing</code> state and the checked radio in step in both directions. Each radio contributes its <code>value</code>, so <code>billing</code> is always <code>'monthly'</code> or <code>'annual'</code>.</li><li>Both radios share a <code>name</code>, and that is not decoration: a shared name is what makes them one group to the browser, and what the arrow keys move within.</li></ul>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/marketing/PricingTable.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">	type Billing = 'monthly' | 'annual';
+
+	let billing = $state&lt;Billing&gt;('monthly');
+
+	/**
+	 * The radios' shared `name`. A shared name is what makes two radios ONE group to
+	 * the browser — it is what the arrow keys move within. `$props.id()` makes it
+	 * unique per instance, so two pricing tables on one page stay two groups, and
+	 * it is the same on the server and in the browser, so hydration agrees.
+	 */
+	const radioName = $props.id();</code></pre>
+</figure>
+<aside class="callout callout--note"><p><code>$props.id()</code> gives each instance of the component its own id, the same on the server and in the browser, so hydration agrees with the HTML. It is the Svelte 5 way to make ids — and here, a group name — that cannot collide: put two pricing tables on one page and they stay two groups. It can only be called at the top level of a component, as the initial value of a variable.</p></aside>
+
+<aside class="callout callout--why">
+	<h4>Why native radios rather than buttons with role=&quot;radio&quot;</h4>
+	<p>Because a role is a promise, and the browser only keeps the promises it makes itself. An earlier version of this component used two <code>&lt;button role=&quot;radio&quot;&gt;</code> elements inside a <code>role=&quot;radiogroup&quot;</code>, and its comment claimed the arrow keys worked. They did not. A screen reader announced &quot;radio button, 1 of 2&quot;, the user pressed the right arrow as the announcement invited, and nothing happened — and both buttons were separate tab stops, which a radio group is not supposed to be. ARIA changes what assistive technology <em>says</em>; it adds no behaviour. To keep that promise with buttons you write the keyboard handling yourself: arrow keys that wrap, Home and End, a roving <code>tabindex</code>. Native radios come with all of it, tested in every browser, for no code at all. Reach for ARIA when HTML has no element for the job. Here it does.</p>
+</aside>
+<p>Styling a native radio as a segment takes three rules:</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/marketing/PricingTable.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-css">/*
+ * The radio is invisible but still THERE: laid over its whole label, so it is
+ * what a click or tap lands on, and still focusable and announced. `display: none`
+ * or `visibility: hidden` would take it out of the tab order and the
+ * accessibility tree, and the group's keyboard behaviour with it.
+ */
+.pricing__toggle-input {
+	position: absolute;
+	inset: 0;
+	margin: 0;
+	opacity: 0;
+	appearance: none;
+	cursor: inherit;
+}
+
+/*
+ * The active and focused looks read the radio's own state, so they cannot
+ * disagree with what a screen reader announces, and they are right even before
+ * the JavaScript has loaded. The ring moves to the label because the radio
+ * itself is transparent.
+ */
+.pricing__toggle-option:has(.pricing__toggle-input:checked) {
+	background-color: var(--accent);
+	color: var(--accent-contrast);
+}
+
+.pricing__toggle-option:has(.pricing__toggle-input:focus-visible) {
+	box-shadow: var(--focus-ring);
+}</code></pre>
+</figure>
+<p>The radio is made transparent and laid over its label, not removed. <code>display: none</code> would take it out of the tab order and the accessibility tree, and the keyboard behaviour we chose it for would go with it. The active segment is then styled with <code>:has()</code>, which matches an element that <em>contains</em> something — here, a label containing a checked radio. So the look comes straight from the radio's own state: there is no <code>is-active</code> class to keep in step, and the right segment is lit even before the JavaScript has loaded.</p>
+<aside class="callout callout--note"><p>Before hydration the radios already work as radios, but the prices only switch once Svelte is running, because <code>billing</code> lives in JavaScript. If someone picks <strong>Annual</strong> in that first moment, <code>bind:group</code> adopts their choice when the page hydrates instead of resetting it, so the prices catch up. An end-to-end test, <code>e2e/pricing.e2e.ts</code>, focuses <strong>Monthly</strong>, presses the right arrow, and expects <strong>Annual</strong> to be checked and the annual prices on screen.</p></aside>
 <aside class="callout callout--note"><p>For excluded features we render them struck through and greyed. A screen reader cannot see grey, so we add a visually-hidden &quot;Not included: &quot; prefix. Colour and styling are never the only carrier of meaning.</p></aside>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>
-	<p>All six marketing components compile. Open the FAQ in a browser, close every item, then Ctrl+F for a word inside one — it should expand.</p>
+	<p>All six marketing components compile. Open the FAQ in a browser, close every item, then Ctrl+F for a word inside one — it should expand. On the pricing page, Tab to the billing toggle and press the arrow keys: the selection and the prices move together, and one more Tab leaves the group entirely.</p>
 </aside>
 		</article>
 

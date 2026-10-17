@@ -56,8 +56,10 @@ export interface LeadStore {
  * ------------------------------------------------------------------ */
 
 /*
- * `resolve()` against the working directory, so a relative LEADS_DIR like ".data"
- * lands inside the project rather than wherever the process happened to start.
+ * `resolve()` against the working directory: a relative LEADS_DIR like ".data"
+ * lands in whatever directory the server was started from — the project root under
+ * `pnpm dev` and `pnpm preview`, but wherever you ran `node build` in production.
+ * Give a production server an absolute path and the question never arises.
  */
 const dataDir = resolve(process.cwd(), LEADS_DIR);
 const leadsFile = join(dataDir, 'leads.jsonl');

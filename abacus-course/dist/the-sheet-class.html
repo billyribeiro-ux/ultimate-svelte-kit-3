@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The Sheet class, and where the reactivity line is — Building Abacus</title>
-<meta name="description" content="A class in a `.svelte.ts` file: selection, the edit session, the title, whether it is saved. The engine inside it holds ten thousand cells without Svelte noticing; one `$state` number, `version`, is the whole contract between them.">
+<meta name="description" content="A class in a .svelte.ts file: selection, the edit session, the title, whether it is saved. The engine inside it holds ten thousand cells without Svelte noticing; one $state number, version, is the whole contract between them.">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -38,7 +38,7 @@
 			
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:1-27</span></span>
+		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:1-28</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -54,7 +54,8 @@
  * WHERE THE REACTIVITY LINE IS
  * ----------------------------
  * The engine holds ten thousand cells in plain `Map`s and recalculates them
- * without Svelte noticing anything — that is the whole point of chapter 10.
+ * without Svelte noticing anything — that is the whole point of writing it
+ * by hand.
  * This class publishes one number, `version`, which goes up when the engine
  * finishes a batch. The grid reads `sheet.version` and then reads cells from
  * the engine; the read is untracked and the number is what re-runs it. One
@@ -73,7 +74,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:46-65</span></span>
+		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:47-66</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">export interface Command {
@@ -100,7 +101,7 @@ const HISTORY_LIMIT = 200;</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:67-111</span></span>
+		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:68-112</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">export class Sheet {
@@ -154,7 +155,7 @@ const HISTORY_LIMIT = 200;</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:117-148</span></span>
+		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:118-149</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/*
@@ -193,14 +194,14 @@ display(row: number, col: number): string {
 
 <aside class="callout callout--why">
 	<h4>Why four methods read a number they do not use</h4>
-	<p>The grid renders <code>{sheet.display(r, c)}</code> for ten thousand cells. In Svelte 5 that text is its own tiny effect, and it re-runs only when something it *read* changes. <code>this.engine.get(...)</code> reads a plain <code>Map</code> — nothing reactive — so without the <code>void this.version</code> on the first line, a cell that depends on another cell would show its old value forever. The first end-to-end run found exactly that: <code>=SUM(A1:A2)</code> stayed at 84 after A1 changed. Reading <code>version</code> subscribes every visible cell to one signal that changes once per batch. That is a few thousand cheap re-reads per edit instead of ten thousand signals — and it is the reason the engine can stay a plain <code>Map</code>.</p>
+	<p>The grid renders <code>{sheet.display(r, c)}</code> for ten thousand cells. In Svelte 5 that text is its own tiny effect, and it re-runs only when something it <em>read</em> changes. <code>this.engine.get(...)</code> reads a plain <code>Map</code> — nothing reactive — so without the <code>void this.version</code> on the first line, a cell that depends on another cell would show its old value forever. The first end-to-end run found exactly that: <code>=SUM(A1:A2)</code> stayed at 84 after A1 changed. Reading <code>version</code> subscribes every visible cell to one signal that changes once per batch. That is a few thousand cheap re-reads per edit instead of ten thousand signals — and it is the reason the engine can stay a plain <code>Map</code>.</p>
 </aside>
 <p>The alternative — a <code>$state</code> per cell — is what the reactivity lesson in chapter 17 builds, for nine cells. It is the right design for nine and the wrong one for a million, and the difference is not taste: a proxy per cell is memory and a signal write per cell per recalculation is time, and a spreadsheet has more cells than anything else in this course.</p>
 <h3 id="editing">The edit session</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:158-173</span></span>
+		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:159-174</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/* ---------------------------------------------------------------- */
@@ -223,7 +224,7 @@ move(dRow: number, dCol: number, extend = false): void {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:175-202</span></span>
+		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:176-203</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/* ---------------------------------------------------------------- */
@@ -259,7 +260,7 @@ cancelEdit(): void {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:204-243</span></span>
+		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:205-244</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/* ---------------------------------------------------------------- */
@@ -303,12 +304,12 @@ setFormat(format: CellFormat, target: Rect = this.selection): void {
 	this.edit(edits, 'Format');
 }</code></pre>
 </figure>
-<p><code>edit</code> is the one door every change goes through: prepare the edits (an implied format, ch. 13), snapshot what the cells held, and run a command whose <code>revert</code> applies the snapshot. <code>setFormat</code> refuses more than twenty thousand cells, because a format on an empty cell is *kept* — so selecting a column and pressing “Currency” would otherwise create a million entries.</p>
+<p><code>edit</code> is the one door every change goes through: prepare the edits (an implied format, ch. 13), snapshot what the cells held, and run a command whose <code>revert</code> applies the snapshot. <code>setFormat</code> refuses more than twenty thousand cells, because a format on an empty cell is <em>kept</em> — so selecting a column and pressing “Currency” would otherwise create a million entries.</p>
 <h3 id="documents">In and out: documents and remote operations</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:592-632</span></span>
+		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:593-633</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/* ---------------------------------------------------------------- */
@@ -356,7 +357,7 @@ toDocument(): Document {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:634-658</span></span>
+		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:635-659</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/** Somebody else's change: applied without an undo entry, and flashed. */
@@ -385,11 +386,11 @@ applyRemote(op: Op): void {
 	this.#sync();
 }</code></pre>
 </figure>
-<p><code>applyRemote</code> is somebody else’s change: applied to the engine with no undo entry — you cannot undo another person’s typing — and flashed, so a cell that changed under you is briefly highlighted. <code>load</code> ends by setting <code>dirty</code> back to false *after* <code>#sync</code>, because what was just loaded is, by definition, what is saved; the browser test that asserts it caught the first version doing that in the wrong order.</p>
+<p><code>applyRemote</code> is somebody else’s change: applied to the engine with no undo entry — you cannot undo another person’s typing — and flashed, so a cell that changed under you is briefly highlighted. <code>load</code> ends by setting <code>dirty</code> back to false <em>after</em> <code>#sync</code>, because what was just loaded is, by definition, what is saved; the browser test that asserts it caught the first version doing that in the wrong order.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:660-712</span></span>
+		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:661-713</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/* ---------------------------------------------------------------- */

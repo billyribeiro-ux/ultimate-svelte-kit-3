@@ -12,6 +12,16 @@ import adapter from '@sveltejs/adapter-node';
 export default defineConfig(({ mode }) => {
 	const env = { ...loadEnv(mode, process.cwd(), ''), ...process.env };
 
+	/*
+	 * The same normalisation as the schema in `src/env.ts`, and it has to be
+	 * done here too. This file reads the raw variable — `src/env.ts` has not run
+	 * when the config is evaluated — and Kit refuses an origin with anything
+	 * after it, so `https://sequent.exchange/` would fail the build before the
+	 * schema's transform ever saw it. Stripping trailing slashes in both places
+	 * keeps the one value Kit checks and the one our hook compares identical.
+	 */
+	const origin = (env['PUBLIC_ORIGIN'] ?? 'http://localhost:4173').replace(/\/+$/, '');
+
 	return {
 		plugins: [
 			sveltekit({
@@ -19,7 +29,7 @@ export default defineConfig(({ mode }) => {
 				// bakes this in at build time and its header fallback assumes https,
 				// so a plain-HTTP preview computes the wrong origin and every POST
 				// comes back 403.
-				paths: { origin: env['PUBLIC_ORIGIN'] ?? 'http://localhost:4173' },
+				paths: { origin },
 
 				/*
 				 * Kit's own cross-site check is turned off, and replaced by a stricter
@@ -40,6 +50,10 @@ export default defineConfig(({ mode }) => {
 				 * exempt because CSRF is a cookie attack — a browser attaches cookies to
 				 * a forged cross-site request automatically and never attaches an
 				 * `Authorization` header. That covers case 1 and closes case 2.
+				 *
+				 * `['*']` turns off Kit's check on form submissions and nothing else.
+				 * A call to a remote function still meets Kit's own same-origin check,
+				 * which ignores `trustedOrigins` entirely, before it reaches our hook.
 				 */
 				csrf: { trustedOrigins: ['*'] },
 

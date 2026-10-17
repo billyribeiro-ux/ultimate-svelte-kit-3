@@ -3,8 +3,9 @@ import { defineConfig } from 'drizzle-kit';
 /*
  * drizzle-kit runs as its own process, outside SvelteKit, so `$app/env/private`
  * is not available to it — hence `process.env` here and nowhere else in the
- * project. drizzle-kit loads `.env` on its own, and `scripts/seed.ts` calls
- * `process.loadEnvFile('.env')` before importing anything that reads it.
+ * project. drizzle-kit loads `.env` on its own, and `pnpm db:seed` starts the
+ * seed with `node --env-file-if-exists=.env`, so the file is loaded before any
+ * module is evaluated.
  */
 if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is not set');
 

@@ -90,7 +90,7 @@ export type Node =
 	| { type: 'binary'; op: BinaryOp; left: Node; right: Node; span: Span }
 	| { type: 'call'; name: string; args: Node[]; span: Span };</code></pre>
 </figure>
-<p>Every node carries its <code>span</code>. The second-best thing a formula can do is be right; the best thing it can do when it is wrong is say *where*. The engine reads references out of this tree to build its graph, the evaluator walks it, and the formula bar colours the source by span.</p>
+<p>Every node carries its <code>span</code>. The second-best thing a formula can do is be right; the best thing it can do when it is wrong is say <em>where</em>. The engine reads references out of this tree to build its graph, the evaluator walks it, and the formula bar colours the source by span.</p>
 
 <figure class="code">
 	<figcaption>
@@ -186,7 +186,7 @@ const INFIX: Record&lt;string, number&gt; = {
 const UNARY_BP = 70;
 const PERCENT_BP = 80;</code></pre>
 </figure>
-<p>Read the table before the code. Comparison binds loosest, then <code>&amp;</code>, then <code>+ -</code>, then <code>* /</code>, then <code>^</code>, then unary sign, then percent. One line in it is a *decision*: unary minus binds tighter than <code>^</code>, so <code>-2^2</code> is 4. Mathematics says −4; every spreadsheet says 4; a formula language that disagreed with the sheet it lives in would be wrong in the way that matters, because a person pasting <code>=-2^2</code> from somewhere else expects the answer they got there.</p>
+<p>Read the table before the code. Comparison binds loosest, then <code>&amp;</code>, then <code>+ -</code>, then <code>* /</code>, then <code>^</code>, then unary sign, then percent. One line in it is a <em>decision</em>: unary minus binds tighter than <code>^</code>, so <code>-2^2</code> is 4. Mathematics says −4; every spreadsheet says 4; a formula language that disagreed with the sheet it lives in would be wrong in the way that matters, because a person pasting <code>=-2^2</code> from somewhere else expects the answer they got there.</p>
 
 <figure class="code">
 	<figcaption>
@@ -252,7 +252,7 @@ const PERCENT_BP = 80;</code></pre>
 	return left;
 }</code></pre>
 </figure>
-<p>This is the whole algorithm. Parse a prefix. Then loop: look at the next operator; if it binds *less* tightly than <code>minBp</code>, stop and hand back what we have; otherwise consume it and parse its right side. The right side is parsed with <code>lbp + 1</code> so that <code>1 - 2 - 3</code> groups as <code>(1 - 2) - 3</code> — and with the *same* power for <code>^</code>, so <code>2^3^2</code> groups as <code>2^(3^2)</code>. That one-character difference is the entire theory of associativity.</p>
+<p>This is the whole algorithm. Parse a prefix. Then loop: look at the next operator; if it binds <em>less</em> tightly than <code>minBp</code>, stop and hand back what we have; otherwise consume it and parse its right side. The right side is parsed with <code>lbp + 1</code> so that <code>1 - 2 - 3</code> groups as <code>(1 - 2) - 3</code> — and with the <em>same</em> power for <code>^</code>, so <code>2^3^2</code> groups as <code>2^(3^2)</code>. That one-character difference is the entire theory of associativity.</p>
 
 <aside class="callout callout--why">
 	<h4>Why Pratt and not a grammar</h4>

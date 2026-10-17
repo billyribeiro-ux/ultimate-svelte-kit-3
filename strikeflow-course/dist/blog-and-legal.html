@@ -77,7 +77,7 @@ export const load: PageLoad = ({ params }) =&gt; {
 	<h4>Why declare entries() when the crawler would find them anyway</h4>
 	<p>SvelteKit finds most pages by crawling links, and it would discover all three of these from <code>/blog</code>. But that makes prerendering depend on your <strong>navigation</strong>. Move posts behind a &quot;load more&quot; button and they silently stop being built, with no error. <code>entries()</code> states the truth directly: these slugs exist and must be rendered, regardless of what links to them.</p>
 </aside>
-<aside class="callout callout--warn"><p>Return a <strong>404</strong> for a missing post, not a redirect to <code>/blog</code>. A missing article genuinely is not found, and bouncing a crawler to an index page with a 302 creates a *soft 404* — one of the more common ways sites confuse Google about which of their URLs are real.</p></aside>
+<aside class="callout callout--warn"><p>Return a <strong>404</strong> for a missing post, not a redirect to <code>/blog</code>. A missing article genuinely is not found, and bouncing a crawler to an index page with a 302 creates a <em>soft 404</em> — one of the more common ways sites confuse Google about which of their URLs are real.</p></aside>
 <aside class="callout callout--note"><p>An unresolvable author is a <strong>500</strong>, not a 404. It is a data bug, not a user error, and failing loudly at build time is exactly what we want — an article with no byline is an E-E-A-T problem we would rather never ship.</p></aside>
 <h3 id="article-schema">The full article schema</h3>
 
@@ -119,8 +119,15 @@ export const load: PageLoad = ({ params }) =&gt; {
 		<span class="code__file">src/routes/blog/+page.svelte</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-css">.post-card { position: relative; }
+	<pre><code class="lang-css">.post-card {
+	/* Required — the stretched-link ::after below is absolutely positioned
+	   against this. Without it, the overlay escapes to the nearest positioned
+	   ancestor and covers the whole page. */
+	position: relative;
+	/* … */
+}
 
+/* … */
 .post-card__title a::after {
 	content: '';
 	position: absolute;
@@ -140,12 +147,13 @@ export const load: PageLoad = ({ params }) =&gt; {
 	<pre><code class="lang-css">.legal :global(h2) {
 	font-size: var(--fs-xl);
 	margin-block: var(--space-10) var(--space-4);
+	scroll-margin-top: calc(var(--header-height) + var(--space-6));
 }</code></pre>
 </figure>
 
 <aside class="callout callout--why">
 	<h4>Why :global here</h4>
-	<p>Svelte scopes styles by adding a hash class to elements it can see in <strong>this</strong> component's markup. The headings come from the child page, so they never get that class and a normal selector would not reach them. <code>.legal :global(h2)</code> reads as: scope the <code>.legal</code> part, but let the <code>h2</code> part match anything inside. That is the correct escape hatch for styling child-rendered content — far better than reaching for <code>!important</code>.</p>
+	<p>Svelte scopes styles by adding a hash class to elements it can see in <strong>this</strong> component's markup. The headings come from the child page, so they never get that class and a normal selector would not reach them. <code>.legal :global(h2)</code> reads as: scope the <code>.legal</code> part, but let the <code>h2</code> part match anything inside. That is the correct escape hatch for styling child-rendered content — far better than reaching for <code>!important</code>. (The <code>scroll-margin-top</code> line does nothing yet: none of the legal headings has an <code>id</code>, so nothing can link to one. It is there for the day they do. When the browser scrolls to a linked element it adds that element's <code>scroll-margin-top</code> to the page-wide <code>scroll-padding-top</code> from chapter 13, so a linked <code>h2</code> here would stop with extra clearance below the sticky header.)</p>
 </aside>
 <h3 id="ymyl">Why a trading site needs these pages</h3>
 <p>Three legal pages: risk disclosure, privacy, terms. For a financial site these are not boilerplate — they are trust signals a quality rater is explicitly told to look for, and the risk disclosure in particular is genuinely important.</p>

@@ -166,11 +166,36 @@ export function highlight(source: string): Chunk[] {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/components/QueryEditor.svelte<span class="code__lines">:258-276</span></span>
+		<span class="code__file">src/lib/components/QueryEditor.svelte<span class="code__lines">:241-307</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">		&gt;{/each}&lt;span class=&quot;anchor&quot; bind:this={anchor}&gt;&lt;/span&gt;{#each parts[1] as chunk, i (i)}&lt;span
-			class=&quot;tok tok--{chunk.category}&quot;&gt;{chunk.text}&lt;/span
+	<pre><code class="lang-svelte">&lt;!--
+	Layer 1: the error underlay.
+
+	Transparent text with a wavy underline. `text-decoration` still paints when
+	the text itself is transparent, which is what makes this a single element
+	rather than a set of absolutely positioned rectangles that would have to be
+	re-measured on every resize.
+--&gt;
+&lt;pre
+	class=&quot;layer layer--marks&quot;
+	aria-hidden=&quot;true&quot;&gt;{#each underlines as mark, i (i)}{#if mark.marked}&lt;span class=&quot;mark&quot;
+				&gt;{mark.text}&lt;/span
+			&gt;{:else}{mark.text}{/if}{/each}&lt;br /&gt;&lt;/pre&gt;
+
+&lt;!--
+	Layer 2: the highlighting, split at the caret so the anchor can be measured.
+
+	The `&lt;br&gt;` at the end gives the layer a final empty line, so that pressing
+	Enter at the end of the query grows the box before the caret moves onto a
+	line that does not exist yet.
+--&gt;
+&lt;pre class=&quot;layer layer--code&quot; aria-hidden=&quot;true&quot;&gt;{#each parts[0] as chunk, i (i)}&lt;span
+			class=&quot;tok&quot;
+			data-category={chunk.category}&gt;{chunk.text}&lt;/span
+		&gt;{/each}&lt;span class=&quot;anchor&quot; bind:this={anchor}&gt;&lt;/span&gt;{#each parts[1] as chunk, i (i)}&lt;span
+			class=&quot;tok&quot;
+			data-category={chunk.category}&gt;{chunk.text}&lt;/span
 		&gt;{/each}&lt;br /&gt;&lt;/pre&gt;
 
 &lt;!--
@@ -187,10 +212,34 @@ export function highlight(source: string): Chunk[] {
 	bind:this={textarea}
 	bind:value
 	class=&quot;layer layer--input&quot;
-	spellcheck=&quot;false&quot;</code></pre>
+	spellcheck=&quot;false&quot;
+	autocapitalize=&quot;off&quot;
+	autocomplete=&quot;off&quot;
+	rows=&quot;1&quot;
+	{disabled}
+	aria-label=&quot;Query&quot;
+	role=&quot;combobox&quot;
+	aria-expanded={open &amp;&amp; suggestions.items.length &gt; 0}
+	aria-controls=&quot;sqf-completions&quot;
+	aria-autocomplete=&quot;list&quot;
+	aria-activedescendant={open &amp;&amp; suggestions.items[active]
+		? `sqf-completion-${active}`
+		: undefined}
+	placeholder=&quot;from logs | where level == &amp;quot;error&amp;quot; | summarize n = count() by service&quot;
+	{oninput}
+	{onkeydown}
+	onclick={sync}
+	onkeyup={sync}
+	onblur={() =&gt; {
+		// A short delay, because a click on an option blurs the textarea before
+		// the click lands. `mousedown` prevention on the list would be tidier and
+		// breaks text selection inside it.
+		setTimeout(() =&gt; (open = false), 120);
+	}}&gt;&lt;/textarea&gt;</code></pre>
 </figure>
 <p>An error underlay in transparent text with a wavy underline, the highlighted source, and a transparent textarea with a visible caret. The grid cell sizes to the tallest — which is the <code>&lt;pre&gt;</code> — so the editor grows with the query and never scrolls independently of its own highlighting. No <code>scrollHeight</code> read per keystroke, no resize effect.</p>
 <aside class="callout callout--warn"><p>Every metric must match in all three layers: font, size, line height, letter spacing, padding, wrapping, tab size. A single mismatch and the highlighting drifts from the caret by a fraction of a character per line, which looks like a browser bug and is not. They are declared once on a shared selector for exactly that reason.</p></aside>
+<aside class="callout callout--note"><p>Each token carries its category as <code>data-category</code>, and the stylesheet selects on it: <code>.tok[data-category='keyword']</code>. A category is what the lexer decided about the text, not a modifier anybody switches on, so the markup states the value and the stylesheet decides which values get a colour. No class name is assembled from a string, and a category with no rule is plain text.</p></aside>
 <h3 id="the-caret">Measuring the caret without a hidden mirror</h3>
 
 <figure class="code">
@@ -237,7 +286,7 @@ export function splitAt(chunks: readonly Chunk[], offset: number): [Chunk[], Chu
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/components/QueryEditor.svelte<span class="code__lines">:77-104</span></span>
+		<span class="code__file">src/lib/components/QueryEditor.svelte<span class="code__lines">:76-103</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/**

@@ -93,19 +93,19 @@ After completing the code, ask the user if they want a playground link. Only cal
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-json">&quot;scripts&quot;: {
-	&quot;dev&quot;: &quot;npm run build:embed &amp;&amp; vite dev&quot;,
-	&quot;build&quot;: &quot;npm run build:embed &amp;&amp; vite build&quot;,
+	&quot;dev&quot;: &quot;pnpm run build:embed &amp;&amp; vite dev&quot;,
+	&quot;build&quot;: &quot;pnpm run build:embed &amp;&amp; vite build&quot;,
 	&quot;preview&quot;: &quot;vite preview&quot;,
 	&quot;start&quot;: &quot;node build/index.js&quot;,
 	&quot;prepare&quot;: &quot;svelte-kit sync || echo ''&quot;,
-	&quot;check&quot;: &quot;svelte-kit sync &amp;&amp; svelte-check --tsconfig ./tsconfig.json --compiler-warnings \&quot;options_missing_custom_element:ignore\&quot; &amp;&amp; tsc --noEmit -p tsconfig.service-worker.json&quot;,
+	&quot;check&quot;: &quot;svelte-kit sync &amp;&amp; svelte-check --tsconfig ./tsconfig.json --compiler-warnings \&quot;options_missing_custom_element:ignore\&quot; &amp;&amp; tsc --noEmit -p src/service-worker/tsconfig.json&quot;,
 	&quot;check:watch&quot;: &quot;svelte-kit sync &amp;&amp; svelte-check --tsconfig ./tsconfig.json --watch&quot;,
 	&quot;lint&quot;: &quot;prettier --check . &amp;&amp; eslint .&quot;,
 	&quot;format&quot;: &quot;prettier --write .&quot;,
 	&quot;test:unit&quot;: &quot;vitest&quot;,
-	&quot;test&quot;: &quot;npm run test:unit -- --run &amp;&amp; npm run test:e2e&quot;,
+	&quot;test&quot;: &quot;pnpm run test:unit --run &amp;&amp; pnpm run test:e2e&quot;,
 	&quot;test:e2e&quot;: &quot;playwright test&quot;,
-	&quot;verify&quot;: &quot;npm run check &amp;&amp; npm run lint &amp;&amp; npm run test:unit -- --run &amp;&amp; npm run build &amp;&amp; npm run test:e2e&quot;,
+	&quot;verify&quot;: &quot;pnpm run check &amp;&amp; pnpm run lint &amp;&amp; pnpm run test:unit --run &amp;&amp; pnpm run build &amp;&amp; pnpm run test:e2e&quot;,
 	&quot;db:push&quot;: &quot;drizzle-kit push&quot;,
 	&quot;db:generate&quot;: &quot;drizzle-kit generate&quot;,
 	&quot;db:migrate&quot;: &quot;drizzle-kit migrate&quot;,
@@ -125,7 +125,7 @@ After completing the code, ask the user if they want a playground link. Only cal
 	&quot;#lib/*&quot;: &quot;./src/lib/*&quot;
 }</code></pre>
 </figure>
-<p><code>#lib/*</code> is a Node subpath import, declared in <code>package.json</code> and understood by Vite, TypeScript and Node alike — which is why <code>scripts/seed.ts</code> can import the presets the same way a component does. <code>verify</code> is the gate: type-check the app and the worker, lint, unit and browser tests, build with the adapter, and the end-to-end suite on both profiles. Everything in this course passed it.</p>
+<p><code>#lib/*</code> is a Node subpath import, declared in <code>package.json</code> and understood by Vite, TypeScript and Node alike — which is why <code>scripts/seed.ts</code> can import the presets the same way a component does. <code>verify</code> is the gate: type-check the app and the worker, lint, unit and browser tests, build with the adapter, and the end-to-end suite on both profiles. Everything in this course passed it. The scripts chain with <code>pnpm run</code>, the package manager <code>packageManager</code> names, so <code>pnpm run verify</code> runs pnpm all the way down; extra arguments follow the script name, <code>pnpm run test:unit --run</code>, because pnpm hands a <code>--</code> on to the command rather than swallowing it the way npm does.</p>
 
 <figure class="code code--terminal">
 	<figcaption>
@@ -135,13 +135,13 @@ After completing the code, ask the user if they want a playground link. Only cal
 	<pre><code>$ pnpm run verify
   check     svelte-check: 0 errors, 0 warnings · tsc (service worker): clean
   lint      prettier + eslint: clean
-  test:unit 58 passed  (server: node · client: chromium)
-  build     adapter-ostinato · pages: 7 routes · api: 4 routes · 3 prerendered
-  test:e2e  66 passed  (33 scenarios × desktop, phone)
+  test:unit 62 passed  (server: node · client: chromium)
+  build     adapter-ostinato · pages: 8 routes · api: 3 routes · 1 prerendered
+  test:e2e  84 passed  (42 scenarios × desktop, phone)
 </code></pre>
 </figure>
 <h3 id="five-directions">Five directions</h3>
-<ol><li><strong>A shared channel for jam rooms.</strong> The broadcaster is in-process (ch. 25). Postgres <code>NOTIFY</code> or a Redis stream makes it work across instances, and the <code>Latest</code> mailbox stays exactly as it is.</li><li><strong>Real accounts.</strong> The signed cookie is enough for a groovebox and would not be for money. The <code>Artist</code> shape and <code>requireArtist()</code> are the seam; a Better Auth session would slot in behind them (project 2 shows how).</li><li><strong>Samples that survive.</strong> Uploaded samples live in memory. A <code>command</code> that stores the file and a <code>sample</code> track that references it by id would make a sample pattern publishable.</li><li><strong>MIDI in.</strong> The Web MIDI API delivers note messages; <code>Note</code> already speaks MIDI numbers. A <code>$effect</code> that subscribes to an input port and calls <code>session.paint</code> is most of a feature.</li><li><strong>A second adapter target.</strong> <code>adapters/ostinato</code> is a Node process. The same <code>partition</code> and <code>applyReroute</code> hand-off would deploy to a platform with real functions, and the manifest-per-function split is already there.</li></ol>
+<ol><li><strong>A shared channel for jam rooms.</strong> The broadcaster is in-process (ch. 25). Postgres <code>NOTIFY</code> or a Redis stream makes it work across instances, and the <code>Latest</code> mailbox stays exactly as it is.</li><li><strong>Real accounts.</strong> The signed cookie is enough for a groovebox and would not be for money. The <code>Artist</code> shape and <code>requireArtist()</code> are the seam; a Better Auth session would slot in behind them (project 2 shows how).</li><li><strong>Samples that survive.</strong> Uploaded samples live in memory. A <code>command</code> that stores the file and a <code>sample</code> track that references it by id would make a sample pattern publishable.</li><li><strong>MIDI in.</strong> The Web MIDI API delivers note messages; <code>Note</code> already speaks MIDI numbers. A <code>$effect</code> that subscribes to an input port and calls <code>session.paint</code> is most of a feature.</li><li><strong>A second adapter target.</strong> <code>adapters/ostinato</code> is a Node process. The same <code>partition</code> and <code>applyReroute</code> hand-off would deploy to a platform with real functions, and the server-per-function split is already there.</li></ol>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>

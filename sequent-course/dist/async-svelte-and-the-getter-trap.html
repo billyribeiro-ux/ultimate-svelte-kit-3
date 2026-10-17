@@ -54,10 +54,10 @@ const instrument = $derived(instruments.find((row) =&gt; row.instrumentId === ch
 // nothing else changes while somebody is looking at it.
 const market = $derived(chosen ? await watchMarket({ instrumentId: chosen }) : null);
 
-const orders = $derived(await getMyOrders());
-const positions = $derived(await getMyPositions());</code></pre>
+const orders = $derived(await getMyOrders());</code></pre>
 </figure>
-<p>Six lines that fetch from the server, pick a default, follow the URL, subscribe to a stream, and re-run precisely the parts that depend on what changed. In Kit 2 that is a load function, a <code>$:</code> block, a store subscription and an <code>onDestroy</code>.</p>
+<p>Five lines that fetch from the server, pick a default, follow the URL, subscribe to a stream, and re-run precisely the parts that depend on what changed. In Kit 2 that is a load function, a <code>$:</code> block, a store subscription and an <code>onDestroy</code>.</p>
+<p>There used to be a sixth, for positions. Where it went, and why, is the last section of this chapter.</p>
 <h3 id="the-trap">The trap</h3>
 <p>Here is the error that started the afternoon:</p>
 
@@ -101,10 +101,10 @@ let ticket = $state({
 
 let sending = $state(false);
 let lastError = $state&lt;string | null&gt;(null);
-
-// …only now the awaited deriveds
+// …
 const instruments = $derived(await getInstruments());</code></pre>
 </figure>
+<p>The <code>// …</code> is three more <code>$state</code> declarations — <code>lastSent</code>, <code>cancelError</code> and <code>ticketOpen</code> — and <code>seenPhase</code>, a plain variable the next section uses. Only after all of them does the first <code>await</code> appear.</p>
 <aside class="callout callout--warn"><p>What makes this so easy to walk into is the asymmetry. <code>bind:value={quantity}</code> on a plain <code>$state</code> variable is completely fine in any order. It is only <code>bind:value={ticket.quantity}</code> — a member of a state object — that emits the getter. So you can have twenty bindings working and add the twenty-first, which happens to be a member access, and the page stops rendering on the server with an error pointing at a line you did not change.</p></aside>
 <aside class="callout callout--note"><p>The rule to carry: <strong>in a component with awaited <code>$derived</code>s, declare all <code>$state</code> first.</strong> It costs nothing, it reads better anyway — state at the top, computed below — and it makes the ordering hazard impossible rather than merely avoided.</p></aside>
 <h3 id="effects">When to reach for $effect instead</h3>
@@ -139,10 +139,140 @@ $effect(() =&gt; {
 </figure>
 <p>The test is simple. Does it produce a <strong>value</strong> the markup reads? <code>$derived</code>. Does it *do something* — animate, log, focus, start a timer? <code>$effect</code>. Deriveds are allowed to run more often than you expect, because they are cached and pure; effects are not, because they are neither.</p>
 <p>The <code>seenPhase !== null</code> guard is the same class of thinking as the idempotent projectors: it separates &quot;the state changed&quot; from &quot;this is the first time I am seeing state at all&quot;. Arriving at a market that is already open is not the market opening, and firing the venue's one dramatic animation at everybody who loads the page would make it mean nothing.</p>
+<h3 id="where-you-await">Where you await is what fails with it</h3>
+<p>An awaited <code>$derived</code> in the script is a promise the whole component waits on. On the server, if it rejects, the render has failed: there is no page to send, only the error page. That is the right trade for the instrument list, without which there is no terminal. It was the wrong one for positions.</p>
+<p>A venue operator can open the terminal: the nav offers it, because watching the book and the tape is half the job. But an operator belongs to the venue, not to a member firm, holds no positions, and is refused <code>view_positions</code>. With <code>getMyPositions()</code> awaited in the script, that one refusal failed the page, and the operator lost the book, the tape and every Cancel button to a panel they had no use for.</p>
+<p>The first fix moved the await into the markup, inside a <code>&lt;svelte:boundary&gt;</code>, and let the boundary catch the 403. On screen it looked right — the whole terminal, and a Positions panel saying &quot;Your role does not allow that.&quot; Then somebody looked at the response: <strong>HTTP 403</strong>, for a page that had rendered perfectly. SvelteKit hands every boundary a <code>transformError</code> that runs the error through <code>handleError</code> and then sets the page's error and status from it — on the server and in the browser alike — so <code>page.status</code> read 403 too, and any monitor or client checking the status saw a failed page. A refusal you know is coming is not an error to catch. It is a branch.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">apps/web/src/routes/terminal/+page.server.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">return {
+	accountIds: locals.viewer.accountIds,
+	/*
+	 * Whether the Positions panel should ask at all.
+	 *
+	 * Every role that opens the terminal may see the book, and one of them — the
+	 * venue operator — holds no positions. Deciding that here, from the same
+	 * rule `getMyPositions` enforces, turns a certain refusal into a branch in
+	 * the markup. The query still checks for itself: this is a courtesy to the
+	 * page, and the remote function is the control.
+	 */
+	canSeePositions: can(locals.viewer, 'view_positions', { firmId: locals.viewer.firmId }).allowed
+};</code></pre>
+</figure>
+<p>This is the one job a load function still does best here: decide something about the page before any of it renders. The admin screen works the same way, with <code>data.canSeeQueue ? await getQueue() : null</code>. The panel then branches, and keeps a boundary for what nobody can predict:</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">apps/web/src/routes/terminal/+page.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">{#if data.canSeePositions}
+	&lt;!-- … --&gt;
+	&lt;svelte:boundary&gt;
+		&lt;!-- svelte-ignore a11y_no_noninteractive_tabindex --&gt;
+		&lt;div class=&quot;scroller&quot; tabindex=&quot;0&quot; role=&quot;region&quot; aria-label=&quot;Positions, scrollable&quot;&gt;
+			&lt;table&gt;
+				&lt;!-- … --&gt;
+				&lt;tbody&gt;
+					{#each await getMyPositions() as position (position.accountId + position.instrumentId)}
+						&lt;!-- … --&gt;
+					{:else}
+						&lt;tr&gt;&lt;td colspan=&quot;5&quot; class=&quot;muted small&quot;&gt;Flat.&lt;/td&gt;&lt;/tr&gt;
+					{/each}
+				&lt;/tbody&gt;
+			&lt;/table&gt;
+		&lt;/div&gt;
+
+		{#snippet failed(error, reset)}
+			{const failure = $derived(error as App.Error)}
+			{#if failure.status &gt;= 500}
+				&lt;!-- … --&gt;
+				&lt;p class=&quot;muted small under-heading&quot;&gt;
+					Positions did not load{failure.id ? ` (reference ${failure.id})` : ''}.
+					&lt;button
+						type=&quot;button&quot;
+						class=&quot;link&quot;
+						onclick={() =&gt; {
+							void getMyPositions().refresh();
+							reset();
+						}}&gt;Try again&lt;/button
+					&gt;
+				&lt;/p&gt;
+			{:else}
+				&lt;!-- … --&gt;
+				&lt;p class=&quot;muted small under-heading&quot;&gt;{failure.message}&lt;/p&gt;
+			{/if}
+		{/snippet}
+	&lt;/svelte:boundary&gt;
+{:else}
+	&lt;p class=&quot;muted small under-heading&quot;&gt;
+		Positions belong to member firms. This role watches the market and holds none.
+	&lt;/p&gt;
+{/if}</code></pre>
+</figure>
+<p>A <code>&lt;svelte:boundary&gt;</code> catches what fails inside it, during rendering or in an <code>await</code>, and shows its <code>failed</code> snippet instead of its contents. Everything outside carries on. So a dropped connection or a fault at our end now costs this panel and nothing else — though, as above, it still sets the page's status, which for a genuine fault is honest.</p>
+
+<aside class="callout callout--why">
+	<h4>Why the await is in the markup, not the script</h4>
+	<p>Because the server and the browser must agree. On the server a script-level <code>$derived(await …)</code> that rejects fails the render before any boundary in the markup exists to catch it, and the person gets the error page. In the browser, after a client-side navigation, a boundary around the place the value is *read* does catch it — which is how an earlier version of this test suite passed with the await still in the script: it only ever reached the terminal by navigating there after signing in. Written inside the boundary, the await fails inside the boundary in both places. The browser test now reloads the page as the operator and asserts a 200, so the server's half is checked too.</p>
+</aside>
+
+<aside class="callout callout--why">
+	<h4>No pending snippet, and a retry that refreshes</h4>
+	<p>The boundary has a <code>failed</code> snippet and deliberately no <code>pending</code> one. Svelte's documentation: &quot;During server-side rendering, a boundary with a <code>pending</code> snippet renders that snippet and ignores the rest of its content&quot; — so a pending snippet would make every first load show a placeholder where the server could have sent the table. And the retry is offered only for a fault (a status of 500 or more), because a refusal answers the same way every time. It calls <code>getMyPositions().refresh()</code> before <code>reset()</code>: <code>reset</code> re-renders the boundary's contents, but a query that failed keeps its failure until it is refreshed, so on its own the retry would await the same rejection again. A browser test drops the connection on that one request, checks the panel says so while the rest of the terminal carries on, restores it, and presses Try again.</p>
+</aside>
+
+<aside class="callout callout--why">
+	<h4>The error is an App.Error, and the cast says so</h4>
+	<p>What reaches <code>failed</code> under SvelteKit is not the thing that was thrown. Kit puts every boundary's error through its error handling first — the server's <code>handleError</code> for a query that called <code>error(...)</code>, the client-side <code>handleError</code> (Kit's default here, as there is no <code>hooks.client.ts</code>) for anything thrown in the browser — and passes on the result: an <code>App.Error</code>, a plain <code>{ status, message }</code> object, plus the <code>id</code> our <code>handleError</code> adds to unexpected errors. A runtime probe that forced a query to throw <code>error(418, 'probe query')</code> printed <code>{&quot;instanceofError&quot;:false,&quot;ctor&quot;:&quot;Object&quot;,&quot;keys&quot;:[&quot;status&quot;,&quot;message&quot;],&quot;message&quot;:&quot;probe query&quot;,&quot;status&quot;:418}</code> — the same on the server render and after a client-side navigation. Svelte itself types the parameter <code>unknown</code>, because a boundary in plain Svelte can catch anything at all, and the strict checker rejects annotating it as <code>App.Error</code>. So the snippet says it once, in a declaration tag: <code>{const failure = $derived(error as App.Error)}</code>. The cast is not a guess but a statement of what Kit guarantees, and the comment above the boundary says so.</p>
+</aside>
+<p>That line is a <strong>declaration tag</strong> — <code>{const …}</code> in the markup, scoped to the block it sits in — and it is the current way to name a value inside a template. The legacy spelling was <code>{@const failure = …}</code>, which Svelte's documentation now calls &quot;considered legacy — use declaration tags instead&quot;. Unlike <code>{@const}</code>, a declaration tag is an ordinary declaration, so it is reactive only if you ask: &quot;When values should be reactive, you can use <code>$state</code> and <code>$derived</code>.&quot; That is why it says <code>$derived</code> — the snippet is the same <code>failed</code> snippet for every failure, and the name should follow whichever <code>error</code> it was handed. Chapter 35 meets the other declaration tag on this page.</p>
+<p>And the failure the panel cannot absorb — a page whose load refuses, a route that does not exist — goes to <code>src/routes/+error.svelte</code>, which receives the same <code>App.Error</code> as a prop:</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">apps/web/src/routes/+error.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
+	import type { ErrorProps } from './$types';
+
+	// …
+	let { error }: ErrorProps = $props();
+
+	// …
+	const heading = $derived(
+		error.status &gt;= 500
+			? 'Something went wrong'
+			: error.status === 404
+				? 'There is nothing here'
+				: 'We cannot show you this'
+	);
+&lt;/script&gt;
+
+&lt;div class=&quot;container card stack failure&quot; role=&quot;alert&quot;&gt;
+	&lt;h1&gt;{heading}&lt;/h1&gt;
+	&lt;p class=&quot;muted&quot;&gt;{error.message}&lt;/p&gt;
+	{#if error.id}
+		&lt;p class=&quot;small faint mono&quot;&gt;Reference {error.id}&lt;/p&gt;
+	{/if}
+	{#if error.status &gt;= 500}
+		&lt;!-- … --&gt;
+		&lt;button type=&quot;button&quot; onclick={() =&gt; location.reload()}&gt;Try again&lt;/button&gt;
+	{/if}
+&lt;/div&gt;</code></pre>
+</figure>
+<p>Three headings, because three different things happened: the venue failed, the page is not there, or the venue refused for a reason it states. Only the first gets a Try again button — a reload cannot change a refusal or conjure a missing page, and offering one says it might.</p>
+<aside class="callout callout--note"><p><code>ErrorProps</code> comes from <code>./$types</code>, the module <code>svelte-kit sync</code> generates for each route folder — the reason chapter 22 put <code>.svelte-kit/types</code> in the tsconfig. Every page and layout in Sequent types its props the same way: <code>let { data }: PageProps = $props()</code> on a page, <code>LayoutProps</code> on a layout. That makes <code>data</code> exactly what the route's <code>load</code> returned, so a field added to the load appears in the component and a field removed from it is a type error, where a hand-written <code>{ data: { … } }</code> would have drifted silently — the layout's once said a viewer's role was any <code>string</code>, when the domain says it is one of five.</p></aside>
+<aside class="callout callout--warn"><p>This file replaced a boundary in the root layout that wrapped every page, guarded its message with <code>error instanceof Error</code>, and had never once run. The guard was wrong — an <code>App.Error</code> is never an <code>Error</code>, so the fallback &quot;We could not load this.&quot; would have won every time — but it did not matter, because SvelteKit 3 wraps <strong>each page</strong> in a boundary of its own that renders the nearest <code>+error.svelte</code>, falling back to Kit's built-in one when the app has none. The page's failure was always caught one level below the layout, and shown as Kit's bare status code and message. A boundary is only reached if nothing nearer catches first.</p></aside>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>
-	<ul><li>You can use <code>await</code> inside <code>$derived</code> and explain what re-runs when</li><li>You can state the declaration-order rule and the exact error breaking it produces</li><li>You can explain why a plain <code>$state</code> binding is unaffected but a member binding is not</li><li>You can decide between <code>$derived</code> and <code>$effect</code> from what the code does, not how it looks</li></ul>
+	<ul><li>You can use <code>await</code> inside <code>$derived</code> and explain what re-runs when</li><li>You can state the declaration-order rule and the exact error breaking it produces</li><li>You can explain why a plain <code>$state</code> binding is unaffected but a member binding is not</li><li>You can decide between <code>$derived</code> and <code>$effect</code> from what the code does, not how it looks</li><li>You can decide whether an await belongs in the script or inside a boundary, from what should fail with it, and why the server and the browser disagree when it is in the wrong place</li><li>You can explain why a refusal you can predict belongs in the load as a flag, not in a boundary — and what a caught error does to the page's status</li><li>You can say what a <code>failed</code> snippet and <code>+error.svelte</code> receive, and why the layout's boundary never ran</li><li>You can write a declaration tag, and say when it needs <code>$derived</code></li></ul>
 </aside>
 		</article>
 

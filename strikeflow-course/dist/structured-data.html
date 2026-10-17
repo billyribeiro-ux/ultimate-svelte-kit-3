@@ -35,9 +35,9 @@
 			<h1>Structured data that actually connects</h1>
 			<p class="lede">Most tutorials give you four disconnected JSON-LD blocks. We build one @graph where every node references the others by @id.</p>
 			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>A single, cross-referenced entity graph that tells a search engine who you are.</p></aside>
-			<p>Structured data is a machine-readable description of your page. Search engines use it to understand what a page *is* rather than guessing from the text — and increasingly, so do AI answer engines.</p>
+			<p>Structured data is a machine-readable description of your page. Search engines use it to understand what a page <em>is</em> rather than guessing from the text — and increasingly, so do AI answer engines.</p>
 <h3 id="graph">The one idea that matters</h3>
-<p>Most tutorials tell you to drop three or four separate <code>&lt;script type=&quot;application/ld+json&quot;&gt;</code> blocks on a page: one for Organization, one for BreadcrumbList, one for Article. That works, and it produces four unrelated islands of data. The search engine has to *guess* that the &quot;StrikeFlow&quot; in the Article's publisher field is the same &quot;StrikeFlow&quot; in the Organization block.</p>
+<p>Most tutorials tell you to drop three or four separate <code>&lt;script type=&quot;application/ld+json&quot;&gt;</code> blocks on a page: one for Organization, one for BreadcrumbList, one for Article. That works, and it produces four unrelated islands of data. The search engine has to <em>guess</em> that the &quot;StrikeFlow&quot; in the Article's publisher field is the same &quot;StrikeFlow&quot; in the Organization block.</p>
 <p>The better approach is a single <code>@graph</code>: one array of nodes, each with a stable, globally unique <code>@id</code>, referencing each other by that id.</p>
 
 <figure class="code">
@@ -72,6 +72,7 @@
 	<pre><code class="lang-ts">export const ids = {
 	organization: `${site.url}/#organization`,
 	website: `${site.url}/#website`,
+	/** Per-page nodes. `url` must already be absolute. */
 	webPage: (url: string) =&gt; `${url}#webpage`,
 	breadcrumb: (url: string) =&gt; `${url}#breadcrumb`,
 	article: (url: string) =&gt; `${url}#article`,
@@ -139,7 +140,10 @@
 		<span class="code__file">src/lib/seo/schema.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">	offers: plans.map((plan) =&gt; ({ /* … */ }))
+	<pre><code class="lang-ts">	offers: plans.map((plan) =&gt; ({
+		'@type': 'Offer',
+		// …
+	}))
 	// NOTE: there is deliberately no `aggregateRating` here. We have not collected
 	// verifiable reviews, and inventing one is a spam policy violation that gets
 	// sites manually penalised. Rich stars are not worth a manual action.</code></pre>
@@ -160,7 +164,7 @@
 	};
 }
 
-/* … */
+// …
 export function serializeJsonLd(graph: Record&lt;string, unknown&gt;): string {
 	return JSON.stringify(graph)
 		.replace(/&lt;/g, '\\u003c')

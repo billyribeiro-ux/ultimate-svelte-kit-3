@@ -2,6 +2,7 @@
 	import { m } from '#lib/paraglide/messages.js';
 	import Footer from '#lib/ui/Footer.svelte';
 	import Header from '#lib/ui/Header.svelte';
+	import type { LayoutProps } from './$types';
 
 	/*
 	 * THE SITE
@@ -13,7 +14,7 @@
 	 * guides, which are prerendered, live outside this group — the root
 	 * layout says why.
 	 */
-	let { data, children } = $props();
+	let { data, children }: LayoutProps = $props();
 </script>
 
 <a class="skip" href="#main">{m.nav_skip()}</a>
@@ -36,8 +37,8 @@
 	.skip {
 		position: absolute;
 		top: -100%;
-		left: var(--space-4);
-		z-index: 50;
+		left: var(--gutter);
+		z-index: var(--z-skip);
 		padding: var(--space-2) var(--space-3);
 		background: var(--ink);
 		color: var(--paper);

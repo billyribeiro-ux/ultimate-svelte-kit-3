@@ -71,11 +71,23 @@
 const ALLOWED: Readonly&lt;Record&lt;Role, readonly Action[]&gt;&gt; = {
 	trader: ['place_order', 'cancel_order', 'view_orders', 'view_positions'],
 
-	risk_manager: ['cancel_firm_orders', 'view_orders', 'view_positions', 'view_ledger',
-	               'set_risk_limits', 'engage_kill_switch'],
+	risk_manager: [
+		'cancel_firm_orders',
+		'view_orders',
+		'view_positions',
+		'view_ledger',
+		'set_risk_limits',
+		'engage_kill_switch'
+	],
 
-	firm_admin: ['view_orders', 'view_positions', 'view_ledger', 'manage_users',
-	             'manage_api_keys', 'cancel_firm_orders'],
+	firm_admin: [
+		'view_orders',
+		'view_positions',
+		'view_ledger',
+		'manage_users',
+		'manage_api_keys',
+		'cancel_firm_orders'
+	],
 
 	// Reads everything, writes nothing. Note it can see the ledger and the audit
 	// log, which a trader cannot — more visibility, less power.
@@ -161,11 +173,7 @@ const ALLOWED: Readonly&lt;Record&lt;Role, readonly Action[]&gt;&gt; = {
  * as `forbidden`.**
  */
 export type DenialReason =
-	| 'not_found'
-	| 'forbidden'
-	| 'account_not_assigned'
-	| 'missing_scope'
-	| 'inactive';</code></pre>
+	'not_found' | 'forbidden' | 'account_not_assigned' | 'missing_scope' | 'inactive';</code></pre>
 </figure>
 <h3 id="exhaustive">Tested exhaustively, and that is not a figure of speech</h3>
 
@@ -225,10 +233,16 @@ if (!decision.allowed) error(403, 'Your role does not allow that.');</code></pre
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/*
+ * The server-side control. Hiding the nav link is manners; this is the rule.
+ *
  * Gated on `view_ledger` rather than `view_positions`, and the difference
- * matters: every trader can see their own positions, so the first version let
- * traders straight into the risk console. `view_ledger` is held by exactly the
- * roles this screen is for — risk managers, firm admins and auditors.
+ * matters: every trader can see their own positions, so the first version of
+ * this let traders straight into the risk console. `view_ledger` is held by
+ * exactly the roles this screen is for — risk managers, firm admins and
+ * auditors.
+ *
+ * The lesson generalises: gate a screen on the permission that *describes*
+ * it, not on the first permission that happens to sound related.
  */
 const decision = can(locals.viewer, 'view_ledger', { firmId: locals.viewer.firmId });
 if (!decision.allowed) error(403, 'Your role does not allow that.');</code></pre>

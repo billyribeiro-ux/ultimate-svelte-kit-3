@@ -4,11 +4,11 @@
 	import Field from '#lib/components/Field.svelte';
 	import { COMMON_TIME_ZONES } from '#lib/time/index.ts';
 	import { getSettings, saveSettings } from '../studio.remote.ts';
-	import type { LayoutData } from '../$types';
+	import type { PageProps } from './$types';
 
-	let { data }: { data: LayoutData } = $props();
+	let { data, params }: PageProps = $props();
 
-	const settings = $derived(await getSettings(data.slug));
+	const settings = $derived(await getSettings(params.slug));
 
 	/**
 	 * The studio's own zone always appears in the list, even if it is not one of
@@ -16,7 +16,7 @@
 	 * the dropdown has silently reset them to London.
 	 */
 	const zones = $derived(
-		COMMON_TIME_ZONES.includes(settings.timeZone as (typeof COMMON_TIME_ZONES)[number])
+		COMMON_TIME_ZONES.some((zone) => zone === settings.timeZone)
 			? COMMON_TIME_ZONES
 			: [settings.timeZone, ...COMMON_TIME_ZONES]
 	);
@@ -34,7 +34,7 @@
 	</header>
 
 	<form {...saveSettings} class="stack stack-lg">
-		<input {...saveSettings.fields.slug.as('hidden', data.slug)} />
+		<input {...saveSettings.fields.slug.as('hidden', params.slug)} />
 
 		{#if saveSettings.result?.saved}
 			<Alert tone="success"><p>Settings saved.</p></Alert>

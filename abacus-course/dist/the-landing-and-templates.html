@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The landing page and the prerendered templates — Building Abacus</title>
-<meta name="description" content="A prerendered landing page with a GSAP entrance behind an attachment and `hydratable` random dots, and template pages prerendered from `entries()` with their formulas already computed on the server.">
+<meta name="description" content="A prerendered landing page with a GSAP entrance behind an attachment and hydratable random dots, and template pages prerendered from entries() with their formulas already computed on the server.">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -52,28 +52,24 @@ export const prerender = true;</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/+page.svelte<span class="code__lines">:1-35</span></span>
+		<span class="code__file">src/routes/(app)/+page.svelte<span class="code__lines">:1-31</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
 	import { hydratable } from 'svelte';
+	import { resolve } from '$app/paths';
 	import { cinematic } from '#lib/motion/cinematic.ts';
 	import Section from '#lib/components/Section.svelte';
+	import { DEMO_INPUTS, demoText } from '#lib/sheet/demo.ts';
 	import { TEMPLATES } from '#lib/sheet/templates.ts';
 
-	/**
+	/*
 	 * A demo grid that needs no JavaScript: the formulas and their results,
 	 * written out, with a CSS animation that &quot;types&quot; the formula into the
-	 * bar. The results are real — `templates.spec.ts` computes them — and
-	 * the point is that a person sees a spreadsheet before they load one.
+	 * bar. The results are real — `demo.spec.ts` computes every one with the
+	 * engine — and the point is that a person sees a spreadsheet before they
+	 * load one.
 	 */
-	const demo = [
-		['Category', 'Budgeted', 'Actual', 'Difference'],
-		['Rent', '1,400.00', '1,400.00', '0.00'],
-		['Groceries', '450.00', '512.40', '-62.40'],
-		['Transport', '120.00', '96.50', '23.50'],
-		['Total', '=SUM(B2:B4)', '=SUM(C2:C4)', '=B5-C5']
-	];
 
 	/**
 	 * `hydratable` for a random number that must agree with itself: the
@@ -94,12 +90,12 @@ export const prerender = true;</code></pre>
 
 <aside class="callout callout--why">
 	<h4>Why the drifting dots use hydratable</h4>
-	<p>The hero has eighteen dots at random positions. Render them on the server and the browser would render eighteen *different* random positions during hydration, and Svelte would find the markup did not match. <code>hydratable(key, fn)</code> runs the function on the server, serialises the result into the page, and hands the browser the same value under the same key. The random numbers are computed once, and hydration finds what it expects.</p>
+	<p>The hero has eighteen dots at random positions. Render them on the server and the browser would render eighteen <em>different</em> random positions during hydration, and Svelte would find the markup did not match. <code>hydratable(key, fn)</code> runs the function on the server, serialises the result into the page, and hands the browser the same value under the same key. The random numbers are computed once, and hydration finds what it expects.</p>
 </aside>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/+page.svelte<span class="code__lines">:45-72</span></span>
+		<span class="code__file">src/routes/(app)/+page.svelte<span class="code__lines">:41-94</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;section class=&quot;hero page&quot; {@attach cinematic()}&gt;
@@ -127,10 +123,128 @@ export const prerender = true;</code></pre>
 	&lt;/p&gt;
 
 	&lt;div class=&quot;hero__actions cluster&quot; data-rise&gt;
-		&lt;a class=&quot;btn btn--primary btn--lg&quot; href=&quot;/sheet/local&quot;&gt;Open a sheet — no account&lt;/a&gt;
-		&lt;a class=&quot;btn btn--lg&quot; href=&quot;/templates&quot;&gt;Start from a template&lt;/a&gt;
-	&lt;/div&gt;</code></pre>
+		&lt;a class=&quot;btn btn--primary btn--lg&quot; href={resolve('/(app)/sheet/local')}
+			&gt;Open a sheet — no account&lt;/a
+		&gt;
+		&lt;a class=&quot;btn btn--lg&quot; href={resolve('/(app)/templates')}&gt;Start from a template&lt;/a&gt;
+	&lt;/div&gt;
+
+	&lt;div class=&quot;demo&quot; data-rise aria-hidden=&quot;true&quot;&gt;
+		&lt;div class=&quot;demo__bar mono&quot;&gt;
+			&lt;span class=&quot;demo__cell&quot;&gt;D5&lt;/span&gt;&lt;span class=&quot;demo__formula&quot;&gt;=B5-C5&lt;/span&gt;
+		&lt;/div&gt;
+		&lt;table class=&quot;demo__table&quot;&gt;
+			&lt;tbody&gt;
+				{#each DEMO_INPUTS as row, r (r)}
+					&lt;tr&gt;
+						{#each row as input, c (c)}
+							{#if r === 0}
+								&lt;th&gt;{input}&lt;/th&gt;
+							{:else}
+								&lt;td class={{ num: c &gt; 0, formula: input.startsWith('='), total: r === 4 }} data-pad&gt;
+									{demoText(r, c)}
+								&lt;/td&gt;
+							{/if}
+						{/each}
+					&lt;/tr&gt;
+				{/each}
+			&lt;/tbody&gt;
+		&lt;/table&gt;
+	&lt;/div&gt;
+&lt;/section&gt;</code></pre>
 </figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sheet/demo.ts<span class="code__lines">:1-43</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * THE LANDING PAGE'S DEMO
+ * =======================
+ *
+ * The little budget the landing page shows before any JavaScript has loaded:
+ * what was typed into each cell, and what each formula comes to. The page is
+ * prerendered and draws these as text — it does not ship the engine to show
+ * five rows — so the answers are written down here, beside the inputs, and
+ * `demo.spec.ts` loads the same inputs into the engine and checks every one.
+ */
+
+import { toA1 } from './address.ts';
+
+/** Each cell as a person would type it. */
+export const DEMO_INPUTS: readonly (readonly string[])[] = [
+	['Category', 'Budgeted', 'Actual', 'Difference'],
+	['Rent', '1400', '1400', '=B2-C2'],
+	['Groceries', '450', '512.4', '=B3-C3'],
+	['Transport', '120', '96.5', '=B4-C4'],
+	['Total', '=SUM(B2:B4)', '=SUM(C2:C4)', '=B5-C5']
+];
+
+/** What each formula above comes to, by address. */
+export const DEMO_RESULTS: Readonly&lt;Record&lt;string, number&gt;&gt; = {
+	D2: 0,
+	D3: -62.4,
+	D4: 23.5,
+	B5: 1970,
+	C5: 2008.9,
+	D5: -38.9
+};
+
+const money = new Intl.NumberFormat('en-US', {
+	minimumFractionDigits: 2,
+	maximumFractionDigits: 2
+});
+
+/** What the cell shows: a formula's answer or a typed number as money, a word as it is. */
+export function demoText(row: number, col: number): string {
+	const input = DEMO_INPUTS[row]?.[col] ?? '';
+	if (input.startsWith('=')) return money.format(DEMO_RESULTS[toA1({ row, col })] ?? Number.NaN);
+	return row &gt; 0 &amp;&amp; col &gt; 0 ? money.format(Number(input)) : input;
+}</code></pre>
+</figure>
+<p>The demo’s numbers live in a module, beside the inputs that produce them. The page draws them as text and never loads the engine to show five rows; the first version had the three totals written into a nested ternary on the column index, inside the markup, and a comment claiming a test computed them. None did.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/sheet/demo.spec.ts<span class="code__lines">:1-33</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">import { describe, expect, it } from 'vitest';
+import { Engine } from '#lib/engine/engine.ts';
+import { toA1 } from './address.ts';
+import { DEMO_INPUTS, DEMO_RESULTS, demoText } from './demo.ts';
+
+/**
+ * The landing page promises its numbers are real. This is the promise kept:
+ * the demo's inputs go into the engine, and every answer the page shows must
+ * be the one the engine gives.
+ */
+describe('the landing page demo', () =&gt; {
+	it('shows what the engine computes, for every formula and nothing else', () =&gt; {
+		const engine = new Engine();
+		DEMO_INPUTS.forEach((row, r) =&gt; row.forEach((input, c) =&gt; engine.set(r, c, input)));
+
+		const formulas = DEMO_INPUTS.flatMap((row, r) =&gt;
+			row.flatMap((input, c) =&gt; (input.startsWith('=') ? [{ row: r, col: c }] : []))
+		);
+		expect(Object.keys(DEMO_RESULTS).sort()).toEqual(formulas.map(toA1).sort());
+
+		for (const cell of formulas) {
+			expect(engine.value(cell.row, cell.col)).toBeCloseTo(DEMO_RESULTS[toA1(cell)]!, 9);
+		}
+	});
+
+	it('writes numbers as money and words as they are', () =&gt; {
+		expect(demoText(4, 3)).toBe('-38.90');
+		expect(demoText(4, 1)).toBe('1,970.00');
+		expect(demoText(1, 1)).toBe('1,400.00');
+		expect(demoText(2, 0)).toBe('Groceries');
+		expect(demoText(0, 3)).toBe('Difference');
+	});
+});</code></pre>
+</figure>
+<p>Now one does. The spec loads the demo’s inputs into the real engine and checks every answer the page shows — and checks that <code>DEMO_RESULTS</code> names exactly the formula cells, so a formula added without its answer, or an answer left behind after its formula went, fails here rather than on the landing page.</p>
 
 <figure class="code">
 	<figcaption>
@@ -193,7 +307,7 @@ export function cinematic(): Attachment&lt;HTMLElement&gt; {
 	};
 }</code></pre>
 </figure>
-<p>The entrance is an attachment, so the markup says <code>{@attach cinematic()}</code> and nothing else. GSAP is imported dynamically inside it so its sixty kilobytes never reach anyone who does not see the animation; <code>prefersReducedMotion</code> is checked first; and nothing in the stylesheet starts at <code>opacity: 0</code>, so a failed import leaves the page visible. Restraint is the design: one timeline, a second long.</p>
+<p>The entrance is an attachment, so the markup says <code>{@attach cinematic()}</code> and nothing else; the elements it moves are marked in the hero with <code>data-word</code>, <code>data-pad</code> and <code>data-rise</code>, and the attachment finds them with <code>querySelectorAll</code>. GSAP is imported dynamically inside it so its sixty kilobytes never reach anyone who does not see the animation; <code>prefersReducedMotion</code> is checked first; and nothing in the stylesheet starts at <code>opacity: 0</code>, so a failed import leaves the page visible. Restraint is the design: one timeline, a second long.</p>
 <h3 id="templates">Templates from entries</h3>
 
 <figure class="code">
@@ -226,10 +340,11 @@ export const load: PageLoad = ({ params }) =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/templates/[slug]/+page.svelte<span class="code__lines">:1-41</span></span>
+		<span class="code__file">src/routes/(app)/templates/[slug]/+page.svelte<span class="code__lines">:1-57</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
+	import { resolve } from '$app/paths';
 	import type { PageProps } from './$types.js';
 	import SheetTable from '#lib/components/SheetTable.svelte';
 	import { create } from '#lib/remote/sheets.remote.ts';
@@ -251,9 +366,23 @@ export const load: PageLoad = ({ params }) =&gt; {
 			&lt;p class=&quot;hint&quot;&gt;{data.template.summary}&lt;/p&gt;
 		&lt;/div&gt;
 		&lt;div class=&quot;cluster&quot;&gt;
-			&lt;a class=&quot;btn btn--primary&quot; href=&quot;/sheet/local?template={data.template.slug}&quot;
+			&lt;a
+				class=&quot;btn btn--primary&quot;
+				href={resolve(`/(app)/sheet/local?template=${data.template.slug}`)}
 				&gt;Open a copy — no account&lt;/a
 			&gt;
+			&lt;!--
+				THE SAVE BUTTON ARRIVES WITH JAVASCRIPT
+				This page is prerendered: built once, for nobody in particular, so
+				there is no person to ask about at build time. The empty `pending`
+				snippet is what says so. On the server, a boundary with `pending`
+				renders that snippet and skips its content, so the build neither
+				awaits `whoAmI()` nor bakes a stranger's answer into the file; in the
+				browser the content renders once the answer arrives, and only for
+				somebody signed in. The link before it is the way in that needs no
+				script and no account. `failed` is empty for the same reason: if
+				nobody can be asked, the page still offers that link.
+			--&gt;
 			&lt;svelte:boundary&gt;
 				{const me = $derived(await whoAmI())}
 				{#if me}
@@ -264,6 +393,7 @@ export const load: PageLoad = ({ params }) =&gt; {
 					&lt;/form&gt;
 				{/if}
 				{#snippet pending()}{/snippet}
+				{#snippet failed()}{/snippet}
 			&lt;/svelte:boundary&gt;
 		&lt;/div&gt;
 	&lt;/header&gt;
@@ -271,7 +401,12 @@ export const load: PageLoad = ({ params }) =&gt; {
 	&lt;SheetTable rendered={data.rendered} caption={data.template.title} /&gt;
 &lt;/article&gt;</code></pre>
 </figure>
-<p>Two ways in: a local copy with no account, or — if <code>whoAmI()</code> says somebody is signed in — a form that saves the template into the account. The form is <code>create</code> from chapter 27 with two hidden fields, and it works with JavaScript off.</p>
+<p>Two ways in: a local copy with no account, or — if <code>whoAmI()</code> says somebody is signed in — a form that saves the template into the account. The form is <code>create</code> from chapter 27 with two hidden fields. The link is the way in that needs no JavaScript; the save button arrives with it, and the comment above the boundary says why.</p>
+
+<aside class="callout callout--why">
+	<h4>Why the save button is not in the prerendered page</h4>
+	<p>The page is prerendered: built once, on the build machine, for nobody in particular. There is no person to ask about at build time, and an answer baked into the file would be the build machine’s — nobody — served to everybody. The empty <code>pending</code> snippet is how the page says so. On the server, a boundary with a <code>pending</code> snippet renders that snippet and skips its content, so the build neither awaits <code>whoAmI()</code> nor writes a stranger’s answer into the HTML; the built file has no “Save to my account” in it at all. In the browser, the content renders once the answer arrives, and the form appears only for somebody signed in. An earlier draft of this chapter said the form worked with JavaScript off. It cannot, because it is not in the page until JavaScript has asked who you are; the no-script path is the link beside it, which needs neither.</p>
+</aside>
 
 <figure class="code">
 	<figcaption>

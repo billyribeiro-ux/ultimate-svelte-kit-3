@@ -34,9 +34,10 @@
 			<p class="eyebrow">Chapter 24</p>
 			<h1>Remote functions</h1>
 			<p class="lede">query, command, form and query.live — and why every argument needs a schema even though the caller is your own page.</p>
-			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Replace load functions and form actions with typed server functions you can call from anywhere.</p></aside>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Build the web tier on typed server functions you can call from anywhere, and know what using an experimental feature costs.</p></aside>
 			<p>A <code>.remote.ts</code> file exports functions that run on the server. A component imports them and calls them like ordinary async functions. SvelteKit generates the endpoint, the fetch, the serialisation and the types.</p>
-<p>This replaces <code>+page.server.ts</code> load functions and form actions for most work, and the difference is not syntax. A load function is tied to a route: it runs when that URL loads, and nowhere else. A remote function is tied to *nothing* — any component on any page can call it, and so can another remote function.</p>
+<p>This project uses them for most of what a Kit 2 app would do with <code>+page.server.ts</code> load functions and form actions, and the difference is not syntax. A load function is tied to a route: it runs when that URL loads, and nowhere else. A remote function is tied to *nothing* — any component on any page can call it, and so can another remote function.</p>
+<aside class="callout callout--note"><p>Remote functions are <strong>experimental</strong> in SvelteKit 3 — &quot;likely to contain bugs and … subject to change without notice&quot;, in the documentation's words — and so is the <code>await</code> in components that makes them pleasant (chapter 22 has the flags and the trade). Load functions and form actions are not deprecated and not legacy; they are the stable way to do this work, and this app still uses load functions where a page needs a decision made before it renders, such as who may open it. Choosing remote functions here is choosing to track an API that may move, in exchange for far less plumbing.</p></aside>
 <h3 id="query">query — reading</h3>
 
 <figure class="code">
@@ -62,26 +63,55 @@ export const getMyOrders = query(async () =&gt; {
 		args: [viewer.firmId]
 	});
 
-	return result.rows.map((row: Row) =&gt; ({ /* … */ }));
+	return result.rows.map((row: Row) =&gt; ({
+		orderId: String(row['order_id']),
+		clientOrderId: String(row['client_order_id']),
+		instrumentId: String(row['instrument_id']),
+		side: String(row['side']),
+		price: row['price'] === null ? null : Number(row['price']),
+		priceLabel:
+			row['price'] === null ? 'market' : formatPrice(Number(row['price']) as Price, 'GBP'),
+		quantity: Number(row['quantity']),
+		filled: Number(row['filled']),
+		timeInForce: String(row['time_in_force']),
+		status: String(row['status']),
+		cancelReason: row['cancel_reason'] === null ? null : String(row['cancel_reason']),
+		updatedAt: Number(row['updated_at'])
+	}));
 });</code></pre>
 </figure>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">svelte</span>
+		<span class="code__file">apps/web/src/routes/terminal/+page.svelte</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
-	import { getMyOrders } from './market.remote.ts';
+	// …
+	import {
+		cancelOrder,
+		getInstruments,
+		getMyOrders,
+		getMyPositions,
+		placeOrder,
+		watchMarket
+	} from './market.remote.ts';
 
+	// …
 	const orders = $derived(await getMyOrders());
+	// …
 &lt;/script&gt;
 
+&lt;!-- … --&gt;
 {#each orders as order (order.orderId)}
-	&lt;tr&gt;…&lt;/tr&gt;
+	&lt;tr&gt;
+		&lt;!-- … --&gt;
+	&lt;/tr&gt;
+{:else}
+	&lt;tr&gt;&lt;td colspan=&quot;7&quot; class=&quot;muted small&quot;&gt;Nothing sent yet.&lt;/td&gt;&lt;/tr&gt;
 {/each}</code></pre>
 </figure>
-<p>That is the whole thing. <code>await</code> inside <code>$derived</code> is the <code>experimental.async</code> flag from the last chapter, and it is what makes a remote call read like a local one. Kit deduplicates identical calls within a render, caches the result, and re-runs the query when something calls <code>.refresh()</code> on it.</p>
+<p>That is all a component needs: import the function, await it inside <code>$derived</code>, use the result. <code>await</code> inside <code>$derived</code> is the <code>compilerOptions.experimental.async</code> flag from chapter 22, and it is what makes a remote call read like a local one. Kit deduplicates identical calls within a render, caches the result, and re-runs the query when something calls <code>.refresh()</code> on it.</p>
 <h3 id="schemas">Every argument gets a schema</h3>
 <p>A remote function that takes arguments takes a valibot schema first. This is not optional and it is not a style preference.</p>
 
@@ -98,7 +128,7 @@ const positiveInteger = v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValu
 	<h4>The caller is not your page</h4>
 	<p>It is tempting to think &quot;the only thing that calls this is my own component, which always sends a valid symbol&quot;. The generated endpoint is a <strong>public HTTP route</strong>. Anybody can <code>curl</code> it with anything, and on a trading venue somebody eventually will, four hundred times a second, with a symbol containing a SQL fragment. The schema is the boundary, and it is the same boundary as the protocol codecs and the environment variables — the pattern of this entire codebase is *validate once, at the edge*.</p>
 </aside>
-<aside class="callout callout--note"><p>SvelteKit enforces the discipline for you: inside a remote function, <code>event.url</code> and <code>event.params</code> <strong>throw</strong> if you read them. A remote function is not a route, so it has no URL to read, and the framework refuses to let you pretend otherwise. Everything that varies must arrive as a validated argument.</p></aside>
+<aside class="callout callout--note"><p>SvelteKit enforces part of the discipline for you: inside a <code>query</code> (and a <code>query.live</code>), reading <code>event.url</code>, <code>event.params</code> or <code>event.route</code> <strong>throws</strong>. A query is cached by its arguments and is not re-run when somebody navigates, so anything it read from the URL would go stale without the cache noticing. In a <code>command</code> or a <code>form</code> those properties describe the page that made the call — which is part of the request, so it can be forged and must never decide what somebody is allowed to do. Either way, everything that varies must arrive as a validated argument.</p></aside>
 <h3 id="command">command — writing</h3>
 
 <figure class="code">
@@ -137,6 +167,61 @@ const positiveInteger = v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValu
 </figure>
 <p>The <code>.refresh()</code> call is the part worth stealing. A command can tell a query it is stale, and Kit sends the fresh data back <strong>in the same HTTP response as the command's result</strong>. One round trip places the order and updates the blotter. Without it you need a second request, and the gap between them is the window where the screen shows an order the person just placed as not existing.</p>
 <p><code>void</code> in front is deliberate: we are not awaiting it, because we do not want the command's response held up by a refresh, and an un-awaited promise without <code>void</code> is the kind of thing a linter should complain about.</p>
+<h3 id="refused">When the server says no</h3>
+<p>A command can be refused, and on a venue it often is. The gateway answers an auditor's cancel with <code>error(403, 'Your role does not allow that.')</code>, an expired session gets <code>error(401, 'Sign in to continue.')</code>, and a paused venue answers a new order with a 503 that explains itself. In the browser, the <code>await</code> in front of the command <strong>rejects</strong>. The person deserves the server's sentence rather than a shrug, so the only question is where in the rejected value that sentence lives.</p>
+<p>Rather than guess, force one and look. A throwaway command that does nothing but <code>error(409, 'probe command')</code>, called from a button, caught, and described:</p>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>{&quot;instanceofError&quot;:false,&quot;ctor&quot;:&quot;HandledHttpError&quot;,&quot;keys&quot;:[&quot;status&quot;,&quot;body&quot;],&quot;status&quot;:409,&quot;body&quot;:{&quot;status&quot;:409,&quot;message&quot;:&quot;probe command&quot;}}</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>It is not an Error</h4>
+	<p>What a rejected remote call hands you is SvelteKit's <code>HttpError</code> — here its subclass <code>HandledHttpError</code>, which means <code>handleError</code> has already run on the server — and it has exactly two properties: <code>status</code>, and <code>body</code>, the <code>App.Error</code> the server sent. The message is <code>body.message</code>. There is no <code>message</code> on the object itself and it does not extend <code>Error</code>, so the reflex <code>thrown instanceof Error ? thrown.message : 'Something went wrong'</code> takes the fallback <strong>every time the server refused on purpose</strong> — the one case where it had something worth saying.</p>
+</aside>
+<p>The probe is how you find out what the value *is*. It is not how you should read it. SvelteKit exports a guard for exactly this value, <code>isHttpError</code>, and the reader the three screens share is built on it:</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">apps/web/src/lib/errors.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">import { isHttpError } from '@sveltejs/kit';
+
+export const NO_ANSWER = 'The venue did not answer. Check your connection and try again.';
+
+export function messageFrom(thrown: unknown): string {
+	return isHttpError(thrown) ? thrown.body.message : NO_ANSWER;
+}</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Ask the framework, not the shape</h4>
+	<p><code>isHttpError(e)</code> is an <code>instanceof</code> check against the very class the client runtime throws, and its return type narrows <code>e</code> to <code>HttpError</code>, whose <code>body</code> is typed <code>App.Error</code>. So <code>thrown.body.message</code> needs no cast, and the compiler knows it is a string. The first version of this reader did it by hand — <code>(thrown as { body?: { message?: unknown } }).body</code>, a cast, a <code>typeof</code> check, and a second cast for <code>message</code> — and it was pasted into three components. It worked, but it encoded a belief about Kit's internals that only the probe had verified, and the casts would have kept compiling the day that belief stopped being true. SvelteKit 3's migration guide says the same of its own classes: rather than <code>instanceof</code> checks against <code>HttpError</code>, &quot;use <code>isHttpError</code>/<code>isRedirect</code> from <code>@sveltejs/kit</code> instead&quot;. One function in <code>#lib</code>, imported where it is needed, is also something Vitest can test without a browser — and <code>errors.spec.ts</code> does, against a real <code>error(…)</code>.</p>
+</aside>
+<p>Two branches, and both are deliberate. A refusal — <code>error(…)</code> in a remote function, or a response that was not SvelteKit's JSON at all, such as the plain-text 403 from our own CSRF hook in chapter 26 — arrives as an <code>HttpError</code>, and the person reads the server's sentence (<code>Forbidden</code>, for the hook). Anything else means the venue never answered: most often <code>fetch</code> rejecting with a <code>TypeError</code> because the connection dropped. Its message, &quot;Failed to fetch&quot;, is the browser talking to a developer, so the person gets a sentence of ours instead. And the one refusal the page can know about before it asks — a person with no trading account — is not thrown at all: <code>send</code> says so and returns, because a fact about the person is not a failure of the call.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">apps/web/src/routes/terminal/+page.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">async function cancel(clientOrderId: string) {
+	cancelError = null;
+
+	try {
+		await cancelOrder({ clientOrderId });
+	} catch (thrown) {
+		cancelError = messageFrom(thrown);
+	}
+}</code></pre>
+</figure>
+<aside class="callout callout--warn"><p>The first version had no <code>try</code> at all — <code>onclick={() =&gt; void cancelOrder(...)}</code>, straight from the button. Here the <code>void</code> was not a decision, it was a way of quietening the linter, and the rejection went to the console as an unhandled error while the screen showed a Cancel button that looked as if it had worked. Only a trader holds <code>cancel_order</code>, so four of the five roles that open the terminal are refused it — and three of them see a Cancel button they may not use: an auditor reads everything and changes nothing, and a risk manager's or firm admin's cancel is the firm-wide one. (The venue operator, the fourth, has no orders on this screen to cancel.) A cancel that silently does not happen is the expensive kind of nothing — somebody walks away believing an order is out of the book while it is still resting there.</p></aside>
+<p>The message is shown above the orders table with <code>role=&quot;alert&quot;</code>, not <code>role=&quot;status&quot;</code>, because the order it is about is still working: that is news somebody should hear now, not when the screen reader next has a moment.</p>
 <h3 id="form">form — progressive enhancement</h3>
 <p><code>form()</code> is <code>command()</code> for things that should work with JavaScript switched off. It takes the same schema, and it returns an object you spread onto a <code>&lt;form&gt;</code> element.</p>
 
@@ -160,16 +245,16 @@ const positiveInteger = v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValu
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">svelte</span>
+		<span class="code__file">apps/web/src/routes/+layout.svelte</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;form {...signOut}&gt;
-	&lt;button type=&quot;submit&quot;&gt;Sign out&lt;/button&gt;
+	&lt;button type=&quot;submit&quot; class=&quot;link&quot;&gt;Sign out&lt;/button&gt;
 &lt;/form&gt;</code></pre>
 </figure>
 <p>With JavaScript, that posts in the background and updates in place. Without it, the browser does a normal form submission and the <code>redirect(303, …)</code> sends you to the sign-in page. Same code, both worlds. Signing in and signing out are the two things that must never depend on a bundle having loaded, which is why they are forms and not commands.</p>
 <h3 id="live">query.live — streaming</h3>
-<p>The last kind takes an <strong>async generator</strong>, and everything it yields is pushed to every browser subscribed with the same arguments.</p>
+<p>The last kind takes an <strong>async generator</strong>, and everything it yields is streamed to the browser for as long as a component on the page is using it. Several components using the same live query share one connection; when the last of them goes away, the stream disconnects and the generator on the server is stopped.</p>
 
 <figure class="code">
 	<figcaption>
@@ -211,7 +296,7 @@ const positiveInteger = v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValu
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>
-	<ul><li>You can write a <code>query</code>, a <code>command</code>, a <code>form</code> and a <code>query.live</code></li><li>You can explain why every argument needs a schema even for your own page</li><li>You can explain what <code>.refresh()</code> inside a command saves you</li><li>You can explain why the live generator coalesces, and what <code>request.signal</code> prevents</li></ul>
+	<ul><li>You can write a <code>query</code>, a <code>command</code>, a <code>form</code> and a <code>query.live</code></li><li>You can explain why every argument needs a schema even for your own page</li><li>You can explain what <code>.refresh()</code> inside a command saves you</li><li>You can say where a refused command's message lives, why <code>instanceof Error</code> never finds it, and why <code>isHttpError</code> is the way to read it</li><li>You can explain why the live generator coalesces, and what <code>request.signal</code> prevents</li></ul>
 </aside>
 		</article>
 

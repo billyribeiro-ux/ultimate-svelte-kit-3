@@ -57,6 +57,15 @@ export interface VirtualizerOptions {
 	 * virtualizer ends up rendering two hundred rows.
 	 */
 	readonly overscan?: number;
+	/**
+	 * The viewport height to assume until the container has been measured.
+	 *
+	 * On the server nothing can be measured, so without this the first window
+	 * is the overscan alone and a server-rendered table opens nearly empty. The
+	 * browser starts from the same number, which keeps hydration matching what
+	 * the server sent, and measures the real height straight after.
+	 */
+	readonly viewport?: number;
 }
 
 export class Virtualizer {
@@ -96,6 +105,7 @@ export class Virtualizer {
 	constructor(options: VirtualizerOptions = {}) {
 		this.#estimate = options.estimate ?? 28;
 		this.#overscan = options.overscan ?? 3;
+		this.viewport = options.viewport ?? 0;
 	}
 
 	/** The best current guess for an unmeasured row. */

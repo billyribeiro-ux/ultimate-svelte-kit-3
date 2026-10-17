@@ -17,7 +17,7 @@
 #   docker run -e SESSION_SECRET=… -e DATABASE_URL=file:/data/abacus.db \
 #              -v abacus-data:/data -p 3000:3000 abacus
 
-ARG NODE_VERSION=24.20.0
+ARG NODE_VERSION=24.21.0
 
 # ---------------------------------------------------------------------------
 FROM node:${NODE_VERSION}-slim AS deps

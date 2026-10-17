@@ -239,7 +239,7 @@ export class Clock {
 		this.#counter = resume?.counter ?? 0;
 	}</code></pre>
 </figure>
-<aside class="callout callout--warn"><p>That comment about parameter properties is not padding. <code>constructor(readonly actor: ActorId)</code> is one of three TypeScript constructs — with <code>enum</code> and namespaces — that has to *emit* code rather than be erased. Node strips types without compiling them, so a file using it cannot be run with <code>node file.ts</code>, and <code>scripts/seed.ts</code> does exactly that with this module in its import graph. The failure is <code>ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX</code>, at runtime, from a file that type-checks perfectly.</p></aside>
+<aside class="callout callout--warn"><p>That comment about parameter properties is not padding. <code>constructor(readonly actor: ActorId)</code> is one of three TypeScript constructs — with <code>enum</code> and namespaces — that has to *emit* code rather than be erased. Node strips types without compiling them, so a file using it cannot be run with <code>node file.ts</code>, and <code>scripts/seed.ts</code> does exactly that with this module in its import graph. The failure is <code>ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX</code>, at runtime, from a file that would otherwise type-check perfectly — which is why chapter 03’s <code>tsconfig.json</code> sets <code>erasableSyntaxOnly</code>, and <code>pnpm check</code> refuses all three before Node ever sees them.</p></aside>
 
 <figure class="code">
 	<figcaption>
@@ -483,10 +483,10 @@ export function fakeClock(who: string, start = 1_000_000_000_000) {
 	</figcaption>
 	<pre><code>pnpm vitest run src/lib/crdt/clock.spec.ts
 
- ✓ src/lib/crdt/clock.spec.ts (18 tests) 6ms
+ ✓ src/lib/crdt/clock.spec.ts (19 tests) 6ms
 
  Test Files  1 passed (1)
-      Tests  18 passed (18)</code></pre>
+      Tests  19 passed (19)</code></pre>
 </figure>
 
 <aside class="callout callout--check">

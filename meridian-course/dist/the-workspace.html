@@ -34,34 +34,55 @@
 			<p class="eyebrow">Chapter 02</p>
 			<h1>A workspace of two</h1>
 			<p class="lede">The app at the root, the library it publishes in <code>packages/waypoint</code>, and the pnpm settings that make a workspace safe: <code>workspace:*</code>, <code>allowBuilds</code>, a minimum release age, and a <code>prepare</code> script that builds the library before the app can import it.</p>
-			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Read the workspace configuration and know why the app depends on its own library the way a stranger would, and what pnpm 11 refuses to do until you say so.</p></aside>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Read the workspace configuration and know why the app depends on its own library the way a stranger would, and what pnpm 12 refuses to do until you say so.</p></aside>
 			<p>The first seven projects were single packages. This one is a <strong>workspace</strong>: the SvelteKit app at the root, and a library in <code>packages/waypoint</code> that the app depends on as if it had downloaded it from the registry. That is not an affectation. A library that is only ever imported by relative path is never really tested as a library; the first outside consumer finds the missing <code>exports</code> entry, the <code>.ts</code> import that should have been <code>.js</code>, the type that was never emitted. Making the app the first consumer finds all of that on every build.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">pnpm-workspace.yaml<span class="code__lines">:1-18</span></span>
+		<span class="code__file">pnpm-workspace.yaml<span class="code__lines">:1-39</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts"># A workspace of two: the app at the root, and the library it publishes in
+	<pre><code class="lang-yaml"># A workspace of two: the app at the root, and the library it publishes in
 # `packages/waypoint`. The app depends on the library as `workspace:*`, which
 # links the folder rather than downloading a tarball — so the app is the
 # library's first consumer, and the packaging is proved on every build.
 packages:
   - 'packages/*'
 
-# pnpm 11 refuses to run a dependency's install scripts unless you say so by
+# pnpm refuses to run a dependency's install scripts unless you say so by
 # name, which is the correct default: `postinstall` is arbitrary code from a
 # transitive dependency you have never read. esbuild needs it to unpack its
-# platform binary, and Vite needs esbuild.
+# platform binary, and Vite needs esbuild. (pnpm 12 also fails the install on
+# a key in this file it does not recognise, so every setting here is checked.)
 allowBuilds:
   esbuild: true
 
+# pnpm can refuse a version published less than `minimumReleaseAge` ago, so a
+# malicious release has time to be noticed and pulled before it reaches you.
+# These are the versions taken inside that window on purpose — each one was
+# the release that made the toolchain below line up — named so the policy
+# lets exactly them through and nothing else.
 minimumReleaseAgeExclude:
   - '@libsql/client@0.18.0'
   - '@libsql/core@0.18.0'
-  - maplibre-gl@6.7.0</code></pre>
+  - maplibre-gl@6.13.0
+  - '@types/node@24.19.2'
+  - eslint-plugin-svelte@3.23.1
+  - phosphor-svelte@3.1.1
+
+# Two libraries declare `@sveltejs/kit` as an *optional* peer and have not
+# widened the range past 2 yet: Better Auth 1.7.7 (`^2.0.0`) and runed 0.37.1
+# (`^2.21.0`). Both use only what did not change in Kit 3 — `svelteKitHandler`
+# takes `resolve` and `building` as arguments, runed reads `$app/state` — and
+# both are proved against 3.0.1 by the end-to-end suite, so the warning is
+# noise rather than information. Remove each line when its release notes say
+# &quot;SvelteKit 3&quot;; `pnpm peers check` will tell you when it is time.
+peerDependencyRules:
+  allowedVersions:
+    'better-auth&gt;@sveltejs/kit': '3'
+    'runed&gt;@sveltejs/kit': '3'</code></pre>
 </figure>
-<p>Three settings, each a decision. <code>packages</code> names the folders. <code>allowBuilds</code> is pnpm 11’s answer to supply-chain attacks through install scripts: a dependency’s <code>postinstall</code> does not run unless you name the package, so a compromised transitive package cannot run code on your machine by being installed. esbuild needs its script to unpack a platform binary, and Vite needs esbuild; nothing else in this tree is allowed to run anything. <code>minimumReleaseAgeExclude</code> is the other half of the same policy — pnpm can refuse versions published less than some number of days ago, so a malicious release has time to be noticed and pulled before it reaches you, and this list is the three packages we deliberately took on the day they shipped.</p>
+<p>Four settings, each a decision. <code>packages</code> names the folders. <code>allowBuilds</code> is pnpm’s answer to supply-chain attacks through install scripts (and pnpm 12 fails the install on a key in this file it does not recognise, so every setting here is one it checks): a dependency’s <code>postinstall</code> does not run unless you name the package, so a compromised transitive package cannot run code on your machine by being installed. esbuild needs its script to unpack a platform binary, and Vite needs esbuild; nothing else in this tree is allowed to run anything. <code>minimumReleaseAgeExclude</code> is the other half of the same policy — pnpm can refuse versions published less than some number of days ago, so a malicious release has time to be noticed and pulled before it reaches you, and this list is the six versions we deliberately took inside that window — each the release that made the toolchain line up — named so the policy lets exactly them through. <code>peerDependencyRules</code> is the one setting that exists because of the move to SvelteKit 3. Better Auth 1.7.7 and runed 0.37.1 both declare <code>@sveltejs/kit</code> as an *optional* peer and have not widened the range past 2 yet; both use only what did not change in Kit 3 — <code>svelteKitHandler</code> takes <code>resolve</code> and <code>building</code> as arguments, runed reads <code>$app/state</code> — and both are proved against 3.0.1 by the end-to-end suite, so <code>allowedVersions</code> tells pnpm that a 3 satisfies those two peers and <code>pnpm peers check</code> stays clean. Each line is deleted the day its library’s release notes say “SvelteKit 3”, and the check is what says when. A rule like this is never written to make a warning go away; it is written when the warning has been investigated and found to be noise, and the comment above it has to say so.</p>
 <aside class="callout callout--note"><p>If you have never seen <code>allowBuilds</code> fail: run <code>pnpm install</code> on a fresh clone with it removed and watch pnpm list the packages that *wanted* to run scripts and were not allowed to. That list is worth reading once. Most of it is telemetry.</p></aside>
 <h3 id="the-scripts">The scripts</h3>
 
@@ -79,14 +100,14 @@ minimumReleaseAgeExclude:
 	&quot;prepare&quot;: &quot;pnpm run package &amp;&amp; pnpm run i18n &amp;&amp; svelte-kit sync || echo ''&quot;,
 	&quot;package&quot;: &quot;pnpm --filter @meridian/waypoint run package&quot;,
 	&quot;i18n&quot;: &quot;paraglide-js compile --project ./project.inlang --outdir ./src/lib/paraglide --emit-ts-declarations --strategy url cookie preferredLanguage baseLocale&quot;,
-	&quot;check&quot;: &quot;pnpm run i18n --silent &amp;&amp; svelte-kit sync &amp;&amp; svelte-check --tsconfig ./tsconfig.json --compiler-warnings \&quot;options_missing_custom_element:ignore\&quot;&quot;,
-	&quot;check:watch&quot;: &quot;svelte-kit sync &amp;&amp; svelte-check --tsconfig ./tsconfig.json --compiler-warnings \&quot;options_missing_custom_element:ignore\&quot; --watch&quot;,
-	&quot;lint&quot;: &quot;prettier --check . &amp;&amp; eslint .&quot;,
+	&quot;check&quot;: &quot;pnpm run i18n --silent &amp;&amp; svelte-kit sync &amp;&amp; svelte-check --tsconfig ./tsconfig.json&quot;,
+	&quot;check:watch&quot;: &quot;svelte-kit sync &amp;&amp; svelte-check --tsconfig ./tsconfig.json --watch&quot;,
+	&quot;lint&quot;: &quot;prettier --check . &amp;&amp; eslint . &amp;&amp; node scripts/contrast.ts&quot;,
 	&quot;format&quot;: &quot;prettier --write .&quot;,
 	&quot;test:unit&quot;: &quot;vitest&quot;,
 	&quot;test&quot;: &quot;npm run test:unit -- --run &amp;&amp; npm run test:e2e&quot;,
 	&quot;test:e2e&quot;: &quot;playwright test&quot;,
-	&quot;verify&quot;: &quot;npm run check &amp;&amp; npm run lint &amp;&amp; npm run test:unit -- --run &amp;&amp; npm run build &amp;&amp; npm run test:e2e&quot;,
+	&quot;verify&quot;: &quot;npm run check &amp;&amp; npm run lint &amp;&amp; npm run test:unit -- --run &amp;&amp; npm run build &amp;&amp; node scripts/bundle-guard.ts &amp;&amp; npm run test:e2e&quot;,
 	&quot;verify:package&quot;: &quot;pnpm --filter @meridian/waypoint run verify&quot;,
 	&quot;db:push&quot;: &quot;drizzle-kit push&quot;,
 	&quot;db:generate&quot;: &quot;drizzle-kit generate&quot;,
@@ -96,12 +117,12 @@ minimumReleaseAgeExclude:
 },</code></pre>
 </figure>
 <p>The order of operations is the whole story of this file. <code>prepare</code> runs after <code>pnpm install</code>, and it does three things the app cannot start without: it builds the library (<code>package</code>), so <code>@meridian/waypoint</code> resolves to real files in <code>packages/waypoint/dist</code>; it compiles the messages (<code>i18n</code>), so <code>#lib/paraglide/messages.js</code> exists to be imported; and it runs <code>svelte-kit sync</code>, so the generated types exist. The <code>|| echo &quot;&quot;</code> on the end is for the one situation where any of those fails on purpose — a Docker build that installs dependencies before it copies the source — and chapter 44 shows the Dockerfile running the three steps itself, explicitly, once the source is there.</p>
-<p><code>build</code> and <code>dev</code> both start with <code>build:element</code>: the standalone custom element is a second Vite build into <code>static/embed</code>, and it has to exist before SvelteKit copies <code>static/</code> into the output. <code>check</code> compiles the messages first for the same reason <code>prepare</code> does, then passes one compiler-warnings flag whose reason is chapter 36. <code>verify</code> is the whole gate — type-check, lint, unit and browser tests, the production build, the end-to-end suite — and CI runs exactly that command, so what is green locally is green there.</p>
+<p><code>build</code> and <code>dev</code> both start with <code>build:element</code>: the standalone custom element is a second Vite build into <code>static/embed</code>, and it has to exist before SvelteKit copies <code>static/</code> into the output. <code>check</code> compiles the messages first for the same reason <code>prepare</code> does, then type-checks the whole project with no warning silenced. (It used to pass one flag to quieten the custom element; chapter 36 says why the element stopped needing it.) <code>verify</code> is the whole gate — type-check; lint, which ends by checking every colour pair in the tokens for contrast (chapter 22); unit and browser tests; the production build; the bundle guard, which reads what that build produced (chapter 42); the end-to-end suite — and CI runs exactly that command, so what is green locally is green there. The two <code>node scripts/…</code> steps run TypeScript directly: Node 24 strips the types, so a script needs no build step and no runner of its own.</p>
 <h3 id="dependencies">What is in the box</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">package.json<span class="code__lines">:67-102</span></span>
+		<span class="code__file">package.json<span class="code__lines">:69-105</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-json">&quot;dependencies&quot;: {
@@ -111,29 +132,30 @@ minimumReleaseAgeExclude:
 	&quot;@libsql/client&quot;: &quot;^0.18.0&quot;,
 	&quot;@meridian/waypoint&quot;: &quot;workspace:*&quot;,
 	&quot;@opentelemetry/api&quot;: &quot;^1.9.1&quot;,
-	&quot;@opentelemetry/core&quot;: &quot;^2.11.0&quot;,
-	&quot;@opentelemetry/sdk-trace-base&quot;: &quot;^2.11.0&quot;,
-	&quot;@opentelemetry/sdk-trace-node&quot;: &quot;^2.11.0&quot;,
-	&quot;@tanstack/svelte-table&quot;: &quot;^9.2.4&quot;,
-	&quot;@threlte/core&quot;: &quot;^8.6.0&quot;,
-	&quot;@threlte/extras&quot;: &quot;^9.21.1&quot;,
-	&quot;@tiptap/core&quot;: &quot;^3.31.0&quot;,
-	&quot;@tiptap/pm&quot;: &quot;^3.31.0&quot;,
-	&quot;@tiptap/starter-kit&quot;: &quot;^3.31.0&quot;,
-	&quot;better-auth&quot;: &quot;^1.7.2&quot;,
-	&quot;bits-ui&quot;: &quot;^2.19.0&quot;,
-	&quot;drizzle-orm&quot;: &quot;^0.45.2&quot;,
+	&quot;@opentelemetry/core&quot;: &quot;^2.12.0&quot;,
+	&quot;@opentelemetry/sdk-trace-base&quot;: &quot;^2.12.0&quot;,
+	&quot;@opentelemetry/sdk-trace-node&quot;: &quot;^2.12.0&quot;,
+	&quot;@tanstack/svelte-table&quot;: &quot;^9.2.8&quot;,
+	&quot;@threlte/core&quot;: &quot;^8.6.1&quot;,
+	&quot;@threlte/extras&quot;: &quot;^9.22.0&quot;,
+	&quot;@tiptap/core&quot;: &quot;^3.31.4&quot;,
+	&quot;@tiptap/extension-placeholder&quot;: &quot;^3.31.4&quot;,
+	&quot;@tiptap/pm&quot;: &quot;^3.31.4&quot;,
+	&quot;@tiptap/starter-kit&quot;: &quot;^3.31.4&quot;,
+	&quot;better-auth&quot;: &quot;^1.7.7&quot;,
+	&quot;bits-ui&quot;: &quot;^2.19.5&quot;,
+	&quot;drizzle-orm&quot;: &quot;^0.45.4&quot;,
 	&quot;gsap&quot;: &quot;^3.15.0&quot;,
-	&quot;layerchart&quot;: &quot;^2.3.1&quot;,
-	&quot;maplibre-gl&quot;: &quot;^6.7.0&quot;,
-	&quot;phosphor-svelte&quot;: &quot;^3.1.0&quot;,
+	&quot;layerchart&quot;: &quot;^2.6.0&quot;,
+	&quot;maplibre-gl&quot;: &quot;^6.13.0&quot;,
+	&quot;phosphor-svelte&quot;: &quot;^3.1.1&quot;,
 	&quot;runed&quot;: &quot;^0.37.1&quot;,
-	&quot;svelte-dnd-action&quot;: &quot;^0.9.79&quot;,
-	&quot;svelte-maplibre&quot;: &quot;^2.0.0&quot;,
+	&quot;svelte-dnd-action&quot;: &quot;^0.9.80&quot;,
+	&quot;svelte-maplibre&quot;: &quot;^2.0.1&quot;,
 	&quot;svelte-sonner&quot;: &quot;^1.2.1&quot;,
-	&quot;three&quot;: &quot;^0.185.1&quot;,
+	&quot;three&quot;: &quot;^0.186.1&quot;,
 	&quot;topojson-client&quot;: &quot;^3.1.0&quot;,
-	&quot;valibot&quot;: &quot;^1.4.2&quot;,
+	&quot;valibot&quot;: &quot;^1.5.0&quot;,
 	&quot;world-atlas&quot;: &quot;^2.0.2&quot;
 },
 &quot;imports&quot;: {
@@ -141,7 +163,7 @@ minimumReleaseAgeExclude:
 	&quot;#lib/*&quot;: &quot;./src/lib/*&quot;
 }</code></pre>
 </figure>
-<p>Forty-odd dependencies is more than any earlier project, and every one is here because a chapter needed it. The one to look at now is <code>&quot;@meridian/waypoint&quot;: &quot;workspace:*&quot;</code> — the protocol tells pnpm to link the folder rather than fetch a tarball, and to replace the specifier with the real version if this package were ever published. The <code>imports</code> map at the bottom is Node’s subpath-imports feature: <code>#lib/...</code> resolves to <code>src/lib/...</code> in Node, in Vite and in TypeScript alike, which is why this project has no <code>$lib</code> alias and no <code>paths</code> in its tsconfig. (SvelteKit 3 still supplies <code>$lib</code>; the project prefers the standard.)</p>
+<p>Forty-odd dependencies is more than any earlier project, and every one is here because a chapter needed it. The one to look at now is <code>&quot;@meridian/waypoint&quot;: &quot;workspace:*&quot;</code> — the protocol tells pnpm to link the folder rather than fetch a tarball, and to replace the specifier with the real version if this package were ever published. The <code>imports</code> map at the bottom is Node’s subpath-imports feature: <code>#lib/...</code> resolves to <code>src/lib/...</code> in Node, in Vite and in TypeScript alike, which is why this project has no <code>$lib</code> alias and no <code>paths</code> in its tsconfig. (SvelteKit 3 no longer generates <code>$lib</code> at all; <code>#lib</code> is the standard it points you to, extensions and all.)</p>
 
 <figure class="code">
 	<figcaption>
@@ -157,7 +179,7 @@ minimumReleaseAgeExclude:
 		<span class="code__file">terminal</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code>$ corepack enable            # pnpm 11, pinned by &quot;packageManager&quot;
+	<pre><code>$ corepack enable            # pnpm 12.10.1, pinned by &quot;packageManager&quot;
 $ pnpm install               # installs both packages, then runs prepare:
                              #   svelte-package → packages/waypoint/dist
                              #   paraglide-js compile → src/lib/paraglide

@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { page } from '$app/state';
+	import type { PageProps } from './$types';
+
+	let { params }: PageProps = $props();
 
 	/**
 	 * The embed host page.
@@ -33,7 +35,7 @@
 		The element is used exactly as a host page would use it: an unknown tag with
 		plain attributes. Svelte has no idea what this is, which is the point.
 	-->
-	<tessera-board board={page.params.board} height="420"></tessera-board>
+	<tessera-board board={params.board} height="420"></tessera-board>
 {/if}
 
 <style>

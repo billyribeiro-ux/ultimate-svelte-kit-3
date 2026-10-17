@@ -7,6 +7,19 @@
 	import { signIn } from './auth.remote.ts';
 
 	const redirectTo = $derived(page.url.searchParams.get('redirectTo') ?? '/manage');
+
+	/*
+	 * The refusals that belong to the form as a whole, and only those.
+	 *
+	 * `allIssues()` is every issue in the form, the email's own included, so an
+	 * alert built straight from it repeated "Enter the email address you signed
+	 * up with" beside the field that already said it — two `role="alert"`
+	 * regions, both read aloud. A form-level issue, the kind `invalid('…')`
+	 * makes from a plain string, is the one with an empty `path`.
+	 */
+	const formIssues = $derived(
+		signIn.fields.allIssues()?.filter((issue) => issue.path.length === 0)
+	);
 </script>
 
 <svelte:head>
@@ -28,9 +41,9 @@
 		-->
 		<input {...signIn.fields.redirectTo.as('hidden', redirectTo)} />
 
-		{#if signIn.fields.allIssues()?.length}
+		{#if formIssues?.length}
 			<Alert tone="error" title="We could not sign you in">
-				<p>{signIn.fields.allIssues()?.[0]?.message}</p>
+				<p>{formIssues[0]?.message}</p>
 			</Alert>
 		{/if}
 
@@ -46,10 +59,10 @@
 			{/snippet}
 		</Field>
 
-		<Field label="Password" required error={signIn.fields.password.issues()?.[0]?.message}>
+		<Field label="Password" required error={signIn.fields._password.issues()?.[0]?.message}>
 			{#snippet children({ id, describedBy, invalid })}
 				<input
-					{...signIn.fields.password.as('password')}
+					{...signIn.fields._password.as('password')}
 					{id}
 					aria-describedby={describedBy}
 					aria-invalid={invalid}

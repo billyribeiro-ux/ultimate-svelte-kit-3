@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { match, resolve } from '$app/paths';
 	import { page } from '$app/state';
+	import type { ResolvedPathname } from '$app/types';
 	import { FingerprintIcon, KeyIcon } from 'phosphor-svelte';
 	import Section from '#lib/components/Section.svelte';
 	import {
@@ -30,13 +32,29 @@
 		return wanted.startsWith('/') && !wanted.startsWith('//') ? wanted : '/sheets';
 	});
 
+	/**
+	 * `?next=` is a string somebody else wrote. SvelteKit 3's `goto` rejects a
+	 * URL that is not one of this app's routes — right for a typo in code,
+	 * wrong for a stale bookmark, which should land somewhere rather than in a
+	 * rejected promise. `match()` asks the router (the server, under
+	 * `resolution: 'server'`) whether `next` is a route. If it is, `next` *is*
+	 * a `ResolvedPathname` — a pathname of this app, base path included —
+	 * and the cast states what `match` just established, which is also the
+	 * type eslint-plugin-svelte's `no-navigation-without-resolve` accepts.
+	 * If not, the workspace is the sensible place to arrive.
+	 */
+	async function leave() {
+		const target = (await match(next)) ? (next as ResolvedPathname) : resolve('/(app)/sheets');
+		await goto(target);
+	}
+
 	async function register(event: SubmitEvent) {
 		event.preventDefault();
 		busy = 'register';
 		try {
 			const user = await registerPasskey(name);
 			toast(`Welcome, ${user.name}`);
-			await goto(next);
+			await leave();
 		} catch (e) {
 			toast(explain(e), 'error');
 		} finally {
@@ -49,7 +67,7 @@
 		try {
 			const user = await signInWithPasskey();
 			toast(`Welcome back, ${user.name}`);
-			await goto(next);
+			await leave();
 		} catch (e) {
 			toast(explain(e), 'error');
 		} finally {

@@ -90,7 +90,7 @@
 	&quot;verify&quot;: &quot;npm run check &amp;&amp; npm run test &amp;&amp; npm run package &amp;&amp; npm run package:check&quot;
 },</code></pre>
 </figure>
-<p><code>svelte</code> is a peer dependency — a library must use the consumer’s copy, never bring its own. The <code>package</code> script runs <code>svelte-kit sync</code> first because <code>svelte-package</code> needs the generated ambient types to build declarations. <code>package:check</code> is two tools and three commands, and each one caught something during development: publint found the missing <code>types</code> condition; arethetypeswrong found that the root entry’s <code>.d.ts</code> imports <code>.svelte</code> files, which Node 16’s resolver would refuse — real, and unfixable while a <code>.d.ts</code> re-exports a component, so the rule is ignored for the root entry only and enforced for <code>./geo</code>.</p>
+<p><code>svelte</code> is a peer dependency — a library must use the consumer’s copy, never bring its own. Its range, <code>^5.0.0</code>, is the widest the library supports, and it is a promise kept by reading the source: runes in a class, <code>$derived.by</code>, <code>$state.snapshot</code> — nothing that arrived after 5.0. That is why the two components build their <code>class</code> as a string rather than as <code>class={[…]}</code>, which arrived in 5.16: the most idiomatic line in the file would quietly have narrowed who can install it. The devDependency, <code>^5.57.2</code>, is the version the library is *tested* with; the peer range is the one it *promises*, and the two are allowed to differ. The <code>package</code> script runs <code>svelte-kit sync</code> first because <code>svelte-package</code> needs the generated ambient types to build declarations. <code>package:check</code> is two tools and three commands, and each one caught something during development: publint found the missing <code>types</code> condition; arethetypeswrong found that the root entry’s <code>.d.ts</code> imports <code>.svelte</code> files, which Node 16’s resolver would refuse — real, and unfixable while a <code>.d.ts</code> re-exports a component, so the rule is ignored for the root entry only and enforced for <code>./geo</code>.</p>
 
 <figure class="code">
 	<figcaption>
@@ -127,7 +127,8 @@ export default defineConfig({
 		projects: [
 			{
 				// The components and the reactive `Route` class, in a real browser.
-				extends: './vite.config.ts',
+				// No `extends`: since Vitest 5 an inline project inherits the config
+				// that declares it, plugins included, unless it says `extends: false`.
 				test: {
 					name: 'client',
 					browser: {
@@ -140,7 +141,6 @@ export default defineConfig({
 			},
 			{
 				// The geodesy: pure functions, plain Node.
-				extends: './vite.config.ts',
 				test: {
 					name: 'server',
 					environment: 'node',

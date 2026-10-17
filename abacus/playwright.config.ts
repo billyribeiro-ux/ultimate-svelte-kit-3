@@ -72,7 +72,7 @@ export default defineConfig({
 		 * against the request origin at run time. A mismatch is a 403 on every
 		 * form submission, and the passkey relying-party id comes from it too.
 		 */
-		command: 'node scripts/prepare-e2e-db.js && npm run build && node build/index.js',
+		command: 'node scripts/prepare-e2e-db.js && pnpm run build && node build/index.js',
 		port: 4173,
 		reuseExistingServer: !process.env.CI,
 		timeout: 240_000,
@@ -80,7 +80,14 @@ export default defineConfig({
 			DATABASE_URL: 'file:e2e.db',
 			PUBLIC_ORIGIN: 'http://localhost:4173',
 			SESSION_SECRET: 'e2e-only-secret-of-at-least-thirty-two-characters',
-			CELL_LIMIT: '50000',
+			/*
+			 * The smallest limit `src/env.ts` accepts. A real deployment sets
+			 * hundreds of thousands; the suite sets a thousand so that one test can
+			 * cross it with a 1,200-cell CSV and see what a refused save looks like.
+			 * No other test comes near it: the largest template, the loan
+			 * schedule, has under two hundred cells.
+			 */
+			CELL_LIMIT: '1000',
 			PORT: '4173'
 		}
 	}

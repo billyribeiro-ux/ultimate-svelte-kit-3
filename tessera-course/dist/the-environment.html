@@ -36,7 +36,7 @@
 			<p class="lede"><code>src/env.ts</code> and <code>defineEnvVars</code> — declaring every variable once, validating at boot, and making a secret in the browser something you have to type on purpose.</p>
 			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Set up configuration that fails at start-up with a clear message rather than at 3am with a missing value.</p></aside>
 			<p>SvelteKit 2 had four magic modules: <code>$env/static/private</code>, <code>$env/dynamic/private</code>, and public versions of both. They worked, and they had two rough edges — a typo in a variable name was <code>undefined</code> rather than an error, and whether a value was allowed in the browser depended on remembering a naming convention.</p>
-<p>SvelteKit 3 replaced all four with one file.</p>
+<p>SvelteKit 3 deprecates all four — they still work, and they go in SvelteKit 4 — in favour of one file.</p>
 
 <figure class="code">
 	<figcaption>
@@ -46,7 +46,9 @@
 	<pre><code class="lang-ts">/**
  * Every environment variable this app reads, declared once.
  *
- * SvelteKit 3 replaced the `$env/*` magic modules with this file. A variable not
+ * SvelteKit 3 deprecated the `$env/*` modules in favour of this file — they
+ * still work, and are removed in SvelteKit 4 — and every variable it declares is
+ * imported from `$app/env/private` or `$app/env/public`. A variable not
  * declared here cannot be imported — a type error at build time rather than an
  * `undefined` that surfaces in production three weeks later — and `public: true`
  * is something you have to type, so a secret cannot reach the browser by
@@ -65,6 +67,7 @@ export const variables = defineEnvVars({
 	DATABASE_URL: {</code></pre>
 </figure>
 <p>A variable not in this file <strong>cannot be imported</strong>. Not &quot;imports as nothing&quot; — the import does not typecheck. That single change moves a whole category of production incident to the moment you type the wrong name.</p>
+<aside class="callout callout--note"><p>The values themselves are imported from <code>$app/env/private</code> and <code>$app/env/public</code> — <code>import { DATABASE_URL } from '$app/env/private'</code> — and only names declared here exist in those modules. An older project will still be full of <code>$env/static/private</code>. That is not a bug: the four old modules are deprecated in SvelteKit 3, still work, and are removed in SvelteKit 4. It is a migration still to do.</p></aside>
 <h3 id="the-flags">What you declare, and why</h3>
 
 <figure class="code">
@@ -99,7 +102,7 @@ PUBLIC_ORIGIN: {
 
 BETTER_AUTH_SECRET: {</code></pre>
 </figure>
-<ul><li><strong><code>schema</code></strong> — a valibot schema, run once at boot against the real environment. <code>DATABASE_URL=&quot;&quot;</code> stops the server starting with a clear message instead of producing an unopenable database three layers down.</li><li><strong><code>public: true</code></strong> — allowed in the browser. Absent by default, so a secret reaching the client requires somebody to *type the word public*. That is a much better failure surface than a naming convention.</li><li><strong><code>static: true</code></strong> — inlined at build time rather than read from <code>process.env</code> per request. <code>PUBLIC_ORIGIN</code> has to be static: <code>vite.config.ts</code> reads the same variable during the build, and a value that could differ between build and run would make the CSRF check compare two different origins.</li></ul>
+<ul><li><strong><code>schema</code></strong> — a valibot schema, run once at boot against the real environment. <code>DATABASE_URL=&quot;&quot;</code> stops the server starting with a clear message instead of producing an unopenable database three layers down.</li><li><strong><code>public: true</code></strong> — allowed in the browser. Absent by default, so a secret reaching the client requires somebody to *type the word public*. That is a much better failure surface than a naming convention.</li><li><strong><code>static: true</code></strong> — inlined at build time rather than read from the environment when the server starts. <code>PUBLIC_ORIGIN</code> has to be static: <code>vite.config.ts</code> reads the same variable during the build, and a value that could differ between build and run would make the CSRF check compare two different origins.</li></ul>
 <p>Notice the schema does more than check. <code>v.transform</code> strips trailing slashes, because <code>https://tessera.app/</code> and <code>https://tessera.app</code> are the same origin to a person and different strings to a comparison — and this value is compared against an <code>Origin</code> header on every state-changing request. Normalise once, here, rather than remembering to normalise at every use.</p>
 
 <figure class="code">
@@ -142,13 +145,13 @@ BETTER_AUTH_SECRET: {</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">ts</span>
+		<span class="code__file">src/lib/server/auth.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">import { DATABASE_URL } from '$env/private';
-import { PUBLIC_ORIGIN } from '$env/public';</code></pre>
+	<pre><code class="lang-ts">import { BETTER_AUTH_SECRET } from '$app/env/private';
+import { PUBLIC_ORIGIN } from '$app/env/public';</code></pre>
 </figure>
-<p>Two modules, typed from your declarations. Import a private variable in a file that reaches the browser and the build fails, naming the file and the import chain that got it there.</p>
+<p>Two modules, typed from your declarations — here at the top of the authentication module, which needs one of each. Private variables come from <code>$app/env/private</code>, and anything declared <code>public: true</code> from <code>$app/env/public</code>. Both sit under <code>$app/env</code>, beside <code>browser</code>, <code>building</code>, <code>dev</code> and <code>version</code>, which SvelteKit 3 moved there from the old <code>$app/environment</code>. Import a private variable in a file that reaches the browser and the build fails, naming the file and the import chain that got it there.</p>
 
 <figure class="code code--terminal">
 	<figcaption>
@@ -158,8 +161,10 @@ import { PUBLIC_ORIGIN } from '$env/public';</code></pre>
 	<pre><code># .env — never committed
 DATABASE_URL=file:local.db
 PUBLIC_ORIGIN=http://localhost:5173
-BETTER_AUTH_SECRET=$(openssl rand -base64 32)</code></pre>
+# paste the output of: openssl rand -base64 32
+BETTER_AUTH_SECRET=</code></pre>
 </figure>
+<p>Run <code>openssl rand -base64 32</code> in your shell and paste what it prints after <code>BETTER_AUTH_SECRET=</code>. Do not put the command itself in the file. <code>.env</code> is read as plain <code>NAME=value</code> lines, not run as a shell script, so <code>$(openssl rand -base64 32)</code> would arrive as those 26 characters of literal text, and the schema above, which wants at least 32, would refuse to start the server. Left empty, it refuses too, with a message naming the variable. That is this chapter working as intended.</p>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>

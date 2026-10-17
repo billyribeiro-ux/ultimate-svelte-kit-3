@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 
 	/**
@@ -26,7 +27,7 @@
 	<h1>A blog post about a groove</h1>
 	<p>Here is the pattern I was talking about. Press play.</p>
 	<ostinato-player pattern={id}></ostinato-player>
-	<p><a href="/">← Back to Ostinato</a></p>
+	<p><a href={resolve('/(app)')}>← Back to Ostinato</a></p>
 </main>
 
 <style>

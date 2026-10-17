@@ -137,10 +137,12 @@ textarea {
 }
 
 /*
- * The one rule the whole motion system rests on. Every transition and
- * animation in the app is either a Svelte transition (which reads the same
- * preference through `prefersReducedMotion`) or a CSS one, and this makes the
- * CSS ones instantaneous for anybody who asked.
+ * Half of the motion system. This makes every CSS transition and animation
+ * instantaneous for anybody who asked for reduced motion. It cannot reach the
+ * other half: Svelte plays `transition:`, `in:`, `out:` and `animate:` with
+ * the Web Animations API (`element.animate`), which no stylesheet rule
+ * shortens — so every one of those reads `prefersReducedMotion` from
+ * `svelte/motion` and asks for a zero duration itself.
  */
 @media (prefers-reduced-motion: reduce) {
 	*,

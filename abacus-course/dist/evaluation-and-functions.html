@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Evaluation and the function library — Building Abacus</title>
-<meta name="description" content="The evaluator walks the tree with a `Context` and knows nothing about sheets. Fifty functions register themselves in a `Map`, receive their arguments as thunks so `IF` is lazy, and share a few coercion helpers.">
+<meta name="description" content="The evaluator walks the tree with a Context and knows nothing about sheets. Fifty functions register themselves in a Map, receive their arguments as thunks so IF is lazy, and share a few coercion helpers.">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -38,7 +38,7 @@
 			
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/formula/evaluate.ts<span class="code__lines">:1-43</span></span>
+		<span class="code__file">src/lib/formula/evaluate.ts<span class="code__lines">:1-42</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -49,8 +49,7 @@
  * cells it needs come through a `Context`, which the engine provides — and a
  * test provides a `Map`. That separation is what makes the language testable
  * in a millisecond, and what lets the same evaluator run in the engine, in
- * the `$derived` demonstration of chapter 12, and on the server for a
- * published sheet.
+ * the `$derived` lesson, and on the server for a published sheet.
  */
 
 import type { CellRef, Node, RangeRef } from './ast.ts';
@@ -89,7 +88,7 @@ export const MAX_RANGE_CELLS = 1_000_000;</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/formula/evaluate.ts<span class="code__lines">:45-94</span></span>
+		<span class="code__file">src/lib/formula/evaluate.ts<span class="code__lines">:44-93</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">export function evaluate(node: Node, ctx: Context): Value {
@@ -143,11 +142,11 @@ export const MAX_RANGE_CELLS = 1_000_000;</code></pre>
 	}
 }</code></pre>
 </figure>
-<p>The <code>call</code> branch is the one to read slowly. A function receives its arguments as <strong>thunks</strong> — <code>() =&gt; evaluate(arg, ctx)</code> — not as values. <code>IF</code> must not evaluate the branch it does not take (it might be <code>1/0</code>), and <code>IFERROR</code> must be able to *catch* an error rather than receive it. Laziness costs a closure per argument and buys the semantics every spreadsheet has.</p>
+<p>The <code>call</code> branch is the one to read slowly. A function receives its arguments as <strong>thunks</strong> — <code>() =&gt; evaluate(arg, ctx)</code> — not as values. <code>IF</code> must not evaluate the branch it does not take (it might be <code>1/0</code>), and <code>IFERROR</code> must be able to <em>catch</em> an error rather than receive it. Laziness costs a closure per argument and buys the semantics every spreadsheet has.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/formula/evaluate.ts<span class="code__lines">:96-107</span></span>
+		<span class="code__file">src/lib/formula/evaluate.ts<span class="code__lines">:95-106</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">function rangeValue(range: RangeRef, ctx: Context): Value {
@@ -167,7 +166,7 @@ export const MAX_RANGE_CELLS = 1_000_000;</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/formula/evaluate.ts<span class="code__lines">:109-168</span></span>
+		<span class="code__file">src/lib/formula/evaluate.ts<span class="code__lines">:108-167</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">function binary(op: string, left: Value, right: Value): Value {
@@ -326,7 +325,7 @@ function numbers(values: Value[]): number[] | ErrorValue {
 	return out;
 }</code></pre>
 </figure>
-<p><code>numbers</code> is the rule that makes <code>SUM(A1:A3)</code> ignore a heading in A1 while <code>SUM(&quot;3&quot;, TRUE)</code> is 4: in a *range*, only numbers count; a *scalar* argument is coerced. Both are what every spreadsheet does, and they are different rules, so they are written as two branches rather than one clever one.</p>
+<p><code>numbers</code> is the rule that makes <code>SUM(A1:A3)</code> ignore a heading in A1 while <code>SUM(&quot;3&quot;, TRUE)</code> is 4: in a <em>range</em>, only numbers count; a <em>scalar</em> argument is coerced. Both are what every spreadsheet does, and they are different rules, so they are written as two branches rather than one clever one.</p>
 
 <figure class="code">
 	<figcaption>
@@ -696,7 +695,7 @@ export function highlights(source: string): Highlight[] {
 	return out;
 }</code></pre>
 </figure>
-<p>The formula bar colours references while a formula is *being typed*, and a formula being typed is unfinished more often than not: <code>=SUM(A1:</code> does not parse. So this works from tokens, not from the tree, and the colours do not vanish at every keystroke that makes the text unparseable. The hue cycles through six, defined in <code>tokens.css</code>, and the same hue outlines the range on the grid.</p>
+<p>The formula bar colours references while a formula is <em>being typed</em>, and a formula being typed is unfinished more often than not: <code>=SUM(A1:</code> does not parse. So this works from tokens, not from the tree, and the colours do not vanish at every keystroke that makes the text unparseable. The hue cycles through six, defined in <code>tokens.css</code>, and the same hue outlines the range on the grid.</p>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>

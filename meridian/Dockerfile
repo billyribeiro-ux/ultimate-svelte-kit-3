@@ -17,7 +17,7 @@
 #   docker run -e BETTER_AUTH_SECRET=… -e DATABASE_URL=file:/data/meridian.db \
 #              -v meridian-data:/data -p 3000:3000 meridian
 
-ARG NODE_VERSION=24.20.0
+ARG NODE_VERSION=24.21.0
 
 # ---------------------------------------------------------------------------
 FROM node:${NODE_VERSION}-slim AS deps
@@ -55,8 +55,9 @@ RUN pnpm run package && pnpm run i18n && pnpm exec svelte-kit sync && pnpm run b
 
 # Production dependencies only, for the runtime stage. `--prod` drops
 # everything under devDependencies: the compilers, the test runners, drizzle-kit.
-# `CI=true` because pnpm 11 asks before it purges a modules directory and, with
-# no terminal to ask on, aborts instead — the first CI run of this file found that.
+# `CI=true` because pnpm asks before it purges a modules directory (11 did,
+# 12 still does) and, with no terminal to ask on, aborts instead — the first CI
+# run of this file found that.
 RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
     CI=true pnpm prune --prod --ignore-scripts
 

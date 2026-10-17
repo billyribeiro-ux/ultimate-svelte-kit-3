@@ -39,14 +39,18 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/CommandPalette.svelte<span class="code__lines">:1-54</span></span>
+		<span class="code__file">src/lib/trip/CommandPalette.svelte<span class="code__lines">:1-88</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
+	import { onMount } from 'svelte';
 	import { Command, Dialog } from 'bits-ui';
 	import { goto } from '$app/navigation';
-	import { CommandIcon } from 'phosphor-svelte';
+	import { MagnifyingGlassIcon } from 'phosphor-svelte';
 	import { m } from '#lib/paraglide/messages.js';
+	import { href } from '#lib/href.ts';
+	import { getLocale } from '#lib/paraglide/runtime.js';
+	import { formatDate } from '#lib/domain/dates.ts';
 	import { KIND_ICONS } from './kinds.ts';
 	import { TABS, type Tab, type TripState } from './state.svelte.ts';
 
@@ -68,6 +72,8 @@
 
 	let { view, editable, onadd }: Props = $props();
 
+	const locale = getLocale();
+
 	let open = $state(false);
 
 	const tabLabels: Record&lt;Tab, () =&gt; string&gt; = {
@@ -88,39 +94,96 @@
 
 	function go(tab: Tab) {
 		open = false;
-		void goto(`?tab=${tab}`, { replace: true });
+		void goto(href(`/(site)/t/[slug=slug]?tab=${tab}`, { slug: view.trip.slug }), {
+			replace: true
+		});
 	}
 
 	function jump(stopId: string) {
 		view.select(stopId);
 		go('itinerary');
 	}
+
+	/*
+	 * Dated stops first, in day order; ideas — no date yet — after them,
+	 * under their own heading, so &quot;Évora&quot; does not come before day one.
+	 */
+	const dated = $derived(
+		view.document.stops
+			.filter((stop) =&gt; stop.date !== null)
+			.toSorted((a, b) =&gt; (a.date! &lt; b.date! ? -1 : a.date! &gt; b.date! ? 1 : 0))
+	);
+	const ideas = $derived(view.document.stops.filter((stop) =&gt; stop.date === null));
+
+	/*
+	 * The shortcut as this keyboard writes it: ⌘K on a Mac or an iPad,
+	 * Ctrl K everywhere else. Only the browser knows which, so the hint is
+	 * blank on the server and filled in on mount (it shows from 48em, where
+	 * a keyboard is likely, and a phone never sees it).
+	 */
+	let shortcut = $state&lt;string | null&gt;(null);
+
+	onMount(() =&gt; {
+		const platform =
+			(navigator as Navigator &amp; { userAgentData?: { platform?: string } }).userAgentData
+				?.platform ?? navigator.platform;
+		shortcut = /mac|iphone|ipad/i.test(platform) ? '⌘K' : 'Ctrl K';
+	});
 &lt;/script&gt;</code></pre>
 </figure>
-<p><code>&lt;svelte:window onkeydown&gt;</code> is how a component listens on the window without an <code>addEventListener</code> it has to remember to remove. <code>goto(&quot;?tab=map&quot;, { replace: true })</code> switches the tab through the URL — the same mechanism as clicking the tab — and <code>replace</code> keeps five palette jumps from becoming five history entries. The <code>GotoOptions</code> in SvelteKit 3 are <code>replace</code>, <code>replaceState</code>, <code>shallow</code>, <code>reset</code>, <code>refreshAll</code> and <code>invalidate</code>; the old <code>noScroll</code> and <code>keepFocus</code> are gone.</p>
+<p><code>&lt;svelte:window onkeydown&gt;</code> is how a component listens on the window without an <code>addEventListener</code> it has to remember to remove. The button that opens the palette shows a magnifier, which means “search” to everybody, rather than the ⌘ glyph, which means something only on a Mac; its shortcut hint is filled in on mount from the platform — ⌘K on a Mac or an iPad, Ctrl K elsewhere — because only the browser knows which keyboard it has. The button’s name is its label — “Search and commands”, visually hidden on a phone — and not an <code>aria-label</code>: with one, the name said “Search and commands” while the button read “Search and commands Ctrl K”, and WCAG’s “label in name” asks that what a control is called contains what it shows, so speech input can find it. The shortcut goes to assistive technology in its own vocabulary, <code>aria-keyshortcuts=&quot;Control+K Meta+K&quot;</code>. <code>goto(href(</code>/(site)/t/[slug=slug]?tab=${tab}<code>, { slug }), { replace: true })</code> switches the tab through the URL — the same typed <code>href()</code> the tabs themselves use, so the palette and the tab bar cannot disagree about where a tab lives — and <code>replace</code> keeps five palette jumps from becoming five history entries. SvelteKit 3 also rejects a <code>goto</code> to anything that is not a route of the app, which a resolved pathname never is. The <code>GotoOptions</code> in 3.0 are <code>replace</code>, <code>shallow</code>, <code>reset</code>, <code>refreshAll</code>, <code>invalidate</code>, <code>state</code> and <code>persistState</code>; <code>replaceState</code> and <code>invalidateAll</code> survive only as deprecated aliases of <code>replace</code> and <code>refreshAll</code>, and the old <code>noScroll</code> and <code>keepFocus</code> are gone — folded into <code>reset: false</code>.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/CommandPalette.svelte<span class="code__lines">:56-67</span></span>
+		<span class="code__file">src/lib/trip/CommandPalette.svelte<span class="code__lines">:90-130</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;svelte:window {onkeydown} /&gt;
 
+&lt;!-- One stop as a palette item; the dated stops and the ideas both render it. --&gt;
+{#snippet stopItem(stop: (typeof view.document.stops)[number])}
+	{const Icon = $derived(KIND_ICONS[stop.kind])}
+	&lt;Command.Item
+		class=&quot;cmd__item&quot;
+		value={`${stop.name} ${stop.id}`}
+		keywords={[stop.kind, stop.date ?? '', stop.date ? formatDate(stop.date, locale) : '']}
+		onSelect={() =&gt; jump(stop.id)}
+	&gt;
+		&lt;Icon size={16} aria-hidden=&quot;true&quot; class=&quot;cmd__kind&quot; data-kind={stop.kind} /&gt;
+		&lt;span&gt;{stop.name}&lt;/span&gt;
+		&lt;!-- &quot;May 10&quot; in the page's language; the ISO date stays a keyword, so typing &quot;2026-05&quot; still finds it. --&gt;
+		{#if stop.date}&lt;span class=&quot;cmd__date tabular&quot;&gt;{formatDate(stop.date, locale)}&lt;/span&gt;{/if}
+	&lt;/Command.Item&gt;
+{/snippet}
+
+&lt;!--
+	A magnifier, which means &quot;search&quot; to everybody, not the ⌘ glyph, which
+	means something only on a Mac. Icon-only on a phone, where the label is
+	visually hidden and still the button's name; the shortcut shows where a
+	keyboard is likely.
+
+	The name comes from the label, not an `aria-label`: with one, the name
+	was &quot;Search and commands&quot; while the button read &quot;Search and commands
+	Ctrl K&quot;, and a name that does not match what is on the button is a
+	button speech input cannot find. The shortcut itself goes to assistive
+	technology as `aria-keyshortcuts`, in its own vocabulary.
+--&gt;
 &lt;button
-	class=&quot;btn btn--sm btn--ghost palette__button no-print&quot;
+	class=&quot;btn btn--sm btn--ghost btn--icon palette__button no-print&quot;
 	type=&quot;button&quot;
 	onclick={() =&gt; (open = true)}
 	title={m.palette_hint()}
+	aria-keyshortcuts=&quot;Control+K Meta+K&quot;
 &gt;
-	&lt;CommandIcon size={16} aria-hidden=&quot;true&quot; /&gt;
-	{m.palette_open()}
-	&lt;kbd class=&quot;palette__kbd&quot; aria-hidden=&quot;true&quot;&gt;K&lt;/kbd&gt;
+	&lt;MagnifyingGlassIcon size={16} aria-hidden=&quot;true&quot; /&gt;
+	&lt;span class=&quot;palette__label&quot;&gt;{m.palette_open()}&lt;/span&gt;
+	{#if shortcut}&lt;kbd class=&quot;palette__kbd&quot; aria-hidden=&quot;true&quot;&gt;{shortcut}&lt;/kbd&gt;{/if}
 &lt;/button&gt;</code></pre>
 </figure>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/trip/CommandPalette.svelte<span class="code__lines">:69-129</span></span>
+		<span class="code__file">src/lib/trip/CommandPalette.svelte<span class="code__lines">:132-202</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;Dialog.Root bind:open&gt;
@@ -131,7 +194,10 @@
 			&lt;Dialog.Description class=&quot;visually-hidden&quot;&gt;{m.palette_hint()}&lt;/Dialog.Description&gt;
 
 			&lt;Command.Root class=&quot;cmd&quot; label={m.palette_open()} loop&gt;
-				&lt;Command.Input class=&quot;cmd__input&quot; placeholder={m.palette_placeholder()} /&gt;
+				&lt;div class=&quot;cmd__field&quot;&gt;
+					&lt;MagnifyingGlassIcon size={18} aria-hidden=&quot;true&quot; class=&quot;cmd__glass&quot; /&gt;
+					&lt;Command.Input class=&quot;cmd__input&quot; placeholder={m.palette_placeholder()} /&gt;
+				&lt;/div&gt;
 				&lt;Command.List class=&quot;cmd__list&quot;&gt;
 					&lt;Command.Viewport&gt;
 						&lt;Command.Empty class=&quot;cmd__empty&quot;&gt;{m.palette_empty()}&lt;/Command.Empty&gt;
@@ -139,21 +205,22 @@
 						&lt;Command.Group&gt;
 							&lt;Command.GroupHeading class=&quot;cmd__heading&quot;&gt;{m.palette_stops()}&lt;/Command.GroupHeading&gt;
 							&lt;Command.GroupItems&gt;
-								{#each view.document.stops as stop (stop.id)}
-									{@const Icon = KIND_ICONS[stop.kind]}
-									&lt;Command.Item
-										class=&quot;cmd__item&quot;
-										value={`${stop.name} ${stop.id}`}
-										keywords={[stop.kind, stop.date ?? '']}
-										onSelect={() =&gt; jump(stop.id)}
-									&gt;
-										&lt;Icon size={16} aria-hidden=&quot;true&quot; /&gt;
-										&lt;span&gt;{stop.name}&lt;/span&gt;
-										{#if stop.date}&lt;span class=&quot;muted&quot;&gt;{stop.date}&lt;/span&gt;{/if}
-									&lt;/Command.Item&gt;
+								{#each dated as stop (stop.id)}
+									{@render stopItem(stop)}
 								{/each}
 							&lt;/Command.GroupItems&gt;
 						&lt;/Command.Group&gt;
+
+						{#if ideas.length &gt; 0}
+							&lt;Command.Group&gt;
+								&lt;Command.GroupHeading class=&quot;cmd__heading&quot;&gt;{m.day_ideas()}&lt;/Command.GroupHeading&gt;
+								&lt;Command.GroupItems&gt;
+									{#each ideas as stop (stop.id)}
+										{@render stopItem(stop)}
+									{/each}
+								&lt;/Command.GroupItems&gt;
+							&lt;/Command.Group&gt;
+						{/if}
 
 						&lt;Command.Group&gt;
 							&lt;Command.GroupHeading class=&quot;cmd__heading&quot;&gt;{m.palette_actions()}&lt;/Command.GroupHeading
@@ -180,17 +247,23 @@
 						&lt;/Command.Group&gt;
 					&lt;/Command.Viewport&gt;
 				&lt;/Command.List&gt;
+				&lt;!-- Where a keyboard is likely, say what each key does, in words beside the key. --&gt;
+				&lt;p class=&quot;cmd__footer&quot; aria-hidden=&quot;true&quot;&gt;
+					&lt;span&gt;&lt;kbd&gt;↑↓&lt;/kbd&gt; {m.palette_keys_move()}&lt;/span&gt;
+					&lt;span&gt;&lt;kbd&gt;Enter&lt;/kbd&gt; {m.palette_keys_open()}&lt;/span&gt;
+					&lt;span&gt;&lt;kbd&gt;Esc&lt;/kbd&gt; {m.palette_keys_close()}&lt;/span&gt;
+				&lt;/p&gt;
 			&lt;/Command.Root&gt;
 		&lt;/Dialog.Content&gt;
 	&lt;/Dialog.Portal&gt;
 &lt;/Dialog.Root&gt;</code></pre>
 </figure>
-<p>Each <code>Command.Item</code> is a <code>value</code> to match against — the stop’s name plus its id, so two stops with the same name stay distinct — and <code>keywords</code> that also match, so typing “food” finds the restaurant. <code>onSelect</code> runs the action. The groups have headings; the empty state is a component. The <code>class</code> props are ours from the tokens, which is what headless means in practice: every visible pixel is in the <code>&lt;style&gt;</code> block below, and the library brought the behaviour.</p>
+<p>Each <code>Command.Item</code> is a <code>value</code> to match against — the stop’s name plus its id, so two stops with the same name stay distinct — and <code>keywords</code> that also match, so typing “food” finds the restaurant. <code>onSelect</code> runs the action. The date beside a stop is formatted in the page’s language — “May 10”, “10. Mai” — while the ISO date stays among the keywords, so typing “2026-05” still finds it. Dated stops come first, in day order, and the ideas — no date yet — under their own heading, both rendered by one top-level snippet; a snippet declared inside a component’s tags would be passed to that component as a prop. The footer says in words what each key does. The groups have headings; the empty state is a component. The <code>class</code> props are ours from the tokens, which is what headless means in practice: every visible pixel is in the <code>&lt;style&gt;</code> block below, and the library brought the behaviour.</p>
 <aside class="callout callout--note"><p>The end-to-end test for this presses <code>ControlOrMeta+k</code> — Playwright’s name for “Control on Linux and Windows, Command on a Mac” — types three letters, and clicks an option. It runs on the phone profile too, where there is no keyboard shortcut in real life, and passes, which says something about how well the primitive degrades.</p></aside>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>
-	<ul><li>You can say what <code>Command</code> does and what the component adds to it.</li><li>You know why the tab switch is <code>goto</code> with <code>replace</code>, and which <code>GotoOptions</code> exist in SvelteKit 3.</li></ul>
+	<ul><li>You can say what <code>Command</code> does and what the component adds to it.</li><li>You know why the tab switch is <code>goto</code> with <code>replace</code> over a typed <code>href()</code>, and which <code>GotoOptions</code> exist in SvelteKit 3.</li></ul>
 </aside>
 		</article>
 

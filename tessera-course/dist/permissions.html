@@ -249,6 +249,22 @@ export const auth = betterAuth({
 });</code></pre>
 </figure>
 <aside class="callout callout--warn"><p>Two things in there will cost you an hour each if you get them wrong. <code>baseURL</code> must come from the same variable the CSRF check uses, or the cookie is issued for one origin and rejected by the check for another — and the symptom is a sign-in that appears to succeed and lands back on the sign-in page with no error anywhere. And <code>sveltekitCookies</code> must be <strong>last</strong> in the plugin list, because it wraps the response so cookies set during a remote function call reach the browser.</p></aside>
+<h3 id="a-change-under-you">A change under you: migration 0001</h3>
+<p>A dependency can change the database schema it expects without you touching a line, and Better Auth did. 1.7.0 added a required <code>issuer</code> column to <code>account</code> — who vouches for the account: an OAuth provider’s URL, or <code>local:credential</code> for a password — with a unique index on <code>(issuer, account_id)</code>, and <code>pnpm run auth:schema</code> wrote both into <code>auth.schema.ts</code>. 1.7.3 withdrew the idea: accounts are identified by <code>(provider_id, account_id)</code> again, exactly as in 1.6, and 1.7.7 never writes the column. It also checks the Drizzle schema at startup and refuses to start with a <code>NOT NULL</code> column it will never fill, because every sign-up would fail on the insert.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">drizzle/0001_drop_account_issuer.sql</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-sql">DROP INDEX `account_issuer_accountId_uidx`;--&gt; statement-breakpoint
+ALTER TABLE `account` DROP COLUMN `issuer`;</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>A second migration, not an edit to the first</h4>
+	<p>Every database that ran <code>0000</code> has the column — the seeded <code>local.db</code> on your machine included — and the journal is how they all arrive at the same shape. <code>drizzle-kit generate</code> wrote this from the change to <code>auth.schema.ts</code>, in the order the Better Auth upgrade guide prescribes for SQLite: the index first, because SQLite will not drop a column an index still names. The only hand-written part is the comment at the top of the file saying why it exists.</p>
+</aside>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>

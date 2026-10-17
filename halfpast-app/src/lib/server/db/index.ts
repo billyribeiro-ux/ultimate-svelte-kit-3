@@ -1,5 +1,6 @@
 import { drizzle } from 'drizzle-orm/libsql';
-import { createClient } from '@libsql/client';
+import { createClient, type Client } from '@libsql/client';
+import { building } from '$app/env';
 import { DATABASE_URL, DATABASE_AUTH_TOKEN } from '$app/env/private';
 import * as schema from './schema.ts';
 
@@ -14,13 +15,34 @@ import * as schema from './schema.ts';
  * file by mistake, the build fails with a clear message instead of shipping your
  * database URL to the browser.
  */
-const client = createClient({
-	url: DATABASE_URL,
-	// libSQL rejects `authToken: undefined` on some versions, so only pass the key
-	// when we actually have one. Spreading a conditional object is the tidiest way
-	// to say "this property may not exist at all".
-	...(DATABASE_AUTH_TOKEN ? { authToken: DATABASE_AUTH_TOKEN } : {})
-});
+function connect(): Client {
+	/*
+	 * Not while building. SvelteKit imports this module during `vite build` to
+	 * analyse the app, and the docs are direct about it: "Any code that should
+	 * not be executed at this stage must check that `building` from `$app/env`
+	 * is `false`." Connecting is such code. Pointed at a `file:` URL it creates
+	 * the file; pointed at a remote database it opens a connection and sends the
+	 * pragmas below — so a build run with production's environment talked to
+	 * production. An in-memory database gives `drizzle` something to wrap, touches
+	 * nothing, and disappears with the build. `src/env.ts` lets `DATABASE_URL`
+	 * be missing at this stage for the same reason.
+	 */
+	if (building) return createClient({ url: ':memory:' });
+
+	// Unreachable once built: `src/env.ts` refuses to start the server without
+	// it. The check is here to narrow the type, not to catch anything.
+	if (!DATABASE_URL) throw new Error('DATABASE_URL is required to start the server.');
+
+	return createClient({
+		url: DATABASE_URL,
+		// libSQL rejects `authToken: undefined` on some versions, so only pass the key
+		// when we actually have one. Spreading a conditional object is the tidiest way
+		// to say "this property may not exist at all".
+		...(DATABASE_AUTH_TOKEN ? { authToken: DATABASE_AUTH_TOKEN } : {})
+	});
+}
+
+const client = connect();
 
 /**
  * Passing `schema` is what gives us the relational query API
@@ -60,7 +82,9 @@ export const db = drizzle(client, { schema });
  * the intermittent `SQLITE_BUSY` this was meant to fix carries on happening,
  * now with a "fix" in place that looks like it should have worked.
  */
-void (async () => {
+if (!building) void applyPragmas();
+
+async function applyPragmas() {
 	try {
 		// Persisted in the database file, so this is idempotent; running it every
 		// boot simply guarantees no deployment is ever missing it.
@@ -70,7 +94,7 @@ void (async () => {
 	} catch (error) {
 		console.warn('[db] could not apply pragmas; continuing with defaults', error);
 	}
-})();
+}
 
 /** The exact type of `db`, for functions that take a transaction or the root. */
 export type Database = typeof db;

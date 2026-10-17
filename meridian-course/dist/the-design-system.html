@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The design system — Building Meridian</title>
-<meta name="description" content="Tokens with `light-dark()`, a theme class on `MediaQuery`, the boot script that stops the flash, fonts from fontsource preloaded by filename, an `&lt;enhanced:img&gt;` hero, a GSAP reveal as an attachment, and the rule that nothing in the app writes a hex code.">
+<meta name="description" content="Tokens with `light-dark()`, a theme class on `MediaQuery`, the boot script that stops the flash and tells the browser chrome and the server, fonts from fontsource preloaded by filename, a hero in four prints that downloads one, one GSAP timeline as an attachment, motion tokens that reduced motion zeroes, the short, named list of places a hex code may appear outside the tokens, and a contrast table checked on every lint.">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -33,25 +33,26 @@
 		<article>
 			<p class="eyebrow">Chapter 22</p>
 			<h1>The design system</h1>
-			<p class="lede">Tokens with <code>light-dark()</code>, a theme class on <code>MediaQuery</code>, the boot script that stops the flash, fonts from fontsource preloaded by filename, an <code>&lt;enhanced:img&gt;</code> hero, a GSAP reveal as an attachment, and the rule that nothing in the app writes a hex code.</p>
+			<p class="lede">Tokens with <code>light-dark()</code>, a theme class on <code>MediaQuery</code>, the boot script that stops the flash and tells the browser chrome and the server, fonts from fontsource preloaded by filename, a hero in four prints that downloads one, one GSAP timeline as an attachment, motion tokens that reduced motion zeroes, the short, named list of places a hex code may appear outside the tokens, and a contrast table checked on every lint.</p>
 			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Build a light-and-dark design system that never flashes, respects reduced motion, and keeps every colour in one file.</p></aside>
-			<p>Four CSS files, imported in order: tokens define, reset clears, base styles, utilities lay out. Every colour, size and duration the interface uses is named once in the first, and components reference the names. The one rule with no exceptions is that nothing else in <code>src</code> writes a hex code — the map style and the globe are the exceptions that prove it, and both say why.</p>
+			<p>Five CSS files, imported in order: tokens define, reset clears, base styles, the date fields’ sheet dresses what Bits UI renders, utilities lay out. <code>dates.css</code> is global rather than a component’s <code>&lt;style&gt;</code> because two components — the trip’s range and an expense’s single date — wear it, and the elements it styles are rendered by the library, out of reach of a scoped selector (chapter 21). Every colour, size and duration the interface uses is named once in the first, and components reference the names. A hex code anywhere else in <code>src</code> is a copy made where a custom property cannot be read, and there are four, each saying so where it is written: the map’s canvas (<code>map/style.ts</code>), the globe’s WebGL scene, the custom element’s shadow root, and the <code>theme-color</code> meta tags in <code>app.html</code>, which the browser reads before any stylesheet. The header of <code>tokens.css</code> lists them, along with the two hex codes that are not copies: print, which is black on white whatever the theme, and the <code>#000</code> in a <code>mask-image</code> gradient, which means “opaque”, not black.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/styles/index.css<span class="code__lines">:1-5</span></span>
+		<span class="code__file">src/lib/styles/index.css<span class="code__lines">:1-6</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-css">/* Order matters: tokens define, reset clears, base styles, utilities lay out. */
+	<pre><code class="lang-css">/* Order matters: tokens define, reset clears, base styles, the date fields dress what Bits UI renders, utilities lay out. */
 @import './tokens.css';
 @import './reset.css';
 @import './base.css';
+@import './dates.css';
 @import './utilities.css';</code></pre>
 </figure>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/styles/tokens.css<span class="code__lines">:1-16</span></span>
+		<span class="code__file">src/lib/styles/tokens.css<span class="code__lines">:1-32</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-css">/*
@@ -59,47 +60,96 @@
  * =============
  *
  * Every colour, size and duration the interface uses, named once. Components
- * reference the names; nothing else in the project writes a hex code.
+ * reference the names. A hex code outside this file is a copy made where a
+ * custom property cannot be read — the map's canvas (`map/style.ts`), the
+ * globe's WebGL scene (`globe/Scene.svelte`), the custom element's shadow
+ * root (`embed/MeridianRoute.svelte`) and the `theme-color` meta tags in
+ * `app.html`, which the browser reads before any stylesheet — and each of
+ * those says so where it is written. Two more are not copies: print, in
+ * `base.css`, is black on white whatever the theme, and `#000` in a
+ * `mask-image` gradient is not a colour at all — it means &quot;opaque&quot;. (The
+ * hex codes in `design/contrast.spec.ts` are test data for the arithmetic,
+ * not colours anybody sees.)
+ *
+ * Every ratio quoted below is checked, not remembered: `pnpm run lint` ends
+ * with `scripts/contrast.ts`, which reads this file, resolves both sides of
+ * every pair the design puts on top of each other, and fails under the
+ * floor — 4.5:1 for text, 3:1 for an edge or a ring. `--report` prints the
+ * table.
  *
  * Colour is done with `light-dark()`: each token holds its light value and
  * its dark value, and the browser picks by `color-scheme` — which follows
  * the system by default and is pinned by `data-theme` on &lt;html&gt; when a
  * person chooses. No duplicated blocks, no cascade tricks, no flash.
  *
- * The palette is &quot;a map on a table&quot;: warm paper, ink, and a teal that reads
- * as water. It is deliberately quiet, because the map, the globe and the
- * photographs are the colour.
+ * The palette is &quot;a map on a table, lit like a film&quot;: warm paper, ink, and
+ * one teal that reads as water. It is deliberately quiet, because the map,
+ * the globe and the route are the colour. Everything saturated that is not
+ * teal is a stop kind or a state (warning, danger) — never a second accent.
  */</code></pre>
 </figure>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/styles/tokens.css<span class="code__lines">:18-57</span></span>
+		<span class="code__file">src/lib/styles/tokens.css<span class="code__lines">:34-127</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-css">:root {
 	color-scheme: light dark;
 
-	/* Surfaces */
+	/*
+	 * SURFACE TIERS
+	 * 0 canvas · 1 raised (cards, inputs) · 2 sunken/hover (chips, table
+	 * head) · 3 overlay (dialog, popover, toast, nav sheet).
+	 *
+	 * In light mode tiers 1 and 3 are both white: the tier is told apart by
+	 * shadow and the hairline ring below. In dark mode a lighter surface *is*
+	 * the elevation, so every tier is one visible step up and shadows are
+	 * nearly invisible — which is how dark interfaces read as solid rather
+	 * than smeared.
+	 */
 	--paper: light-dark(#f8f5ee, #101318);
 	--paper-2: light-dark(#ffffff, #171b22);
 	--paper-3: light-dark(#efeae0, #1e232c);
-	--line: light-dark(#dcd5c7, #2b323d);
+	--paper-4: light-dark(#ffffff, #242a34);
+	--line: light-dark(#e2dccf, #2b323d);
 	--line-2: light-dark(#c9c0ae, #3a4350);
+	--line-3: light-dark(#b5ab97, #4a5566);
 
-	/* Ink */
+	/*
+	 * INK
+	 * `--ink-3` is the darkest &quot;tertiary&quot; grey that still passes AA (4.5:1)
+	 * as small text on every tier — 5.36:1 on paper, 4.87:1 on paper-3 in
+	 * light. `--ink-4` does not, and is for things that are not text: grips,
+	 * disabled icons, the dots between facts.
+	 */
 	--ink: light-dark(#171a1f, #eef1f5);
 	--ink-2: light-dark(#4b5160, #aeb6c2);
-	--ink-3: light-dark(#7a8191, #7c8595);
+	--ink-3: light-dark(#5f6574, #8b95a5);
+	--ink-4: light-dark(#8a9099, #6b7484);
 
-	/* Accents */
+	/* The accent. Hover goes darker in light and lighter in dark: towards the ink, never away. */
 	--sea: light-dark(#0f766e, #2dd4bf);
-	--sea-2: light-dark(#0d9488, #5eead4);
+	--sea-strong: light-dark(#0b5f59, #5eead4);
 	--sea-soft: light-dark(#d6f0ec, #103b37);
-	--sun: light-dark(#b45309, #f59e0b);
+	--on-sea: light-dark(#ffffff, #052926);
+
+	/* State colours, not accents. Light `--sun` is pulled down to 5.75:1 on paper so the &quot;food&quot; chip is readable. */
+	--sun: light-dark(#9a4a06, #f59e0b);
 	--sun-soft: light-dark(#fdebd0, #3d2a08);
 	--coral: light-dark(#be123c, #fb7185);
 	--coral-soft: light-dark(#fde2e7, #4a1220);
+	--ok: var(
+		--sea
+	); /* success is the brand colour; there is no green (the toast's check reads it) */
+
+	/*
+	 * Text on any saturated fill: pins, route numbers, avatars. Dark kind
+	 * colours are pastel, so white on them fails (1.86:1 on dark `--sea`);
+	 * near-black ink reads at 6.19:1 or better on every one. In light the
+	 * kinds are deep enough for white, at 5.17:1 or better.
+	 */
+	--on-fill: light-dark(#ffffff, #0b1220);
 
 	/* Stop kinds — one hue each, used on the map and in the itinerary */
 	--kind-place: var(--sea);
@@ -109,8 +159,29 @@
 	--kind-activity: var(--coral);
 	--kind-idea: var(--ink-3);
 
-	/* Focus */
+	/* Focus: a 2px ring and a soft halo, so it survives on hovered surfaces */
 	--focus: light-dark(#2563eb, #93c5fd);
+	--focus-halo: light-dark(rgb(37 99 235 / 0.18), rgb(147 197 253 / 0.25));
+
+	/*
+	 * The edge of a chosen segment (theme toggle, notes toolbar, stop kind).
+	 * A tier step alone is 1.1:1 in dark and 1.2:1 in light — a state nobody
+	 * can see — so the chosen pill also draws a 1px edge at 3:1 or better
+	 * against both the track (3.21 / 3.35) and itself (3.84 / 3.06).
+	 */
+	--segment-edge: light-dark(#8a8172, #6b7484);
+
+	/* The scrim behind a dialog or sheet */
+	--scrim: light-dark(rgb(23 26 31 / 0.45), rgb(0 0 0 / 0.6));
+
+	/*
+	 * NIGHT — the globe's frame. Not `light-dark()`: the globe is a night
+	 * scene in both themes (space is dark), so these are one value each.
+	 * `--night-ink` is 10.4:1 on `--night`.
+	 */
+	--night: #0a1220;
+	--night-ink: #b3c3d1;
+	--night-raised: rgb(255 255 255 / 0.05);
 
 	/* Type */
 	--font-display: 'Fraunces Variable', Georgia, 'Times New Roman', serif;
@@ -118,11 +189,11 @@
 		'Inter Variable', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 	--font-mono: ui-monospace, 'SF Mono', 'Cascadia Mono', Menlo, monospace;</code></pre>
 </figure>
-<p><code>light-dark()</code> is the whole theming mechanism. Each token holds its light value and its dark value and the browser picks by <code>color-scheme</code>, which follows the system by default and is pinned by <code>data-theme</code> on <code>&lt;html&gt;</code> when a person chooses. No duplicated <code>@media (prefers-color-scheme)</code> blocks, no <code>.dark</code> cascade, and — because the choice is applied before the first paint — no flash. The palette is “a map on a table”: warm paper, ink, a teal that reads as water, and one hue per kind of stop that the itinerary and the map share through <code>--kind-*</code>.</p>
+<p><code>light-dark()</code> is the whole theming mechanism. Each token holds its light value and its dark value and the browser picks by <code>color-scheme</code>, which follows the system by default and is pinned by <code>data-theme</code> on <code>&lt;html&gt;</code> when a person chooses. No duplicated <code>@media (prefers-color-scheme)</code> blocks, no <code>.dark</code> cascade, and — because the choice is applied before the first paint — no flash. The palette is “a map on a table, lit like a film”: warm paper in four surface tiers, ink in four weights, one teal that reads as water, and one hue per kind of stop that the itinerary and the map share through <code>--kind-*</code>. Three of the tokens exist only because of contrast arithmetic: <code>--on-fill</code> is the ink that reads on every kind colour in both themes (white fails on the pastel dark kinds at 1.9:1); the light <code>--ink-3</code> was darkened until tertiary text passed 4.5:1 on every tier; and <code>--segment-edge</code> is the 1px edge a chosen segment draws — the theme toggle, the notes toolbar, the stop’s kind — because the tier step alone is 1.1:1 in dark and 1.2:1 in light, a state nobody can see, and the edge is 3:1 or better against both the track and the segment. The <code>--night</code> tokens are the one family that is not <code>light-dark()</code>: the globe is a night scene in both themes. The scale has eight steps, each a <code>clamp()</code> between a 360px phone and a 1280px desktop, with a leading and a tracking token to pair with each — big serif closes up, small serif is left alone — and most durations are a <code>--dur-*</code> that the <code>prefers-reduced-motion</code> block at the bottom sets to zero. Not all: the view transitions, the live dot’s pulse and the home page’s card stagger write their timing as numbers, and the tab indicator’s tween, the list’s flip and the map’s camera are JavaScript. Each of those sits behind a reduced-motion check of its own, and the comment above the block names every one — “reads a token” and “is switched off” are two different claims, and the second is the one that matters.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/styles/base.css<span class="code__lines">:1-39</span></span>
+		<span class="code__file">src/lib/styles/base.css<span class="code__lines">:1-61</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-css">/*
@@ -130,47 +201,69 @@
  * ====
  *
  * Typography, links, and the handful of shared classes that every page
- * uses: buttons, inputs, cards, chips, badges. Each is small and boring on
- * purpose — a component library's job is to be predictable.
+ * uses: buttons, inputs, cards, chips, the dialog shell, the toast. Each is
+ * small and boring on purpose — a component library's job is to be
+ * predictable. Where a rule is not obvious, the comment above it says why.
  */
 
 body {
 	font-family: var(--font-body);
 	font-size: var(--text-md);
+	line-height: var(--leading-body);
 	color: var(--ink);
 	background: var(--paper);
 }
 
+/* ------------------------------------------------------------------ */
+/* Headings                                                            */
+/* ------------------------------------------------------------------ */
+
+/*
+ * Fraunces has an optical-size axis that runs from 9 to 144. Pinning it to
+ * one value gave an 18px heading the hairlines of a poster; letting the
+ * browser map px → opsz (`font-optical-sizing: auto`, the default once no
+ * `font-variation-settings` fights it) gives each size the cut drawn for
+ * it. Two places pin it: the hero title to the full 144 cut, and the 404
+ * numeral to 96, because at 46–72px the poster cut lost its hairlines.
+ */
 h1,
 h2,
 h3 {
 	font-family: var(--font-display);
 	font-weight: 500;
-	line-height: 1.15;
-	letter-spacing: -0.01em;
-	font-variation-settings: 'opsz' 96;
+	font-optical-sizing: auto;
 }
 
+/* Each size pairs with its own leading and tracking: big type closes up, small type is left alone. */
 h1 {
 	font-size: var(--text-2xl);
+	line-height: var(--leading-tight);
+	letter-spacing: var(--tracking-2xl);
+	max-inline-size: 22ch;
 }
 h2 {
 	font-size: var(--text-xl);
+	line-height: var(--leading-snug);
+	letter-spacing: var(--tracking-xl);
 }
 h3 {
 	font-size: var(--text-lg);
+	line-height: var(--leading-snug);
+	letter-spacing: 0;
 }
 h4 {
+	font-family: var(--font-body);
 	font-size: var(--text-md);
 	font-weight: 600;
+	line-height: var(--leading-snug);
 }</code></pre>
 </figure>
-<p>The display face is Fraunces, a variable font with an optical-size axis; <code>font-variation-settings: &quot;opsz&quot; 96</code> on headings asks for the display cut. The body is Inter. Both come from fontsource as stylesheets of <code>@font-face</code> rules with <code>unicode-range</code>, so a browser downloads the latin subset and nothing else — and chapter 14’s <code>preload</code> filter names those two files by their source filename.</p>
+<p>The display face is Fraunces, a variable font with an optical-size axis that the browser maps from the font size — <code>font-optical-sizing: auto</code>, so an 18px heading gets the cut drawn for 18px and a 56px hero gets the one drawn for posters; only the hero title pins <code>&quot;opsz&quot; 144</code>, and the 404 numeral pins 96 — at 46 to 72px the poster cut lost its hairlines and each “4” read as a blob. The body is Inter. Both come from fontsource as stylesheets of <code>@font-face</code> rules with <code>unicode-range</code>, so a browser downloads the latin subset and nothing else — and chapter 14’s <code>preload</code> filter names those two files by their source filename.</p>
 <h3 id="theme">The theme, and the flash it prevents</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/ui/theme.svelte.ts<span class="code__lines">:1-56</span></span>
+		<span class="code__file">src/lib/ui/theme.svelte.ts<span class="code__lines">:1-89</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -186,10 +279,24 @@ h4 {
  * `MediaQuery` from `svelte/reactivity` is the system's preference as a
  * reactive value: `resolved` updates when the OS switches at sunset without
  * anybody polling.
+ *
+ * WHY ONE INSTANCE IN A MODULE, WHEN SVELTE ADVISES CONTEXT
+ * ---------------------------------------------------------
+ * Svelte's best practices prefer context to state in a shared module, for a
+ * reason that matters on a server: a module is loaded once per process, so
+ * state in it is shared by every request the process renders, and one
+ * person's value can be rendered into another person's page. This module is
+ * safe from that by construction, and the constructor and `set` are where it
+ * is decided. On the server the constructor returns before it reads
+ * anything, and `set` is only ever called from a change handler, which never
+ * runs there — so the server's instance is `'system'` for its whole life and
+ * holds nothing of anybody's. The person's choice reaches a server render
+ * another way: as `data.theme`, read from the cookie for that one request.
  */
 
 import { MediaQuery } from 'svelte/reactivity';
 import { browser } from '$app/env';
+import { THEME_COOKIE } from './theme-cookie.ts';
 
 export type Theme = 'system' | 'light' | 'dark';
 
@@ -225,34 +332,98 @@ class ThemeState {
 		}
 		if (next === 'system') delete document.documentElement.dataset.theme;
 		else document.documentElement.dataset.theme = next;
+
+		/*
+		 * The two things outside the stylesheet that follow the choice, the
+		 * same way the boot script in `app.html` sets them on load: the
+		 * browser chrome's `theme-color`, and the cookie the server reads.
+		 */
+		for (const meta of document.querySelectorAll&lt;HTMLMetaElement&gt;('meta[name=&quot;theme-color&quot;]')) {
+			const scheme = meta.dataset.scheme;
+			meta.media =
+				next === 'system'
+					? `(prefers-color-scheme: ${scheme})`
+					: scheme === next
+						? 'all'
+						: 'not all';
+		}
+		document.cookie =
+			next === 'system'
+				? `${THEME_COOKIE}=; path=/; max-age=0; samesite=lax`
+				: `${THEME_COOKIE}=${next}; path=/; max-age=31536000; samesite=lax`;
 	}
 }
 
 export const theme = new ThemeState();</code></pre>
 </figure>
-<p><code>MediaQuery</code> from <code>svelte/reactivity</code> is the system’s preference as a reactive value: when the operating system switches at sunset, <code>resolved</code> changes and the toaster and the map style follow, without anybody polling. The class only decides what <code>color-scheme</code> is; the CSS does the work. <code>browser</code> from <code>$app/env</code> guards the storage reads, because this module is imported on the server too.</p>
+<p><code>MediaQuery</code> from <code>svelte/reactivity</code> is the system’s preference as a reactive value: when the operating system switches at sunset, <code>resolved</code> changes and the toaster and the map style follow, without anybody polling. The class only decides what <code>color-scheme</code> is; the CSS does the work. <code>browser</code> from <code>$app/env</code> guards the storage reads, because this module is imported on the server too. Two things outside the stylesheet follow a change as well, and <code>set()</code> updates both: the <code>theme-color</code> meta tags, and a cookie for the server — the next two blocks say what each is for.</p>
+
+<aside class="callout callout--why">
+	<h4>Why one instance in a module, when Svelte advises context</h4>
+	<p>Svelte’s best practices prefer context to state declared in a shared module, and the reason is the server: a module is loaded once per process, so state in it is shared by every request that process renders, and one person’s value can end up in another person’s page. <code>theme</code> is safe from that by construction, and the comment at the top of the file says where. On the server the constructor returns before it reads anything, and <code>set()</code> is only called from a change handler, which never runs there — so the server’s instance is <code>system</code> for its whole life and holds nothing of anybody’s. The person’s choice reaches a server render by another road, as <code>data.theme</code>, read from the cookie for that one request. Context would be the answer the day the module held something per person on the server; until then, a singleton that is written only in the browser is the simpler honest thing.</p>
+</aside>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/app.html<span class="code__lines">:12-25</span></span>
+		<span class="code__file">src/app.html<span class="code__lines">:12-33</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-html">&lt;!--
+	The browser's own chrome — the phone's status bar, the tab strip —
+	takes the page's canvas colour, so a cream page is not topped by a
+	white bar and a near-black one by a grey one. These are `--paper`'s
+	two values from `tokens.css`, by hand: a &lt;meta&gt; cannot read a token.
+	Each follows the system's scheme until a person picks one; then the
+	script below points the chosen one at every screen (`media=&quot;all&quot;`)
+	and the other at none, so a dark page on a light phone gets a dark
+	bar. `theme.svelte.ts` does the same when the choice changes.
+--&gt;
+&lt;meta
+	name=&quot;theme-color&quot;
+	data-scheme=&quot;light&quot;
+	media=&quot;(prefers-color-scheme: light)&quot;
+	content=&quot;#f8f5ee&quot;
+/&gt;
+&lt;meta
+	name=&quot;theme-color&quot;
+	data-scheme=&quot;dark&quot;
+	media=&quot;(prefers-color-scheme: dark)&quot;
+	content=&quot;#101318&quot;
+/&gt;</code></pre>
+</figure>
+<p><code>theme-color</code> is the colour a phone paints its status bar and a desktop browser its tab strip. It is <code>--paper</code>’s two values, by hand, because a <code>&lt;meta&gt;</code> is read before any stylesheet and cannot see a token. Two tags with <code>media</code> queries follow the system; the catch is a person who *chose* — a dark page on a light phone would sit under a cream bar. So the boot script below, and <code>theme.set()</code> later, point the chosen tag at every screen (<code>media=&quot;all&quot;</code>) and the other at none (<code>media=&quot;not all&quot;</code>). Rewriting <code>media</code> rather than <code>content</code> keeps both colours in the HTML, where the comment beside them can say where they came from.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/app.html<span class="code__lines">:34-57</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-html">&lt;!--
 	The theme a person chose, applied before the first paint so a dark
-	choice on a light system never flashes light. This script is the one
-	inline script in the app: `vite.config.ts` reads it out of this file,
-	hashes it, and adds the hash to `script-src` — so it runs under the
-	Content Security Policy on prerendered pages (hashes) and rendered
-	ones (nonces) alike.
+	choice on a light system never flashes light; the browser chrome
+	follows it, and so does a cookie, which is how the server knows which
+	of the home page's two hero prints to ask for (`theme-cookie.ts`).
+	This script is the one inline script in the app: `vite.config.ts`
+	reads it out of this file, hashes it, and adds the hash to
+	`script-src` — so it runs under the Content Security Policy on
+	prerendered pages (hashes) and rendered ones (nonces) alike.
 --&gt;
 &lt;script&gt;
 	try {
 		var t = localStorage.getItem('meridian:theme');
-		if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
+		if (t !== 'light' &amp;&amp; t !== 'dark') t = '';
+		if (t) document.documentElement.dataset.theme = t;
+		var metas = document.querySelectorAll('meta[name=&quot;theme-color&quot;]');
+		for (var i = 0; i &lt; metas.length; i++) {
+			var s = metas[i].getAttribute('data-scheme');
+			metas[i].media = t ? (s === t ? 'all' : 'not all') : '(prefers-color-scheme: ' + s + ')';
+		}
+		document.cookie =
+			'meridian-theme=' + t + '; path=/; max-age=' + (t ? 31536000 : 0) + '; samesite=lax';
 	} catch (e) {}
 &lt;/script&gt;</code></pre>
 </figure>
-<p>The one inline script in the app, and the reason <code>vite.config.ts</code> hashes it. A dark choice on a light system would otherwise paint light for one frame before hydration; this runs before the first paint and sets <code>data-theme</code> from storage. It carries no nonce attribute, because the guides are prerendered and SvelteKit refuses to prerender a template with <code>%sveltekit.nonce%</code> in it — the hash in <code>script-src</code> allows it everywhere.</p>
+<p>The one inline script in the app, and the reason <code>vite.config.ts</code> hashes it. A dark choice on a light system would otherwise paint light for one frame before hydration; this runs before the first paint, sets <code>data-theme</code> from storage, points the <code>theme-color</code> tags, and writes the choice into a cookie — the one thing the *server* needs to know about a theme, for the hero below. The variable names are one letter and the syntax is <code>var</code> because this is the only JavaScript that runs before the bundle, untranspiled, in every browser that loads the page. It carries no nonce attribute, because the guides are prerendered and SvelteKit refuses to prerender a template with <code>%sveltekit.nonce%</code> in it — the hash in <code>script-src</code> allows it everywhere.</p>
 
 <figure class="code">
 	<figcaption>
@@ -279,7 +450,7 @@ export const theme = new ThemeState();</code></pre>
 &lt;fieldset class=&quot;theme&quot;&gt;
 	&lt;legend class=&quot;visually-hidden&quot;&gt;{m.theme_label()}&lt;/legend&gt;
 	{#each options as option (option.value)}
-		{@const Icon = option.icon}
+		{const Icon = $derived(option.icon)}
 		&lt;label class=&quot;theme__option&quot; title={option.label()}&gt;
 			&lt;input
 				class=&quot;visually-hidden&quot;
@@ -295,127 +466,281 @@ export const theme = new ThemeState();</code></pre>
 	{/each}
 &lt;/fieldset&gt;</code></pre>
 </figure>
-<p>A radio group, because that is what it is: one of three, always exactly one. Arrow keys move between them for free, and a screen reader says “Theme, Light, 2 of 3” with no ARIA beyond the fieldset. <code>:has(input:checked)</code> styles the label from the state of the input inside it, which is what <code>:has()</code> was made for.</p>
-<h3 id="hero">A picture that is four pictures</h3>
+<p>A radio group, because that is what it is: one of three, always exactly one. Arrow keys move between them for free, and a screen reader says “Theme, Light, 2 of 3” with no ARIA beyond the fieldset. <code>:has(input:checked)</code> styles the label from the state of the input inside it, which is what <code>:has()</code> was made for — and what it paints is a tier-3 pill with the <code>--segment-edge</code> hairline, so the choice shows in the dark theme too.</p>
+<h3 id="hero">A picture in four prints</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(site)/+page.svelte<span class="code__lines">:18-43</span></span>
+		<span class="code__file">src/routes/(site)/+page.svelte<span class="code__lines">:20-109</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">&lt;section class=&quot;hero container&quot;&gt;
-	&lt;div class=&quot;hero__copy stack&quot; {@attach reveal()}&gt;
-		&lt;p class=&quot;eyebrow&quot;&gt;{m.app_tagline()}&lt;/p&gt;
-		&lt;h1 class=&quot;hero__title&quot;&gt;{m.home_hero_title()}&lt;/h1&gt;
-		&lt;p class=&quot;hero__lede&quot;&gt;{m.home_hero_lede()}&lt;/p&gt;
-		&lt;div class=&quot;cluster&quot;&gt;
-			&lt;a class=&quot;btn btn--primary&quot; href={localizeHref('/trips/new')}&gt;{m.home_cta()}&lt;/a&gt;
-			&lt;a class=&quot;btn&quot; href={localizeHref('/t/seedjapan2')}&gt;{m.home_cta_secondary()}&lt;/a&gt;
-		&lt;/div&gt;
-	&lt;/div&gt;
+	<pre><code class="lang-svelte">let { data }: PageProps = $props();
 
-	&lt;!--
-		`&lt;enhanced:img&gt;` is rewritten at build time into a `&lt;picture&gt;` with AVIF
-		and WebP sources at several widths, plus width/height so nothing shifts
-		while it loads. The source is a PNG drawn by `scripts/make-hero.ts`.
-		`sizes` tells the browser how wide the image is on screen, so it picks
-		the smallest file that is still sharp for that width.
-	--&gt;
-	&lt;enhanced:img
-		class=&quot;hero__img&quot;
-		src=&quot;../../lib/assets/hero.png&quot;
-		alt=&quot;&quot;
-		sizes=&quot;(min-width: 64em) 40rem, 100vw&quot;
-		fetchpriority=&quot;high&quot;
-	/&gt;
-&lt;/section&gt;</code></pre>
+/*
+ * FOUR PRINTS, ONE DOWNLOAD
+ * -------------------------
+ * The hero has a day print and a night print (`scripts/make-hero.ts`),
+ * each drawn twice — for a desktop, and for a phone, with pins and
+ * numbers big enough to read at 360px — and a page should fetch only
+ * the one it shows. `&lt;picture&gt;` chooses before any script runs, by the
+ * first `&lt;source&gt;` whose `media` and `type` match, so the order is the
+ * decision:
+ *
+ *   - nobody chose a theme: the night prints come first and carry
+ *     `(prefers-color-scheme: dark)`, the day prints follow without it,
+ *     and the system decides;
+ *   - somebody chose: only that print's sources are rendered, with no
+ *     colour scheme in their media, so a dark choice on a light phone
+ *     gets the night print and never downloads the day one;
+ *   - within each, the desktop print carries `(min-width: 37em)` and the
+ *     phone print, after it, carries no width at all. 37em is where the
+ *     desktop print's numbers reach 11px — 30px of a 1600px drawing,
+ *     shown 590px wide — so below it the phone print takes over, with
+ *     its 21px pins.
+ *
+ * The server learns the choice from a cookie the boot script keeps
+ * (`theme-cookie.ts`); once the page is running, the choice is the live
+ * one, so flipping the toggle on this page swaps the print. All four are
+ * `?enhanced` imports with the widths named, which is the same
+ * `&lt;enhanced:img&gt;` pipeline — AVIF and WebP at three or four widths,
+ * width and height known so nothing shifts (the phone print has the
+ * desktop's 16:10) — rendered by hand because the component cannot put
+ * a `media` on a source.
+ */
+
+/*
+ * WHY `running`, AND NOT `theme.choice` FROM THE START
+ * ----------------------------------------------------
+ * The server has no `localStorage`; it knows the choice from the cookie,
+ * as `data.theme`, and renders the sources for that. The first render in
+ * the browser is hydration, which does not draw the page again: it walks
+ * the elements the server sent and attaches to them, so it must describe
+ * the same markup. Read `theme.choice` straight away and a person whose
+ * storage and cookie disagree — another tab changed the theme a moment
+ * ago — describes different `&lt;source&gt;`s from the ones in the document.
+ * Where only a `srcset` differs, Svelte keeps the server's and ignores
+ * its own; where the number of sources differs, hydration fails, and
+ * Svelte clears the server's page and renders all of it again. So the
+ * first render reads `data.theme`, as the server did; `onMount` runs once
+ * hydration is done, and from then on the live choice decides.
+ */
+let running = $state(false);
+onMount(() =&gt; {
+	running = true;
+});
+
+const chosen = $derived(running ? (theme.choice === 'system' ? null : theme.choice) : data.theme);
+
+const WIDE = '(min-width: 37em)';
+const DARK = '(prefers-color-scheme: dark)';
+const both = (...queries: (string | undefined)[]) =&gt;
+	queries.filter(Boolean).join(' and ') || undefined;
+
+const prints = $derived.by(() =&gt; {
+	const scheme = chosen === null ? DARK : undefined;
+	return [
+		...(chosen === 'light'
+			? []
+			: [
+					{
+						name: 'night',
+						picture: night,
+						media: both(WIDE, scheme),
+						sizes: '(min-width: 64em) 40rem, 100vw'
+					},
+					{ name: 'night-phone', picture: nightPhone, media: scheme, sizes: '100vw' }
+				]),
+		...(chosen === 'dark'
+			? []
+			: [
+					{ name: 'day', picture: day, media: WIDE, sizes: '(min-width: 64em) 40rem, 100vw' },
+					{ name: 'day-phone', picture: dayPhone, media: undefined, sizes: '100vw' }
+				])
+	];
+});
+
+const sources = (picture: typeof day) =&gt;
+	Object.entries(picture.sources).map(([format, srcset]) =&gt; ({
+		type: `image/${format}`,
+		srcset
+	}));</code></pre>
 </figure>
-<p><code>&lt;enhanced:img&gt;</code> is rewritten at build time — by the preprocessor that must come first in <code>vite.config.ts</code> — into a <code>&lt;picture&gt;</code> with AVIF and WebP sources at several widths, plus <code>width</code> and <code>height</code> so nothing shifts while it loads. <code>sizes</code> tells the browser how wide the image is on screen, so it picks the smallest file that is still sharp. The source PNG is drawn by <code>scripts/make-hero.ts</code> with sharp, which is why sharp is a devDependency named out loud rather than a transitive one hoped for.</p>
-<h3 id="motion">One reveal, three rules</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/motion/reveal.ts<span class="code__lines">:1-67</span></span>
+		<span class="code__file">src/routes/(site)/+page.svelte<span class="code__lines">:117-176</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;!--
+	The hero is the one cinematic moment the product allows itself: the title
+	in the display face at its largest cut, a glow of the sea colour behind
+	the image, and the image itself bleeding to the screen's edge on a phone
+	and sitting in a soft frame on a desktop. `{@attach hero()}` plays the
+	one GSAP timeline when the hero arrives by navigation — never over a page
+	somebody has already seen (`hero.ts` says how it knows); the copy and the
+	image are marked with data attributes so the attachment finds them
+	without knowing the markup.
+--&gt;
+&lt;section class=&quot;hero&quot; {@attach hero()}&gt;
+	&lt;div class=&quot;container hero__grid&quot;&gt;
+		&lt;div class=&quot;hero__copy stack&quot; data-hero-copy&gt;
+			&lt;p class=&quot;overline&quot;&gt;{m.app_tagline()}&lt;/p&gt;
+			&lt;h1 class=&quot;hero__title&quot;&gt;{m.home_hero_title()}&lt;/h1&gt;
+			&lt;p class=&quot;hero__lede&quot;&gt;{m.home_hero_lede()}&lt;/p&gt;
+			&lt;div class=&quot;hero__actions&quot;&gt;
+				&lt;a class=&quot;btn btn--primary hero__btn&quot; href={href('/(site)/(app)/trips/new')}&gt;
+					{m.home_cta()}
+				&lt;/a&gt;
+				&lt;a
+					class=&quot;btn btn--ghost hero__btn&quot;
+					href={href('/(site)/t/[slug=slug]', { slug: 'seedjapan2' })}
+				&gt;
+					{m.home_cta_secondary()}
+					&lt;ArrowRightIcon size={16} aria-hidden=&quot;true&quot; /&gt;
+				&lt;/a&gt;
+			&lt;/div&gt;
+		&lt;/div&gt;
+
+		&lt;!--
+			`media` says which print a source is for; `sizes` tells the browser how
+			wide that print is on screen, so it picks the smallest file that is
+			still sharp for that width; `fetchpriority` says it is the largest
+			thing on the first screen.
+		--&gt;
+		&lt;div class=&quot;hero__figure&quot; data-hero-image&gt;
+			&lt;picture&gt;
+				{#each prints as print (print.name)}
+					{#each sources(print.picture) as source (source.type)}
+						&lt;source
+							srcset={source.srcset}
+							sizes={print.sizes}
+							type={source.type}
+							media={print.media}
+						/&gt;
+					{/each}
+				{/each}
+				&lt;img
+					class=&quot;hero__img&quot;
+					src={chosen === 'dark' ? night.img.src : day.img.src}
+					width={day.img.w}
+					height={day.img.h}
+					alt=&quot;&quot;
+					fetchpriority=&quot;high&quot;
+				/&gt;
+			&lt;/picture&gt;
+		&lt;/div&gt;
+	&lt;/div&gt;
+&lt;/section&gt;</code></pre>
+</figure>
+<p>The hero is a map of the sample trip drawn by <code>scripts/make-hero.ts</code> with sharp — coastline, contours clipped to the land, a graticule, the dashed route and its numbered pins — once on cream for the light theme and once on near-black for the dark. Drawn twice rather than filtered once: the first version developed the cream print as a negative in the dark theme, <code>filter: invert(1) hue-rotate(180deg)</code>, and a negative is not a night map — the pins’ white numbers went black, and the land and the sea took whatever greys the arithmetic gave them rather than the night tokens’. The script is deterministic, so running it again produces the same bytes and the diff of a commit that touches it is honest.</p>
+<p>And each print is drawn twice, for two sizes of screen. A pin and its number are drawn in the pixels of the image, and the image is shown 40rem wide on a desktop and the full width of a 360px phone: the desktop drawing’s 26px pins came out 15px across on the phone, with numbers under 5px tall. So the script draws a desktop print at 1600×1000 and a phone print at 1200×750, framed a little tighter on the route, and every size in it — strokes, pins, numbers — is written in screen pixels at the narrowest the print is shown and multiplied out per print: the phone’s pins are 21px with 11.5px numbers at 360px. The compass rose is the desktop’s ornament only; drawn on the phone print it sat on Barcelona.</p>
+<p>Four prints must not mean four downloads, and the hero is the largest thing on the first screen — its paint *is* the page’s Largest Contentful Paint. <code>&lt;picture&gt;</code> makes the choice before any script runs: the browser takes the first <code>&lt;source&gt;</code> whose <code>media</code> and <code>type</code> match, so the order of the sources is the decision, and <code>prints</code> is that order as data. With no theme chosen, the night prints come first with <code>(prefers-color-scheme: dark)</code> in their <code>media</code> and the day prints follow, so the system decides. With a theme chosen, only that theme’s prints are rendered, with no colour scheme in their <code>media</code>, so a dark choice on a light phone fetches a night print and never a day one. Within each theme the desktop print carries <code>(min-width: 37em)</code> and comes first, and the phone print after it carries no width at all. 37em is not one of the layout’s breakpoints; it is where the desktop print’s numbers reach 11px — 30px of a 1600px drawing, shown about 590px wide — so below it the phone print, drawn for that, takes over. The server learns the choice from the cookie the boot script writes, through the <code>(site)</code> layout’s <code>load</code> (the next chapter quotes it); once the page is running, the live choice takes over, so flipping the toggle on this page swaps the print.</p>
+
+<aside class="callout callout--why">
+	<h4>Why <code>running</code>, and not <code>theme.choice</code> from the start</h4>
+	<p>The first render in the browser is hydration, and hydration does not draw the page again: it walks the elements the server sent and attaches to them, so it has to describe the same markup the server wrote. The server knew the choice only from the cookie, as <code>data.theme</code>. Read <code>theme.choice</code> straight away and a person whose storage and cookie disagree — another tab changed the theme a moment ago — describes different <code>&lt;source&gt;</code>s from the ones in the document. Where only a <code>srcset</code> differs Svelte keeps the server’s and ignores its own; where the number of sources differs hydration fails, and Svelte throws the server’s page away and renders all of it again. So the first render reads <code>data.theme</code>, as the server did; <code>onMount</code> runs once hydration is done and sets <code>running</code>, and from then on the live choice decides. The general rule is worth keeping: a value only the browser knows may change the page *after* hydration, never during it.</p>
+</aside>
+<p>All four prints are <code>?enhanced</code> imports with the widths named — the same pipeline as <code>&lt;enhanced:img&gt;</code>, run by the preprocessor that must come first in <code>vite.config.ts</code>: AVIF and WebP at four widths for a desktop print and three for a phone print, with the intrinsic width and height known so nothing shifts while it loads — the phone print is 16:10 like the desktop’s, so the one <code>&lt;img&gt;</code> reserves the right space for either. The component is not used because it cannot put a <code>media</code> on a source; the import gives the same <code>sources</code> and <code>img</code> and the markup is written by hand, with <code>src/images.d.ts</code> telling TypeScript what such an import returns. Each source’s <code>sizes</code> tells the browser how wide that print is on screen — 40rem from 64em or the whole width for a desktop print, the whole width for a phone print — so it picks the smallest file that is still sharp, and <code>fetchpriority=&quot;high&quot;</code> says it is the one to fetch first. On a phone the image steps out of the gutter to the screen’s edges and its bottom edge fades into the paper — only the bottom: a fade at the top as well left the map a faint band with dead space under it.</p>
+
+<aside class="callout callout--why">
+	<h4>Why a cookie, when the choice is already in storage</h4>
+	<p>Because the server renders the <code>&lt;picture&gt;</code>, and the browser starts fetching an image from the HTML long before any script could change it. <code>localStorage</code> is invisible to the server; a cookie is sent with the request. The cookie is a mirror, not a second source of truth: every colour still comes from <code>light-dark()</code> and <code>data-theme</code>, so a missing or stale cookie costs at most one picture drawn for the other theme — never a flash, never a wrong colour on anything else.</p>
+</aside>
+<h3 id="motion">One timeline, four rules</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/motion/hero.ts<span class="code__lines">:1-72</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
- * REVEAL ON SCROLL
- * ================
+ * THE HERO, ONCE
+ * ==============
  *
- * An attachment: a function that receives an element and returns a cleanup.
- * `{@attach reveal()}` on a container fades its children in, staggered,
- * the first time it scrolls into view.
+ * The one GSAP timeline in the product, as an attachment: a function that
+ * receives the hero element and returns a cleanup. `{@attach hero()}` on
+ * the hero section plays it on mount — the copy rises in, then the image
+ * unmasks — and GSAP ships only in the home route's chunk, because this is
+ * the only file that imports it.
  *
- * Three rules keep it honest:
+ * Four rules keep it honest:
  *
  *   1. Nothing is hidden until JavaScript runs. The server renders every
  *      element visible; only this function, in the browser, sets the
  *      starting opacity. With JavaScript off, or before it loads, the page
  *      is simply there.
- *   2. Reduced motion means no motion. Not &quot;less&quot; — none. The function
+ *   2. Nothing that has been seen is taken away. On the first load the
+ *      server's hero is painted long before the JavaScript arrives, and
+ *      the first version then snapped the title, the lede and the image to
+ *      nothing and faded them back in — the text a visitor had started to
+ *      read blinked out. So when the hero is being *hydrated* (the root
+ *      layout has not yet marked the document `data-hydrated`) and the
+ *      browser has already painted (a `first-contentful-paint` entry
+ *      exists), the timeline does not run. It plays when the hero arrives
+ *      with a navigation — a click on the brand from another page — where
+ *      the elements are new and nobody has seen them yet.
+ *   3. Reduced motion means no motion. Not &quot;less&quot; — none. The function
  *      returns before touching a style.
- *   3. It runs once. An `IntersectionObserver` fires when the container is
- *      in view, the tween plays, and the observer disconnects. Scrolling
- *      back up does not replay it; that is a slot machine, not a page.
+ *   4. It runs once, on mount. Scrolling back up does not replay it; that
+ *      is a slot machine, not a page.
+ *
+ * Nothing else in the app uses GSAP; the rest of what moves is CSS, a
+ * Svelte tween or a library's own animation. If this timeline ever goes,
+ * GSAP leaves the dependency list the same day.
  */
 
 import type { Attachment } from 'svelte/attachments';
 import { gsap } from 'gsap';
+import { reducedMotion } from './prefers.svelte.ts';
 
-export interface RevealOptions {
-	/** pixels the children travel up as they appear */
-	y?: number;
-	/** seconds between each child starting */
-	stagger?: number;
-	/** seconds each child takes */
-	duration?: number;
-}
-
-export function reveal({
-	y = 18,
-	stagger = 0.07,
-	duration = 0.7
-}: RevealOptions = {}): Attachment&lt;HTMLElement&gt; {
+export function hero(): Attachment&lt;HTMLElement&gt; {
 	return (node) =&gt; {
-		if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+		if (reducedMotion.current) return;
+		if (alreadySeen()) return;
 
-		const targets = node.children.length &gt; 0 ? Array.from(node.children) : [node];
-		gsap.set(targets, { opacity: 0, y });
+		const copy = Array.from(node.querySelectorAll&lt;HTMLElement&gt;('[data-hero-copy] &gt; *'));
+		const image = node.querySelector&lt;HTMLElement&gt;('[data-hero-image]');
 
-		const observer = new IntersectionObserver(
-			(entries) =&gt; {
-				if (!entries.some((entry) =&gt; entry.isIntersecting)) return;
-				gsap.to(targets, {
-					opacity: 1,
-					y: 0,
-					duration,
-					stagger,
-					ease: 'power3.out',
-					overwrite: true
-				});
-				observer.disconnect();
-			},
-			{ rootMargin: '0px 0px -10% 0px' }
-		);
-		observer.observe(node);
+		gsap.set(copy, { opacity: 0, y: 16 });
+		if (image) gsap.set(image, { opacity: 0, clipPath: 'inset(0 0 12% 0)' });
+
+		const timeline = gsap.timeline({ defaults: { ease: 'power3.out' } });
+		timeline.to(copy, { opacity: 1, y: 0, duration: 0.7, stagger: 0.06 });
+		if (image) {
+			timeline.to(image, { opacity: 1, clipPath: 'inset(0 0 0% 0)', duration: 0.9 }, 0.15);
+		}
 
 		return () =&gt; {
-			observer.disconnect();
-			gsap.killTweensOf(targets);
+			timeline.kill();
+			gsap.set([...copy, ...(image ? [image] : [])], { clearProps: 'all' });
 		};
 	};
+}
+
+/** Hydrating a page the browser has already painted: the hero is on screen, and stays as it is. */
+function alreadySeen(): boolean {
+	const hydrating = !('hydrated' in document.documentElement.dataset);
+	const painted = performance
+		.getEntriesByType('paint')
+		.some((entry) =&gt; entry.name === 'first-contentful-paint');
+	return hydrating &amp;&amp; painted;
 }</code></pre>
 </figure>
+<p>The project’s cinematic budget is spent on the globe and on one hero. Everything else moves the way a good editor cuts: rarely, and for a reason — a dialog rises 8px, a bottom sheet slides on the iOS curve, a tab indicator is a <code>Tween</code> from <code>svelte/motion</code>, the check mark on a copy button pops in with a ten-line custom transition in <code>src/lib/motion/transitions.ts</code>, and all of it reads its duration from the <code>--dur-*</code> tokens or from the one <code>MediaQuery</code> in <code>src/lib/motion/prefers.svelte.ts</code>. The hero is the exception that earns GSAP: an attachment — a function that receives an element and returns a cleanup — with four rules the comment states: nothing is hidden until JavaScript runs, nothing that has been seen is taken away, reduced motion means no motion, and it plays once. The second rule is the one a review found. On a first load the server’s hero is painted long before the JavaScript arrives, and the timeline then snapped the title, the lede and the image to nothing and faded them back — the sentence a visitor had started to read blinked out. So <code>alreadySeen()</code> asks two questions: is this a hydration (the root layout has not yet set <code>data-hydrated</code>), and has the browser painted (a <code>first-contentful-paint</code> entry exists)? Both yes, and the hero stays exactly as it is; the timeline plays when the hero arrives with a client-side navigation, as new elements nobody has seen. The copy and the image are found by <code>data-hero-copy</code> and <code>data-hero-image</code>, so the attachment does not know the markup, and the cleanup kills the timeline and clears the inline styles GSAP wrote. It is imported by the home route alone, so the library ships in that chunk and no other.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(site)/+page.svelte<span class="code__lines">:45-70</span></span>
+		<span class="code__file">src/routes/(site)/+page.svelte<span class="code__lines">:178-210</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;!--
 	`{const}` in markup: the list of features exists only for this loop, so it
-	is declared where the loop is, in the markup, rather than a screen away in
-	the script. It re-runs when the messages' locale changes.
+	is declared where the loop is, rather than a screen away in the script. It
+	is bare on purpose. A bare declaration tag is worked out once, and nothing
+	it reads changes while the page is open: a language switch is a full
+	reload (the `LocaleSwitcher` links carry `data-sveltekit-reload`), and the
+	new page works the list out afresh in the new language. The header's
+	links, which must follow a sign-in, are the opposite case: `$derived`.
 --&gt;
 {const features = [
 	{ icon: MapPinIcon, title: m.home_feature_map_title(), text: m.home_feature_map_text() },
@@ -428,22 +753,181 @@ export function reveal({
 	{ icon: UsersThreeIcon, title: m.home_feature_live_title(), text: m.home_feature_live_text() }
 ]}
 
-&lt;section class=&quot;container features grid&quot; {@attach reveal({ stagger: 0.1 })}&gt;
-	{#each features as feature (feature.title)}
-		{@const Icon = feature.icon}
-		&lt;article class=&quot;card card--pad stack stack--sm&quot;&gt;
-			&lt;Icon size={28} weight=&quot;duotone&quot; class=&quot;feature__icon&quot; aria-hidden=&quot;true&quot; /&gt;
-			&lt;h2&gt;{feature.title}&lt;/h2&gt;
-			&lt;p class=&quot;muted&quot;&gt;{feature.text}&lt;/p&gt;
+&lt;!-- The cards rise in 70ms apart the first time they scroll into view; CSS does the motion, `inview` says when. --&gt;
+&lt;section class=&quot;container features grid&quot; {@attach inview()}&gt;
+	{#each features as feature, i (feature.title)}
+		{const Icon = $derived(feature.icon)}
+		&lt;article class=&quot;card card--pad feature stack stack--sm&quot; style:--i={i}&gt;
+			&lt;span class=&quot;feature__icon&quot; aria-hidden=&quot;true&quot;&gt;
+				&lt;Icon size={28} weight=&quot;duotone&quot; /&gt;
+			&lt;/span&gt;
+			&lt;h2 class=&quot;feature__title&quot;&gt;{feature.title}&lt;/h2&gt;
+			&lt;p class=&quot;feature__text&quot;&gt;{feature.text}&lt;/p&gt;
 		&lt;/article&gt;
 	{/each}
 &lt;/section&gt;</code></pre>
 </figure>
-<p>The project’s cinematic budget is spent on the globe. Everything else moves the way a good editor cuts: rarely, and for a reason. The reveal is an attachment — a function that receives an element and returns a cleanup — with three rules the comment states: nothing is hidden until JavaScript runs, reduced motion means no motion, and it plays once. GSAP does the tween because its easing and stagger are better than hand-written keyframes and because it is the tool the earlier projects taught; it is used in one file.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/motion/hero.ts<span class="code__lines">:74-104</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * The features grid: CSS does the stagger (`animation-delay` from `--i`),
+ * and this only says *when* — the first time the grid scrolls into view,
+ * `data-inview` is set and the observer is done. Rule 1 still holds: the
+ * CSS that hides a card is scoped to `[data-inview]`'s absence *and* to
+ * JavaScript having run, so a page without JavaScript shows every card.
+ */
+export function inview(): Attachment&lt;HTMLElement&gt; {
+	return (node) =&gt; {
+		if (reducedMotion.current) {
+			node.dataset.inview = '';
+			return;
+		}
+		// Already on screen when the script arrives: there is nothing to wait for.
+		if (node.getBoundingClientRect().top &lt; innerHeight * 0.9) {
+			node.dataset.inview = '';
+			return;
+		}
+		node.dataset.animate = '';
+		const observer = new IntersectionObserver(
+			(entries) =&gt; {
+				if (!entries.some((entry) =&gt; entry.isIntersecting)) return;
+				node.dataset.inview = '';
+				observer.disconnect();
+			},
+			{ rootMargin: '0px 0px -10% 0px' }
+		);
+		observer.observe(node);
+		return () =&gt; observer.disconnect();
+	};
+}</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(site)/+page.svelte<span class="code__lines">:312-335</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/*
+ * Rule 1 of the hero: nothing is hidden until JavaScript runs. The
+ * attachment sets `data-animate` only in the browser, and only when
+ * motion is wanted; without it, this rule never matches and every card
+ * is simply there. `:global` because the attributes are written by the
+ * attachment, not the template, and the compiler would otherwise drop
+ * a selector it cannot see matching.
+ */
+@media (prefers-reduced-motion: no-preference) {
+	:global(.features[data-animate]:not([data-inview]) .feature) {
+		opacity: 0;
+	}
+	:global(.features[data-inview] .feature) {
+		animation: rise var(--dur-5) var(--ease-out) both;
+		animation-delay: calc(var(--i) * 70ms);
+	}
+}
+
+@keyframes rise {
+	from {
+		opacity: 0;
+		translate: 0 12px;
+	}
+}</code></pre>
+</figure>
+<p>The feature cards need no timeline, so they get none. <code>inview</code> only decides *when*: it sets <code>data-animate</code> in the browser while the grid is still below the fold, and <code>data-inview</code> the first time it scrolls into view, and then disconnects its observer. The CSS does the motion — a 12px rise on <code>--dur-5</code>, each card 70ms after the one before through the <code>--i</code> the markup sets — and rule 1 lives in the selector: a card is hidden only under <code>[data-animate]</code>, which the server never writes, so with JavaScript off every card is simply there. A grid already on screen when the script arrives skips the hiding step, and under reduced motion the whole block sits inside a media query that does not match. The list itself is a declaration tag — a <code>{const}</code> in the markup, beside the one loop that uses it — and the next chapter says what one is in full.</p>
+
+<aside class="callout callout--why">
+	<h4>Why the list is a bare <code>{const}</code> and the icon a <code>$derived</code> one</h4>
+	<p>A bare declaration tag is worked out once, when its block is created; one that wraps its value in <code>$derived</code> is worked out again whenever what it reads changes — the compiler turns the first into a plain <code>const</code> and the second into a derived signal. The list reads only messages, and the one thing that could change those is the language. A language switch loads a new page — the switcher’s links carry <code>data-sveltekit-reload</code> — and the new page works the list out afresh in the new language, so once is all it needs, and the comment above it says it is bare on purpose. <code>Icon</code> reads the loop’s item instead, and an item is like a prop: Svelte’s best practices say to “treat props as though they will change”, and to make a value that depends on one <code>$derived</code>. A keyed <code>{#each}</code> keeps a card whose key survives a change to the list and hands it the new item; a bare tag there would go on drawing the old icon. This list never changes, so the <code>$derived</code> costs nothing today, and it is the form that stays right on the day the list does.</p>
+</aside>
+<h3 id="checked">Contrast, checked on every lint</h3>
+<p>Every ratio in this chapter — 5.36:1 for the tertiary ink on paper, 3.06:1 for a chosen segment’s edge, 10.39:1 for the globe’s hints — is printed by a script, not remembered. Because every colour is a token and most tokens are a <code>light-dark()</code> pair, whether text is readable is a question <code>tokens.css</code> can answer on its own, without a browser: parse it, resolve both sides of each pair and the <code>var()</code> aliases between tokens, and work out the WCAG ratio of every pair the design puts on top of each other.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/design/contrast.ts<span class="code__lines">:106-144</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">const TEXT = ['ink', 'ink-2', 'ink-3'] as const;
+const TIERS = ['paper', 'paper-2', 'paper-3', 'paper-4'] as const;
+const KINDS = ['place', 'lodging', 'food', 'transport', 'activity', 'idea'] as const;
+
+/**
+ * The table the design promises: every text ink on every surface tier,
+ * the ink on every saturated fill, the focus ring on every paper, a chosen
+ * segment's edge on its track and on itself, the globe's hint on the night
+ * frame, and the hairline floor for a control's border — plus the accent
+ * and state colours where they are used as text.
+ */
+export const PAIRS: readonly Pair[] = [
+	...TEXT.flatMap((fg) =&gt;
+		TIERS.map((bg) =&gt; ({ fg, bg, min: 4.5, note: `${fg} text on surface tier ${bg}` }))
+	),
+	...KINDS.map((kind) =&gt; ({
+		fg: 'on-fill',
+		bg: `kind-${kind}`,
+		min: 4.5,
+		note: `a pin's number on the ${kind} colour`
+	})),
+	...TIERS.map((bg) =&gt; ({ fg: 'focus', bg, min: 3, note: `the focus ring on ${bg}` })),
+	{ fg: 'segment-edge', bg: 'paper-3', min: 3, note: 'a chosen segment’s edge on its track' },
+	{ fg: 'segment-edge', bg: 'paper-4', min: 3, note: 'a chosen segment’s edge on the segment' },
+	{ fg: 'night-ink', bg: 'night', min: 4.5, note: 'the globe’s hints on the night frame' },
+	{ fg: 'line-2', bg: 'paper-2', min: 1.5, note: 'a control’s border (hairline floor)' },
+	{ fg: 'sea', bg: 'paper', min: 4.5, note: 'links' },
+	{ fg: 'sea', bg: 'paper-2', min: 4.5, note: 'links on a card' },
+	{ fg: 'sea-strong', bg: 'paper', min: 4.5, note: 'hovered links' },
+	{ fg: 'sea', bg: 'sea-soft', min: 4.5, note: '.chip--sea, the Live chip' },
+	{ fg: 'sun', bg: 'paper', min: 4.5, note: 'warning text' },
+	{ fg: 'sun', bg: 'sun-soft', min: 4.5, note: 'sun text on its soft fill' },
+	{ fg: 'coral', bg: 'paper', min: 4.5, note: '.issue' },
+	{ fg: 'coral', bg: 'paper-4', min: 4.5, note: '.issue in a dialog' },
+	{ fg: 'coral', bg: 'coral-soft', min: 4.5, note: '.chip--coral' },
+	{ fg: 'on-sea', bg: 'sea', min: 4.5, note: 'the primary button' },
+	{ fg: 'on-fill', bg: 'coral', min: 4.5, note: '.btn--danger' },
+	{ fg: 'paper', bg: 'ink', min: 4.5, note: 'the update banner, the skip link' }
+];</code></pre>
+</figure>
+<p>That is the table the design promises, as data: every text ink on every surface tier, the fill ink on every stop kind, the focus ring on every paper, the segment edge on its track and on itself, and the accent and state colours where they are used as text. The floor is the standard’s — 4.5:1 for text, 3:1 for something that is not text but must be seen — and the maths is too: each channel linearised, weighted by how bright the eye finds it into a luminance, and the ratio of two luminances each plus 0.05. A pair whose token does not exist counts as a failure, so renaming <code>--ink-3</code> cannot quietly drop its rows.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">scripts/contrast.ts<span class="code__lines">:19-38</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { check, report } from '../src/lib/design/contrast.ts';
+
+const root = join(dirname(fileURLToPath(import.meta.url)), '..');
+const css = readFileSync(join(root, 'src/lib/styles/tokens.css'), 'utf8');
+const results = check(css);
+const failures = results.filter((result) =&gt; !result.ok);
+
+if (process.argv.includes('--report') || failures.length &gt; 0) {
+	console.log('CONTRAST (WCAG 2.x, from tokens.css)' + report(results).join('\n'));
+}
+
+if (failures.length &gt; 0) {
+	console.error(`\n${failures.length} pair(s) under their floor`);
+	process.exitCode = 1;
+} else {
+	console.log(`contrast: ${results.length} pairs in two themes, every one at or above its floor`);
+}</code></pre>
+</figure>
+<p><code>pnpm run lint</code> ends with this script, so a token change that makes the tertiary ink unreadable on a card fails in a second, before a browser has started; <code>--report</code> prints the whole table, and <code>scripts/screens.ts</code> prints it again beside the screenshots. The module is pure — no DOM, no file system — so a script, a unit test (chapter 41) and the screenshot tool all import the same table.</p>
+
+<aside class="callout callout--why">
+	<h4>Why a static table, when axe checks contrast in the browser</h4>
+	<p>axe does check it, and chapter 42 runs axe on every screen in both themes. But axe can only judge what is on screen in the states the suite reaches: an error line inside a dialog, a warning chip, a hovered link may never be rendered there. The table checks every pair the design *promises*, in both themes, whether or not a page shows it today — and when it fails it names two tokens, which is where the fix goes, rather than a DOM node, which is where the symptom was. The two disagree only when a component puts colours together that the table does not list, and that is a conversation the design should have anyway.</p>
+</aside>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>
-	<ul><li>You can explain <code>light-dark()</code> and why the theme class only sets <code>color-scheme</code>.</li><li>You know why the boot script has a hash and no nonce.</li><li>You can state the three rules of the reveal and where each is enforced.</li></ul>
+	<ul><li>You can explain <code>light-dark()</code> and why the theme class only sets <code>color-scheme</code>.</li><li>You know why the boot script has a hash and no nonce.</li><li>You can state the four rules of the hero timeline, and say why the feature cards animate with CSS instead.</li><li>You can say how the hero fetches one print of two, and why the server has to know the theme for that.</li><li>You know which file a contrast ratio in this chapter comes from, and what fails when a token change breaks one.</li></ul>
 </aside>
 		</article>
 

@@ -4,6 +4,8 @@
 	import type { FeatureCollection, Geometry } from 'geojson';
 	import { PauseIcon, PlayIcon } from 'phosphor-svelte';
 	import { m } from '#lib/paraglide/messages.js';
+	import { reducedMotion } from '#lib/motion/prefers.svelte.ts';
+	import { boundaryMessage } from '#lib/ui/errors.ts';
 	import Scene, { type GlobeStop } from './Scene.svelte';
 
 	/**
@@ -28,13 +30,18 @@
 	let { stops, selected, onselect }: Props = $props();
 
 	/*
-	 * `MediaQuery` from `svelte/reactivity`: a media query as a reactive
-	 * value. When the operating system setting changes, `current` changes,
-	 * and the scene stops animating without a reload.
+	 * `reducedMotion` is the app's one `MediaQuery` for the setting (see
+	 * `src/lib/motion/prefers.svelte.ts`): a reactive value, so when the
+	 * operating system setting changes, `current` changes, and the scene
+	 * stops animating without a reload.
 	 */
-	const reducedMotion = new MediaQuery('(prefers-reduced-motion: reduce)');
-
 	let flying = $state(false);
+
+	/* On a touch screen a scroll moves the page and a pinch zooms the globe, so the hint says pinch. */
+	const touch = new MediaQuery('(pointer: coarse)');
+
+	/* The canvas fades in over 700ms once the scene has drawn its first frame; before that the frame is already night. */
+	let ready = $state(false);
 
 	/* The coastlines: the same prerendered file the map reads. */
 	async function loadWorld(): Promise<FeatureCollection<Geometry>> {
@@ -47,18 +54,19 @@
 <div class="globe">
 	<svelte:boundary>
 		{#snippet pending()}
-			<p class="globe__status muted">{m.globe_loading()}</p>
+			<p class="globe__status">{m.globe_loading()}</p>
 		{/snippet}
+		<!-- An `App.Error` from `handleError`, not the `Error` thrown below: the words are on `message`. -->
 		{#snippet failed(error, reset)}
 			<p class="globe__status issue">
-				{error instanceof Error ? error.message : m.error_title()}
+				{boundaryMessage(error)}
 				<button class="btn btn--sm" type="button" onclick={reset}>{m.live_reconnect()}</button>
 			</p>
 		{/snippet}
 
 		{const world = await loadWorld()}
 
-		<div class="globe__canvas">
+		<div class="globe__canvas" data-ready={ready ? '' : undefined}>
 			<Canvas>
 				<Scene
 					{stops}
@@ -68,6 +76,7 @@
 					reduced={reducedMotion.current}
 					{onselect}
 					onlanded={() => (flying = false)}
+					onfirstframe={() => (ready = true)}
 				/>
 			</Canvas>
 		</div>
@@ -94,24 +103,39 @@
 		{:else}
 			<p class="hint">{m.route_none()}</p>
 		{/if}
-		<p class="hint">{m.globe_hint()}</p>
+		<p class="hint">{touch.current ? m.globe_hint_touch() : m.globe_hint()}</p>
 	</div>
 </div>
 
 <style>
+	/*
+	 * Always night. The globe is the one place the product allows itself a
+	 * dark frame on a cream page, and the frame is the same colour in both
+	 * themes — the `--night` tokens, which the trip page paints before this
+	 * chunk arrives, so the tab never flashes. The hairline that sits the
+	 * night box on paper like a framed print is on that frame, not here, so
+	 * there is exactly one. The controls have a row of their own under the
+	 * canvas, so the globe is centred in what is visible, never behind them.
+	 */
 	.globe {
 		display: grid;
-		grid-template-rows: 1fr auto;
+		grid-template-rows: minmax(0, 1fr) auto;
 		height: 100%;
-		min-height: 24rem;
-		border-radius: var(--radius-lg);
+		min-height: 20rem;
+		border-radius: inherit;
 		overflow: hidden;
-		background: #050b14;
-		color: #dfe8f0;
+		background: var(--night);
+		color: var(--night-ink);
 	}
 
 	.globe__canvas {
 		min-height: 0;
+		opacity: 0;
+		transition: opacity var(--dur-5) var(--ease-out);
+	}
+
+	.globe__canvas[data-ready] {
+		opacity: 1;
 	}
 
 	.globe__status {
@@ -119,14 +143,17 @@
 		place-items: center;
 		gap: var(--space-2);
 		padding: var(--space-6);
+		color: var(--night-ink);
+		font-size: var(--text-sm);
 	}
 
 	.globe__controls {
 		padding: var(--space-3) var(--space-4);
-		background: rgb(255 255 255 / 0.06);
+		background: var(--night-raised);
 	}
 
+	/* 10.4:1 on the night frame. */
 	.globe__controls .hint {
-		color: #9fb3c4;
+		color: var(--night-ink);
 	}
 </style>

@@ -19,6 +19,7 @@ import { command, getRequestEvent } from '$app/server';
 import { STOP_LIMIT } from '$app/env/private';
 import { and, eq } from 'drizzle-orm';
 import { nextPosition, place } from '#lib/domain/itinerary.ts';
+import { m } from '#lib/paraglide/messages.js';
 import { IdSchema, MoveStopSchema, StopInputSchema, StopPatchSchema } from '#lib/domain/schemas.ts';
 import { bump, requireMember } from '#lib/server/access.ts';
 import { db, schema } from '#lib/server/db/index.ts';
@@ -28,7 +29,7 @@ export const addStop = command(StopInputSchema, async (input) => {
 	const { user, trip } = await requireMember(input.tripId, 'editor');
 
 	if ((await trips.countStops(trip.id)) >= STOP_LIMIT) {
-		error(422, `A trip holds at most ${STOP_LIMIT} stops`);
+		error(422, m.stop_limit({ limit: STOP_LIMIT }));
 	}
 
 	const position = nextPosition(await trips.listStops(trip.id), input.date);
@@ -43,7 +44,7 @@ export const addStop = command(StopInputSchema, async (input) => {
 
 export const updateStop = command(StopPatchSchema, async ({ id, ...patch }) => {
 	const existing = await db.query.stop.findFirst({ where: eq(schema.stop.id, id) });
-	if (!existing) error(404, 'Not found');
+	if (!existing) error(404, m.error_no_stop());
 	await requireMember(existing.tripId, 'editor');
 
 	await db.update(schema.stop).set(patch).where(eq(schema.stop.id, id));
@@ -54,7 +55,7 @@ export const moveStop = command(MoveStopSchema, async ({ tripId, id, date, index
 	await requireMember(tripId, 'editor');
 
 	const stops = await trips.listStops(tripId);
-	if (!stops.some((s) => s.id === id)) error(404, 'Not found');
+	if (!stops.some((s) => s.id === id)) error(404, m.error_no_stop());
 
 	const changes = place(stops, id, date, index);
 	if (changes.length > 0) {

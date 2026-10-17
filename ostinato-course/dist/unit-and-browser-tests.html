@@ -38,7 +38,7 @@
 			
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:249-299</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:282-335</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">test: {
@@ -53,8 +53,12 @@
 			 * `AudioContext`, no `OfflineAudioContext` and no layout, so the
 			 * scheduler, the knobs and the waveform would all pass every test you
 			 * thought to write while doing nothing at all.
+			 *
+			 * No `extends` line: Vitest 5 hands every inline project the root
+			 * config — the plugins, `ssr.external`, `requireAssertions` — by
+			 * default. Vitest 4 needed `extends: './vite.config.ts'` here, which
+			 * loaded this very file a second time per project.
 			 */
-			extends: './vite.config.ts',
 			test: {
 				name: 'client',
 				browser: {
@@ -74,7 +78,6 @@
 			// Pure logic — plain Node, no browser, fast. The pattern model, the
 			// codec, the identity cookie and the adapter's route partition live
 			// here, and these are the tests that run on every save.
-			extends: './vite.config.ts',
 			test: {
 				name: 'server',
 				environment: 'node',
@@ -289,6 +292,46 @@ it('refuses a token signed with a different secret', async () =&gt; {
 	});
 });</code></pre>
 </figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/errors.spec.ts<span class="code__lines">:1-32</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">import { describe, expect, it } from 'vitest';
+import { error } from '@sveltejs/kit';
+import { messageOf } from './errors.ts';
+
+/** What an awaited remote call rejects with: the `HttpError` that `error()` throws. */
+function rejection(status: number, message: string, id?: string): unknown {
+	try {
+		if (id) error(status, message, { id });
+		else error(status, message);
+	} catch (e) {
+		return e;
+	}
+}
+
+describe('messageOf', () =&gt; {
+	it(&quot;reads the server's sentence from an HttpError&quot;, () =&gt; {
+		expect(messageOf(rejection(404, 'No such track in this room'), 'fallback')).toBe(
+			'No such track in this room'
+		);
+	});
+
+	it('keeps the reference an unexpected failure was logged under', () =&gt; {
+		const failure = rejection(500, 'Something went wrong on our side.', 'f3c1');
+		expect(messageOf(failure, 'fallback')).toBe('Something went wrong on our side. (ref f3c1)');
+	});
+
+	it('says what was being attempted when there is no sentence to read', () =&gt; {
+		expect(messageOf(new TypeError('Failed to fetch'), 'Could not delete that')).toBe(
+			'Could not delete that'
+		);
+	});
+});</code></pre>
+</figure>
+<p>No double for an <code>HttpError</code> here: the test makes a real one the way the server does, by calling <code>error()</code> and catching what it throws, so the three cases are the three things <code>messageOf</code> can actually be handed (ch. 24). <code>lib/server/tracing.spec.ts</code> is the same idea for the span ring: a real <code>BasicTracerProvider</code> with the ring exporter behind it, one span with a query string in its <code>http.url</code>, and an assertion about what the public diagnostics page would be shown (ch. 32).</p>
 <p>The adapter’s partition is tested with the same shapes SvelteKit hands an adapter in <code>builder.routes</code> — an <code>id</code> and a <code>pattern</code> — so the doubles are honest. <code>pick</code> is what the runtime calls per request, and the cases are the ones that were wrong at some point: a data request, a remote call, a vanity address.</p>
 <h3 id="state-without-a-component"><code>$state</code> without a component</h3>
 

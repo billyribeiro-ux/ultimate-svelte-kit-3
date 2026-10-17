@@ -166,7 +166,7 @@
 			{@attach revealGroup('.how__step', { from: 'up', scale: true })}
 		>
 			{#each steps as step, index (step.title)}
-				{@const Icon = step.icon}
+				{const Icon = $derived(step.icon)}
 				<li class="how__step">
 					<span class="how__number tabular" aria-hidden="true">0{index + 1}</span>
 					<span class="how__icon" aria-hidden="true">

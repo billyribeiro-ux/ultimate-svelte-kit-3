@@ -62,6 +62,11 @@
 			{published.title.length > 28 ? `${published.title.slice(0, 27)}…` : published.title}
 		</text>
 
+		<!--
+			Plain declarations, not `$derived`: this component is rendered once, on
+			the server, to a string. Nothing it reads changes after that, so there
+			is nothing for a derived to follow.
+		-->
 		{#each published.pattern.tracks as track, row (track.id)}
 			{const hue = hues[track.kind] ?? 60}
 			{#each track.steps as step, column (column)}

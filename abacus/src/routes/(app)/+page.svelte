@@ -1,22 +1,18 @@
 <script lang="ts">
 	import { hydratable } from 'svelte';
+	import { resolve } from '$app/paths';
 	import { cinematic } from '#lib/motion/cinematic.ts';
 	import Section from '#lib/components/Section.svelte';
+	import { DEMO_INPUTS, demoText } from '#lib/sheet/demo.ts';
 	import { TEMPLATES } from '#lib/sheet/templates.ts';
 
-	/**
+	/*
 	 * A demo grid that needs no JavaScript: the formulas and their results,
 	 * written out, with a CSS animation that "types" the formula into the
-	 * bar. The results are real — `templates.spec.ts` computes them — and
-	 * the point is that a person sees a spreadsheet before they load one.
+	 * bar. The results are real — `demo.spec.ts` computes every one with the
+	 * engine — and the point is that a person sees a spreadsheet before they
+	 * load one.
 	 */
-	const demo = [
-		['Category', 'Budgeted', 'Actual', 'Difference'],
-		['Rent', '1,400.00', '1,400.00', '0.00'],
-		['Groceries', '450.00', '512.40', '-62.40'],
-		['Transport', '120.00', '96.50', '23.50'],
-		['Total', '=SUM(B2:B4)', '=SUM(C2:C4)', '=B5-C5']
-	];
 
 	/**
 	 * `hydratable` for a random number that must agree with itself: the
@@ -67,8 +63,10 @@
 	</p>
 
 	<div class="hero__actions cluster" data-rise>
-		<a class="btn btn--primary btn--lg" href="/sheet/local">Open a sheet — no account</a>
-		<a class="btn btn--lg" href="/templates">Start from a template</a>
+		<a class="btn btn--primary btn--lg" href={resolve('/(app)/sheet/local')}
+			>Open a sheet — no account</a
+		>
+		<a class="btn btn--lg" href={resolve('/(app)/templates')}>Start from a template</a>
 	</div>
 
 	<div class="demo" data-rise aria-hidden="true">
@@ -77,20 +75,14 @@
 		</div>
 		<table class="demo__table">
 			<tbody>
-				{#each demo as row, r (r)}
+				{#each DEMO_INPUTS as row, r (r)}
 					<tr>
-						{#each row as text, c (c)}
+						{#each row as input, c (c)}
 							{#if r === 0}
-								<th>{text}</th>
+								<th>{input}</th>
 							{:else}
-								<td class={{ num: c > 0, formula: text.startsWith('='), total: r === 4 }} data-pad>
-									{text.startsWith('=')
-										? c === 1
-											? '1,970.00'
-											: c === 2
-												? '2,008.90'
-												: '-38.90'
-										: text}
+								<td class={{ num: c > 0, formula: input.startsWith('='), total: r === 4 }} data-pad>
+									{demoText(r, c)}
 								</td>
 							{/if}
 						{/each}
@@ -106,7 +98,11 @@
 		<ul class="features">
 			{#each Object.values(TEMPLATES) as template (template.slug)}
 				<li>
-					<h3><a href="/templates/{template.slug}">{template.title}</a></h3>
+					<h3>
+						<a href={resolve('/(app)/templates/[slug]', { slug: template.slug })}
+							>{template.title}</a
+						>
+					</h3>
 					<p>{template.summary}</p>
 				</li>
 			{/each}

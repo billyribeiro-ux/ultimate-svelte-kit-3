@@ -153,7 +153,7 @@ export interface Channel {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/audio/engine.svelte.ts<span class="code__lines">:111-135</span></span>
+		<span class="code__file">src/lib/audio/engine.svelte.ts<span class="code__lines">:111-126</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">get volume(): number {
@@ -171,26 +171,29 @@ set volume(value: number) {
 	if (this.#master &amp;&amp; this.#context) {
 		this.#master.gain.setTargetAtTime(this.#volume, this.#context.currentTime, 0.02);
 	}
-}
-
-/**
- * The channel strip for a track, made on first request.
- *
- * `getOrInsertComputed` (Svelte 5.57) is exactly this operation: look it up,
- * and if it is not there, build it *once* and keep it. The old spelling was
- * `get`, an `if`, a `new` and a `set`, and the old bug was building a second
- * strip because two callers raced through the `if` — a track with two
- * outputs plays at double volume, which is a good bug to never write again.</code></pre>
+}</code></pre>
 </figure>
 <p>The obvious way to connect <code>volume</code> to the gain node is an <code>$effect</code> that watches one and pokes the other. The setter is better: the value and its consequence change in the same place, there is nothing to synchronise, and <code>setTargetAtTime</code> gives the fader a twenty-millisecond glide so it never clicks. “Use <code>$effect</code> to sync state” is the first habit to unlearn in Svelte 5, and this is the pattern that replaces it.</p>
 <h3 id="getorinsertcomputed">getOrInsertComputed (Svelte 5.57)</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/audio/engine.svelte.ts<span class="code__lines">:137-165</span></span>
+		<span class="code__file">src/lib/audio/engine.svelte.ts<span class="code__lines">:128-168</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">channel(track: Pick&lt;Track, 'id' | 'gain' | 'pan'&gt;): Channel {
+	<pre><code class="lang-ts">/**
+ * The channel strip for a track, made on first request.
+ *
+ * `getOrInsertComputed` (Svelte 5.57) is exactly this operation: look it up,
+ * and if it is not there, build it *once* and keep it. The old spelling was
+ * four statements — `get`, an `if`, a `new` and a `set` — and two lookups,
+ * and the one that matters is the `set`, which is also the one an edit can
+ * lose without anything failing to compile. Without it every call builds a
+ * fresh strip and connects it to the master, and the scheduler calls this
+ * once per hit: a track would end up with as many outputs as it has played
+ * notes. One call cannot be half-written.
+ */
+channel(track: Pick&lt;Track, 'id' | 'gain' | 'pan'&gt;): Channel {
 	const ctx = this.context;
 
 	const channel = this.channels.getOrInsertComputed(track.id, () =&gt; {
@@ -220,11 +223,11 @@ prune(liveIds: readonly string[]): void {
 	}
 }</code></pre>
 </figure>
-<p>The old spelling was <code>get</code>, an <code>if</code>, a <code>new</code> and a <code>set</code> — and the old bug was building a second strip because two callers raced through the <code>if</code>. A track with two outputs plays at double volume, which is a good bug to never write again. <code>getOrInsertComputed</code> is exactly “look it up, and if it is not there, build it once and keep it”. <code>channels</code> is a <code>SvelteMap</code> because the mixer reads <code>has(track.id)</code> to decide whether to draw a meter, and a meter that appears on its own the first time a track sounds is nicer than one that waits for a re-render.</p>
+<p>The old spelling was four statements — <code>get</code>, an <code>if</code>, a <code>new</code> and a <code>set</code> — and two lookups, and the statement that matters is the <code>set</code>, which is also the one an edit can lose without anything failing to compile. Lose it and every call builds a fresh strip and connects it to the master; the scheduler calls <code>channel()</code> once per hit, so a track would end up with as many outputs as it has played notes. (It is not a race: JavaScript runs that <code>if</code> to the end before anything else runs, and the factory is synchronous. The danger is the half-written version, not a concurrent one.) <code>getOrInsertComputed</code> is exactly “look it up, and if it is not there, build it once and keep it”, and one call cannot be half-written. <code>channels</code> is a <code>SvelteMap</code> because the mixer reads <code>has(track.id)</code> to decide whether to draw a meter, and a meter that appears on its own the first time a track sounds is nicer than one that waits for a re-render.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/audio/engine.svelte.ts<span class="code__lines">:167-190</span></span>
+		<span class="code__file">src/lib/audio/engine.svelte.ts<span class="code__lines">:170-193</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">	async resume(): Promise&lt;void&gt; {

@@ -118,20 +118,34 @@
 		<span class="code__file">src/lib/components/booking/DateStrip.svelte</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-css">/* On the narrowest phones the weekday initial is enough; the number carries
- * the meaning and seven three-letter labels would wrap. */
-@media (max-width: 26rem) {
-	.weekday {
-		font-size: 0.6rem;
-	}
+	<pre><code class="lang-css">.weekday {
+	font-size: 0.6rem;
+	/* … */
+}
+
+/* … */
+
+/* Mobile first. On the narrowest phones the number carries the meaning, so
+ * the weekday is tiny and the days have no side padding; seven three-letter
+ * labels at full size would wrap. From 26rem there is room for both. */
+@media (min-width: 26rem) {
 	.day {
-		padding-inline: 0;
+		padding-inline: var(--space-1);
+	}
+
+	.weekday {
+		font-size: var(--text-xs);
 	}
 }</code></pre>
 </figure>
-<p>Six width queries in the entire application: these two, a <code>min-width: 30rem</code> that lets the landing page's buttons stop being full-width, and three small <code>max-width</code> ones that tighten a component on narrow phones — the header drops the brand word at 22rem, a confirmation detail row collapses to one column at 26rem, and the diary's cancel button drops onto its own row at 30rem. Not one of them came from a table of phone sizes — each was written at the width where its content visibly stopped fitting. That is the whole method: resize the window slowly, and add a query at the point where you wince.</p>
+<p>Six width queries in the entire application, and every one is <code>min-width</code>: these two; one at 30rem that lets the landing page's buttons stop being full-width; the header's brand word, which appears from 22rem; the confirmation page's detail rows, which go side by side from 26rem; and the diary's cancel button, which joins its row from 30rem. Not one of them came from a table of phone sizes — each was written at the width where its content visibly stopped fitting. That is the whole method: resize the window slowly, and add a query at the point where you wince.</p>
+
+<aside class="callout callout--why">
+	<h4>Why only min-width</h4>
+	<p>Three of those queries used to be <code>max-width</code>: a desktop layout written first, then undone on small screens — the &quot;desktop-first with extra steps&quot; this chapter opened with. They worked, and each one made the phone the special case. Rewritten as <code>min-width</code>, the rules outside any query are the phone's, and every query only ever adds: a wider screen gains a column, a label, padding. Reading a stylesheet from the top tells you what the smallest screen sees, which is the screen most of this app's customers are holding.</p>
+</aside>
 <h3 id="touch">Thumbs, not cursors</h3>
-<ul><li><strong>44px minimum</strong> on anything tappable — <code>min-height: 2.75rem</code>. The slot grid, the buttons, the header links.</li><li><strong>Spacing between targets</strong>, not just size. Two 44px buttons touching are one 88px button as far as a thumb is concerned.</li><li><strong>Primary actions at the bottom</strong> on a phone. The top of a 6.7-inch screen needs a hand shuffle.</li><li><strong><code>inputmode</code> and <code>autocomplete</code></strong> on every field. <code>autocomplete=&quot;email&quot;</code> plus <code>inputmode=&quot;email&quot;</code> is the difference between two taps and thirty.</li></ul>
+<ul><li><strong>44px minimum</strong> on anything tappable — <code>min-height: 2.75rem</code>. The slot grid, the buttons, the header links.</li><li><strong>Spacing between targets</strong>, not just size. Two 44px buttons touching are one 88px button as far as a thumb is concerned.</li><li><strong>Primary actions at the bottom</strong> on a phone. The top of a 6.7-inch screen needs a hand shuffle.</li><li><strong>The right <code>type</code>, and <code>autocomplete</code></strong>, on every field the browser can fill. <code>fields.email.as('email')</code> renders <code>type=&quot;email&quot;</code>, which brings up the keyboard with an @ on it, and <code>autocomplete=&quot;email&quot;</code> lets the browser offer the address it already knows: the difference between two taps and thirty.</li></ul>
 <h3 id="dvh">The viewport unit that does not lie</h3>
 
 <figure class="code">

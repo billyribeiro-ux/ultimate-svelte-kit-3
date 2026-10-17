@@ -1,6 +1,6 @@
 /**
  * PART 6 — The canvas: a camera, a pointer, and geometry that is just numbers
- * (chapters 26–30)
+ * (chapters 25–29)
  *
  * The half of the project a person actually touches. Almost all of it is plain
  * functions and one class, deliberately kept out of the components — a
@@ -398,7 +398,7 @@ const onPointerDown = (event: PointerEvent) => {
 			},
 			{
 				type: 'warn',
-				text: 'Pointer capture has a consequence that bites later, in chapter 31: it redirects the *compatibility mouse events* too, so an `ondblclick` handler on a captured child element never fires. Tessera’s rename-on-double-click had to move up to the canvas because of it. Worth knowing now rather than discovering at 11pm.'
+				text: 'Pointer capture has a consequence that bites later: it redirects the *compatibility mouse events* too, so an `ondblclick` handler on a captured child element never fires. Tessera’s rename-on-double-click had to move up to the canvas because of it. Worth knowing now rather than discovering at 11pm.'
 			},
 
 			{ type: 'h3', id: 'the-frozen-canvas', text: 'The listener that stops the canvas freezing' },

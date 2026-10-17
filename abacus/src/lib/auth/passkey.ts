@@ -10,6 +10,7 @@
  * the authenticator.
  */
 
+import { isHttpError } from '@sveltejs/kit';
 import {
 	browserSupportsWebAuthn,
 	startAuthentication,
@@ -51,8 +52,16 @@ export async function signInWithPasskey(): Promise<User> {
 	return finishAuthentication({ challengeId, response });
 }
 
-/** A message a person can act on, from the errors the credential API throws. */
+/**
+ * A message a person can act on, from whichever half failed.
+ *
+ * The server's half — `finishAuthentication` refusing a passkey it has never
+ * seen — rejects with an `HttpError`, which is not an `Error`: its sentence
+ * is in `body.message`. The browser's half throws an `Error` whose `name`
+ * says what happened, and the three that mean something are told apart.
+ */
 export function explain(error: unknown): string {
+	if (isHttpError(error)) return error.body.message;
 	if (error instanceof Error) {
 		if (error.name === 'NotAllowedError') return 'The passkey prompt was cancelled or timed out.';
 		if (error.name === 'InvalidStateError')

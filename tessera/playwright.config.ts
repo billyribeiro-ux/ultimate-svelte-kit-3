@@ -21,7 +21,7 @@ export default defineConfig({
 	testMatch: '**/*.e2e.ts',
 
 	webServer: {
-		command: 'npm run build && node build/index.js',
+		command: 'pnpm run build && node build/index.js',
 		port: PORT,
 		env: {
 			DATABASE_URL: 'file:e2e.db',

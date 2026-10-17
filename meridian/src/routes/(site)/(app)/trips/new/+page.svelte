@@ -87,6 +87,6 @@
 <style>
 	.new {
 		max-width: 36rem;
-		padding-block: var(--space-6) var(--space-8);
+		padding-block: var(--space-6) var(--section);
 	}
 </style>

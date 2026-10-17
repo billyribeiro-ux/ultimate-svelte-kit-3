@@ -103,6 +103,14 @@ export function ago(locale: Locale, when: Date, now: Date = new Date()): string 
 	).format(when);
 }
 
-export { DEFAULT_LOCALE, ENDONYM, HTML_LANG, LOCALES, isLocale, negotiate } from './locales.ts';
+export {
+	DEFAULT_LOCALE,
+	ENDONYM,
+	HTML_LANG,
+	LOCALES,
+	isLocale,
+	langParam,
+	negotiate
+} from './locales.ts';
 export type { Locale } from './locales.ts';
 export type { Messages } from './messages/en.ts';

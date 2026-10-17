@@ -1,5 +1,5 @@
 /**
- * PART 5 — Talking to the outside (chapters 29–33)
+ * PART 5 — Talking to the outside (chapters 28–32)
  *
  * A venue whose only client is its own web page is a demo. This part builds the
  * public API an algorithm uses, the keys that authenticate it, the limits that
@@ -310,7 +310,9 @@ const secret = randomBytes(32).toString('base64url');`
 				lang: 'ts',
 				code: `
 export const SCOPES = ['read', 'trade', 'admin'] as const;
+export type Scope = (typeof SCOPES)[number];
 
+// …
 if (input.scopes.length === 0) {
 	// A key with no scopes can do nothing and looks like a working key. Making
 	// it an error beats letting somebody debug it for an afternoon.
@@ -477,6 +479,7 @@ take(key: string, config: BucketConfig, now: number, cost = 1): Verdict {
 				lang: 'ts',
 				code: `
 const resolved = await viewerFromApiKey(db, presented, now);
+// …
 if (!resolved) throw new ApiError('unauthenticated', 'That API key is not usable.');
 
 const config = bucketFor(resolved.ratePerSecond);
@@ -515,7 +518,6 @@ const verdict = limiter.take(\`key:\${resolved.keyId}\`, config, now, cost);`
 				code: `
 let cursor: Cursor | undefined;
 const presented = url.searchParams.get('cursor');
-
 if (presented) {
 	try {
 		cursor = decodeCursor(presented);
@@ -542,7 +544,21 @@ if (presented) {
 				file: 'apps/web/src/routes/api/v1/trades/+server.ts',
 				lang: 'ts',
 				code: `
-/*
+/**
+ * \`GET /api/v1/trades\` — the caller's own executions, newest first.
+ *
+ * "Own" is doing real work in that sentence. A trade has two sides, and this
+ * endpoint returns a trade if *either* side belongs to the caller's firm — and
+ * then tells them which side was theirs, so their reconciliation does not have
+ * to guess.
+ *
+ * It does **not** return the counterparty. In a centrally cleared market the
+ * counterparty is the clearing house, and telling Northgate that they just
+ * bought from Lowfield hands them information they would pay for and are not
+ * entitled to.
+ *
+ * ## The scoping, and the mistake it avoids
+ *
  * The \`WHERE\` clause names \`buy_firm_id\` and \`sell_firm_id\` explicitly. It
  * would be shorter to fetch the tape and filter in JavaScript, and that is the
  * version that leaks: the \`LIMIT\` applies before the filter, so a firm with one
@@ -550,11 +566,25 @@ if (presented) {
  * they give up. Worse, any future maintainer who removes the filter by accident
  * ships every firm's trades to everybody, and no test that only ever has one
  * firm in it will notice.
- */`
+ */
+
+// …
+const result = await db.execute({
+	sql: \`SELECT trade_id, seq, instrument_id, at, price, quantity, aggressor,
+				 buy_order_id, buy_firm_id, buy_account_id, buyer_fee,
+				 sell_order_id, sell_firm_id, sell_account_id, seller_fee
+		  FROM trade
+		  WHERE (buy_firm_id = ? OR sell_firm_id = ?)
+		  \${filters.join(' ')}
+		  \${resume.sql}
+		  \${orderClause('newest_first', { seq: 'seq', id: 'trade_id' })}
+		  LIMIT ?\`,
+	args
+});`
 			},
 			{
 				type: 'p',
-				text: 'Note also what this endpoint does **not** return: the counterparty. In a centrally cleared market the counterparty is the clearing house, and telling Northgate they just bought from Lowfield hands them information they would pay for and are not entitled to.'
+				text: 'The same header records what the endpoint does **not** return: the counterparty. In a centrally cleared market the counterparty is the clearing house, and telling Northgate they just bought from Lowfield hands them information they would pay for and are not entitled to. Instead each row says which side was the caller\'s, so their reconciliation does not have to guess.'
 			},
 			{
 				type: 'checkpoint',
@@ -636,7 +666,15 @@ export async function enqueue(tx: Executor, message: OutboxMessage, now: number)
 		sql: \`INSERT INTO outbox (kind, seq, firm_id, idempotency_key, payload, created_at, available_at)
 		      VALUES (?, ?, ?, ?, ?, ?, ?)
 		      ON CONFLICT (idempotency_key) DO NOTHING\`,
-		args: [ /* … */ ]
+		args: [
+			message.kind,
+			message.seq,
+			message.firmId ?? null,
+			message.idempotencyKey,
+			JSON.stringify(message.payload),
+			now,
+			now
+		]
 	});
 }`
 			},
@@ -946,7 +984,13 @@ if (host.startsWith('::ffff:')) {
  * Link-local is refused **even in development**, and that is the one carve-out
  * \`allowInsecure\` does not get.
  *
- * …
+ * The flag exists so a student can point a webhook at \`http://localhost:3000\`
+ * and watch a delivery arrive. It was originally implemented as "skip the
+ * private-address check", which also permitted \`169.254.169.254\` — the cloud
+ * metadata service, and the single most valuable SSRF target there is.
+ *
+ * A browser test caught it: the admin form accepted the metadata endpoint
+ * without complaint, because the dev server had the flag set.
  *
  * Nobody has ever needed to send a webhook to a link-local address. Making
  * the escape hatch narrower than "turn the check off" costs one branch and

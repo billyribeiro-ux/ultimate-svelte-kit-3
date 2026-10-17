@@ -90,8 +90,11 @@ hr {
  * `animationend`, and any code waiting for that event to clean up would hang
  * forever. This is the one place a magic number is the correct answer.
  *
- * The board's own motion is handled separately, in `motion/preferences.ts`,
- * because it needs to *not start* rather than to finish instantly.
+ * Motion driven from JavaScript is out of this rule's reach: the camera's
+ * glides are a `Tween` in `canvas/camera.svelte.ts`, and the entrance is a GSAP
+ * timeline in `motion/index.ts`. Both ask `prefersReducedMotion` from
+ * `svelte/motion` before they move, so they do not start at all rather than
+ * finishing instantly.
  */
 @media (prefers-reduced-motion: reduce) {
 	*,

@@ -8,6 +8,7 @@
  * means.
  */
 
+import * as v from 'valibot';
 import type { Reroute, Transport } from '@sveltejs/kit/hooks';
 import { Note } from '#lib/music/note.ts';
 import { parseVanity } from '#lib/vanity.ts';
@@ -53,8 +54,12 @@ export const transport: Transport = {
  * fetched on every navigation would be a hook that made every navigation slow.
  *
  * A handle that does not exist returns nothing, so the URL falls through to a
- * 404 rather than to a guess.
+ * 404 rather than to a guess. So does an answer of the wrong shape: the body
+ * is checked, not cast, and a reply that does not say `{ pathname }` is no
+ * answer at all.
  */
+const Resolved = v.object({ pathname: v.nullable(v.string()) });
+
 export const reroute: Reroute = async ({ url, fetch }) => {
 	const vanity = parseVanity(url.pathname);
 	if (!vanity) return;
@@ -66,6 +71,6 @@ export const reroute: Reroute = async ({ url, fetch }) => {
 	const response = await fetch(api);
 	if (!response.ok) return;
 
-	const { pathname } = (await response.json()) as { pathname: string | null };
-	return pathname ?? undefined;
+	const resolved = v.safeParse(Resolved, await response.json());
+	return resolved.success ? (resolved.output.pathname ?? undefined) : undefined;
 };

@@ -52,7 +52,7 @@ describe('addTax', () =&gt; {
 	});
 });</code></pre>
 </figure>
-<ul><li><code>describe</code> groups related tests. Purely organisational — it makes failures readable.</li><li><code>it</code> is one test. Read it as a sentence: *it* adds 20 percent. If the name does not read as a sentence, the test is probably doing too much.</li><li><code>expect(...)</code> takes the actual value; <code>.toBe(...)</code> says what it should be. If they differ, the test fails and prints both.</li></ul>
+<ul><li><code>describe</code> groups related tests. Purely organisational — it makes failures readable.</li><li><code>it</code> is one test. Read it as a sentence: <em>it</em> adds 20 percent. If the name does not read as a sentence, the test is probably doing too much.</li><li><code>expect(...)</code> takes the actual value; <code>.toBe(...)</code> says what it should be. If they differ, the test fails and prints both.</li></ul>
 
 <aside class="callout callout--why">
 	<h4>Why bother, honestly</h4>
@@ -76,23 +76,25 @@ export default defineConfig({
 			// …
 		}),
 
-		/* …the ordering story from chapter 19: this must come after sveltekit()… */
+		// …
 		sveltePhosphorOptimize()
 	],
 
 	test: {
 		expect: { requireAssertions: true },
+
+		// …
 		projects: [
 			// …
 		]
 	}
 });</code></pre>
 </figure>
-<aside class="callout callout--note"><p>The import comes from <code>vitest/config</code>, not <code>vite</code> — the same <code>defineConfig</code>, but its types know about the <code>test</code> block.</p></aside>
+<aside class="callout callout--note"><p>The import comes from <code>vitest/config</code>, not <code>vite</code> — the same <code>defineConfig</code>, but its types know about the <code>test</code> block. The <code>// …</code> just above <code>sveltePhosphorOptimize()</code> is the ordering comment from chapter 19: it must come after <code>sveltekit()</code>.</p></aside>
 
 <aside class="callout callout--why">
 	<h4>One config, one transform pipeline</h4>
-	<p>The <code>test</code> block lives in the *same file* as your build config, and Vitest reuses the exact same plugins. So your tests see your code transformed identically to how the browser will see it. Older test runners needed a separate config that duplicated all of this — and drifted, producing the notorious &quot;passes in tests, breaks in the build&quot; failure. Sharing one pipeline removes that entire category of problem.</p>
+	<p>The <code>test</code> block lives in the <em>same file</em> as your build config, and Vitest reuses the exact same plugins. So your tests see your code transformed identically to how the browser will see it. Older test runners needed a separate config that duplicated all of this — and drifted, producing the notorious &quot;passes in tests, breaks in the build&quot; failure. Sharing one pipeline removes that entire category of problem.</p>
 </aside>
 <aside class="callout callout--note"><p><code>requireAssertions: true</code> fails any test that runs without asserting anything. It sounds pedantic and it catches a genuinely common mistake: an async test that forgets <code>await</code>, finishes early, asserts nothing, and reports a confident green tick forever.</p></aside>
 <h3 id="projects">Two projects: Node and browser</h3>
@@ -103,10 +105,12 @@ export default defineConfig({
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">test: {
+	// …
 	projects: [
 		{
-			// Component tests — a REAL Chromium, not a DOM emulator
-			extends: './vite.config.ts',
+			// Component tests — run in a real Chromium, not a DOM emulator.
+			// Worth the extra seconds: jsdom quietly lies about layout and focus,
+			// which are exactly the things a component test should verify.
 			test: {
 				name: 'client',
 				browser: {
@@ -119,8 +123,7 @@ export default defineConfig({
 			}
 		},
 		{
-			// Pure logic — plain Node, no browser, very fast
-			extends: './vite.config.ts',
+			// Pure logic tests — plain Node, no browser, fast.
 			test: {
 				name: 'server',
 				environment: 'node',
@@ -131,6 +134,7 @@ export default defineConfig({
 	]
 }</code></pre>
 </figure>
+<aside class="callout callout--note"><p>Each project inherits the root config — the <code>sveltekit()</code> and Phosphor plugins included — automatically. That is a Vitest 5 behaviour: Vitest 4 needed <code>extends: './vite.config.ts'</code> on every project, which re-read this file from disk each time. If you see that line in an older example, it is no longer needed; <code>extends: false</code> is the opt-out for a project that must stand alone.</p></aside>
 <ul><li>Files named <code>something.spec.ts</code> run in <strong>Node</strong> — fast, for pure logic.</li><li>Files named <code>Something.svelte.spec.ts</code> run in a <strong>real browser</strong> — slower, for components.</li></ul>
 
 <aside class="callout callout--why">
@@ -140,7 +144,7 @@ export default defineConfig({
 <h3 id="what-to-test">What to test — and what not to</h3>
 <p>Beginners are usually told to test everything, which produces a suite so slow and brittle that the team deletes it. Test where being wrong is expensive:</p>
 <ul><li><strong>Security-critical code.</strong> Our token signing. If it breaks, anyone can forge a download link.</li><li><strong>Anything with edge cases.</strong> Expiry boundaries, empty arrays, zero, negative numbers.</li><li><strong>Invariants other code depends on.</strong> Our chart data must have strictly increasing timestamps, because the charting library silently misbehaves otherwise.</li><li><strong>Bugs you have already fixed.</strong> Write the test that would have caught it, so it cannot come back.</li></ul>
-<aside class="callout callout--warn"><p>Do not test that a framework works. A test asserting that Svelte renders a prop is testing Svelte, not your code, and it will break when Svelte changes something irrelevant. Test *your* logic.</p></aside>
+<aside class="callout callout--warn"><p>Do not test that a framework works. A test asserting that Svelte renders a prop is testing Svelte, not your code, and it will break when Svelte changes something irrelevant. Test <em>your</em> logic.</p></aside>
 <h3 id="tokens-test">The test that matters most here</h3>
 
 <figure class="code">
@@ -152,7 +156,7 @@ export default defineConfig({
 	const token = createDownloadToken('reader@example.com');
 	const [, signature] = token.split('.');
 
-	// Re-encode a payload claiming a different email, keeping the old signature
+	// Re-encode a payload claiming a different email, keeping the old signature.
 	const forgedPayload = Buffer.from(
 		JSON.stringify({ email: 'attacker@example.com', exp: Date.now() + 100_000 })
 	).toString('base64url');
@@ -230,7 +234,7 @@ it('never produces a non-positive price', () =&gt; {
 
 <aside class="callout callout--why">
 	<h4>None of these assert a specific number</h4>
-	<p>They assert *properties*: determinism, ordering, positivity. That means they survive a change to the generation algorithm — they only fail if the guarantee is actually broken. A test asserting <code>price[3] === 428.91</code> would fail on every harmless tweak, and a test that cries wolf gets deleted.</p>
+	<p>They assert <em>properties</em>: determinism, ordering, positivity. That means they survive a change to the generation algorithm — they only fail if the guarantee is actually broken. A test asserting <code>price[3] === 428.91</code> would fail on every harmless tweak, and a test that cries wolf gets deleted.</p>
 </aside>
 <h3 id="wrong-test">When the test is wrong</h3>
 <p>While writing this project I asserted <code>formatCompactUsd(5_600)</code> returns exactly <code>&quot;$5.60K&quot;</code> — and the assertion broke when the project moved from Node 22 to Node 24. <code>Intl</code> is implemented by ICU, the Unicode library Node bundles, and its output is a moving target: compact <strong>currency</strong> formatting used to keep the currency's minimum fraction digits (<code>$5.60K</code> on Node 22's ICU 78.2), and ICU 78.3, which Node 24 ships, trims them to <code>$5.6K</code>. Same code, different text, depending on which Node is installed.</p>
@@ -241,12 +245,28 @@ it('never produces a non-positive price', () =&gt; {
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">it('formats a value with a trailing zero, whichever ICU is installed', () =&gt; {
-	/* …a long comment in the source explains: DELIBERATELY A PATTERN, NOT AN EXACT STRING… */
+	/*
+	 * DELIBERATELY A PATTERN, NOT AN EXACT STRING.
+	 *
+	 * `Intl` is implemented by ICU, the Unicode library Node bundles, and its
+	 * output is a moving target across versions. Compact *currency* formatting
+	 * used to keep the currency's minimum fraction digits — `$5.60K` — and as
+	 * of ICU 78.3 it trims them: `$5.6K`. Node 22 ships 78.2, Node 24 ships
+	 * 78.3, so the same code produces different text on each.
+	 *
+	 * A byte-exact assertion here is therefore not a test of this function. It
+	 * is a test of which Node version is installed, and it fails on upgrade for
+	 * a reason that has nothing to do with the code under test. This project
+	 * learned that the hard way while moving from Node 22 to Node 24.
+	 *
+	 * What the app actually needs is the right symbol, the right magnitude
+	 * suffix, and no more than two decimals. That is what this asserts.
+	 */
 	expect(formatCompactUsd(5_600)).toMatch(/^\$5\.60?K$/);
 	expect(formatCompactUsd(1_000)).toMatch(/^\$1(\.00)?K$/);
 });</code></pre>
 </figure>
-<aside class="callout callout--note"><p>A byte-exact assertion here is not a test of <code>formatCompactUsd</code> — it is a test of which Node version is installed, and it fails on upgrade for a reason that has nothing to do with the code under test. What the app actually needs is the right symbol, the right magnitude suffix and no more than two decimals, so the test asserts a pattern — and carries a comment explaining why, or the next person will &quot;fix&quot; it back to an exact string.</p></aside>
+<aside class="callout callout--note"><p>The comment is half the test. A pattern where you would expect an exact string looks like laziness to the next person who reads it, and without the explanation they will &quot;fix&quot; it back to a byte-exact assertion — which is not a test of <code>formatCompactUsd</code> at all, but of which Node version is installed.</p></aside>
 <h3 id="running">Running them</h3>
 
 <figure class="code code--terminal">

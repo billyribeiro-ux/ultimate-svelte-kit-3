@@ -1,5 +1,5 @@
 /**
- * PART 2 — The log, and making it durable (chapters 12–17)
+ * PART 2 — The log, and making it durable (chapters 12–16)
  *
  * The engine is a pure function. This part gives it somewhere to read from and
  * somewhere to write to, and makes both survive the process being killed.
@@ -34,12 +34,14 @@ export const part2 = [
 				code: `
 -- Commands, in the order the sequencer accepted them.
 --
--- \`seq\` is an explicit INTEGER PRIMARY KEY rather than an autoincrement,
+-- \\\`seq\\\` is an explicit INTEGER PRIMARY KEY rather than an autoincrement,
 -- because the sequencer owns it. Letting SQLite choose would mean the ordering
 -- authority lived in two places, and the day they disagree is the day replay
 -- stops reproducing history.
 --
--- …
+-- There are no UPDATE or DELETE statements against this table anywhere in the
+-- codebase. A trigger below enforces that, because "we agreed not to" is not an
+-- enforcement mechanism.
 CREATE TABLE IF NOT EXISTS command_log (
 	seq INTEGER PRIMARY KEY,
 
@@ -61,11 +63,11 @@ CREATE TABLE IF NOT EXISTS command_log (
 	body TEXT NOT NULL
 ) STRICT;
 
--- …
+CREATE INDEX IF NOT EXISTS command_log_firm_idx ON command_log (firm_id, seq);
 
 -- Events, in the order the engine produced them.
 --
--- \`caused_by\` points at the command that produced this event. It is the single
+-- \\\`caused_by\\\` points at the command that produced this event. It is the single
 -- most useful column in the database during an incident: every event knows its
 -- cause, and every derived identifier contains its own sequence number, so
 -- "why did this happen" is a lookup rather than an investigation.
@@ -78,6 +80,10 @@ CREATE TABLE IF NOT EXISTS event_log (
 	instrument_id TEXT,
 	body TEXT NOT NULL
 ) STRICT;`
+			},
+			{
+				type: 'p',
+				text: 'The SQL lives inside a `String.raw` template literal in `schema.ts` rather than in a `.sql` file — the file\'s header tells the story of the production build that could not find `schema.sql` — which is why every backtick in its comments is preceded by a backslash.'
 			},
 			{
 				type: 'note',
@@ -122,31 +128,124 @@ END;`
 				file: 'packages/store/src/client.ts',
 				lang: 'ts',
 				code: `
+const client = createClient({
+	url,
+	...(authToken === undefined ? {} : { authToken }),
+	/*
+	 * \`busy_timeout\`, as the client option rather than the pragma.
+	 *
+	 * The option is applied by the client to every connection it opens,
+	 * including the ones it opens later for transactions. The pragma reaches
+	 * only whichever connection happened to run it, and a venue where three
+	 * connections wait politely and the fourth fails instantly with
+	 * \`SQLITE_BUSY\` is a venue with a bug that reproduces one time in four.
+	 */
+	timeout: BUSY_TIMEOUT_MS,
+	concurrency: POOL_SIZE
+});
+
 /*
- * Separate \`execute\` calls, not a batch.
+ * A plain \`execute\`, not a batch.
  *
  * \`batch\` wraps its statements in a transaction, and SQLite refuses to change
  * journal mode inside one — "cannot change into wal mode from within a
  * transaction". Written as a batch this fails, the error is easy to swallow,
  * and WAL silently never applies. The venue then works perfectly until two
  * processes read and write at once.
+ *
+ * Once is enough: WAL is recorded in the database file, and every connection
+ * to it, from any process, inherits it.
  */
 await client.execute('PRAGMA journal_mode = WAL');
-await client.execute('PRAGMA busy_timeout = 5000');
-await client.execute('PRAGMA foreign_keys = ON');
-/*
- * \`synchronous = FULL\` rather than the WAL default of \`NORMAL\`.
+
+await configurePool(client, url, [...CONNECTION_PRAGMAS, ...connectionPragmas]);`
+			},
+			{
+				type: 'p',
+				text: 'Three of the four settings are properties of the **connection**, not the database, and since `@libsql/client` 0.18 a client is not one connection but a small pool of them. A statement outside a transaction borrows a connection and hands it back before its promise resolves, so four `execute` calls in a row all land on the *same* connection — and the other three turn up later with whatever the library compiled in. `busy_timeout` has a client option that reaches every connection. The other two do not, so they are applied the only way that addresses each connection individually: by holding all of them at once.'
+			},
+			{
+				type: 'p',
+				text: 'How many connections that is, is a decision of its own:'
+			},
+			{
+				type: 'code',
+				file: 'packages/store/src/client.ts',
+				lang: 'ts',
+				code: `
+export const POOL_SIZE = 4;`
+			},
+			{
+				type: 'why',
+				title: 'Why four, and why not one',
+				text: 'One is the size that looks safest and is the only one that breaks. A transaction holds its connection for its whole life, and when transactions hold every connection the pool **refuses** the next borrower with `TRANSACTION_ACTIVE` rather than making it wait. With one connection, every read that arrives while a write is in flight throws — and in the web process that is a live query polling while an order is appended, which is to say constantly. Two is the floor. Four leaves room for a stray direct `client.transaction()` somewhere without starving the readers. More buys nothing: a statement outside a transaction borrows a connection, runs synchronously and returns it before anything else in the process can run, so reads never genuinely overlap inside one Node process, and each extra connection is two more file descriptors held open for nothing.'
+			},
+			{
+				type: 'code',
+				file: 'packages/store/src/client.ts',
+				lang: 'ts',
+				code: `
+/**
+ * The settings every connection must carry.
  *
- * NORMAL lets the OS decide when to flush, which means a machine that loses
- * power can lose the last few commits. For a cache that is a fine trade. For
- * an append-only log that is the system of record for other people's money,
- * it is not: the whole promise is that an acknowledged order is durable.
+ * \`journal_mode\` is deliberately not here: it is a property of the *file*, set
+ * once and remembered. These two are properties of the connection, and SQLite
+ * forgets them the moment it is closed.
+ *
+ * \`foreign_keys = ON\` — the log's \`caused_by\` and the ledger's postings point at
+ * other rows, and an event whose command does not exist must fail to commit. A
+ * test in \`log.spec.ts\` depends on exactly that.
+ *
+ * \`synchronous = FULL\` rather than \`NORMAL\` — NORMAL lets the OS decide when to
+ * flush, which means a machine that loses power can lose the last few commits.
+ * For a cache that is a fine trade. For an append-only log that is the system
+ * of record for other people's money, it is not: the whole promise is that an
+ * acknowledged order is durable.
+ *
+ * libSQL happens to compile both of these in as its defaults. Relying on that
+ * would let a build flag somebody else controls decide whether the books
+ * balance after a power cut, so they are set explicitly. The same coincidence
+ * means reading them back proves nothing, so the test that every connection is
+ * configured uses a pragma of its own — see \`connectionPragmas\`.
  */
-await client.execute('PRAGMA synchronous = FULL');`
+const CONNECTION_PRAGMAS = ['PRAGMA foreign_keys = ON', 'PRAGMA synchronous = FULL'];
+
+// …
+async function configurePool(
+	client: Client,
+	url: string,
+	pragmas: readonly string[]
+): Promise<void> {
+	const pooled = url.startsWith('file:') && !url.includes(':memory:');
+
+	if (!pooled) {
+		for (const pragma of pragmas) await client.execute(pragma);
+		return;
+	}
+
+	const held: Transaction[] = [];
+	for (let index = 0; index < POOL_SIZE; index += 1) {
+		held.push(await client.transaction('deferred'));
+	}
+
+	for (const transaction of held) {
+		await transaction.executeMultiple(['ROLLBACK', ...pragmas].join(';\\n') + ';');
+		transaction.close();
+	}
+}`
+			},
+			{
+				type: 'p',
+				text: 'Two details carry the weight, and the doc comment on `configurePool` spells both out. `PRAGMA foreign_keys` is a documented no-op inside a transaction, so each held connection first runs `ROLLBACK` — there is nothing to roll back — and then the pragmas, in one `executeMultiple`: the one method on a transaction that does not check the transaction is still open between statements. Then `close()` hands the configured connection back to the pool, where it is reused ahead of any new one. An in-memory database or a remote libSQL server is not a pool this can reach, so it takes the plain branch at the top and the pragmas run once.'
 			},
 			{
 				type: 'warn',
-				text: '`busy_timeout` is a property of the **connection**, not the database. Every process that opens a connection must set it again. A process that forgets is the one that fails under load with `SQLITE_BUSY` while every other process is fine — which is a maddening thing to debug. That is why every process in Sequent calls one `openStore` function rather than creating clients itself.'
+				text: 'The connection-level settings are the ones that fail silently. A process that forgets `busy_timeout` is the one that fails under load with `SQLITE_BUSY` while every other process is fine; a connection that misses `foreign_keys` is the one that lets an event point at a command that never happened. Both are maddening to debug precisely because the other connections are fine. That is why every process in Sequent calls one `openStore` function rather than creating clients itself, and why there is a test that reads the settings back through every connection in the pool.'
+			},
+			{
+				type: 'why',
+				title: 'A test needs a value that could have been different',
+				text: 'The first version of that test read `busy_timeout`, `foreign_keys` and `synchronous` back through every connection and expected `5000`, `1` and `2`. It passed — and it passed just as well with `configurePool` reduced to an immediate `return`, because the timeout comes from the client option and libSQL compiles in the other two as its defaults. An assertion that agrees with the defaults cannot tell configured from forgotten. So `openStore` takes `connectionPragmas`, which nothing in the venue uses, and the test opens a store with `PRAGMA cache_size = -4321` — a value nobody would choose and no build has as its default — and finds it on all `POOL_SIZE` connections. With `configurePool` stubbed out it reads `-2000`, and fails, which is the property a test is for.'
 			},
 			{
 				type: 'checkpoint',
@@ -180,7 +279,7 @@ export class Sequencer {
 	#next: number | undefined;
 	readonly #client: Client;
 
-	/* … */
+	// …
 	constructor(client: Client) {
 		this.#client = client;
 	}
@@ -199,6 +298,8 @@ export class Sequencer {
 		);
 		this.#next = Number(result.rows[0]?.['high'] ?? 0) + 1;
 	}
+
+	// …
 }`
 			},
 
@@ -389,7 +490,7 @@ export async function appendEvents(
 	version: number,
 	events: readonly Event[]
 ): Promise<void> {
-	/* … */
+	// …
 	await withTransaction(client, async (tx) => {
 		for (const body of events) {
 			await tx.execute({
@@ -609,31 +710,36 @@ TypeError: body.instruments is not iterable
 				file: 'apps/engine/src/snapshot.ts',
 				lang: 'ts',
 				code: `
-	/*
-	 * A snapshot that will not parse is treated as **absent**, not as an error.
-	 *
-	 * …
-	 *
-	 * Returning \`undefined\` makes recovery fall back to replaying from genesis,
-	 * which is slower and correct. That is the trade the whole architecture was
-	 * built to be able to make, and it does not exist unless this \`catch\` does.
-	 *
-	 * It is logged rather than swallowed silently: a venue that quietly replays
-	 * from genesis every start is one whose snapshots have been broken for
-	 * months and whose boot time nobody has questioned.
-	 */
-	try {
-		return {
-			state: deserialise(JSON.parse(String(row['body'])) as SnapshotBody),
-			fingerprint: String(row['fingerprint'])
-		};
-	} catch (thrown) {
-		console.error(
-			\`[engine] snapshot at seq \${Number(row['seq'])} is unreadable; replaying from genesis instead.\`,
-			thrown
-		);
-		return undefined;
-	}`
+/*
+ * A snapshot that will not parse is treated as **absent**, not as an error.
+ *
+ * This is the difference between a claim and a property. Everywhere in this
+ * codebase says the snapshot is an optimisation and the log is the system of
+ * record — and until a fault-injection test wrote nonsense into the table,
+ * that was only a claim: \`deserialise\` threw \`body.instruments is not
+ * iterable\`, the exception escaped \`recover\`, and the engine would not start.
+ * A corrupt cache took the venue down.
+ *
+ * Returning \`undefined\` makes recovery fall back to replaying from genesis,
+ * which is slower and correct. That is the trade the whole architecture was
+ * built to be able to make, and it does not exist unless this \`catch\` does.
+ *
+ * It is logged rather than swallowed silently: a venue that quietly replays
+ * from genesis every start is one whose snapshots have been broken for
+ * months and whose boot time nobody has questioned.
+ */
+try {
+	return {
+		state: deserialise(JSON.parse(String(row['body'])) as SnapshotBody),
+		fingerprint: String(row['fingerprint'])
+	};
+} catch (thrown) {
+	console.error(
+		\`[engine] snapshot at seq \${Number(row['seq'])} is unreadable; replaying from genesis instead.\`,
+		thrown
+	);
+	return undefined;
+}`
 			},
 
 			{ type: 'h3', id: 'vacuous', text: 'And one more test, so the others mean something' },
@@ -810,7 +916,7 @@ after 4000 transactions: 8033`
 			},
 			{
 				type: 'p',
-				text: '`@libsql/client`\'s `client.transaction()` opens a **second connection** to the database, and never releases it. Not on `commit()`. Not on `rollback()`. Not on an explicit `close()`. Two descriptors per transaction, forever.'
+				text: '`@libsql/client` 0.17.4\'s `client.transaction()` opens a **second connection** to the database, and never releases it. Not on `commit()`. Not on `rollback()`. Not on an explicit `close()`. Two descriptors per transaction, forever.'
 			},
 			{
 				type: 'p',
@@ -832,37 +938,49 @@ after 3000: 35
 after 500: 1033`
 			},
 			{
+				type: 'p',
+				text: 'So `withTransaction` was written to avoid `transaction()` altogether: `BEGIN IMMEDIATE` and `COMMIT` as plain statements on the one connection a client then had, with a promise chain in front so two callers could never interleave their statements into one transaction. That shipped, and a regression test that counts `/proc/self/fd` shipped with it.'
+			},
+
+			{ type: 'h3', id: 'the-sequel', text: 'The sequel: the library fixed it, and broke the fix' },
+			{
+				type: 'p',
+				text: '`@libsql/client` 0.18 fixed the leak properly. A client is now a small **pool** of connections; a transaction borrows one and gives it back on commit, rollback or close. Good news — except that a plain statement borrows a connection too, and the pool rolls back anything left open on a connection before the next borrower can inherit it. So `BEGIN IMMEDIATE` on one `execute` was undone before `COMMIT` arrived on the next:'
+			},
+			{
+				type: 'terminal',
+				code: `Migration 1 (firm.billable_from) failed and was rolled back:
+SQLITE_ERROR: cannot commit - no transaction is active
+
+ Test Files  13 failed | 8 passed (21)
+      Tests  204 failed | 170 passed (374)`
+			},
+			{
+				type: 'p',
+				text: 'Two hundred tests, on the first `pnpm install` after the bump. Which is the point of having two hundred tests. The fix is to go back to `client.transaction(\'write\')` — which is `BEGIN IMMEDIATE` under the hood — and to keep the chain, because with a pool it matters *more*, not less:'
+			},
+			{
 				type: 'code',
 				file: 'packages/store/src/client.ts',
 				lang: 'ts',
 				code: `
-/**
- * Run a function inside a transaction, on **this** connection.
- *
- * …
- *
- * \`BEGIN IMMEDIATE\` on the existing connection has none of that. It is also
- * *more* correct for our purposes: \`IMMEDIATE\` takes the write lock at the
- * start rather than upgrading half way through, so a busy venue gets a clean
- * wait on \`busy_timeout\` instead of \`SQLITE_BUSY\` mid-transaction.
- */
 export async function withTransaction<T>(
-	client: Executor,
+	client: Client,
 	work: (tx: Executor) => Promise<T>
 ): Promise<T> {
 	const previous = chains.get(client) ?? Promise.resolve();
 
 	const run = previous.then(async () => {
-		await client.execute('BEGIN IMMEDIATE');
+		const transaction = await client.transaction('write');
 
 		try {
-			const result = await work(client);
-			await client.execute('COMMIT');
+			const result = await work(transaction);
+			await transaction.commit();
 			return result;
 		} catch (thrown) {
-			/* … */
+			// …
 			try {
-				await client.execute('ROLLBACK');
+				await transaction.rollback();
 			} catch {
 				// The original error is the one worth having.
 			}
@@ -872,7 +990,7 @@ export async function withTransaction<T>(
 	});
 
 	// The chain must continue whether this call succeeded or not, or one failed
-	// transaction would block every later one on this connection forever.
+	// transaction would block every later one on this client forever.
 	chains.set(
 		client,
 		run.then(
@@ -886,16 +1004,16 @@ export async function withTransaction<T>(
 			},
 			{
 				type: 'note',
-				text: 'The promise chain is not decoration. SQLite allows one write transaction per connection, and in `apps/engine` the engine loop and the projector loop share a client — without the queue their statements would land in one transaction and commit together. Not a deadlock, not an error, and completely wrong.'
+				text: 'The promise chain is not decoration. In `apps/engine` the engine loop and the projector loop share a client. On the old single connection, two overlapping transactions would land their statements in one transaction and commit together. On the pool, the second one blocks the event loop waiting for a lock the first one can only release when the event loop runs. Different failure, same fix: one writer at a time, queued in JavaScript. The function\'s own doc comment tells this whole story — 0.17.4, the workaround, 0.18 — so the next person to touch it meets the history before they meet the code.'
 			},
 			{
 				type: 'why',
 				title: 'What a load test is actually for',
-				text: 'Not to produce a number for a slide. This bug was invisible below ten thousand transactions, which means it was invisible to every unit test, every integration test, and every hour of manual use. Volume is a *category* of test, and this is the class of thing it finds.'
+				text: 'Not to produce a number for a slide. The original bug was invisible below ten thousand transactions, which means it was invisible to every unit test, every integration test, and every hour of manual use. Volume is a *category* of test, and this is the class of thing it finds.'
 			},
 			{
 				type: 'p',
-				text: 'There is now a regression test that counts `/proc/self/fd`, so a refactor back to `client.transaction()` fails in two seconds rather than in production.'
+				text: 'The regression test that counts `/proc/self/fd` stays. It is now a test of the library rather than of us — and the library has been wrong about this once, so if a release leaks again it fails in two seconds rather than in production.'
 			},
 			{
 				type: 'checkpoint',

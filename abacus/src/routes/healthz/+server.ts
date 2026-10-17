@@ -9,17 +9,33 @@
  * first question in every incident.
  */
 
-import { json } from '@sveltejs/kit';
 import { version } from '$app/env';
 import type { RequestHandler } from './$types.js';
 import { client } from '#lib/server/db/index.ts';
 
+/*
+ * `Response.json(…)` is the platform's own: the same `content-type` and the
+ * same serialisation SvelteKit's `json(…)` helper wrapped, which is why
+ * SvelteKit 3 deprecated the helper. One fewer import, and a handler that
+ * reads the same in a Worker, in Deno, or in a test with no framework in it.
+ */
 export const GET: RequestHandler = async ({ setHeaders }) => {
 	setHeaders({ 'cache-control': 'no-store' });
 	try {
 		await client.execute('select 1');
-		return json({ ok: true, version, uptime: Math.round(process.uptime()) });
+		return Response.json({ ok: true, version, uptime: Math.round(process.uptime()) });
 	} catch (error) {
-		return json({ ok: false, version, error: (error as Error).message }, { status: 503 });
+		/*
+		 * The reason goes to the log, under a reference; the caller gets the
+		 * reference and a fixed sentence. This endpoint answers anybody, and a
+		 * driver's message can carry a file path or a connection string —
+		 * which is why `handleError` keeps unexpected messages back too.
+		 */
+		const id = crypto.randomUUID();
+		console.error(`[${id}] health check: the database did not answer`, error);
+		return Response.json(
+			{ ok: false, version, error: 'database unreachable', id },
+			{ status: 503 }
+		);
 	}
 };

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { isHttpError } from '@sveltejs/kit';
 	import { deleteRule, rules, saveRule, toggleRule } from '#lib/remote/alerts.remote.ts';
 	import { clock, relative } from '#lib/reactivity/clock.svelte.ts';
 	import { formatDuration } from '#lib/time/range.ts';
@@ -6,11 +7,12 @@
 
 	let { data }: PageProps = $props();
 
+	/** One rule as the list query returns it, with its last evaluation. */
+	type Rule = Awaited<ReturnType<typeof rules>>[number];
+
 	/** The rule being edited, or `null` for the new-rule form. */
 	let editing = $state<string | null>(null);
 	let creating = $state(false);
-
-	const list = $derived(await rules({ tenant: data.tenant }));
 
 	/**
 	 * How stale an evaluation may be before it is worth saying so.
@@ -23,15 +25,48 @@
 		return evaluatedAt > 0 && now - evaluatedAt > intervalMs * 3;
 	}
 
-	function stateOf(rule: (typeof list)[number], now: number): { label: string; tone: string } {
-		if (!rule.enabled) return { label: 'Disabled', tone: '' };
-		if (rule.evaluatedAt === 0) return { label: 'Not yet evaluated', tone: '' };
+	/** The chip's word, and the tone class that colours it — none for a quiet state. */
+	type Tone = 'chip--ok' | 'chip--warn' | 'chip--danger' | null;
+
+	function stateOf(rule: Rule, now: number): { label: string; tone: Tone } {
+		if (!rule.enabled) return { label: 'Disabled', tone: null };
+		if (rule.evaluatedAt === 0) return { label: 'Not yet evaluated', tone: null };
 		if (stale(rule.evaluatedAt, rule.intervalMs, now)) {
 			return { label: 'Evaluation is behind', tone: 'chip--warn' };
 		}
 		if (rule.state === 'firing') return { label: 'Firing', tone: 'chip--danger' };
 		if (rule.state === 'pending') return { label: 'Pending', tone: 'chip--warn' };
 		return { label: 'OK', tone: 'chip--ok' };
+	}
+
+	/** The last toggle the server refused, and what it said. */
+	let refused = $state<{ id: string; message: string } | null>(null);
+
+	/**
+	 * Enable or disable, and say so when the server will not.
+	 *
+	 * Nothing draws a command's failure for it: no boundary sees an event
+	 * handler, and the rejection used to go unhandled, leaving the box showing
+	 * what was asked for rather than what the server kept. So the box is put back
+	 * and the refusal is shown in the row.
+	 *
+	 * What arrives here is NOT an `App.Error`. A boundary is handed what
+	 * `handleError` made of a failure; awaiting a command hands back the
+	 * `HttpError` the client rebuilt from the response, and its message is on
+	 * `body`. `isHttpError` tells it from a request that never reached the server.
+	 */
+	async function toggle(id: string, box: HTMLInputElement): Promise<void> {
+		const enabled = box.checked;
+		refused = null;
+		try {
+			await toggleRule({ tenant: data.tenant, id, enabled });
+		} catch (error) {
+			box.checked = !enabled;
+			refused = {
+				id,
+				message: isHttpError(error) ? error.body.message : 'The change did not reach the server.'
+			};
+		}
 	}
 </script>
 
@@ -58,7 +93,14 @@
 		{@render ruleForm(null)}
 	{/if}
 
+	<!--
+		The rules are awaited here, inside the boundary, and not in the script: in
+		the script the server waited for them and then drew a `pending` snippet in
+		their place. The traces page says why, and what the boundary does instead.
+	-->
 	<svelte:boundary>
+		{const list = $derived(await rules({ tenant: data.tenant }))}
+
 		{#if list.length === 0}
 			<p class="empty">
 				No rules yet. A rule runs a query on a schedule and fires when the first number it returns
@@ -67,7 +109,7 @@
 		{:else}
 			<ul class="rules">
 				{#each list as rule (rule.id)}
-					{@const state = stateOf(rule, clock.now)}
+					{const state = $derived(stateOf(rule, clock.now))}
 					<!--
 						`.for(rule.id)`, not the bare form object.
 
@@ -77,10 +119,10 @@
 						renders its error branch. `.for` mints one instance per id, which is also
 						what gives each row its own pending state.
 					-->
-					{@const remove = deleteRule.for(rule.id)}
+					{const remove = $derived(deleteRule.for(rule.id))}
 					<li class="rule">
 						<div class="rule__head">
-							<span class="chip {state.tone}">{state.label}</span>
+							<span class={['chip', state.tone]}>{state.label}</span>
 							<h2>{rule.name}</h2>
 
 							<div class="rule__actions">
@@ -95,12 +137,7 @@
 									<input
 										type="checkbox"
 										checked={rule.enabled}
-										onchange={(event) =>
-											toggleRule({
-												tenant: data.tenant,
-												id: rule.id,
-												enabled: event.currentTarget.checked
-											})}
+										onchange={(event) => toggle(rule.id, event.currentTarget)}
 									/>
 									<span>Enabled</span>
 								</label>
@@ -123,6 +160,10 @@
 								</form>
 							</div>
 						</div>
+
+						{#if refused?.id === rule.id}
+							<p class="rule__refused" role="alert">{refused.message}</p>
+						{/if}
 
 						<p class="rule__query mono truncate" title={rule.query}>{rule.query}</p>
 
@@ -171,14 +212,9 @@
 			</ul>
 		{/if}
 
-		{#snippet pending()}
-			<p class="empty" role="status">Loading rules…</p>
-		{/snippet}
-
+		<!-- An `App.Error`, not an `HttpError`, unlike the toggle's rejection above. -->
 		{#snippet failed(error)}
-			<p class="empty" role="alert">
-				{(error as { body?: { message?: string } })?.body?.message ?? 'Could not load the rules.'}
-			</p>
+			<p class="empty" role="alert">{(error as App.Error).message}</p>
 		{/snippet}
 	</svelte:boundary>
 </div>
@@ -190,8 +226,8 @@
 	only difference between them is a hidden `id`, which is exactly what the server
 	branches on.
 -->
-{#snippet ruleForm(rule: (typeof list)[number] | null)}
-	{@const save = saveRule.for(rule?.id ?? 'new')}
+{#snippet ruleForm(rule: Rule | null)}
+	{const save = $derived(saveRule.for(rule?.id ?? 'new'))}
 	<!--
 		EVERY FIELD COMES FROM `save.fields`, NOT FROM A `name` ATTRIBUTE.
 
@@ -388,6 +424,12 @@
 		gap: var(--space-1);
 		font-size: var(--fs-xs);
 		color: var(--text-muted);
+	}
+
+	.rule__refused {
+		margin: 0;
+		color: var(--danger);
+		font-size: var(--fs-xs);
 	}
 
 	.rule__query {

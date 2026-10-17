@@ -16,7 +16,7 @@
  */
 
 import type { RequestHandler } from './$types';
-import { error, json } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 import * as v from 'valibot';
 import { authenticateKey, hasScope } from '#lib/server/access.ts';
 import { BatchSchema, IngestError, ingest } from '#lib/server/ingest.ts';
@@ -50,7 +50,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		 * comment above a response that did not carry the header it describes. The
 		 * end-to-end test that asserts the header is what found it.
 		 */
-		return json(
+		return Response.json(
 			{ message: 'Provide a valid API key in the Authorization header.' },
 			{
 				status: 401,
@@ -60,20 +60,23 @@ export const POST: RequestHandler = async ({ request }) => {
 	}
 
 	if (!hasScope(access, 'ingest')) {
-		error(403, { message: 'This key may read but not write.' });
+		// SvelteKit 3's `error` takes the message as its second argument; whatever
+		// else `App.Error` carries goes third (see `issues`, below). The object form
+		// still compiles, as a deprecation, which is why the type-checker is silent.
+		error(403, 'This key may read but not write.');
 	}
 
 	const declared = Number(request.headers.get('content-length') ?? 0);
 	if (declared > MAX_BYTES) {
-		error(413, { message: `Body exceeds ${MAX_BYTES} bytes.` });
+		error(413, `Body exceeds ${MAX_BYTES} bytes.`);
 	}
 
 	let body: unknown;
 	try {
 		body = await readJson(request);
 	} catch (thrown) {
-		if (thrown instanceof IngestError) error(thrown.status, { message: thrown.message });
-		error(400, { message: 'Body is not valid JSON.' });
+		if (thrown instanceof IngestError) error(thrown.status, thrown.message);
+		error(400, 'Body is not valid JSON.');
 	}
 
 	const parsed = v.safeParse(BatchSchema, body);
@@ -91,7 +94,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			message: issue.message
 		}));
 
-		error(400, { message: `Batch rejected: ${issues[0]?.message ?? 'invalid'}`, issues });
+		error(400, `Batch rejected: ${issues[0]?.message ?? 'invalid'}`, { issues });
 	}
 
 	try {
@@ -112,10 +115,10 @@ export const POST: RequestHandler = async ({ request }) => {
 			publish(access.tenantId, { signal: 'spans', rows: parsed.output.spans as never });
 		}
 
-		return json(result, { status: 202 });
+		return Response.json(result, { status: 202 });
 	} catch (thrown) {
 		if (thrown instanceof IngestError) {
-			return json(
+			return Response.json(
 				{ message: thrown.message },
 				{
 					status: thrown.status,

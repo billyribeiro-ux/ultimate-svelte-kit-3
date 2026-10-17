@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { openTab, signIn, TRIPS, USERS } from './helpers.ts';
+import { openTab, signIn, TRIPS, typeDateInto, USERS } from './helpers.ts';
 
 /**
  * ONE TRIP, EVERY TAB
@@ -63,7 +63,12 @@ test('an expense is added and the settle-up follows', async ({ page }) => {
 
 	await page.getByLabel('What for').fill('Pastéis de nata');
 	await page.getByLabel(/Amount/).fill('12.60');
-	await page.getByLabel('Date').fill('2026-05-10');
+	// The expense date is the same segmented picker as the trip's dates (in the page's language, not the browser's).
+	await typeDateInto(page.getByRole('group', { name: 'Date', exact: true }), {
+		year: 2026,
+		month: 5,
+		day: 10
+	});
 	await page.getByRole('button', { name: 'Add an expense' }).click();
 
 	await expect(page.getByRole('cell', { name: 'Pastéis de nata' })).toBeVisible();

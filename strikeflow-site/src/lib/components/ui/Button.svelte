@@ -75,9 +75,12 @@
 
 <svelte:element
 	this={tag}
-	class="btn btn--{variant} btn--{size}"
-	class:btn--full={fullWidth}
-	class:btn--disabled={disabled}
+	class={[
+		'btn',
+		`btn--${variant}`,
+		`btn--${size}`,
+		{ 'btn--full': fullWidth, 'btn--disabled': disabled }
+	]}
 	{href}
 	{onclick}
 	aria-label={ariaLabel}

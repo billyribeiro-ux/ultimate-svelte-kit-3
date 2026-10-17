@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { HeartIcon } from 'phosphor-svelte';
 	import { resolve } from '$app/paths';
+	import { messageOf } from '#lib/errors.ts';
 	import { getCounts, lovePattern, recordPlay } from '#lib/remote/patterns.remote.ts';
 	import type { Published } from '#lib/server/patterns.ts';
 	import { vanityPath } from '#lib/vanity.ts';
@@ -33,8 +34,8 @@
 			await lovePattern(published.id).updates(
 				getCounts(published.id).withOverride((counts) => ({ ...counts, likes: counts.likes + 1 }))
 			);
-		} catch {
-			toast('Could not love that right now', 'error');
+		} catch (e) {
+			toast(messageOf(e, 'Could not love that right now'), 'error');
 		}
 	}
 
@@ -52,6 +53,11 @@
 		<div>
 			<h1 class={{ 'view__title--compact': compact }}>{published.title}</h1>
 			<p class="view__meta">
+				<!--
+					A vanity address is not a route, so there is no route id to give
+					`resolve()`: the `reroute` hook turns it into `/p/<id>` (ch. 26).
+				-->
+				<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
 				<a href={vanity}>@{published.artist.handle}</a>
 				<span class="mono">{published.bpm} bpm</span>
 				{#if published.remixOf}
@@ -92,10 +98,13 @@
 	</Player>
 
 	<div class="cluster">
-		<a class="btn btn--primary" href="/studio?remix={published.id}">Remix in the studio</a>
+		<a class="btn btn--primary" href={resolve(`/(app)/studio?remix=${published.id}`)}
+			>Remix in the studio</a
+		>
+		<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- a vanity address, as above -->
 		<a class="btn" href={vanity}>Vanity address</a>
 		{#if !compact}
-			<a class="btn btn--ghost" href="/embed#{published.id}">Embed</a>
+			<a class="btn btn--ghost" href={resolve(`/(app)/embed#${published.id}`)}>Embed</a>
 		{/if}
 	</div>
 </article>

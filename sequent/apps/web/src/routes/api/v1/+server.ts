@@ -16,13 +16,16 @@
  * version is invisible in every log you have.
  */
 
-import { json } from '@sveltejs/kit';
 import type { RequestHandler } from '@sveltejs/kit';
 import { CURRENT_VERSION, SUPPORTED_VERSIONS } from '@sequent/protocol';
 import { DEFAULT_LIMIT, MAX_LIMIT, SCOPES } from '@sequent/store';
 
+// `Response.json`, not Kit's `json()` helper. SvelteKit 3 deprecated `json` and
+// `text` because the platform now does the same job: the static method sets the
+// content type and serialises in one call, and it is the one every other route
+// in `/api/v1` already uses. One way to build a JSON response, not two.
 export const GET: RequestHandler = () =>
-	json({
+	Response.json({
 		data: {
 			name: 'Sequent venue API',
 			version: 'v1',

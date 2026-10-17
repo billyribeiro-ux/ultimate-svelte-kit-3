@@ -93,7 +93,13 @@ export class NodeView {
 	/** The materialised text of the label. The characters live in the CRDT. */
 	label = $state('');
 
-	constructor(readonly id: NodeId) {}
+	readonly id: NodeId;
+
+	// A field and an assignment, not `constructor(readonly id: NodeId)`: see the
+	// note on parameter properties in `crdt/clock.ts`.
+	constructor(id: NodeId) {
+		this.id = id;
+	}
 
 	/** Bounds, as a plain object — handy for geometry that should not be reactive. */
 	get rect(): Rect {
@@ -109,7 +115,11 @@ export class EdgeView {
 	toPort = $state<Port>('auto');
 	label = $state('');
 
-	constructor(readonly id: EdgeId) {}
+	readonly id: EdgeId;
+
+	constructor(id: EdgeId) {
+		this.id = id;
+	}
 }
 
 /** What `apply` did, so callers can skip work when the answer is "nothing". */

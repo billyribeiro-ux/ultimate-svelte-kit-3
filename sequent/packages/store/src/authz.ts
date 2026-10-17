@@ -267,7 +267,7 @@ export class NotAllowed extends Error {
 		this.reason = reason;
 	}
 
-	get status(): number {
+	get status(): 401 | 403 | 404 {
 		return statusFor(this.reason);
 	}
 }

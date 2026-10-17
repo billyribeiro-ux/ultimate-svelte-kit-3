@@ -133,14 +133,32 @@ export const postComment = form(
 	v.object({
 		boardId,
 		body,
-		anchor: v.optional(v.string()),
-		parentId: v.optional(v.string())
+		anchor: v.optional(reference),
+		parentId: v.optional(reference)
 	}),
 	async ({ boardId: id, body: text, anchor, parentId }) =&gt; {
 		const who = requireUser();
 
 		// `commenter` is enough. That is the whole point of the role.
 		await requireAccess(id, who.id, 'commenter').catch(rethrow);
+
+		/*
+		 * A reply names its thread by id, and the id comes from the client.
+		 *
+		 * The check above is about the board in `boardId`. Nothing about it says the
+		 * thread in `parentId` is on that board, so it is looked up *with* the board
+		 * — a root comment, on the board that was just checked — and anything else
+		 * is a thread that does not exist, as far as this caller is concerned.
+		 */
+		if (parentId) {
+			const parent = await db
+				.select({ id: comment.id })
+				.from(comment)
+				.where(and(eq(comment.id, parentId), eq(comment.boardId, id), isNull(comment.parentId)))
+				.limit(1);
+
+			if (parent.length === 0) error(404, 'No such thread.');
+		}
 
 		await db.insert(comment).values({
 			id: crypto.randomUUID(),
@@ -152,9 +170,10 @@ export const postComment = form(
 		});
 
 		await threads(id).refresh();
-	}</code></pre>
+	}
+);</code></pre>
 </figure>
-<p>A <code>form()</code> rather than a <code>command()</code>, for the reason from chapter 32 — it works without JavaScript — and for a second reason specific to this shape: <code>postComment.for(threadId)</code> gives every reply box its own instance from one definition.</p>
+<p>A <code>form()</code> rather than a <code>command()</code>, for the reason from chapter 31 — it works without JavaScript — and for a second reason specific to this shape: <code>postComment.for(threadId)</code> gives every reply box its own instance from one definition. The <code>parentId</code> check in the middle is the subject of a section of its own, below.</p>
 
 <figure class="code">
 	<figcaption>
@@ -170,10 +189,9 @@ export const postComment = form(
  * the reference only captures the initial value, which is a warning worth
  * listening to rather than silencing.
  */
-const list = $derived(threads(boardId));
-const open = $derived((list.current ?? []).filter((thread) =&gt; thread.resolvedAt === null));</code></pre>
+const list = $derived(threads(boardId));</code></pre>
 </figure>
-<aside class="callout callout--warn"><p><code>$derived</code>, not a plain <code>const</code>. <code>threads(boardId)</code> called once captures whichever board was open when the component mounted. Deriving it means navigating to another board re-runs the query — and, less obviously, it is what makes the compiler stop warning that the reference only captures the initial value, which is a warning worth listening to rather than silencing.</p></aside>
+<aside class="callout callout--warn"><p><code>$derived</code>, not a plain <code>const</code>. <code>threads(boardId)</code> called once captures whichever board was open when the component mounted. Deriving it means navigating to another board re-runs the query — and, less obviously, it is what makes the compiler stop warning that the reference only captures the initial value, which is a warning worth listening to rather than silencing. It is the same reason chapter 30’s board page derives <code>openBoard(params.board)</code>.</p></aside>
 <h3 id="per-thread">One definition, independent state</h3>
 
 <figure class="code">
@@ -182,11 +200,11 @@ const open = $derived((list.current ?? []).filter((thread) =&gt; thread.resolved
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">{#each open as thread (thread.id)}
-	{@const reply = postComment.for(thread.id)}
+	{const reply = $derived(postComment.for(thread.id))}
 	&lt;article class=&quot;thread&quot;&gt;
 		&lt;header class=&quot;thread__head&quot;&gt;
 			&lt;strong&gt;{thread.author}&lt;/strong&gt;
-			{#if thread.anchor}&lt;span class=&quot;thread__anchor&quot;&gt;on a shape&lt;/span&gt;{/if}
+			{#if thread.anchor}&lt;span class=&quot;thread__anchor&quot;&gt;{t.comments.onShape}&lt;/span&gt;{/if}
 		&lt;/header&gt;
 		&lt;p class=&quot;thread__body&quot;&gt;{thread.body}&lt;/p&gt;
 
@@ -201,28 +219,293 @@ const open = $derived((list.current ?? []).filter((thread) =&gt; thread.resolved
 			under every other one. Spreading the bare `postComment` into a loop
 			gives every thread the same instance and exactly that bug.
 		--&gt;
-		&lt;form {...reply} class=&quot;thread__reply-form&quot;&gt;
+		&lt;form {...reply.enhance((form) =&gt; send(form, thread.id))} class=&quot;thread__reply-form&quot;&gt;
 			&lt;input {...reply.fields.boardId.as('hidden', boardId)} /&gt;
 			&lt;input {...reply.fields.parentId.as('hidden', thread.id)} /&gt;
-			&lt;label class=&quot;visually-hidden&quot; for=&quot;reply-{thread.id}&quot;&gt;Reply&lt;/label&gt;
-			&lt;input id=&quot;reply-{thread.id}&quot; {...reply.fields.body.as('text')} placeholder=&quot;Reply…&quot; /&gt;
+			&lt;label class=&quot;visually-hidden&quot; for=&quot;{uid}-reply-{thread.id}&quot;&gt;{t.comments.reply}&lt;/label&gt;
+			&lt;input
+				id=&quot;{uid}-reply-{thread.id}&quot;
+				{...reply.fields.body.as('text')}
+				placeholder={t.comments.replyPlaceholder}
+			/&gt;
 			&lt;Button size=&quot;sm&quot; type=&quot;submit&quot;&gt;{t.comments.post}&lt;/Button&gt;
 		&lt;/form&gt;
 
-		&lt;Button
-			size=&quot;sm&quot;
-			variant=&quot;ghost&quot;
-			onclick={() =&gt; resolveThread({ boardId, id: thread.id, resolved: true })}
-		&gt;
+		{#if reply.fields.issues()?.length}
+			&lt;p class=&quot;comments__error&quot; role=&quot;alert&quot;&gt;{reply.fields.issues()?.[0]?.message}&lt;/p&gt;
+		{/if}
+
+		&lt;Button size=&quot;sm&quot; variant=&quot;ghost&quot; onclick={() =&gt; setResolved(thread.id, true)}&gt;
 			{t.comments.resolve}
 		&lt;/Button&gt;</code></pre>
 </figure>
 <p>Spread the bare <code>postComment</code> into the loop and every thread shares one instance: a failed reply in one thread puts its error message under all of them, and the pending spinner appears on every button at once. <code>.for(id)</code> is the fix and it is four characters.</p>
-<aside class="callout callout--note"><p>Note <code>resolveThread</code>’s <code>where</code> clause: <code>and(eq(comment.id, id), isNull(comment.parentId))</code>. Only a root comment can be resolved, because a reply has no independent state — and expressing that in the query rather than in a check above it means there is no path that forgets.</p></aside>
+<aside class="callout callout--note"><p><code>{const reply = $derived(…)}</code> is a declaration tag, from chapter 30, and here its *scope* is the part worth seeing. A declaration tag’s name is visible to its siblings and to their children — in the documentation’s words, to “everything in the same lexical scope” — so <code>reply</code> reaches the whole <code>&lt;article&gt;</code> and nothing outside this <code>{#each}</code>. The legacy <code>{@const}</code> had to sit directly inside a block; a declaration tag can go anywhere in markup.</p></aside>
+<h3 id="the-same-board">The check and the write name the same board</h3>
+<p>Resolving a thread is a command. Read it for what the <code>where</code> clause says, because the first version of it had a hole in exactly that line.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/remote/comments.remote.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export const resolveThread = command(
+	v.object({ boardId, id: v.pipe(reference, v.minLength(1)), resolved: v.boolean() }),
+	async ({ boardId: board, id, resolved }) =&gt; {
+		const who = requireUser();
+		await requireAccess(board, who.id, 'commenter').catch(rethrow);
+
+		const result = await db
+			.update(comment)
+			.set({
+				resolvedAt: resolved ? new Date() : null,
+				resolvedBy: resolved ? who.id : null
+			})
+			/*
+			 * Three conditions, and the middle one is part of the permission check.
+			 *
+			 * `requireAccess` proved that this person may comment on `board` — the
+			 * board the *caller* named. `id` names a row, and a row id says nothing
+			 * about which board it is on. Matching on the id alone lets anybody who
+			 * can comment on a board of their own resolve a thread on any board at
+			 * all, by sending their board's id next to somebody else's thread id.
+			 * The check and the write have to name the same board.
+			 *
+			 * The last condition is the model: only a root comment can be resolved,
+			 * because a reply has no independent state.
+			 */
+			.where(and(eq(comment.id, id), eq(comment.boardId, board), isNull(comment.parentId)));
+
+		// The same answer for &quot;no such comment&quot; and &quot;not on this board&quot;, so a
+		// thread id is not an oracle either.
+		if (result.rowsAffected === 0) error(404, 'No such thread.');
+
+		await threads(board).refresh();
+	}
+);</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>The question the check answered</h4>
+	<p><code>requireAccess(board, who.id, 'commenter')</code> answers a precise question: may this person comment on the board *the caller named*? The caller also names the thread, by id — and a row id says nothing about which board the row is on. The first version updated <code>where(and(eq(comment.id, id), isNull(comment.parentId)))</code>: the right thread, on any board at all. Everybody who signs up owns a workspace and can make a board in it, so every viewer in the app was one devtools edit away from resolving threads on boards they can only look at: press Resolve, and change the <code>boardId</code> in the request to a board of their own. The check passed, for the board it was asked about. The write happened somewhere else.</p>
+</aside>
+<p>The fix is one condition — <code>eq(comment.boardId, board)</code> — and the rule it stands for is worth more than the line: <strong>the access check and the row lookup must name the same board.</strong> A check that proves something about one id, followed by a write that matches on another, is not a check. And when nothing matches, the answer is 404, the same for “no such comment” as for “not on this board”, so a thread id is no more of an oracle than a board id was in chapter 18.</p>
+<p>The same shape turns up wherever a remote function takes the id of a row *inside* a board. <code>postComment</code> takes a <code>parentId</code>, and looks it up with the board before it writes a reply to it — above. <code>forgetCheckpoint</code> deletes a checkpoint by id:</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/remote/history.remote.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/** Delete a checkpoint. The operations it pointed at are untouched. */
+export const forgetCheckpoint = command(
+	v.object({ boardId, id: v.pipe(v.string(), v.minLength(1), v.maxLength(64)) }),
+	async ({ boardId: board, id }) =&gt; {
+		const user = requireUser();
+		await requireAccess(board, user.id, 'editor').catch(rethrow);
+
+		// Scoped to the board that was checked, not just the id: see `resolveThread`
+		// in `comments.remote.ts` for what matching on the id alone allows.
+		const result = await db
+			.delete(checkpoint)
+			.where(and(eq(checkpoint.id, id), eq(checkpoint.boardId, board)));
+
+		if (result.rowsAffected === 0) error(404, 'No such checkpoint.');
+
+		await revisions(board).refresh();
+	}
+);</code></pre>
+</figure>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>[features] comments › will not let a viewer resolve a thread by naming a board of their own
+
+  the owner posts a thread on a new board; the viewer, who owns &quot;mo-board&quot;, opens it
+  the viewer presses Resolve, and the command's boardId is rewritten to &quot;mo-board&quot;
+  the panel's alert                         → &quot;No such thread.&quot;
+  the owner reloads                         → the thread is still open, nothing resolved
+
+  before: HTTP 200 — the thread was resolved, by somebody who can only view the board</code></pre>
+</figure>
+<aside class="callout callout--note"><p>The test forges the request the way an attacker would: it presses the real button and rewrites the command’s argument on the way out with Playwright’s <code>page.route</code>. The seed gives the viewer a workspace and a board of their own for exactly this, because every account made through the sign-up form has one — a fixture in which the viewer is *only* a viewer is a fixture in which this bug cannot be seen.</p></aside>
+<h3 id="refused">When the server says no</h3>
+<p>A viewer can see the comment box, the Reply boxes and the Resolve button. Hiding them would be a courtesy, and courtesies get forgotten; what actually stops a viewer is <code>requireAccess(…, 'commenter')</code> in <code>postComment</code> and <code>resolveThread</code>, which answers 403 — about the board the write is really scoped to, now. The interface’s job is to say so, in the server’s words, next to the thing that was refused.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/Comments.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/**
+ * Why the last thing this panel sent was refused, in the server's words, and
+ * where to say so: `'new'` for the new-thread form, or the thread it was about.
+ */
+let refusal = $state&lt;{ at: string; message: string } | null&gt;(null);
+
+/*
+ * `thrown.body.message`, not `thrown.message`.
+ *
+ * Something the server refuses — a viewer pressing Resolve, say — rejects with
+ * an `HttpError`: `{ status, body }`, where `body` is the `App.Error`. It is not
+ * an `Error` and has no `message` of its own, so reading one shows nothing.
+ * Anything that is not an `HttpError` is a request that never got an answer,
+ * and that gets the generic line.
+ */
+function refuse(at: string, thrown: unknown) {
+	refusal = { at, message: isHttpError(thrown) ? thrown.body.message : t.errors.generic };
+}
+
+async function setResolved(id: string, done: boolean) {
+	refusal = null;
+	try {
+		await resolveThread({ boardId, id, resolved: done });
+	} catch (thrown) {
+		refuse(id, thrown);
+	}
+}
+
+/**
+ * What both comment forms do when submitted, via `enhance`.
+ *
+ * Without it, a submission the server refuses renders the nearest
+ * `+error.svelte` — and for a board, which resets its layout, that is the root
+ * error page, in place of the whole editor. A viewer who typed a comment would
+ * lose the board to find out they may not post one. With it, the refusal is a
+ * line under the form and the text they typed is still in the box.
+ *
+ * `enhance` hands over the reset too: the form is cleared only once the comment
+ * has landed.
+ */
+async function send(form: Pick&lt;RemoteFormEnhanceInstance, 'element' | 'submit'&gt;, at: string) {
+	refusal = null;
+	try {
+		if (await form.submit()) form.element.reset();
+	} catch (thrown) {
+		refuse(at, thrown);
+	}
+}</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why <code>body.message</code></h4>
+	<p>A command the server refuses rejects with an <code>HttpError</code> — <code>{ status, body }</code> — and an <code>HttpError</code> is not an <code>Error</code>, so <code>thrown.message</code> is <code>undefined</code> and the obvious line shows nothing at all. The first version did not even get that far: it had no <code>catch</code>, the rejection went nowhere, and pressing the button did nothing anybody could see. <code>isHttpError(thrown)</code> narrows the type, <code>body.message</code> is the server’s sentence, and anything that is not an <code>HttpError</code> — a request that never got an answer — gets the generic line.</p>
+</aside>
+<p>The two forms go through <code>send</code>, by way of <code>enhance</code>:</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/Comments.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;form {...postComment.enhance((form) =&gt; send(form, 'new'))} class=&quot;comments__new&quot;&gt;
+	&lt;input {...postComment.fields.boardId.as('hidden', boardId)} /&gt;
+	&lt;input {...postComment.fields.anchor.as('hidden', anchor ?? '')} /&gt;
+
+	&lt;label class=&quot;visually-hidden&quot; for=&quot;{uid}-new&quot;&gt;{t.comments.placeholder}&lt;/label&gt;
+	&lt;textarea
+		id=&quot;{uid}-new&quot;
+		{...postComment.fields.body.as('text')}
+		placeholder={t.comments.placeholder}
+		rows=&quot;2&quot;&gt;&lt;/textarea&gt;
+
+	{#if postComment.fields.issues()?.length}
+		&lt;p class=&quot;comments__error&quot; role=&quot;alert&quot;&gt;{postComment.fields.issues()?.[0]?.message}&lt;/p&gt;
+	{/if}
+
+	&lt;Button size=&quot;sm&quot; variant=&quot;primary&quot; type=&quot;submit&quot;&gt;{t.comments.post}&lt;/Button&gt;
+&lt;/form&gt;</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why <code>enhance</code></h4>
+	<p>A form spread without <code>enhance</code> handles its own failures, and the documentation says how: “if an error occurs during submission, the nearest <code>+error.svelte</code> page will be rendered.” For this panel the nearest one is the root error page — the board page resets its layout with <code>@</code>, and no layout in between has one — so a viewer who typed a comment and pressed Post lost the whole editor to find out they may not post. <code>enhance</code> hands the submission to the component: <code>form.submit()</code> rejects with the same <code>HttpError</code> a command does, and <code>send</code> turns it into a line under the form, with the comment still in the box. The documentation also says what <code>enhance</code> takes away — “the <code>&lt;form&gt;</code> is not automatically reset — you must call <code>form.element.reset()</code>” — which is why <code>send</code> clears the box only once <code>submit()</code> reports success.</p>
+</aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/Comments.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/** Unique to this instance, for the `for`/`id` pairs below. */
+const uid = $props.id();</code></pre>
+</figure>
+<aside class="callout callout--note"><p><code>{uid}-new</code> rather than <code>id=&quot;new-comment&quot;</code>. A fixed id is unique until the component is rendered twice — two panels, a test that mounts two — and then two labels point at one textarea. <code>$props.id()</code> “generates an ID that is unique to the current component instance”, the same on the server and after hydration, and the documentation’s example is exactly this: linking a <code>&lt;label for&gt;</code> to its control.</p></aside>
+<h3 id="the-list">The list, awaited where it is shown</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/Comments.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;!--
+	The query awaited here, in this component's own markup and inside its own
+	boundary — so the wait is this boundary's `pending` snippet and a failure is
+	its `failed` one, and the rest of the editor never notices either.
+
+	Each declaration tag is a `$derived`, so a refresh after a post or a resolve
+	re-runs the split into open and resolved without re-running anything else.
+--&gt;
+&lt;svelte:boundary&gt;
+	{const all = $derived(await list)}
+	{const open = $derived(all.filter((thread) =&gt; thread.resolvedAt === null))}
+	{const resolved = $derived(all.filter((thread) =&gt; thread.resolvedAt !== null))}
+
+	{#if all.length === 0}
+		&lt;p class=&quot;comments__empty&quot;&gt;{t.comments.none}&lt;/p&gt;
+	{/if}</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/Comments.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">{#snippet pending()}
+	&lt;p class=&quot;comments__empty&quot;&gt;{t.sync.connecting}&lt;/p&gt;
+{/snippet}
+
+&lt;!--
+	An `App.Error`, already through `handleError`, so the text is its
+	`message`. Svelte types `error` as `unknown` — it cannot know what
+	SvelteKit's `transformError` returns — hence the cast.
+--&gt;
+{#snippet failed(error)}
+	&lt;p class=&quot;comments__error&quot; role=&quot;alert&quot;&gt;
+		{t.errors.generic} &lt;small&gt;{(error as App.Error).message}&lt;/small&gt;
+	&lt;/p&gt;
+{/snippet}</code></pre>
+</figure>
+<p>This is the idiom, and it is the same one the board page and the board list use: the query awaited <strong>in this component’s own markup</strong>, inside its own <code>&lt;svelte:boundary&gt;</code>, with declaration tags naming what is derived from it. The wait is this boundary’s <code>pending</code> snippet, a failure is its <code>failed</code> snippet, and the rest of the editor never notices either. <code>open</code> and <code>resolved</code> are <code>$derived</code> declaration tags, so a refresh after a post or a resolve re-runs the split and nothing else.</p>
+
+<aside class="callout callout--why">
+	<h4>Why not <code>.current</code></h4>
+	<p>A query also has <code>current</code>, <code>loading</code> and <code>error</code>, and the documentation offers them plainly as the second choice: “while using <code>await</code> is recommended, as an alternative the query also has <code>loading</code>, <code>error</code> and <code>current</code> properties.” This panel used them for a while, on the theory that an <code>await</code> would suspend the whole component. That is true of an <code>await</code> in the *script*; one in the markup suspends only its boundary. What the properties cost is every branch written by hand — loading, error, empty — and nothing to stop a fallback showing at the wrong moment. The first version showed “No comments yet” over a query that had failed: a fallback that always won, and the one line on the panel that was confidently wrong. Reach for <code>.current</code> when you want the rest of a component to render without waiting and are prepared to handle <code>undefined</code> and <code>.error</code> yourself.</p>
+</aside>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>[features] comments › tells a viewer, in the server’s words, why they cannot resolve one
+[features] comments › tells a viewer who posts why not, and leaves the board where it was
+[features] comments › will not let a viewer resolve a thread by naming a board of their own
+
+  viewer presses Resolve        → &quot;You have view-only access to this board.&quot;
+  viewer posts &quot;May I?&quot;         → the same sentence; the canvas is still there, and so is &quot;May I?&quot;
+  viewer forges the boardId     → &quot;No such thread.&quot;
+
+  before: Resolve did nothing anybody could see; Post replaced the editor with the root error page;
+          the forged request resolved the thread</code></pre>
+</figure>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>
-	<ul><li>A colleague’s comment appears without a refresh.</li><li>A failed reply shows its error under one thread only.</li><li>A <code>commenter</code> can comment and cannot move a box.</li></ul>
+	<ul><li>A colleague’s comment appears without a refresh.</li><li>A failed reply shows its error under one thread only.</li><li>A viewer who presses Resolve or Post is told why not, in the server’s words, and keeps the board.</li><li>A request that names one board and a thread on another is answered 404, not obeyed.</li><li>A <code>commenter</code> can comment and cannot move a box.</li></ul>
 </aside>
 		</article>
 

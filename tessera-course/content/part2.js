@@ -162,18 +162,18 @@ export class OrSet<K extends string> {
 			},
 			{
 				type: 'p',
-				text: 'Look closely at `observedAdds`. It exists so that the *caller* can put the observed stamps into the operation, which makes a remove a self-contained delta:'
+				text: 'Look closely at `observedAdds`. It exists so that the *caller* can put the observed stamps into the operation, which makes a remove a self-contained delta. In the shape the board’s `node.remove` operation has in chapter 13:'
 			},
 			{
 				type: 'code',
 				lang: 'ts',
 				code: `
 // Wrong: means something different depending on when it lands.
-{ kind: 'remove', node: 'n1' }
+{ kind: 'node.remove', stamp, target: 'n1' }
 
 // Right: means exactly one thing, here, on a replica three weeks behind,
 // and during a replay in six months.
-{ kind: 'remove', node: 'n1', observed: ['1756…0000aaaaaaaa', '1756…0003bbbbbbbb'] }`
+{ kind: 'node.remove', stamp, target: 'n1', observed: ['1756…00000aaaaaaaa', '1756…00003bbbbbbbb'] }`
 			},
 
 			{ type: 'h3', id: 'add-wins', text: 'Why add-wins and not remove-wins' },
@@ -445,8 +445,8 @@ export function write<T>(current: Lww<T> | undefined, value: T, stamp: Stamp): L
 			{
 				type: 'ul',
 				items: [
-					'**`mergeRegister` returns one of its inputs**, never a fresh object. Merging an unchanged value is free, and reference equality keeps working as a cheap "did this change?" test for the reactive layer in chapter 15.',
-					'**`write` returns `undefined` when nothing changed.** The document uses that to skip reactive invalidation entirely. Redelivery during a reconnect is common enough that "this operation is old news" is a hot path rather than an edge case — and a `$state` write that sets the same value still schedules work.'
+					'**`mergeRegister` returns one of its inputs**, never a fresh object. Merging an unchanged value allocates nothing, and the result can be compared with what was there by reference — the cheap way to ask “did this change?” of a merge.',
+					'**`write` returns `undefined` when nothing changed.** This is the “did this change?” test the reactive layer actually uses: chapter 14’s document skips reactive invalidation entirely when it gets `undefined` back. Redelivery during a reconnect is common enough that "this operation is old news" is a hot path rather than an edge case — and a `$state` write that sets the same value still schedules work.'
 				]
 			},
 
@@ -463,10 +463,15 @@ export function write<T>(current: Lww<T> | undefined, value: T, stamp: Stamp): L
 				type: 'code',
 				lang: 'ts',
 				code: `
-// A move writes two fields, so it is two register writes with one stamp.
-// A recolour writes one. They do not interact.
-{ kind: 'node.set', node: 'n1', stamp, fields: { x: 240, y: 120 } }
-{ kind: 'node.set', node: 'n1', stamp, fields: { fill: 'jade' } }`
+// One operation per field, each with a stamp of its own. A move writes two
+// fields, so it is two operations; a recolour is one. They do not interact.
+{ kind: 'node.set', stamp: s1, target: 'n1', field: 'x', value: 240 }
+{ kind: 'node.set', stamp: s2, target: 'n1', field: 'y', value: 120 }
+{ kind: 'node.set', stamp: s3, target: 'n1', field: 'fill', value: 'jade' }`
+			},
+			{
+				type: 'p',
+				text: 'That is the real shape of a `node.set`: one `field`, one `value`, one stamp. Chapter 13 types it so that `field: \'x\'` only accepts a number, and chapter 14’s `moveNode` is exactly the first two lines — two calls, two stamps.'
 			},
 			{
 				type: 'note',
@@ -958,13 +963,15 @@ static from(value: string, stamps: readonly Stamp[]): RgaText {
 				lang: 'ts',
 				code: `
 class Replica {
+	readonly name: string;
 	readonly clock: Clock;
 	readonly #nodes = new OrSet<NodeId>();
 	readonly #fields = new Map<NodeId, Map<string, Lww<number | string>>>();
 	readonly #labels = new Map<NodeId, RgaText>();
 	#version: VersionVector = empty();
 
-	constructor(readonly name: string) {
+	constructor(name: string) {
+		this.name = name;
 		// Every replica shares one physical clock reading, so the ordering under
 		// test is the logical one and not an artefact of who ran first.
 		this.clock = new Clock(actor(name), () => 1_700_000_000_000);
@@ -1201,11 +1208,11 @@ it('survives a replica that stays offline for the whole session', () => {
 				code: `
 pnpm vitest run src/lib/crdt
 
- ✓ src/lib/crdt/clock.spec.ts        (18 tests)
+ ✓ src/lib/crdt/clock.spec.ts        (19 tests)
  ✓ src/lib/crdt/version.spec.ts      (12 tests)
  ✓ src/lib/crdt/orset.spec.ts        (11 tests)
  ✓ src/lib/crdt/register.spec.ts      (7 tests)
- ✓ src/lib/crdt/fracdex.spec.ts      (14 tests)
+ ✓ src/lib/crdt/fracdex.spec.ts      (15 tests)
  ✓ src/lib/crdt/rga.spec.ts          (16 tests)
  ✓ src/lib/crdt/convergence.spec.ts   (4 tests)  1.1s`
 			},

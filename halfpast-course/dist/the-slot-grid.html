@@ -35,7 +35,7 @@
 			<h1>The slot grid</h1>
 			<p class="lede">The one component customers actually touch. Radio buttons in disguise, sized for thumbs.</p>
 			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>An accessible, keyboard-navigable grid of times that animates when the world changes underneath it.</p></aside>
-			<p>It looks like a grid of buttons. It is a radio group, because that is what it *is*: a set of mutually exclusive options, exactly one of which will be chosen.</p>
+			<p>It looks like a grid of buttons. It is a radio group, because that is what it <em>is</em>: a set of mutually exclusive options, exactly one of which will be chosen.</p>
 
 <figure class="code">
 	<figcaption>
@@ -44,9 +44,13 @@
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;div class=&quot;grid&quot; bind:this={grid}&gt;
 	{#each slots as slot (slot.start)}
-		{@const value = valueOf(slot)}
-		&lt;label class=&quot;slot&quot; class:selected={selectedValue === value}&gt;
-			&lt;input {...field.as('radio', value)} /&gt;
+		&lt;!--
+			No `selected` class. The label is styled from its radio's own state,
+			`:has(input:checked)`, so the chosen time looks chosen with or without
+			JavaScript, and the look can never disagree with what the form posts.
+		--&gt;
+		&lt;label class=&quot;slot&quot;&gt;
+			&lt;input {...field.as('radio', slotValue(slot))} /&gt;
 			&lt;span&gt;{labelFor(slot)}&lt;/span&gt;
 		&lt;/label&gt;
 	{/each}
@@ -57,7 +61,8 @@
 	<h4>Why not &lt;button&gt;</h4>
 	<p>Real radios give you arrow-key navigation, a single tab stop for the whole group, correct screen-reader announcements (&quot;Choose a time, 09:00, radio button, 3 of 24&quot;), and form submission with JavaScript off — for free, from the browser, in the version you are not testing on. Rebuilding that on <code>&lt;button&gt;</code> takes a hundred lines and will still be worse.</p>
 </aside>
-<p>The input is visually hidden but never <code>display: none</code> — a hidden-that-way radio is unfocusable and unsubmittable. Clip it instead, and style the <code>&lt;label&gt;</code> from <code>:has(:checked)</code> and <code>:has(:focus-visible)</code>.</p>
+<p>The input is visually hidden but never <code>display: none</code> — a hidden-that-way radio is unfocusable and unsubmittable. Clip it instead, and style the <code>&lt;label&gt;</code> from <code>:has(input:checked)</code> and <code>:has(input:focus-visible)</code>. The chosen time used to be marked with a <code>selected</code> class worked out in JavaScript from the field's value, which meant that without script the radio you had checked looked exactly like the ones you had not. Asking the radio itself fixes that and deletes the bookkeeping.</p>
+<p><code>slotValue(slot)</code> writes each radio's value: the start instant and the staff member fused into one string, so the form posts a complete choice with no JavaScript. It lives in the component's <code>&lt;script module&gt;</code> block, which runs once per module rather than once per instance, and that is what lets the booking page import it beside the component (<code>import SlotGrid, { slotValue } from …</code>) and ask whether the chosen value is still on offer in exactly the terms the grid wrote it.</p>
 <h3 id="touch">Sized for a thumb</h3>
 
 <figure class="code">
@@ -111,11 +116,22 @@
  *   Play    — animate those transforms away. The elements slide to their new
  *             homes because the browser has already decided where those are.
  *
- * …
+ * The trick is that nothing animates layout. Layout happens once, in a single
+ * frame; what animates is a `transform`, which costs no layout and no repaint
+ * per frame — the browser moves pixels it has already painted. GSAP still
+ * writes that transform from JavaScript on every frame, so the main thread is
+ * not idle; it is just doing almost nothing. Animating `top` and `left`
+ * directly forces a reflow every frame and drops to roughly 20fps on a phone
+ * with forty cells on screen.
+ *
+ * Why it matters here specifically: when somebody else books the 11:00 slot,
+ * that button vanishes and every later slot shifts up. Without FLIP the grid
+ * snaps and the customer's finger is suddenly over a different time than the one
+ * they were reaching for. With it, the movement is visible — which is the point.
  */</code></pre>
 </figure>
-<p>Nothing animates layout. Layout happens once, in a single frame; what animates is a <code>transform</code>, which the compositor handles without touching the main thread. Animating <code>top</code> and <code>left</code> forces a reflow every frame and drops to roughly 20fps on a phone with forty cells on screen.</p>
-<p>The point is not decoration. Movement that is *visible* is movement the customer can follow; movement that is instant is a button that was there a moment ago and now is not.</p>
+<p>The comment is the documentation, and the paragraph beginning &quot;The trick&quot; is the part to remember: nothing animates layout. The browser lays the grid out once, in a single frame, and what moves afterwards is only a <code>transform</code>, which costs no layout and no repaint per frame. It is not free — GSAP drives the animation from JavaScript, writing the transform on every frame — but the work per frame is tiny, where animating <code>top</code> and <code>left</code> makes the browser lay the whole grid out again forty times a second.</p>
+<p>The point is not decoration. Movement that is <em>visible</em> is movement the customer can follow; movement that is instant is a button that was there a moment ago and now is not.</p>
 <aside class="callout callout--warn"><p>Our first version left every cell stuck at <code>position: absolute</code>, because the capture was asynchronous — GSAP is loaded on demand — and <code>play()</code> could start before it finished. The fix was to hold a <strong>promise</strong> of the captured state rather than the state itself, so <code>play()</code> awaits whatever <code>capture()</code> began and the two can never cross.</p></aside>
 <h3 id="reduced-motion">And for anyone who asked for less</h3>
 
@@ -129,7 +145,11 @@
 	return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
+// …
+
 let pending: Promise&lt;Motion | null&gt; | null = null;
+
+// …
 
 export function loadMotion(): Promise&lt;Motion | null&gt; {
 	if (!browser || prefersReducedMotion()) return Promise.resolve(null);

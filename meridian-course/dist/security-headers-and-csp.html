@@ -40,7 +40,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:163-209</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:187-233</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/*
@@ -96,20 +96,28 @@ csrf: { trustedOrigins: [] },</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/app.html<span class="code__lines">:20-25</span></span>
+		<span class="code__file">src/app.html<span class="code__lines">:44-57</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-html">&lt;script&gt;
 	try {
 		var t = localStorage.getItem('meridian:theme');
-		if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
+		if (t !== 'light' &amp;&amp; t !== 'dark') t = '';
+		if (t) document.documentElement.dataset.theme = t;
+		var metas = document.querySelectorAll('meta[name=&quot;theme-color&quot;]');
+		for (var i = 0; i &lt; metas.length; i++) {
+			var s = metas[i].getAttribute('data-scheme');
+			metas[i].media = t ? (s === t ? 'all' : 'not all') : '(prefers-color-scheme: ' + s + ')';
+		}
+		document.cookie =
+			'meridian-theme=' + t + '; path=/; max-age=' + (t ? 31536000 : 0) + '; samesite=lax';
 	} catch (e) {}
 &lt;/script&gt;</code></pre>
 </figure>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:359-364</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:394-399</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">function themeBootHash(): `sha256-${string}` {
@@ -119,14 +127,14 @@ csrf: { trustedOrigins: [] },</code></pre>
 	return `sha256-${createHash('sha256').update(script).digest('base64')}`;
 }</code></pre>
 </figure>
-<p>The theme boot script — the one that sets the dark class before first paint so a dark theme never flashes light — is the one inline script the app writes itself, and it appears on *every* page, prerendered or not. So it is allowed by hash, and the hash is computed at build time <strong>from the template</strong>, not kept as a second copy: edit the script and the hash follows. This is the kind of thing that fails silently otherwise — nothing errors at build, the script is simply blocked in production, and the first person to notice is the one with a dark system and a light flash. The regular expression reads the script from <code>app.html</code>, which is why the template must not put a <code>nonce</code> attribute on it: SvelteKit refuses to prerender a template containing <code>%sveltekit.nonce%</code>, and a prerendered page needs this script too.</p>
+<p>The theme boot script — the one that sets <code>data-theme</code> before first paint so a dark theme never flashes light, and points the <code>theme-color</code> tags and the theme cookie at the same choice (chapter 22) — is the one inline script the app writes itself, and it appears on *every* page, prerendered or not. So it is allowed by hash, and the hash is computed at build time <strong>from the template</strong>, not kept as a second copy: edit the script and the hash follows. This is the kind of thing that fails silently otherwise — nothing errors at build, the script is simply blocked in production, and the first person to notice is the one with a dark system and a light flash. The regular expression reads the script from <code>app.html</code>, which is why the template must not put a <code>nonce</code> attribute on it: SvelteKit refuses to prerender a template containing <code>%sveltekit.nonce%</code>, and a prerendered page needs this script too.</p>
 <ul><li><code>worker-src 'self' blob:</code> — MapLibre parses vector tiles in a Web Worker. Its URL comes from a Vite asset import, so <code>'self'</code> covers it; <code>blob:</code> is for the fallback MapLibre uses when the worker script is on another origin.</li><li><code>img-src 'self' data: blob:</code> — MapLibre’s sprite sheet and the canvas exports are <code>data:</code> and <code>blob:</code> URLs; the enhanced images are <code>'self'</code>.</li><li><code>connect-src 'self'</code> — deliberately no tile server. The map style is built from a bundled TopoJSON of the world (chapter 27), so the app works offline, in CI, with no keys and no third party learning where people plan to go. Adding a tile provider would mean adding its origin here, and the comment says so, so the change is one line and visible in review.</li><li><code>style-src 'self' 'unsafe-inline'</code> — the trade the comment owns up to. Markers and the itinerary position things with <code>style:</code> attributes, attributes cannot be hashed, and a nonce does not apply to them. The exposure is CSS injection, which can deface but cannot run code; the alternative is a design without a single inline style, which is a large price for a small gain.</li><li><code>frame-ancestors 'none'</code> — nobody may put this app in an iframe, which closes clickjacking. One route needs the opposite, and the next section is about that.</li><li><code>form-action 'self'</code>, <code>base-uri 'self'</code>, <code>object-src 'none'</code> — forms may only submit here, <code>&lt;base&gt;</code> may not be hijacked, plugins do not exist.</li></ul>
 <p><code>csrf: { trustedOrigins: [] }</code> is the last line of the block and the easiest to get wrong. SvelteKit refuses form submissions whose <code>Origin</code> header does not match the app’s own, which is what stops another site from posting to <code>/signin</code> on a person’s behalf. An empty list means *nobody else*; the value to add here is a second origin of your own, never a wildcard.</p>
 <h3 id="headers">The headers, and the one route that may be framed</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/hooks.server.ts<span class="code__lines">:97-148</span></span>
+		<span class="code__file">src/hooks.server.ts<span class="code__lines">:114-165</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">const handleSecurity: Handle = async ({ event, resolve }) =&gt; {
@@ -135,7 +143,7 @@ csrf: { trustedOrigins: [] },</code></pre>
 		 * Preload the two fonts the first paint needs, by source filename.
 		 *
 		 * SvelteKit preloads `js` and `css` by default and never fonts. Since
-		 * 3.0.0-next.24 a `font` input carries its `filename` — the project-relative
+		 * SvelteKit 3 a `font` input carries its `filename` — the project-relative
 		 * source path, before hashing — so this can name the exact file rather than
 		 * guessing at a hashed URL.
 		 */
@@ -187,7 +195,7 @@ csrf: { trustedOrigins: [] },</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/hooks.server.ts<span class="code__lines">:76-85</span></span>
+		<span class="code__file">src/hooks.server.ts<span class="code__lines">:93-102</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">const handleAuth: Handle = async ({ event, resolve }) =&gt; {
@@ -206,7 +214,7 @@ csrf: { trustedOrigins: [] },</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/remote/auth.remote.ts<span class="code__lines">:27-46</span></span>
+		<span class="code__file">src/lib/remote/auth.remote.ts<span class="code__lines">:30-49</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">const HOME = '/trips';
@@ -234,7 +242,7 @@ const RedirectSchema = v.optional(
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/api/route/[slug=slug].json/+server.ts<span class="code__lines">:21-51</span></span>
+		<span class="code__file">src/routes/api/route/[slug=slug].json/+server.ts<span class="code__lines">:29-61</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">const CORS = {
@@ -247,7 +255,7 @@ export const GET: RequestHandler = async ({ params }) =&gt; {
 	if (!trip || trip.visibility !== 'link') error(404, 'No such trip.');
 
 	const stops = await listStops(trip.id);
-	return json(
+	return Response.json(
 		{
 			name: trip.name,
 			slug: trip.slug,
@@ -256,6 +264,8 @@ export const GET: RequestHandler = async ({ params }) =&gt; {
 			stops: stops
 				.filter((stop) =&gt; stop.date !== null)
 				.map((stop) =&gt; ({
+					// Opaque, and the one thing that tells two stops at the same place apart.
+					id: stop.id,
 					name: stop.name,
 					kind: stop.kind,
 					date: stop.date,
@@ -273,7 +283,7 @@ export const OPTIONS: RequestHandler = () =&gt; new Response(null, { status: 204
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/hooks.server.ts<span class="code__lines">:157-165</span></span>
+		<span class="code__file">src/hooks.server.ts<span class="code__lines">:174-182</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">export const handleFetch: HandleFetch = ({ request, fetch, event }) =&gt; {
@@ -290,7 +300,7 @@ export const OPTIONS: RequestHandler = () =&gt; new Response(null, { status: 204
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/hooks.server.ts<span class="code__lines">:178-193</span></span>
+		<span class="code__file">src/hooks.server.ts<span class="code__lines">:199-214</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">export const handleError: HandleServerError = ({ error, event, kind, issues }) =&gt; {
@@ -300,17 +310,17 @@ export const OPTIONS: RequestHandler = () =&gt; new Response(null, { status: 204
 			?.map((segment) =&gt; (typeof segment === 'object' ? String(segment.key) : String(segment)))
 			.join('.');
 		console.warn(`validation failed for ${event.url.pathname}${path ? ` at ${path}` : ''}`);
-		return { message: 'That request did not make sense.' };
+		return { message: m.error_bad_request() };
 	}
 
 	if (kind !== 'unknown') return;
 
 	const id = crypto.randomUUID();
 	console.error(`[${id}] ${event.request.method} ${event.url.pathname}`, error);
-	return { message: 'Something went wrong on our side.', id };
+	return { message: m.error_server(), id };
 };</code></pre>
 </figure>
-<p>Error handling is a security surface too. <code>handleError</code> receives a <code>kind</code> in SvelteKit 3 — <code>app</code>, <code>framework</code>, <code>validation</code> or <code>unknown</code> — and the code returns something only for the last two. A validation failure (a remote function argument that did not match its schema) is logged with the *path* of the field and answered with a fixed message, so a caller probing the API learns that the request was malformed and nothing about the schema. An unknown error gets an id that is logged with the stack and shown to the person, so a bug report can be matched to a log line; the message itself says nothing about what broke.</p>
+<p>Error handling is a security surface too. <code>handleError</code> receives a <code>kind</code> in SvelteKit 3 — <code>app</code>, <code>framework</code>, <code>validation</code> or <code>unknown</code> — and the code returns something only for the last two. A validation failure (a remote function argument that did not match its schema) is logged with the *path* of the field and answered with a fixed sentence — <code>m.error_bad_request()</code>, in the request’s language, and the same sentence whatever failed — so a caller probing the API learns that the request was malformed and nothing about the schema. An unknown error gets an id that is logged with the stack and shown to the person, so a bug report can be matched to a log line; the message itself says nothing about what broke.</p>
 <aside class="callout callout--warn"><p>The place a policy like this usually breaks is *the next feature*. A new analytics script, a font from a CDN, a tile server, a YouTube embed: each needs a source in exactly one directive, and the temptation is to add <code>'unsafe-inline'</code> or a wildcard because the console error is annoying. The discipline is to read the console error — it names the directive and the blocked URL — add that one origin to that one directive, and write the comment that says why, as every directive above has.</p></aside>
 
 <aside class="callout callout--check">

@@ -8,7 +8,7 @@
  *      `_app/immutable` files) and `prerendered/`
  *   2. otherwise, which function? — `pick` matches the path against the route
  *      patterns each function owns
- *   3. that function's `Server.respond`
+ *   3. that function's `server.respond`
  *   4. if that function was the catch-all and the `reroute` hook moved the
  *      request, `applyReroute` hands it to the function that owns the new path
  *
@@ -16,30 +16,57 @@
  * this adapter exists for.
  */
 
-import process from 'node:process';
+import { pathToFileURL } from 'node:url';
 import sirv from 'sirv';
 import { createReadableStream, getRequest, setResponse } from '@sveltejs/kit/node';
 import { applyReroute } from '@sveltejs/kit/adapter';
-import { Server } from 'SERVER';
-import { manifest as pagesManifest } from 'MANIFEST_PAGES';
-import { manifest as apiManifest } from 'MANIFEST_API';
-import { manifest as routerManifest } from 'MANIFEST_ROUTER';
-import { appDir, base, origin, patterns, precompress, prerendered } from 'ENTRIES';
+import {
+	appDir,
+	base,
+	functions,
+	headers,
+	origin,
+	patterns,
+	precompress,
+	prerendered
+} from 'ENTRIES';
 import { dir } from './dir.js';
 import { pick } from 'PARTITION';
 
 const startedAt = Date.now();
 
+/** @typedef {(typeof functions)[number]} Entry */
+
 /*
- * Three servers from three manifests. Each is the whole SvelteKit runtime with
- * a different idea of which routes exist; the code behind the routes is shared,
- * because the bundle has one copy of it.
+ * Three servers, each written by `builder.generateServerInstance` with a
+ * different idea of which routes exist, and each in a bundle of its own under
+ * `functions/` — `../index.js` says why they cannot share one. Each is the
+ * whole SvelteKit runtime, `init` and `respond` and nothing else, over its own
+ * copy of the app. SvelteKit 3.0 deprecated the `Server` class in favour of
+ * these ready-made objects: an adapter no longer builds a server from a
+ * manifest, it imports one.
+ *
+ * Imported *by path, at run time*, with a dynamic `import()` the bundler is
+ * not allowed to touch — `functions/<name>/index.js` next to `dir.js`, which
+ * knows where the build is. The first version of this file used three static
+ * imports and asked rolldown to rewrite them into relative paths, and it did,
+ * verbatim: `./functions/pages/index.js`. The trouble is that the module the
+ * rewrite lands in is wherever the bundler put this code — `index.js` and
+ * `handler.js` are both entries, so the body they share became a chunk under
+ * `chunks/` — and from there `./functions/` is a folder that does not exist.
+ * The server died on its first import. A path computed from `dir` is right
+ * from any chunk, which is the same reason `dir.js` exists for `client/`.
  */
-const servers = {
-	pages: new Server(pagesManifest),
-	api: new Server(apiManifest),
-	router: new Server(routerManifest)
-};
+/** @type {Record<Entry, import('@sveltejs/kit').Server>} */
+const servers = Object.fromEntries(
+	await Promise.all(
+		functions.map(async (fn) => {
+			/** @type {{ server: import('@sveltejs/kit').Server }} */
+			const { server } = await import(pathToFileURL(`${dir}/functions/${fn}/index.js`).href);
+			return [fn, server];
+		})
+	)
+);
 
 const compiled = {
 	pages: patterns.pages.map((source) => new RegExp(source)),
@@ -65,6 +92,11 @@ const ready = Promise.all(
 /* ------------------------------------------------------------------ */
 
 /**
+ * A file is answered here, by sirv, and never reaches SvelteKit — so none of
+ * the app's hooks run for it, and whatever headers `handleSecurity` sets on a
+ * rendered page are missing unless they are set here too. `headers` is the
+ * adapter's `headers` option, baked in at build time.
+ *
  * @param {string} path
  * @param {boolean} client
  */
@@ -73,14 +105,13 @@ function serve(path, client) {
 		etag: true,
 		gzip: precompress,
 		brotli: precompress,
-		setHeaders: client
-			? (res, pathname) => {
-					// Hashed filenames never change, so a browser may keep them forever.
-					if (pathname.startsWith(`/${appDir}/immutable/`) && res.statusCode === 200) {
-						res.setHeader('cache-control', 'public,max-age=31536000,immutable');
-					}
-				}
-			: undefined
+		setHeaders: (res, pathname) => {
+			for (const [name, value] of Object.entries(headers)) res.setHeader(name, value);
+			// Hashed filenames never change, so a browser may keep them forever.
+			if (client && pathname.startsWith(`/${appDir}/immutable/`) && res.statusCode === 200) {
+				res.setHeader('cache-control', 'public,max-age=31536000,immutable');
+			}
+		}
 	});
 }
 
@@ -124,16 +155,22 @@ function prerenderedPage(req, res, next) {
 /* ------------------------------------------------------------------ */
 
 /**
- * The origin SvelteKit compares against for CSRF: baked in at build time when
- * `PUBLIC_ORIGIN` was set, else `ORIGIN` from the environment, else guessed
- * from the request — which is the guess that goes wrong behind a proxy, and
- * why the first two options exist.
+ * The origin SvelteKit compares against for CSRF: baked in at build time from
+ * `paths.origin` — which `vite.config.ts` fills from `PUBLIC_ORIGIN` — else
+ * guessed from the request, which is the guess that goes wrong behind a proxy
+ * and why the first option exists.
+ *
+ * There used to be a third option between those two: an `ORIGIN` environment
+ * variable read when the process started. adapter-node 6 removed it in favour
+ * of the config value, and this adapter follows, for the reason `PUBLIC_ORIGIN`
+ * is declared `static` in `src/env.ts`: an origin that could differ between the
+ * build and the process would make the CSRF check compare two different
+ * origins, and the way to make a mismatch impossible is to have one place.
  *
  * @param {import('node:http').IncomingMessage} req
  */
 function originFor(req) {
 	if (origin) return origin;
-	if (process.env.ORIGIN) return process.env.ORIGIN;
 
 	const protocol = req.headers['x-forwarded-proto'] ?? 'http';
 	const host = req.headers['x-forwarded-host'] ?? req.headers.host ?? 'localhost';
@@ -141,7 +178,7 @@ function originFor(req) {
 }
 
 /**
- * @param {'pages' | 'api' | 'router'} entry
+ * @param {Entry} entry
  * @param {Request} request
  * @param {import('node:http').IncomingMessage} req
  */
@@ -154,11 +191,9 @@ function respond(entry, request, req) {
 		},
 		// `event.platform` in the app. `emulate()` in `../index.js` produces the
 		// same shape during development, so nothing has to guard against `undefined`.
-		platform: {
-			adapter: 'adapter-ostinato',
-			entry: entry === 'router' ? 'pages' : entry,
-			startedAt
-		}
+		// `entry` is the truth, catch-all included: nothing in the app branches on
+		// it, and a diagnostics page that said `pages` for a 404 would be lying.
+		platform: { adapter: 'adapter-ostinato', entry, startedAt }
 	});
 }
 
@@ -172,7 +207,9 @@ async function sveltekit(req, res) {
 	/** @type {Request} */
 	let request;
 	try {
-		request = await getRequest({ request: req, base: originFor(req), bodySizeLimit: 512 * 1024 });
+		// Synchronous since 3.0: the body becomes a stream, nothing is read yet,
+		// so there was never anything to wait for and now there is no `await`.
+		request = getRequest({ request: req, base: originFor(req), bodySizeLimit: 512 * 1024 });
 	} catch {
 		res.statusCode = 400;
 		res.end('Bad Request');

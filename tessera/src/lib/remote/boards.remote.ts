@@ -20,12 +20,14 @@
 import { error, redirect } from '@sveltejs/kit';
 import * as v from 'valibot';
 import { and, desc, eq } from 'drizzle-orm';
-import { command, form, query } from '$app/server';
+import { command, form, getRequestEvent, query } from '$app/server';
+import { resolve } from '$app/paths';
 import { emptySnapshot, parseSnapshot, LoadedBoard } from '#lib/board/index.ts';
 import { db } from '#lib/server/db/index.ts';
 import { board, membership, workspace } from '#lib/server/db/schema.ts';
 import { requireAccess, AccessError } from '#lib/server/rbac.ts';
 import { requireUser } from '#lib/server/session.ts';
+import { langParam } from '#lib/i18n/index.ts';
 
 const boardId = v.pipe(v.string(), v.minLength(1), v.maxLength(64));
 const title = v.pipe(v.string(), v.trim(), v.minLength(1), v.maxLength(120));
@@ -156,8 +158,15 @@ export const createBoard = form(
 		 * navigate with. It is what the form does with JavaScript switched off, and
 		 * making the enhanced path do something different is how two code paths
 		 * drift until only one of them is ever exercised.
+		 *
+		 * Built with `resolve()`, like every link: the route id is checked, and the
+		 * new board opens in the language the list was in.
 		 */
-		redirect(303, `/boards/${id}`);
+		const { locale } = getRequestEvent().locals;
+		redirect(
+			303,
+			resolve('/[[lang=locale]]/boards/[board]', { lang: langParam(locale), board: id })
+		);
 	}
 );
 

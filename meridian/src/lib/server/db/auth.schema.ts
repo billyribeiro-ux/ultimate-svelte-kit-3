@@ -1,13 +1,20 @@
 /**
- * Better Auth's four tables, in the shape Better Auth 1.7 expects.
+ * Better Auth's four tables, in the shape Better Auth 1.7.7 expects.
  *
  * `pnpm exec auth generate` would write this file from `auth.ts`; it is kept
  * by hand so that the column names follow the same `snake_case` convention as
- * the rest of the schema and so that the one column added in 1.7 — `issuer` —
- * carries a comment saying why it is there.
+ * the rest of the schema — and so that a change *under* the app has somewhere
+ * to be explained. There was one: Better Auth 1.7.0 added a required
+ * `issuer` column to `account` (who vouches for the account — an OAuth
+ * provider's URL, or `local:credential` for a password), with a unique index
+ * on `(issuer, account_id)`, and the first version of this file carried both.
+ * 1.7.3 withdrew it, so 1.7.7 never writes the column; Better Auth's own
+ * schema diff now warns about it, and the 1.7 upgrade guide says what to do
+ * on SQLite: drop the index, then the column. Migration `0001` does exactly
+ * that, which is why the `account` table below looks like 1.6's again.
  */
 import { relations, sql } from 'drizzle-orm';
-import { sqliteTable, text, integer, index, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
 
 const nowMs = sql`(cast(unixepoch('subsecond') * 1000 as integer))`;
 
@@ -49,13 +56,6 @@ export const account = sqliteTable(
 		id: text('id').primaryKey(),
 		accountId: text('account_id').notNull(),
 		providerId: text('provider_id').notNull(),
-		/*
-		 * Who vouches for this account — required since Better Auth 1.7. OAuth
-		 * accounts store the provider's issuer URL; password accounts store the
-		 * synthetic `local:credential`. Sign-in filters on it, so a row without
-		 * it is a user who exists and can never log in.
-		 */
-		issuer: text('issuer').notNull().default('local:credential'),
 		userId: text('user_id')
 			.notNull()
 			.references(() => user.id, { onDelete: 'cascade' }),
@@ -71,12 +71,7 @@ export const account = sqliteTable(
 			.$onUpdate(() => /* @__PURE__ */ new Date())
 			.notNull()
 	},
-	(table) => [
-		index('account_userId_idx').on(table.userId),
-		// Mirrors the unique constraint Better Auth 1.7 declares: one account per
-		// (issuer, accountId) pair.
-		uniqueIndex('account_issuer_accountId_idx').on(table.issuer, table.accountId)
-	]
+	(table) => [index('account_userId_idx').on(table.userId)]
 );
 
 export const verification = sqliteTable(

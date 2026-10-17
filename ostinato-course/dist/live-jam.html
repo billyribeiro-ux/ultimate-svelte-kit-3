@@ -187,7 +187,7 @@ async function announce(room: string): Promise&lt;void&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/remote/rooms.remote.ts<span class="code__lines">:1-13</span></span>
+		<span class="code__file">src/lib/remote/rooms.remote.ts<span class="code__lines">:1-16</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -200,17 +200,32 @@ async function announce(room: string): Promise&lt;void&gt; {
  * browser closes it, SvelteKit stops iterating — which runs the `finally`
  * below, which leaves the room. There is no connection to manage by hand.
  *
- * During server rendering the generator is run for its *first* value only, so
- * the page arrives with the room already drawn and takes over from there.
+ * The jam page awaits it inside a boundary with a `pending` snippet, and a
+ * boundary like that renders only its `pending` snippet on the server. So the
+ * stream is opened by the browser, after hydration, and never during server
+ * rendering — which is why the page's `load` asks `getRoomName` first: that is
+ * the one question the server has to answer before it can send a status.
  */</code></pre>
 </figure>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/remote/rooms.remote.ts<span class="code__lines">:57-73</span></span>
+		<span class="code__file">src/lib/remote/rooms.remote.ts<span class="code__lines">:60-90</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">export const watchRoom = query.live(v.string(), async function* (id) {
+	<pre><code class="lang-ts">/**
+ * A room's name, or a 404. The jam page's universal `load` awaits this, so a
+ * room that does not exist is a real `404` from the server — the error page,
+ * with the status a link checker or a crawler reads — rather than a `200` that
+ * says &quot;No such room&quot; once the browser has opened the stream.
+ */
+export const getRoomName = query(v.string(), async (id) =&gt; {
+	const room = await getRoom(id);
+	if (!room) error(404, 'No such room');
+	return room.name;
+});
+
+export const watchRoom = query.live(v.string(), async function* (id) {
 	const exists = await getRoom(id);
 	if (!exists) error(404, 'No such room');
 
@@ -221,7 +236,9 @@ async function announce(room: string): Promise&lt;void&gt; {
 	const leave = join(id, currentArtist(), (snapshot) =&gt; mailbox.push(snapshot));
 
 	try {
-		yield (await getRoom(id))!;
+		// Read again after joining, so the first snapshot already counts this
+		// browser among those present.
+		yield (await getRoom(id)) ?? error(404, 'No such room');
 		while (true) yield await mailbox.next();
 	} finally {
 		leave();
@@ -231,12 +248,12 @@ async function announce(room: string): Promise&lt;void&gt; {
 
 <aside class="callout callout--why">
 	<h4>Why a generator</h4>
-	<p>A <code>query</code> returns once. A <code>query.live</code> is an async *generator*: it <code>yield</code>s every time there is something new, and SvelteKit streams each value — over server-sent events — to every browser that has the query open. When the last browser closes it, SvelteKit stops iterating the generator, which runs the <code>finally</code>, which calls <code>leave()</code>. There is no connection to manage, no <code>close</code> handler to forget. During server rendering the generator is run for its first value only, so the page arrives drawn.</p>
+	<p>A <code>query</code> returns once. A <code>query.live</code> is an async *generator*: it <code>yield</code>s every time there is something new, and SvelteKit streams each value — over server-sent events — to every browser that has the query open. When the last browser closes it, SvelteKit stops iterating the generator, which runs the <code>finally</code>, which calls <code>leave()</code>. There is no connection to manage, no <code>close</code> handler to forget. A live query awaited during server rendering runs for its first value only — but the jam page awaits this one inside a boundary with a <code>pending</code> snippet, and the server renders only that snippet, so here the stream is always opened by the browser after hydration. That is why <code>getRoomName</code> exists beside it: the page’s <code>load</code> awaits it (ch. 31), so the one thing the server must know before it sends a status — whether the room exists — is asked by a plain <code>query</code>, and <code>/jam/nowhere</code> is a real 404.</p>
 </aside>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/remote/rooms.remote.ts<span class="code__lines">:23-55</span></span>
+		<span class="code__file">src/lib/remote/rooms.remote.ts<span class="code__lines">:26-58</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -278,7 +295,7 @@ class Latest&lt;T&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/remote/rooms.remote.ts<span class="code__lines">:79-99</span></span>
+		<span class="code__file">src/lib/remote/rooms.remote.ts<span class="code__lines">:96-116</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">const RoomStep = v.object({
@@ -307,7 +324,7 @@ export const setRoomStep = command(RoomStep, async ({ room, track, index, step }
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/remote/rooms.remote.ts<span class="code__lines">:137-148</span></span>
+		<span class="code__file">src/lib/remote/rooms.remote.ts<span class="code__lines">:154-165</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">export const loadRoomPreset = command(

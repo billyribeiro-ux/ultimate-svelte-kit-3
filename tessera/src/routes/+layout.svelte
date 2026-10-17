@@ -1,15 +1,9 @@
 <script lang="ts">
 	import '../app.css';
 	import { messages } from '#lib/i18n/index.ts';
-	import type { Snippet } from 'svelte';
-	import type { LayoutData } from './$types';
+	import type { LayoutProps } from './$types';
 
-	interface Props {
-		data: LayoutData;
-		children: Snippet;
-	}
-
-	let { data, children }: Props = $props();
+	let { data, children }: LayoutProps = $props();
 
 	/**
 	 * The catalogue, resolved once at the root and passed down.

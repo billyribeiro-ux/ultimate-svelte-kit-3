@@ -248,7 +248,7 @@ export const checkpoint = sqliteTable(
 			},
 			{
 				type: 'p',
-				text: 'Restoring does not rewind the log. It replays the board as it was at that sequence and writes the difference as *new* operations. History is append-only, including the history of undoing things — which is the only way a restore can itself be undone, and the only way it can be collaborative. Chapter 39 builds it.'
+				text: 'Restoring does not rewind the log. It replays the board as it was at that sequence and writes the difference as *new* operations. History is append-only, including the history of undoing things — which is the only way a restore can itself be undone, and the only way it can be collaborative. Chapter 37 builds it.'
 			},
 
 			{
@@ -502,6 +502,25 @@ export const auth = betterAuth({
 				text: 'Two things in there will cost you an hour each if you get them wrong. `baseURL` must come from the same variable the CSRF check uses, or the cookie is issued for one origin and rejected by the check for another — and the symptom is a sign-in that appears to succeed and lands back on the sign-in page with no error anywhere. And `sveltekitCookies` must be **last** in the plugin list, because it wraps the response so cookies set during a remote function call reach the browser.'
 			},
 
+			{ type: 'h3', id: 'a-change-under-you', text: 'A change under you: migration 0001' },
+			{
+				type: 'p',
+				text: 'A dependency can change the database schema it expects without you touching a line, and Better Auth did. 1.7.0 added a required `issuer` column to `account` — who vouches for the account: an OAuth provider’s URL, or `local:credential` for a password — with a unique index on `(issuer, account_id)`, and `pnpm run auth:schema` wrote both into `auth.schema.ts`. 1.7.3 withdrew the idea: accounts are identified by `(provider_id, account_id)` again, exactly as in 1.6, and 1.7.7 never writes the column. It also checks the Drizzle schema at startup and refuses to start with a `NOT NULL` column it will never fill, because every sign-up would fail on the insert.'
+			},
+			{
+				type: 'code',
+				file: 'drizzle/0001_drop_account_issuer.sql',
+				lang: 'sql',
+				code: `
+DROP INDEX \`account_issuer_accountId_uidx\`;--> statement-breakpoint
+ALTER TABLE \`account\` DROP COLUMN \`issuer\`;`
+			},
+			{
+				type: 'why',
+				title: 'A second migration, not an edit to the first',
+				text: 'Every database that ran `0000` has the column — the seeded `local.db` on your machine included — and the journal is how they all arrive at the same shape. `drizzle-kit generate` wrote this from the change to `auth.schema.ts`, in the order the Better Auth upgrade guide prescribes for SQLite: the index first, because SQLite will not drop a column an index still names. The only hand-written part is the comment at the top of the file saying why it exists.'
+			},
+
 			{
 				type: 'checkpoint',
 				items: [
@@ -690,7 +709,7 @@ return { accepted: ops.length, watermark };`
 			{
 				type: 'why',
 				title: 'The asymmetry that makes the fix obvious',
-				text: 'Echoing an operation somebody already has is **harmless** — every replica is idempotent, that is the entire point of part 2. Dropping a new one is not. So when the two error directions have wildly different costs, pick the algorithm that can only ever fail in the cheap direction. Filtering on the returned stamps costs a `Set` and cannot be wrong.'
+				text: 'Echoing an operation somebody already has is **harmless** — every replica is idempotent, that is the entire point of chapters 09 to 12. Dropping a new one is not. So when the two error directions have wildly different costs, pick the algorithm that can only ever fail in the cheap direction. Filtering on the returned stamps costs a `Set` and cannot be wrong.'
 			},
 
 			{ type: 'h3', id: 'reading', text: 'Reading it back' },

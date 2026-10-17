@@ -45,7 +45,7 @@
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;Seo
 	title=&quot;Features — the full options tape, classified in real time&quot;
-	description=&quot;Live flow scanning, unusual activity baselines, dealer gamma exposure…&quot;
+	description=&quot;Live flow scanning, unusual activity baselines, dealer gamma exposure, dark pool prints, a real alerts engine and full tick replay. Here is exactly what StrikeFlow does.&quot;
 	schema={[
 		softwareApplicationSchema(),
 		breadcrumbSchema(pageUrl, [
@@ -80,12 +80,9 @@
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">const limitations = [
-	'We infer dealer positioning from public volume and open interest. Nobody can ' +
-		'observe it directly, so treat every gamma figure as a well-informed estimate.',
-	'The consolidated tape does not report whether a trade opened or closed a position. ' +
-		'Our opening-position detection is probabilistic, and we show you the confidence.',
-	'Starter plan data is delayed fifteen minutes. That is the standard non-professional ' +
-		'market data entitlement, not a limitation we invented.'
+	'We infer dealer positioning from public volume and open interest. Nobody can observe it directly, so treat every gamma figure as a well-informed estimate.',
+	'The consolidated tape does not report whether a trade opened or closed a position. Our opening-position detection is probabilistic, and we show you the confidence.',
+	'Starter plan data is delayed fifteen minutes. That is the standard non-professional market data entitlement, not a limitation we invented.'
 ];</code></pre>
 </figure>
 <h3 id="about">The about page, and why it is an SEO page</h3>
@@ -99,7 +96,7 @@
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;Seo
 	title=&quot;About — the team behind StrikeFlow&quot;
-	description=&quot;StrikeFlow was founded in 2021 by a derivatives trader and a market data engineer…&quot;
+	description=&quot;StrikeFlow was founded in 2021 by a derivatives trader and a market data engineer. Here is who builds it, what we believe about market data, and what we refuse to do.&quot;
 	schema={[
 		...team.map(personSchema),
 		breadcrumbSchema(pageUrl, [
@@ -120,11 +117,22 @@
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">{#if channel.href}
+	&lt;!--
+		`mailto:` and `tel:` are scheme URLs, not routes, so there is nothing
+		for `resolve()` to do. The lint rule accepts such hrefs when it can
+		read the literal, but not through an `{#each}` variable — hence the
+		targeted disable rather than a `rel=&quot;external&quot;` that would be wrong
+		for an email address.
+	--&gt;
+	&lt;!-- eslint-disable-next-line svelte/no-navigation-without-resolve --&gt;
 	&lt;a class=&quot;channels__link&quot; href={channel.href}&gt;{channel.linkLabel}&lt;/a&gt;
 {:else}
+	&lt;!-- `&lt;address&gt;` is the correct element for contact details of its
+	     nearest article or the document as a whole. --&gt;
 	&lt;address class=&quot;channels__address&quot;&gt;{channel.linkLabel}&lt;/address&gt;
 {/if}</code></pre>
 </figure>
+<aside class="callout callout--note"><p>The <code>eslint-disable</code> line is not decoration. <code>eslint-plugin-svelte</code> 3.23 makes <code>svelte/no-navigation-without-resolve</code> an <strong>error</strong> in its <code>recommended</code> config: every <code>href</code> must come from <code>resolve()</code>, be a literal the rule can see is not a route (<code>mailto:</code>, <code>https://…</code>), or carry <code>rel=&quot;external&quot;</code> — which is what the footer and the team profile links do. Here the value hides behind an <code>{#each}</code> variable, so the rule cannot read it, and <code>rel=&quot;external&quot;</code> would be a lie on an email address. So we switch the rule off for this one line and write down why. Type the anchor without it and <code>pnpm run lint</code> fails on this file.</p></aside>
 <aside class="callout callout--note"><p><code>&lt;address&gt;</code> is the correct element for the contact details of its nearest article or the document as a whole. It is not for postal addresses generally — a shipping address in a table is not an <code>&lt;address&gt;</code>. Browsers italicise it by default, which we reset.</p></aside>
 
 <aside class="callout callout--check">

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import type { PageProps } from './$types.js';
 	import SheetTable from '#lib/components/SheetTable.svelte';
 
@@ -21,8 +22,10 @@
 <div class="embed">
 	<SheetTable rendered={data.rendered} caption={data.published.title} />
 	<p class="embed__foot hint">
-		<a href="/s/{data.published.id}" target="_blank" rel="noopener">{data.published.title}</a> · by {data
-			.published.owner} · made with Abacus
+		<a href={resolve('/(app)/s/[id]', { id: data.published.id })} target="_blank" rel="noopener"
+			>{data.published.title}</a
+		>
+		· by {data.published.owner} · made with Abacus
 	</p>
 </div>
 

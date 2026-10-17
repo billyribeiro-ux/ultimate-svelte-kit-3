@@ -69,11 +69,11 @@ function rng(seed: number) {
 	};
 }</code></pre>
 </figure>
-<p>The idea is old and underused: build the *obviously correct* version — no indexes, no dirty sets, rebuild the whole graph every time — and check that the clever version agrees with it on inputs nobody chose. The two share the parser and the evaluator, which have their own tests, and nothing else. <code>mulberry32</code> is a seedable generator so that a failure prints a seed and can be replayed.</p>
+<p>The idea is old and underused: build the <em>obviously correct</em> version — no indexes, no dirty sets, rebuild the whole graph every time — and check that the clever version agrees with it on inputs nobody chose. The two share the parser and the evaluator, which have their own tests, and nothing else. <code>mulberry32</code> is a seedable generator so that a failure prints a seed and can be replayed.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/engine/engine.property.spec.ts<span class="code__lines">:38-82</span></span>
+		<span class="code__file">src/lib/engine/engine.property.spec.ts<span class="code__lines">:38-80</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">const ROWS = 5;
@@ -118,18 +118,17 @@ function randomInput(random: () =&gt; number): string | null {
 		default:
 			return `=MAX(${range()})`;
 	}
-}
-
-/** Everything from scratch: parse all, find cycles, evaluate recursively. */</code></pre>
+}</code></pre>
 </figure>
 <p>Random inputs are the part that takes judgement. A quarter numbers, some empties, a few awkward literals (<code>TRUE</code>, <code>'abc</code>), and formulas over random cells and ranges with the whole operator set — including divisions that will be by zero and references that will be circular. A generator that only produces valid, sensible formulas tests only valid, sensible formulas.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/engine/engine.property.spec.ts<span class="code__lines">:83-144</span></span>
+		<span class="code__file">src/lib/engine/engine.property.spec.ts<span class="code__lines">:82-144</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">function fromScratch(inputs: Map&lt;number, string&gt;): Map&lt;number, Scalar&gt; {
+	<pre><code class="lang-ts">/** Everything from scratch: parse all, find cycles, evaluate recursively. */
+function fromScratch(inputs: Map&lt;number, string&gt;): Map&lt;number, Scalar&gt; {
 	const formulas = new Map&lt;number, Node&gt;();
 	const literals = new Map&lt;number, Scalar&gt;();
 	const errors = new Map&lt;number, ErrorValue&gt;();
@@ -192,7 +191,7 @@ function randomInput(random: () =&gt; number): string | null {
 	return values;
 }</code></pre>
 </figure>
-<p>The from-scratch evaluator finds cycle members on the *static* graph with the same <code>cyclicMembers</code> — that function is shared on purpose, because its correctness is a graph-theory fact tested elsewhere — then resolves every formula recursively, memoising as it goes. It is twenty lines because it does not have to be fast.</p>
+<p>The from-scratch evaluator finds cycle members on the <em>static</em> graph with the same <code>cyclicMembers</code> — that function is shared on purpose, because its correctness is a graph-theory fact tested elsewhere — then resolves every formula recursively, memoising as it goes. There is nothing clever in its sixty lines, because it does not have to be fast.</p>
 
 <figure class="code">
 	<figcaption>

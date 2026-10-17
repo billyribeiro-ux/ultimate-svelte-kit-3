@@ -6,12 +6,12 @@
 	import { stagger } from '#lib/motion/index.ts';
 	import { formatDuration, formatMoney } from '#lib/time/index.ts';
 	import { getServices, saveService, setServiceActive } from '../studio.remote.ts';
-	import type { LayoutData } from '../$types';
+	import type { PageProps } from './$types';
 	import { messageFrom } from '#lib/errors.ts';
 
-	let { data }: { data: LayoutData } = $props();
+	let { data, params }: PageProps = $props();
 
-	const services = $derived(await getServices(data.slug));
+	const services = $derived(await getServices(params.slug));
 
 	let editing = $state<string | null>(null);
 	let lastError = $state<string | null>(null);
@@ -21,7 +21,7 @@
 		try {
 			// The handler calls `getServices(slug).refresh()`, so the updated list
 			// comes back with this response rather than in a second round trip.
-			await setServiceActive({ slug: data.slug, serviceId, isActive });
+			await setServiceActive({ slug: params.slug, serviceId, isActive });
 		} catch (thrown) {
 			lastError = messageFrom(thrown, 'Could not update that service.');
 		}
@@ -53,8 +53,8 @@
 				shares one set of fields, so typing in the third card fills the first,
 				and a validation error appears on all of them at once.
 			-->
-			{@const editForm = saveService.for(entry.id)}
-			<li class="card" class:inactive={!entry.isActive}>
+			{const editForm = $derived(saveService.for(entry.id))}
+			<li class={['card', { inactive: !entry.isActive }]}>
 				<div class="summary">
 					<div class="titles">
 						<h3>{entry.name}</h3>
@@ -76,8 +76,7 @@
 					<div class="row-actions">
 						<button
 							type="button"
-							class="visibility"
-							class:on={entry.isActive}
+							class={['visibility', { on: entry.isActive }]}
 							onclick={() => void toggle(entry.id, !entry.isActive)}
 							aria-label={entry.isActive
 								? `Hide ${entry.name} from the booking page`
@@ -102,7 +101,7 @@
 
 				{#if editing === entry.id}
 					<form {...editForm} class="edit stack">
-						<input {...editForm.fields.slug.as('hidden', data.slug)} />
+						<input {...editForm.fields.slug.as('hidden', params.slug)} />
 						<input {...editForm.fields.serviceId.as('hidden', entry.id)} />
 
 						<Field label="Name" required error={editForm.fields.name.issues()?.[0]?.message}>

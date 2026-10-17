@@ -1,4 +1,18 @@
+# `esbuild` is the only dependency allowed to run a postinstall script. pnpm blocks
+# every other lifecycle script by default, which is the right default for a project
+# that only needs a handful of well-known packages.
 allowBuilds:
   esbuild: true
+
+# pnpm 12 gates releases younger than 24 hours — the built-in `minimumReleaseAge`
+# of 1440 minutes. That default is non-strict: when an install needs a version that
+# fresh, pnpm installs it anyway and records it here, so a later frozen install of
+# the same lockfile still passes. These three were written on 2026-10-09. pnpm only
+# refuses (or prompts) when `minimumReleaseAge` is configured explicitly, which
+# turns `minimumReleaseAgeStrict` on. An entry stops doing anything once the
+# release is a day old; `minimumReleaseAgeExcludePrune: true` would drop stale
+# ones on the next `pnpm add`/`update`/`remove`, or delete them by hand.
 minimumReleaseAgeExclude:
-  - svelte@5.57.0
+  - '@types/node@24.19.2'
+  - eslint-plugin-svelte@3.23.1
+  - phosphor-svelte@3.1.1

@@ -38,7 +38,7 @@
 			
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/[tenant]/explore/+page.server.ts<span class="code__lines">:1-27</span></span>
+		<span class="code__file">src/routes/[tenant]/explore/+page.server.ts<span class="code__lines">:1-28</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">import type { PageServerLoad } from './$types.js';
@@ -67,39 +67,18 @@ import { DEFAULT_RANGE } from '#lib/time/range.ts';
  *
  * The rule this illustrates: **await what the first paint needs, stream what the
  * first interaction needs.** Streaming everything is a page of spinners;
- * awaiting everything is a page that waits for its slowest query.</code></pre>
+ * awaiting everything is a page that waits for its slowest query.
+ */</code></pre>
 </figure>
 <p>Two returned values, and the difference between them is the whole lesson. <code>q</code> and <code>range</code> come straight off the URL and the page cannot render without them — there is no sensible loading state for the contents of a query box, and rendering an empty one that fills in a moment later means the editor is briefly wrong and the caret jumps.</p>
 <p><code>services</code> is a promise, returned unawaited. SvelteKit streams it: the HTML goes out immediately and the value arrives in a later chunk. It feeds completion, which nobody can use until they have focused the editor and typed something.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/[tenant]/explore/+page.server.ts<span class="code__lines">:7-48</span></span>
+		<span class="code__file">src/routes/[tenant]/explore/+page.server.ts<span class="code__lines">:29-48</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">/**
- * WHAT THE PAGE NEEDS BEFORE IT CAN PAINT, AND WHAT IT DOES NOT
- * =============================================================
- *
- * Two returned values, and the difference between them is the whole lesson about
- * streamed loads.
- *
- * `q` and `range` are **awaited**. They come straight off the URL and the page
- * cannot render without them — there is no sensible &quot;loading&quot; state for the
- * contents of the query box, and rendering an empty one that fills in a moment
- * later means the editor is briefly wrong and the caret jumps.
- *
- * `services` is a **promise, returned unawaited**. SvelteKit streams it: the
- * HTML goes out immediately and the value arrives in a later chunk. It feeds
- * completion, which nobody can use until they have focused the editor and typed
- * something — by which time it has long since landed. Awaiting it would hold the
- * entire page behind a `GROUP BY` over a day of data.
- *
- * The rule this illustrates: **await what the first paint needs, stream what the
- * first interaction needs.** Streaming everything is a page of spinners;
- * awaiting everything is a page that waits for its slowest query.
- */
-export const load: PageServerLoad = async ({ params, locals, url }) =&gt; {
+	<pre><code class="lang-ts">export const load: PageServerLoad = async ({ params, locals, url }) =&gt; {
 	const access = await requireTenant(locals.user?.id, params.tenant, 'viewer');
 
 	return {
@@ -125,36 +104,75 @@ export const load: PageServerLoad = async ({ params, locals, url }) =&gt; {
 	<h4>The <code>.catch</code> is load-bearing, not defensive</h4>
 	<p>A rejection in a streamed promise arrives <strong>after</strong> the response has started, so it cannot become an error page. It becomes an unhandled rejection in the browser and a page that never finishes hydrating — a blank interface with no error anywhere. Resolving to an empty list degrades completion and nothing else.</p>
 </aside>
-<h3 id="consuming">And nothing to show while it lands</h3>
+<h3 id="consuming">Reading it without waiting for it</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/[tenant]/explore/+page.svelte<span class="code__lines">:302-316</span></span>
+		<span class="code__file">src/routes/[tenant]/explore/+page.svelte<span class="code__lines">:245-251</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/**
+ * The service names completion offers, streamed by the `load`: none until
+ * they land, then the list. Read as state rather than through an `{#await}`
+ * block, so the editor is in the server's HTML and stays mounted when they
+ * arrive. Why a class: `streamed.svelte.ts`.
+ */
+const services = $derived(new Streamed(data.services, []));</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/[tenant]/explore/+page.svelte<span class="code__lines">:431-442</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;!--
-	Saving a view is a form, and the hidden fields carry the *current* query
-	rather than the submitted one.
-
-	Somebody who has edited the box and not pressed Run still means the thing
-	they can see. A form that saved `submitted` would silently store the
-	previous query, which is the kind of quiet wrongness people discover
-	weeks later when the view opens something they never wrote.
+	The editor is drawn at once, by the server too, with whatever service
+	names have landed so far: none in the first paint, the streamed list a
+	moment later. Completion is the only thing that reads them, and nobody
+	asks for a completion in the first moment of a page.
 --&gt;
-&lt;form {...saveView} class=&quot;explore__save&quot;&gt;
-	&lt;input {...saveView.fields.tenant.as('hidden', data.tenant)} /&gt;
-	&lt;input {...saveView.fields.query.as('hidden', workspace.q)} /&gt;
-	&lt;input {...saveView.fields.range.as('hidden', workspace.range)} /&gt;
-	&lt;input
-		class=&quot;input btn--sm&quot;</code></pre>
+&lt;QueryEditor
+	bind:value={workspace.q}
+	catalogue={{ source, services: services.current }}
+	onrun={run}
+	serverError={null}
+/&gt;</code></pre>
 </figure>
-<p><code>{#await … then}</code> with no pending branch, on purpose: the editor is fully usable without completion, and a spinner over a working editor would be worse than no spinner.</p>
+<p>The editor is drawn at once, on the server as well, and its catalogue reads <code>services.current</code>: an empty list in the first paint, and the streamed list as soon as it lands. Nothing on the screen depends on it except the completion list, and nobody asks for a completion in the first moment of a page. When the list arrives, the editor is not drawn again — the same textarea, with the same caret, simply has more to offer.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/reactivity/streamed.svelte.ts<span class="code__lines">:38-51</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export class Streamed&lt;T&gt; {
+	current: T;
+
+	constructor(promise: Promise&lt;T&gt;, standIn: T) {
+		this.current = $state.raw(standIn);
+
+		promise.then(
+			(value) =&gt; {
+				this.current = value;
+			},
+			() =&gt; {}
+		);
+	}
+}</code></pre>
+</figure>
+<p>A stand-in until the promise resolves, then the value, in a <code>$state.raw</code> field. Raw, because the value is replaced whole and never changed in place, so a deep proxy around it would be work for nothing. The page creates one inside a <code>$derived</code>, so a navigation that streams a new list makes a new <code>Streamed</code>, and the old one is dropped with the promise it was waiting for.</p>
+
+<aside class="callout callout--why">
+	<h4>Why not <code>{#await data.services then services}</code></h4>
+	<p>That was the first version, and it cost two things. “During server-side rendering, only the pending branch will be rendered”, and the pending branch here was empty, so the editor was the one control missing from the server’s HTML: a link to a refused query, opened before the JavaScript arrived, explained the refusal and offered nowhere to fix it. And in the browser the <code>then</code> branch is drawn from scratch when the promise lands, so an editor inside it is a new editor — an early click or a caret placed while the list was in flight would be thrown away. The block is the right tool when the content *is* the value; here the value only improves a control that is useful without it.</p>
+</aside>
+<aside class="callout callout--note"><p>Not an <code>$effect</code> that copies the value into <code>$state</code> either. An effect would need a flag to ignore a promise that landed after it had been replaced, and an effect that writes state another rune could hold is the pattern the <code>$effect</code> documentation warns against. A small class keeps the promise and the state it settles into together, and the <code>$derived</code> that creates it decides when it is replaced.</p></aside>
 <h3 id="the-rule">The rule, stated once</h3>
 <p><strong>Await what the first paint needs; stream what the first interaction needs.</strong> Streaming everything is a page of spinners. Awaiting everything is a page that waits for its slowest query.</p>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>
-	<ul><li>The explore page renders rows before the completion catalogue has loaded.</li><li>A failing catalogue query degrades completion and nothing else.</li><li>You can say which of your loads should be awaited and why.</li></ul>
+	<ul><li>The explore page, editor and rows, is in the server’s HTML before the completion catalogue has loaded.</li><li>Completion still offers service names once the catalogue lands, and the caret does not move when it does.</li><li>A failing catalogue query degrades completion and nothing else.</li><li>You can say which of your loads should be awaited and why.</li></ul>
 </aside>
 		</article>
 

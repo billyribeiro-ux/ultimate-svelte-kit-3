@@ -45,7 +45,7 @@
 </figure>
 <aside class="callout callout--note"><p>GSAP became fully free in 2024, including every plugin — ScrollTrigger, SplitText, MorphSVG, the lot. Older tutorials describe a paid &quot;Club GreenSock&quot; tier for these. That is out of date.</p></aside>
 <h3 id="problem">The problem nobody warns you about</h3>
-<p>A scroll reveal works by starting an element invisible and fading it in. Simple enough — until you ask *when* it becomes invisible.</p>
+<p>A scroll reveal works by starting an element invisible and fading it in. Simple enough — until you ask <em>when</em> it becomes invisible.</p>
 <p>GSAP is a large library, loaded asynchronously. There is a window — 200ms on a good connection, several seconds on a bad one — where your page has rendered but the animation library has not arrived. Two obvious approaches both fail badly:</p>
 <ul><li><strong>Hide it in CSS, reveal with JavaScript.</strong> If the JavaScript never arrives — blocked request, failed chunk after a bad deploy, browser extension — the content is gone <strong>forever</strong>. A blank page. This is the worst bug in the category and it is shockingly common.</li><li><strong>Hide it in JavaScript once GSAP loads.</strong> The element renders visible, then jumps to hidden, then animates in. A visible flicker on every single page load.</li></ul>
 <h3 id="solution">The solution: three mechanisms, one effect</h3>
@@ -86,13 +86,17 @@
 }
 
 /* … */
-
 /* Hero parts are choreographed by `motion/hero.ts`, which sets its own start
    positions. They just need to be invisible until it does. */
 .motion-pending [data-hero] {
 	opacity: 0;
 }
 
+/*
+ * Belt and braces. If the media query somehow evaluates differently to the inline
+ * script's `matchMedia` check, this guarantees a reduced-motion user is never
+ * looking at a hidden element.
+ */
 @media (prefers-reduced-motion: reduce) {
 	.motion-pending [data-reveal],
 	.motion-pending [data-hero] {
@@ -119,7 +123,7 @@
 	opacity: 0,
 	...offset,
 	...(scale ? { scale: 0.97 } : {}),
-	/* … */
+	// …
 	force3D: true
 });
 
@@ -151,33 +155,39 @@ gsap.to(targets, {
 		<span class="code__file">src/lib/motion/gsap.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">export function loadMotion(): Promise&lt;MotionApi | null&gt; {
+	<pre><code class="lang-ts">import { browser } from '$app/env';
+
+// …
+export function loadMotion(): Promise&lt;MotionApi | null&gt; {
 	if (!browser || prefersReducedMotion()) {
+		// …
 		releaseMotionGate();
-		return Promise.resolve(null);   // never even imports GSAP
+		return Promise.resolve(null);
 	}
 
 	motionPromise ??= (async () =&gt; {
-		const [{ gsap }, { ScrollTrigger }, { SplitText }, { CustomEase }] =
-			await Promise.all([
-				import('gsap'),
-				import('gsap/ScrollTrigger'),
-				import('gsap/SplitText'),
-				import('gsap/CustomEase')
-			]);
+		const [{ gsap }, { ScrollTrigger }, { SplitText }, { CustomEase }] = await Promise.all([
+			import('gsap'),
+			import('gsap/ScrollTrigger'),
+			import('gsap/SplitText'),
+			import('gsap/CustomEase')
+		]);
+
 		gsap.registerPlugin(ScrollTrigger, SplitText, CustomEase);
-		// ...
+		// …
+		return { gsap, ScrollTrigger, SplitText, duration, stagger, travel, trigger };
 	})();
 
 	return motionPromise;
 }</code></pre>
 </figure>
+<p><code>browser</code> comes from <code>$app/env</code> — the module SvelteKit 2 called <code>$app/environment</code> (chapter 9). It is <code>true</code> in the browser and <code>false</code> during server rendering and prerendering, so on the server <code>loadMotion</code> returns <code>null</code> before anything can touch <code>window</code> or <code>document</code>.</p>
 
 <aside class="callout callout--why">
 	<h4>Note where the check happens</h4>
 	<p>It returns <code>null</code> <strong>before</strong> the dynamic imports. So a reduced-motion user does not merely see no animation — they never download the ~90kB animation library at all. Respecting the setting should mean not making that person pay for something they explicitly asked not to see.</p>
 </aside>
-<aside class="callout callout--note"><p>Returning <code>null</code> rather than a no-op object is deliberate: every caller is forced to handle it, which makes the reduced-motion path impossible to forget.</p></aside>
+<aside class="callout callout--note"><p>Returning <code>null</code> rather than a no-op object is deliberate: every caller is forced to handle it, which makes the reduced-motion path impossible to forget. The <code>// …</code> under the import stands for the module's other import, the <code>MotionApi</code> type, the shared promise and the <code>prefersReducedMotion()</code> helper. The next is a comment on that <code>releaseMotionGate()</code> call: the inline script already skips the class for these users, but the two checks can disagree (someone toggles the OS setting after load), and releasing the gate at once beats leaving content hidden until the 2.5-second failsafe. The last stands for our named eases, the project-wide GSAP defaults and two ScrollTrigger settings, each explained in the file.</p></aside>
 <h3 id="attachment">The reveal, as a Svelte attachment</h3>
 
 <figure class="code">
@@ -188,9 +198,12 @@ gsap.to(targets, {
 	<pre><code class="lang-ts">export function reveal(options: RevealOptions = {}): Attachment&lt;HTMLElement&gt; {
 	return (node) =&gt; {
 		let cancelled = false;
+		/** GSAP's Context: cleans up every tween and ScrollTrigger created inside it. */
 		let context: { revert: () =&gt; void } | undefined;
 
 		void loadMotion().then((motion) =&gt; {
+			// `null` means reduced motion or SSR. The CSS gate has already been
+			// released by the inline script in that case, so content is visible.
 			if (!motion || cancelled) return;
 
 			const { gsap } = motion;
@@ -198,10 +211,12 @@ gsap.to(targets, {
 			// …
 
 			context = gsap.context(() =&gt; {
+				// …
 				gsap.set(targets, {
 					opacity: 0,
 					...offset,
 					...(scale ? { scale: 0.97 } : {}),
+					// …
 					force3D: true
 				});
 
@@ -215,6 +230,7 @@ gsap.to(targets, {
 					duration: dur,
 					delay,
 					stagger: items ? staggerAmount : 0,
+					// …
 					clearProps: 'transform',
 					scrollTrigger: {
 						trigger: node,
@@ -227,12 +243,13 @@ gsap.to(targets, {
 
 		return () =&gt; {
 			cancelled = true;
+			// …
 			context?.revert();
 		};
 	};
 }</code></pre>
 </figure>
-<ul><li><code>cancelled</code> guards the async gap. If the component unmounts before GSAP arrives, we must not animate a detached element.</li><li><code>gsap.context()</code> scopes everything created inside it. One <code>revert()</code> kills every tween and ScrollTrigger — no manual bookkeeping.</li><li><code>clearProps: 'transform'</code> strips the inline transform when the tween finishes. A leftover <code>translate3d(0,0,0)</code> creates a containing block that quietly breaks any <code>position: fixed</code> descendant.</li><li>The returned function is the cleanup. <strong>Skip it and every client-side navigation leaks a ScrollTrigger</strong> that keeps recalculating on every scroll event, forever.</li></ul>
+<ul><li>The first <code>// …</code> stands for reading the options and working out the start offset from <code>from</code> and <code>distance</code>; the others are the comments the real file carries on the points below.</li><li><code>cancelled</code> guards the async gap. If the component unmounts before GSAP arrives, we must not animate a detached element.</li><li><code>gsap.context()</code> scopes everything created inside it. One <code>revert()</code> kills every tween and ScrollTrigger — no manual bookkeeping.</li><li><code>clearProps: 'transform'</code> strips the inline transform when the tween finishes. A leftover <code>translate3d(0,0,0)</code> creates a containing block that quietly breaks any <code>position: fixed</code> descendant.</li><li>The returned function is the cleanup. <strong>Skip it and every client-side navigation leaks a ScrollTrigger</strong> that keeps recalculating on every scroll event, forever.</li></ul>
 <aside class="callout callout--note"><p><code>start: 'top 85%'</code> means &quot;begin when the top of the element reaches 85% of the way down the viewport&quot; — just as it comes into view. Wait until it is fully on screen and the user watches a static element suddenly move, which looks broken.</p></aside>
 
 <aside class="callout callout--check">

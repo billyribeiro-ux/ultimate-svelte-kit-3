@@ -10,17 +10,49 @@
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 		<!--
+			The browser's own chrome — the phone's status bar, the tab strip —
+			takes the page's canvas colour, so a cream page is not topped by a
+			white bar and a near-black one by a grey one. These are `--paper`'s
+			two values from `tokens.css`, by hand: a <meta> cannot read a token.
+			Each follows the system's scheme until a person picks one; then the
+			script below points the chosen one at every screen (`media="all"`)
+			and the other at none, so a dark page on a light phone gets a dark
+			bar. `theme.svelte.ts` does the same when the choice changes.
+		-->
+		<meta
+			name="theme-color"
+			data-scheme="light"
+			media="(prefers-color-scheme: light)"
+			content="#f8f5ee"
+		/>
+		<meta
+			name="theme-color"
+			data-scheme="dark"
+			media="(prefers-color-scheme: dark)"
+			content="#101318"
+		/>
+		<!--
 			The theme a person chose, applied before the first paint so a dark
-			choice on a light system never flashes light. This script is the one
-			inline script in the app: `vite.config.ts` reads it out of this file,
-			hashes it, and adds the hash to `script-src` — so it runs under the
-			Content Security Policy on prerendered pages (hashes) and rendered
-			ones (nonces) alike.
+			choice on a light system never flashes light; the browser chrome
+			follows it, and so does a cookie, which is how the server knows which
+			of the home page's two hero prints to ask for (`theme-cookie.ts`).
+			This script is the one inline script in the app: `vite.config.ts`
+			reads it out of this file, hashes it, and adds the hash to
+			`script-src` — so it runs under the Content Security Policy on
+			prerendered pages (hashes) and rendered ones (nonces) alike.
 		-->
 		<script>
 			try {
 				var t = localStorage.getItem('meridian:theme');
-				if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
+				if (t !== 'light' && t !== 'dark') t = '';
+				if (t) document.documentElement.dataset.theme = t;
+				var metas = document.querySelectorAll('meta[name="theme-color"]');
+				for (var i = 0; i < metas.length; i++) {
+					var s = metas[i].getAttribute('data-scheme');
+					metas[i].media = t ? (s === t ? 'all' : 'not all') : '(prefers-color-scheme: ' + s + ')';
+				}
+				document.cookie =
+					'meridian-theme=' + t + '; path=/; max-age=' + (t ? 31536000 : 0) + '; samesite=lax';
 			} catch (e) {}
 		</script>
 		<!--

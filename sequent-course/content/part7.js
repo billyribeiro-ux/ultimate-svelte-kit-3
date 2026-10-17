@@ -1,5 +1,5 @@
 /**
- * PART 7 — Running it (chapters 39–43)
+ * PART 7 — Running it (chapters 38–42)
  *
  * The work that separates a project that demos from one somebody can operate:
  * changing the schema without an outage, turning a feature off without a
@@ -473,6 +473,7 @@ export async function usageFor(
 			{ type: 'h3', id: 'property', text: 'Property-based testing' },
 			{
 				type: 'code',
+				file: 'packages/core/src/invariants.spec.ts',
 				lang: 'ts',
 				code: `
 it('never leaves a crossed book during continuous trading', () => {
@@ -481,6 +482,8 @@ it('never leaves a crossed book during continuous trading', () => {
 			const { state } = run(steps);
 			const instrument = state.instruments.get(VOD)!;
 
+			// A crossed book is two participants who agree on a price and have
+			// not been matched. Outside an auction it must never happen.
 			if (instrument.phase === 'continuous') {
 				expect(isCrossed(instrument.book)).toBe(false);
 			}
@@ -514,6 +517,13 @@ it('never leaves a crossed book during continuous trading', () => {
  * Those are the only failures that matter in production, and they are the only
  * ones a developer never sees, because a developer's machine does not lose
  * power and does not run two copies of the engine by accident during a deploy.
+ *
+ * ## The invariant every test here checks
+ *
+ * However the venue is interrupted, **replaying the log produces the same
+ * state**. Not similar; identical, down to a fingerprint. That is the property
+ * event sourcing is *for*, and it is worth nothing unless something proves it
+ * survives contact with a crash.
  */`
 			},
 			{
@@ -521,19 +531,14 @@ it('never leaves a crossed book during continuous trading', () => {
 				text: 'One of these found a genuinely dangerous bug. The test handed the engine a **corrupt snapshot** — a truncated JSON body — and asserted it still recovered. It did not: `deserialise` threw `body.instruments is not iterable`, the error escaped `recover()`, and the engine refused to start. A file that exists purely as an *optimisation* had become a single point of failure for the whole venue.'
 			},
 			{
+				type: 'p',
+				text: 'The fix, which chapter 15 walks through with its full comment, treats a snapshot that will not parse as **absent**: recovery replays from genesis instead, more slowly and correctly. It logs as it does so, because a venue that quietly replays from genesis on every start is one whose snapshots have been broken for months.'
+			},
+			{
 				type: 'code',
 				file: 'apps/engine/src/snapshot.ts',
 				lang: 'ts',
 				code: `
-/*
- * A snapshot that will not parse is treated as **absent**, not as an error.
- *
- * …
- *
- * It is logged rather than swallowed silently: a venue that quietly replays
- * from genesis every start is one whose snapshots have been broken for
- * months and whose boot time nobody has questioned.
- */
 try {
 	return {
 		state: deserialise(JSON.parse(String(row['body'])) as SnapshotBody),
@@ -569,7 +574,16 @@ try {
  *   are the same ones the small suites make — the books balance, no order is
  *   overfilled — and they are the point. The timing is context.
  *
- * …
+ * ## Why the numbers here are deliberately modest
+ *
+ * These run on whatever machine CI happens to give us, against SQLite on a
+ * temp filesystem. Ten thousand orders is enough to shake out an ordering bug
+ * and short enough that nobody skips the suite. A throughput assertion tuned to
+ * a fast laptop is a test that fails on a busy CI box for no reason, which is
+ * how a suite gets an \`it.skip\` nobody removes.
+ *
+ * So the assertions are about **correctness and completeness**, and the timings
+ * are printed rather than asserted.
  */`
 			},
 			{
@@ -594,28 +608,31 @@ BEGIN / COMMIT           35 descriptors`
 			},
 			{
 				type: 'p',
-				text: '`@libsql/client`\'s `transaction()` opens a second connection and never releases it — not on commit, not on rollback, not on an explicit `close()`. Two descriptors per transaction, forever. The engine opens one transaction per command, so at the default file limit it died after about ten thousand orders.'
+				text: '`@libsql/client` 0.17.4\'s `transaction()` opened a second connection and never released it — not on commit, not on rollback, not on an explicit `close()`. Two descriptors per transaction, forever. The engine opens one transaction per command, so at the default file limit it died after about ten thousand orders. The first fix was `BEGIN IMMEDIATE` and `COMMIT` as plain statements on the one connection; 0.18 then fixed the leak with a connection pool, which made that impossible — a statement borrows a connection and the pool rolls back whatever it left open — and `withTransaction` went back to `transaction()`, this time with the leak gone:'
 			},
 			{
 				type: 'code',
 				file: 'packages/store/src/client.ts',
 				lang: 'ts',
 				code: `
-export type Executor = Pick<Client, 'execute'>;
-const chains = new WeakMap<Executor, Promise<unknown>>();
+export type Executor = Pick<Transaction, 'execute'>;
 
+// …
+const chains = new WeakMap<Client, Promise<unknown>>();
+
+// …
 export async function withTransaction<T>(
-	client: Executor,
+	client: Client,
 	work: (tx: Executor) => Promise<T>
 ): Promise<T> {
 	const previous = chains.get(client) ?? Promise.resolve();
 
 	const run = previous.then(async () => {
-		await client.execute('BEGIN IMMEDIATE');
+		const transaction = await client.transaction('write');
 
 		try {
-			const result = await work(client);
-			await client.execute('COMMIT');
+			const result = await work(transaction);
+			await transaction.commit();
 			return result;
 		} catch (thrown) {
 			/*
@@ -623,10 +640,11 @@ export async function withTransaction<T>(
 			 *
 			 * If the connection has gone, \`ROLLBACK\` throws too — and throwing *that*
 			 * would replace the real error with a meaningless one, hiding the reason
-			 * the transaction failed in the first place.
+			 * the transaction failed in the first place. Either way the connection
+			 * goes back to the pool: \`rollback()\` releases it even when it throws.
 			 */
 			try {
-				await client.execute('ROLLBACK');
+				await transaction.rollback();
 			} catch {
 				// The original error is the one worth having.
 			}
@@ -636,7 +654,7 @@ export async function withTransaction<T>(
 	});
 
 	// The chain must continue whether this call succeeded or not, or one failed
-	// transaction would block every later one on this connection forever.
+	// transaction would block every later one on this client forever.
 	chains.set(
 		client,
 		run.then(
@@ -650,11 +668,11 @@ export async function withTransaction<T>(
 			},
 			{
 				type: 'p',
-				text: 'The promise chain is what serialises callers. SQLite allows one write transaction per connection, so two overlapping `withTransaction` calls would otherwise put their statements into *one* transaction and commit them together — not a deadlock, not an error, and completely wrong.'
+				text: 'The promise chain is what serialises callers, and the pool made it more necessary rather than less. On one connection, two overlapping `withTransaction` calls would put their statements into *one* transaction and commit them together — not a deadlock, not an error, and completely wrong. On a pool, each gets its own connection and the second `BEGIN IMMEDIATE` waits for the first\'s write lock inside a synchronous native call — blocking the event loop that the first transaction needs in order to finish. A deadlock with a five-second timeout on it. The chain makes the second caller wait in JavaScript, where waiting is free.'
 			},
 			{
 				type: 'p',
-				text: 'And the regression test measures file descriptors directly, so a future refactor back to `client.transaction()` fails in two seconds instead of in production after a few minutes of real trading.'
+				text: 'And the regression test still measures file descriptors directly. It is a test of the library now, and the library has been wrong about this once — so if a release leaks again it fails in two seconds instead of in production after a few minutes of real trading.'
 			},
 
 			{ type: 'h3', id: 'my-own-bugs', text: 'The tests that were wrong' },
@@ -680,13 +698,134 @@ export async function withTransaction<T>(
 				title: 'What actually found the bugs',
 				text: 'A browser at 390px found two layout bugs no unit test could see. `curl` found four API bugs in an afternoon. A load test found a file-descriptor leak. Fault injection found the corrupt-snapshot dependency. A property test found a crossed book. The single highest-value habit in this whole project was **running the thing**, repeatedly, in the shape a real user would.'
 			},
+
+			{ type: 'h3', id: 'browser-tests', text: 'Six browser tests, each of which failed first' },
+			{
+				type: 'p',
+				text: 'A unit test cannot see what a person sees when the venue refuses them, so a short Playwright suite in `apps/web/e2e/` does. Six tests, run against the production build by `pnpm verify`, each making the venue say no — or fail — for a real reason and asserting what the person is told:'
+			},
+			{
+				type: 'ul',
+				items: [
+					'**A venue operator\'s positions panel.** The refusal used to take the whole terminal down with it, and the first fix still served the working terminal as an HTTP 403. The test now checks the page after signing in *and* after a reload, status included (chapter 27).',
+					'**An auditor\'s cancel.** Refused at the gateway, and the screen used to show nothing at all (chapter 24).',
+					'**A trader opening the risk console.** Used to get SvelteKit\'s built-in error page, because the app had no `+error.svelte` of its own (chapter 27).',
+					'**A wrong password.** Used to replace the sign-in form with an error page (chapter 25).',
+					'**A wrong password, with JavaScript switched off.** Used to come back in the page, in plain text, in the password field and in the hydration data (chapter 25).',
+					'**A positions read that fails.** Used to leave the panel stuck until a full reload; now it can be tried again in place (chapter 27).'
+				]
+			},
+			{
+				type: 'p',
+				text: 'The warning above was applied to them literally. Every one was run against the code from before its fix — the old pages, the new tests — and every one failed, each for its own reason: no Tape heading (and, against the two half-fixes since, a refusal where the note belongs, or a 403 on reload); no alert; no failure card; no form; the password found in the page; no Try again button. A test that had passed there would have been testing nothing.'
+			},
+			{
+				type: 'p',
+				text: 'They are the only tests in the project that open a browser. Every other test is Vitest running in Node — no window, no clicks, just functions and real SQLite files — and that is faster, steadier and easier to read. This project once deleted Playwright altogether, for being a dependency with nothing to run. Bringing it back was a decision that had to be earned, so here is the case.'
+			},
+			{
+				type: 'why',
+				title: 'Why these six need a browser',
+				text: 'Each bug was in how the server, the network and the page meet, and showed only on the page. Svelte\'s documentation draws the line for the clearest one — errors "occurring outside the rendering process (for example, in event handlers …) are not caught by error boundaries" — so a refused cancel is handled by the `try` in its own handler or by nothing, and only a click runs that handler. Two cheaper shapes were weighed. Svelte\'s testing guide says to ask first whether the logic can be lifted out and tested on its own — and the one piece that could be, was: reading the message from a refusal started as a hand-written reader pasted into three components, and is now `messageFrom` in `#lib/errors.ts`, built on `isHttpError` and tested by Vitest (chapter 24). Everything left is wiring — a promise nobody caught, an `await` in the wrong place, a refusal caught where it should have been a branch, a boundary that could never be reached, an `error` that should have been `invalid`, a field name that decides what a page echoes back. Mounting the terminal under jsdom with its remote functions mocked fails differently: a mock rejects with whatever its author believes a refusal looks like, and believing it was an `Error` was the bug. A test that mocks the thing it is about asserts the assumption. So the case was checked rather than argued: with the Cancel button put back to `void cancelOrder(...)`, every Vitest test passes, and this suite fails because no alert ever appears.'
+			},
+			{
+				type: 'p',
+				text: 'Chromium is a one-off download. After that, `verify` runs the browser tests last, against the build it has just made:'
+			},
+			{
+				type: 'terminal',
+				code: `
+$ pnpm --filter @sequent/web exec playwright install chromium
+$ PUBLIC_ORIGIN=http://localhost:4173 pnpm verify`
+			},
+			{
+				type: 'code',
+				file: 'apps/web/e2e/errors.e2e.ts',
+				lang: 'ts',
+				code: `
+test('a cancel the venue refuses says so, rather than appearing to work', async ({ page }) => {
+	// An auditor sees the firm's working orders, each with a Cancel button, and
+	// may cancel none of them: reads everything, changes nothing. So do risk
+	// managers and firm admins, whose cancel is the firm-wide one. Three of the
+	// five roles on this screen meet this refusal.
+	await signIn(page, 'quinn@northgate.test');
+	await expect(page.locator('html[data-hydrated]')).toHaveCount(1);
+
+	const cancel = page.getByRole('button', { name: /^Cancel SEED-/ }).first();
+	await cancel.click();
+
+	await expect(panel(page, 'Your orders').getByRole('alert')).toHaveText(
+		'Your role does not allow that.'
+	);
+});`
+			},
+			{
+				type: 'p',
+				text: 'The second line is the one that is easy to leave out. It waits for an attribute the root layout sets:'
+			},
+			{
+				type: 'code',
+				file: 'apps/web/src/routes/+layout.svelte',
+				lang: 'ts',
+				code: `
+$effect(() => {
+	document.documentElement.dataset['hydrated'] = '';
+});`
+			},
+			{
+				type: 'why',
+				title: 'Wait for hydration, not for time',
+				text: 'Server rendering puts every button on the screen before any of them has a handler. A test that clicks in that gap clicks nothing, then times out waiting for a reaction that was never coming — which looks exactly like the bug it was written to catch. An `$effect` only runs in a browser, once the component is mounted, so the attribute appears at precisely the moment the page can respond. Waiting for it costs nothing on a fast machine and is still correct on a slow one, which no `waitForTimeout` can say.'
+			},
+			{
+				type: 'note',
+				text: 'The test once ended with one more line: `await expect(cancel).toBeVisible()`, under the comment "Refused at the gateway, so the order never left the book". It could not fail. No engine runs under the browser suite, so no order\'s status ever changes, and the Cancel button stays on screen whether the cancel was accepted or refused. The alert is the assertion. The extra line was the vacuous kind the warning above is about, and it went.'
+			},
+			{
+				type: 'warn',
+				text: 'The first draft of that test signed in as a trader and cleared the cookies, to stand in for an expired session. It failed for the wrong reason: the terminal was still settling after the sign-in redirect, something on it met the missing cookie before the click did, and the whole page went to the error page. Changing state underneath a page that is still loading tests the loading, not the thing you meant. The auditor is refused every time, and is the commoner case anyway.'
+			},
+			{
+				type: 'p',
+				text: 'The last piece is where the suite gets its venue. The seed deletes the file it is given, so the database is pinned in the config rather than read from the environment, and the server is never one that happened to be running already:'
+			},
+			{
+				type: 'code',
+				file: 'apps/web/playwright.config.ts',
+				lang: 'ts',
+				code: `
+webServer: {
+	// Seed, then serve. In one command so the seed has finished with the file
+	// before the server opens it; a \`globalSetup\` runs after the web server
+	// has already started.
+	command: 'node scripts/seed.ts && node build',
+	port: 4173,
+	/*
+	 * Never a server that is already listening. 4173 is also where
+	 * \`vite preview\` goes, and a reused server skips the seed above and serves
+	 * whatever database it was started with — so the suite would run against
+	 * the venue somebody is developing on, the thing \`e2e.db\` exists to
+	 * prevent. A port in use fails the run, and says why.
+	 */
+	reuseExistingServer: false,
+	env: { DATABASE_URL, PORT: '4173' }
+}`
+			},
+			{
+				type: 'why',
+				title: 'Why never reuse a running server',
+				text: 'Reusing a server that is already up saves a few seconds locally, and `reuseExistingServer: !process.env.CI` is a line plenty of Playwright configs carry — this one did, at first. Here it would quietly break both promises above: the seed is part of the server\'s command, so a reused server never seeds, and it serves whichever database it was started with. A failure that says "port 4173 is already in use" costs ten seconds to act on. A green run against the wrong venue costs whatever somebody does next on the strength of it.'
+			},
 			{
 				type: 'checkpoint',
 				items: [
 					'You can name the venue\'s four invariants and assert them after any operation',
 					'You can explain what shrinking gives you that a random failure does not',
 					'You can explain why a corrupt snapshot must not stop the engine',
-					'You can explain why a vacuous test is worse than a missing one'
+					'You can explain why a vacuous test is worse than a missing one',
+					'You can explain why each browser test was run against the old code, and why they wait for `data-hydrated`',
+					'You can say why these six tests need a browser when every other test here runs in Node, and why mocking the remote functions would not have caught the bug',
+					'You can explain why the positions test reloads the page and checks the status, and why the password test switches JavaScript off'
 				]
 			}
 		]

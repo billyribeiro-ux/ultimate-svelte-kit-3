@@ -7,7 +7,12 @@ import { playwright } from '@vitest/browser-playwright';
 import { sveltekit } from '@sveltejs/kit/vite';
 import { sveltePhosphorOptimize } from 'phosphor-svelte/vite';
 import adapter from '@sveltejs/adapter-node';
-import { version as packageVersion } from './package.json' with { type: 'json' };
+/*
+ * The default import, not `{ version }`: a JSON module has exactly one export
+ * per the specification, and Vite 8 warns that its coming native config
+ * loader — plain Node, no bundling step — will refuse a named one.
+ */
+import pkg from './package.json' with { type: 'json' };
 
 /*
  * SvelteKit 3 keeps ALL framework configuration here, inside the `sveltekit()`
@@ -60,7 +65,8 @@ export default defineConfig(({ mode }) => {
 				 * project deploys the way most Node apps do — `node build` behind a
 				 * reverse proxy, in a container — and spends its deployment chapter on
 				 * the things that make that safe: the origin, the body limit, graceful
-				 * shutdown, a health check, and a Dockerfile that runs as nobody.
+				 * shutdown, a health check, and a Dockerfile that runs as the
+				 * unprivileged `node` user.
 				 *
 				 * `precompress` writes `.br` and `.gz` beside every asset at build time,
 				 * so the server never compresses on the fly.
@@ -81,9 +87,11 @@ export default defineConfig(({ mode }) => {
 					 * turned it on again and its suite found a back navigation that
 					 * completed — URL changed, `navigation.complete` resolved — with the
 					 * old page still on screen, five times in eight. Both bisected cleanly
-					 * to this flag. It stays off here, and the studio↔workspace back
-					 * navigation test in `e2e/sheet.e2e.ts` is the criterion for turning
-					 * it on.
+					 * to this flag. It stays off here. The criterion for turning it on is
+					 * the test "back from a sheet shows the workspace, and forward shows
+					 * the sheet" in `e2e/account.e2e.ts` — the same kind of navigation, on
+					 * a page with a top-level `await` — passing on both profiles, run
+					 * after run.
 					 */
 					forkPreloads: false
 				},
@@ -154,7 +162,7 @@ export default defineConfig(({ mode }) => {
 				 * to reload for nothing.
 				 */
 				version: {
-					name: commitHash() ?? packageVersion,
+					name: commitHash() ?? pkg.version,
 					pollInterval: 60_000
 				},
 
@@ -221,8 +229,13 @@ export default defineConfig(({ mode }) => {
 					 * The grid virtualises on measured sizes, the clipboard is the
 					 * clipboard, and `ResizeObserver` fires. jsdom has none of those and
 					 * would pass every test you thought to write while doing nothing.
+					 *
+					 * No `extends` line. Since Vitest 5 an inline project inherits the
+					 * config that declares it — the SvelteKit plugin, `#lib`, the `ssr`
+					 * externals — so naming this file again would load the Svelte plugin
+					 * twice and earn a warning. `extends: false` is the only thing left
+					 * to say, and it would be wrong here.
 					 */
-					extends: './vite.config.ts',
 					test: {
 						name: 'client',
 						browser: {
@@ -238,7 +251,6 @@ export default defineConfig(({ mode }) => {
 					// Pure logic — plain Node, no browser, fast. The formula language,
 					// the engine, the locale layer, the CSV parser and the identity code
 					// live here, and these are the tests that run on every save.
-					extends: './vite.config.ts',
 					test: {
 						name: 'server',
 						environment: 'node',

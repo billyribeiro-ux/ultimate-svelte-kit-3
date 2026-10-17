@@ -42,10 +42,11 @@
 		<span class="code__file">terminal</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code>pnpm create svelte@next sextant
+	<pre><code>pnpm dlx sv create sextant
 cd sextant
 pnpm install</code></pre>
 </figure>
+<aside class="callout callout--note"><p>The versions this course was built and verified against: SvelteKit 3.0.1, Svelte 5.57, Vite 8.3, Vitest 5.0, Playwright 1.64, TypeScript 6.0, Node 24.21 (the current LTS) and pnpm 12.10. Two of those are not dependencies, and three settings look after them. <code>packageManager</code> in <code>package.json</code> records the exact pnpm the lockfile was written with, and both pnpm and Corepack read it. <code>engines.node</code> is the floor, and it is the check that runs at <code>pnpm install</code>: pnpm refuses an older Node there rather than three chapters in. <code>.nvmrc</code> holds the exact Node this was verified on, for version managers such as nvm and fnm; pnpm never reads it.</p></aside>
 <p>The config is a *function* rather than an object, and that is not stylistic. It has to read the environment before the build starts, because one value is substituted into the output.</p>
 
 <figure class="code">
@@ -183,7 +184,7 @@ ssr: { external: ['@libsql/client', 'libsql'] },</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:205-228</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:205-233</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">test: {
@@ -198,8 +199,13 @@ ssr: { external: ['@libsql/client', 'libsql'] },</code></pre>
 			 * `getBoundingClientRect()`, and jsdom has no layout: every element is
 			 * 0×0, so a virtualizer under jsdom renders zero rows and passes every
 			 * assertion you thought to write.
+			 *
+			 * No `extends` line. Since Vitest 5 an inline project inherits the
+			 * config that declares it — the plugins, `ssr.external`, the `#lib`
+			 * imports — so naming this file again would load the SvelteKit plugin
+			 * twice and earn a warning. `extends: false` is the only thing left to
+			 * say, and it would be wrong here.
 			 */
-			extends: './vite.config.ts',
 			test: {
 				name: 'client',
 				browser: {
@@ -211,6 +217,7 @@ ssr: { external: ['@libsql/client', 'libsql'] },</code></pre>
 				exclude: ['src/lib/server/**']
 			}</code></pre>
 </figure>
+<aside class="callout callout--note"><p>No <code>extends</code> line on either project. Vitest 5 made an inline project inherit the config that declares it — the plugins, <code>ssr.external</code>, the <code>#lib</code> imports — so naming this file again, as Vitest 4 required, would load the SvelteKit plugin twice and earn a warning. The only thing left to say is <code>extends: false</code>, and it would be wrong here.</p></aside>
 <p>And the server project runs one file at a time. SQLite allows exactly one writer; two specs that both seed rows meet <code>SQLITE_BUSY</code> in parallel, and the symptom is a dozen unrelated assertions failing at random in whichever file lost the race.</p>
 <aside class="callout callout--note"><p>WAL mode and a busy timeout — which we set in chapter 21 — make the *application* tolerate concurrent writers and are worth having for their own sake. They do not make a test suite deterministic, because a timeout that is long enough is still a race. Serialising the files costs two seconds and removes the class.</p></aside>
 

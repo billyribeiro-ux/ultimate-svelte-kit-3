@@ -97,7 +97,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:230-252</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:254-276</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/*
@@ -135,7 +135,8 @@ paraglideVitePlugin({
     --emit-ts-declarations --strategy url cookie preferredLanguage baseLocale
 
 $ ls src/lib/paraglide
-messages/  messages.js  messages.d.ts  runtime.js  runtime.d.ts  server.js  server.d.ts</code></pre>
+README.md  messages/  messages.d.ts  messages.js  registry.d.ts  registry.js
+runtime.d.ts  runtime.js  server.d.ts  server.js</code></pre>
 </figure>
 <p>The Vite plugin compiles on every change during development and in the build; the CLI in <code>package.json</code> compiles before <code>svelte-check</code> and in <code>prepare</code>, because the type-checker and a fresh clone both need <code>src/lib/paraglide</code> to exist before Vite has run. The <code>strategy</code> list is the same in both places, and it is the order the locale is decided in: the URL first — <code>/de/trips</code> is German, <code>/trips</code> is the base locale — then the cookie the switcher sets, then the browser’s <code>Accept-Language</code>, then English. The generated folder is git-ignored; the JSON is the source of truth.</p>
 <h3 id="two-halves">The two halves of a localised URL</h3>
@@ -154,16 +155,16 @@ export const reroute: Reroute = ({ url }) =&gt; deLocalizeUrl(url).pathname;</co
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/hooks.server.ts<span class="code__lines">:38-66</span></span>
+		<span class="code__file">src/hooks.server.ts<span class="code__lines">:40-83</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
- * Paraglide's middleware does three things around `resolve`: it decides the
+ * Paraglide's middleware does two things around `resolve`: it decides the
  * locale from the URL, the cookie or `Accept-Language` (in the order
- * `vite.config.ts` gave it); it stores that locale in an `AsyncLocalStorage`
- * so `m.some_message()` anywhere in this request — a remote function, a
- * `load`, a component — speaks the right language without being told; and
- * it hands back a request whose URL has had the `/de` prefix removed.
+ * `vite.config.ts` gave it), and it stores that locale in an
+ * `AsyncLocalStorage`, so `m.some_message()` anywhere in this request — a
+ * remote function, a `load`, a component, the sentence in an `error()` —
+ * speaks the right language without being told.
  *
  * The middleware also offers a request whose URL has had the `/de` prefix
  * removed. It is not used: `event.request` is read-only in SvelteKit 3,
@@ -176,18 +177,94 @@ export const reroute: Reroute = ({ url }) =&gt; deLocalizeUrl(url).pathname;</co
  * not `replace`: with a string pattern `replace` swaps the *first* match,
  * and the first match was the one in the comment above the `&lt;html&gt;` tag —
  * a bug that shipped a page that looked right and said `lang=&quot;%paraglide.lang%&quot;`.
+ *
+ * WHICH URL SAYS THE LANGUAGE
+ * ---------------------------
+ * Not the request's own URL, which for a remote function is its endpoint,
+ * `/_app/remote/…`, with no `/de` in it — and the URL strategy's answer for
+ * a URL with no prefix is English, so the cookie was never asked. Read that
+ * way, a German sign-in form answered &quot;Enter an email address&quot; from its
+ * schema while the rest of the page spoke German. `localeUrl` gives the
+ * middleware a URL that carries the language: the calling page, which
+ * SvelteKit puts back into `event.url` for a form or a command, and for a
+ * `query` — which comes from no page — the endpoint under the cookie's
+ * language (`#lib/server/locale-url.ts` says how, and why that order).
  */
 const handleParaglide: Handle = ({ event, resolve }) =&gt;
-	paraglideMiddleware(event.request, ({ locale }) =&gt; {
-		return resolve(event, {
-			transformPageChunk: ({ html }) =&gt;
-				html
-					.replaceAll('%paraglide.lang%', locale)
-					.replaceAll('%paraglide.dir%', getTextDirection(locale))
-		});
-	});</code></pre>
+	paraglideMiddleware(
+		event.request,
+		({ locale }) =&gt;
+			resolve(event, {
+				transformPageChunk: ({ html }) =&gt;
+					html
+						.replaceAll('%paraglide.lang%', locale)
+						.replaceAll('%paraglide.dir%', getTextDirection(locale))
+			}),
+		{ effectiveRequestUrl: localeUrl(event) }
+	);</code></pre>
 </figure>
 <p>There is one <code>trips</code> route, not three. <code>reroute</code> — universal, so it runs on the server for the first request and in the browser for every navigation after — tells the router that <code>/de/trips</code> is served by <code>src/routes/trips</code>. The server middleware does the other half: decide the locale for the request, store it in an <code>AsyncLocalStorage</code> so every <code>m.*()</code> call in the request speaks it, and fill <code>%paraglide.lang%</code> in <code>app.html</code>. The middleware *offers* a rewritten request too, and it is not used: <code>event.request</code> is read-only in SvelteKit 3, and two mechanisms for one rewrite is how a redirect loop starts.</p>
+<p>The third argument, <code>effectiveRequestUrl</code>, is what makes the server speak the page’s language and not just render it. A remote form posts to <code>/_app/remote/…</code>, not to the page it sits on, so the request’s own URL never has <code>/de</code> in it; SvelteKit reads the calling page from a header and gives it back as <code>event.url</code>. Read from the request instead, every sentence produced *inside* a form or command — a schema’s “Enter an email address”, an <code>error(422, …)</code>, the message <code>handleError</code> returns — came out in English on a German page. Not because the middleware fell through to the cookie: the URL strategy’s answer for a URL with no prefix is the base locale, so the cookie was never consulted at all.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/locale-url.ts<span class="code__lines">:1-41</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">import { extractLocaleFromRequestWithStrategies, localizeUrl } from '#lib/paraglide/runtime.js';
+
+/**
+ * WHICH URL SAYS THE LANGUAGE
+ * ===========================
+ *
+ * Paraglide's middleware reads the locale from a URL first — `/de/trips` is
+ * German — and this is the URL to give it, for any request.
+ *
+ * For a page it is the page's URL. For a remote form or command it is the
+ * page the call came from: the browser posts those to `/_app/remote/…`, a
+ * URL with no `/de` in it, but sends the calling page along in a header,
+ * and SvelteKit puts it back into `event.url`. Read from the request
+ * itself, a German sign-in form answered &quot;Enter an email address&quot;.
+ *
+ * A `query` called from the browser sends no such header, so its
+ * `event.url` is still the endpoint — and the URL strategy does not say &quot;I
+ * cannot tell&quot; for a URL with no prefix, it says &quot;English&quot;. So when
+ * SvelteKit had no page to put back, the language comes from what the
+ * browser does send: the cookie, which Paraglide's client runtime writes
+ * as soon as a page reads its locale from its own URL, then
+ * `Accept-Language`, then English. That locale is put into the URL, where
+ * the middleware will find it first.
+ */
+export interface LocaleRequest {
+	readonly url: URL;
+	readonly request: Request;
+	readonly isRemoteRequest: boolean;
+}
+
+export function localeUrl({ url, request, isRemoteRequest }: LocaleRequest): URL {
+	// A remote call whose `event.url` is still its own endpoint: SvelteKit was not told the page.
+	const pageless = isRemoteRequest &amp;&amp; new URL(request.url).pathname === url.pathname;
+	if (!pageless) return url;
+	const locale = extractLocaleFromRequestWithStrategies(request, [
+		'cookie',
+		'preferredLanguage',
+		'baseLocale'
+	]);
+	return localizeUrl(url, { locale });
+}</code></pre>
+</figure>
+<p><code>localeUrl()</code> is what the hook passes. For a page and for a form or command it is <code>event.url</code>, which is the page. A <code>query</code> called from the browser is the case that is left: it sends no page header — SvelteKit’s own source says so — so its <code>event.url</code> is still the endpoint, and SvelteKit has nothing to put back. The test for that case is a comparison the public API allows: a remote request whose <code>event.url</code> has the same path as the request itself is one SvelteKit could not place. For it the language comes from what the browser does send — the cookie, which Paraglide’s client runtime writes as soon as a page reads its locale from its own URL, then <code>Accept-Language</code>, then English — through <code>extractLocaleFromRequestWithStrategies</code>, and <code>localizeUrl()</code> puts that locale into the URL, where the middleware’s URL strategy finds it first. A German page’s queries now fail in German; <code>locale-url.spec.ts</code> asks for all four cases.</p>
+
+<aside class="callout callout--why">
+	<h4>Why not Paraglide’s per-route strategies</h4>
+	<p>Paraglide can be told to use a different strategy order for some routes — <code>routeStrategies</code>, cookie first for <code>/_app/remote/*</code> — and it is the more declarative answer. It is also a URL-pattern match at runtime, and the compiler adds a <code>URLPattern</code> polyfill to the runtime to do it, in the browser bundle as well as the server’s: every page would carry eighteen kilobytes of minified polyfill, and the URL-pattern matching that goes with it, to settle a question only the server asks. Twenty lines in a server module answer it for nothing on the client.</p>
+</aside>
+<p>Those sentences are messages like any other. A schema’s message is written as a function, <code>() =&gt; m.issue_email()</code>, so valibot calls it when the check fails — inside the request, where the middleware has stored the locale — rather than once, in English, when the module loaded (chapter 12 has the schemas). So is every sentence in an <code>error()</code> that a person can see: <code>m.stop_limit({ limit })</code>, a message with a parameter, when a trip is full; <code>m.error_no_stop()</code> when a companion removed the stop a moment ago; <code>m.error_owner_only()</code> on the settings page; <code>m.join_expired()</code> for an invite that ran out. A toast prints <code>body.message</code> as it is, and so does the error page, so an English literal there is an English sentence on a German page that looks deliberate. So the rule for this app is short: *no sentence a person reads is a string literal in a <code>.ts</code> file*. The one <code>error()</code> with English in it is the route API’s 404, and it says why: a program reads it, on somebody else’s page, with no language of ours to answer in (chapter 36). The end-to-end suite holds the rule to account in chapter 42 — a bad address typed into <code>/de/signin</code> must come back in German, and a refused save must show the server’s sentence, whole.</p>
+
+<aside class="callout callout--why">
+	<h4>Why a function, and not the message itself</h4>
+	<p><code>v.email(m.issue_email())</code> would call the message function once, when <code>schemas.ts</code> is first imported — on the server that is boot, before any request has a locale, so every schema would speak the base language for the life of the process. Passing the function defers the call to the moment of failure. Valibot accepts either; the difference only shows on the second language, which is why it is easy to get wrong and worth a test.</p>
+</aside>
 
 <figure class="code">
 	<figcaption>
@@ -207,7 +284,7 @@ const handleParaglide: Handle = ({ event, resolve }) =&gt;
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/ui/LocaleSwitcher.svelte<span class="code__lines">:1-32</span></span>
+		<span class="code__file">src/lib/ui/LocaleSwitcher.svelte<span class="code__lines">:1-46</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
@@ -217,6 +294,7 @@ const handleParaglide: Handle = ({ event, resolve }) =&gt;
 	import { getLocale, localizeHref, locales, type Locale } from '#lib/paraglide/runtime.js';
 
 	const names: Record&lt;Locale, string&gt; = { en: 'English', de: 'Deutsch', 'pt-br': 'Português' };
+	const codes: Record&lt;Locale, string&gt; = { en: 'EN', de: 'DE', 'pt-br': 'PT' };
 
 	/*
 	 * A prerendered page has no query string — it is one file, served for
@@ -224,12 +302,25 @@ const handleParaglide: Handle = ({ event, resolve }) =&gt;
 	 * while prerendering is an error, not an empty string. The guides layout
 	 * passes `keepSearch={false}`; the site header, which is never
 	 * prerendered, keeps `?tab=map` across a language switch.
+	 *
+	 * `compact` is for a header that has to fit a nav beside it: below 64em
+	 * the links show two-letter codes — EN · DE · PT — and the full names
+	 * come back from 64em, where there is room. A phone needs it most: with
+	 * full names the guides header wrapped to three rows.
+	 *
+	 * A compact link is named with both — &quot;Português (PT)&quot; — so its name
+	 * holds the words on it. Named &quot;Português&quot; while it showed &quot;PT&quot;, it was
+	 * a link speech input could not find (&quot;click PT&quot;), and it passed for
+	 * English and German only because their names happen to start with
+	 * their codes. The full name is still the first word, so the link is
+	 * still &quot;Deutsch&quot; to the end-to-end suite.
 	 */
 	interface Props {
 		keepSearch?: boolean;
+		compact?: boolean;
 	}
 
-	let { keepSearch = true }: Props = $props();
+	let { keepSearch = true, compact = false }: Props = $props();
 
 	/*
 	 * Links, not a `&lt;select&gt;` with an `onchange`. A link to `/de/trips` is a
@@ -246,30 +337,40 @@ const handleParaglide: Handle = ({ event, resolve }) =&gt;
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/ui/LocaleSwitcher.svelte<span class="code__lines">:34-47</span></span>
+		<span class="code__file">src/lib/ui/LocaleSwitcher.svelte<span class="code__lines">:48-71</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">&lt;nav class=&quot;locales&quot; aria-label={m.locale_label()}&gt;
+	<pre><code class="lang-svelte">&lt;nav class={['locales', { 'locales--compact': compact }]} aria-label={m.locale_label()}&gt;
 	&lt;TranslateIcon size={16} aria-hidden=&quot;true&quot; /&gt;
+	&lt;!--
+		The one link in the app that bypasses `#lib/href.ts`: `here` is whatever
+		page this is, in another language — a pathname, not a route id, and there
+		is nothing for `resolve()` to check. Said so to the linter, out loud.
+	--&gt;
+	&lt;!-- eslint-disable svelte/no-navigation-without-resolve --&gt;
 	{#each locales as locale (locale)}
 		&lt;a
 			href={localizeHref(here, { locale })}
 			hreflang={locale}
 			lang={locale}
+			title={compact ? names[locale] : undefined}
+			aria-label={compact ? `${names[locale]} (${codes[locale]})` : undefined}
 			aria-current={locale === current ? 'true' : undefined}
 			data-sveltekit-reload
 		&gt;
-			{names[locale]}
+			&lt;span class=&quot;locales__code&quot; aria-hidden=&quot;true&quot;&gt;{codes[locale]}&lt;/span&gt;
+			&lt;span class=&quot;locales__name&quot;&gt;{names[locale]}&lt;/span&gt;
 		&lt;/a&gt;
 	{/each}
+	&lt;!-- eslint-enable svelte/no-navigation-without-resolve --&gt;
 &lt;/nav&gt;</code></pre>
 </figure>
-<p>Links, not a <code>&lt;select&gt;</code>. A link to <code>/de/trips</code> works before JavaScript loads, opens in a new tab, and is how a crawler finds the German site. <code>localizeHref(here, { locale })</code> is Paraglide’s: it prefixes the current path with the locale — or removes the prefix for the base locale. <code>data-sveltekit-reload</code> makes the switch a full navigation, so the middleware runs again, sets the cookie, and writes <code>lang=&quot;de&quot;</code> on the document. A client-side navigation would swap the message functions and leave <code>&lt;html lang&gt;</code> saying the wrong thing, which a screen reader would read in the wrong voice.</p>
-<p>The <code>keepSearch</code> prop is a prerendering scar worth keeping: a prerendered page is one file served for every request and has no query string, and SvelteKit says so loudly — reading <code>url.search</code> while prerendering throws. The guides layout passes <code>keepSearch={false}</code>; the site header keeps <code>?tab=map</code> across a switch.</p>
+<p>Links, not a <code>&lt;select&gt;</code>. A link to <code>/de/trips</code> works before JavaScript loads, opens in a new tab, and is how a crawler finds the German site. <code>localizeHref(here, { locale })</code> is Paraglide’s: it prefixes the current path with the locale — or removes the prefix for the base locale. <code>data-sveltekit-reload</code> makes the switch a full navigation, so the middleware runs again, sets the cookie, and writes <code>lang=&quot;de&quot;</code> on the document. A client-side navigation would swap the message functions and leave <code>&lt;html lang&gt;</code> saying the wrong thing, which a screen reader would read in the wrong voice. It is also the one link in the app that does not go through <code>href()</code> from chapter 23: <code>here</code> is a pathname, not a route id, and there is nothing for <code>resolve()</code> to check — so the component says that to the linter in a comment around the loop, rather than loosening the rule for everybody.</p>
+<p>The <code>keepSearch</code> prop is a prerendering scar worth keeping: a prerendered page is one file served for every request and has no query string, and SvelteKit says so loudly — reading <code>url.search</code> while prerendering throws. The guides layout passes <code>keepSearch={false}</code>; the site header keeps <code>?tab=map</code> across a switch. <code>compact</code> is for a header that has a nav beside it: below 64em — a phone, a tablet — the links show EN, DE and PT, and from 64em the full names, where there is room. With the full names on a phone, the guides header had wrapped to three rows. A compact link is *named* with both — <code>aria-label=&quot;Português (PT)&quot;</code> — and that is an accessibility rule, not a nicety: WCAG’s “label in name” says a control’s accessible name contains the words drawn on it, because a person using speech input says what they see. Named “Português” while it showed “PT”, the link could not be found by “click PT”; English and German only passed because their names happen to begin with their codes. The full name comes first, so the link is still “Deutsch” to a screen reader and to the end-to-end suite.</p>
 
 <aside class="callout callout--why">
 	<h4>Why Paraglide and not svelte-i18n, or paraglide-sveltekit</h4>
-	<p>svelte-i18n is a runtime dictionary with stores; it works, and it ships every string of every loaded language and offers no type for the keys. <code>@inlang/paraglide-sveltekit</code> was the framework-specific wrapper, and it has been folded into Paraglide 2’s own <code>strategy</code> plus the <code>reroute</code> hook — there is nothing left for a SvelteKit-specific package to do, which is why the ecosystem survey in chapter 37 lists it as “not needed” rather than “rejected”. The pieces here are Paraglide 2.25, one universal hook, one server handler, and a component of links.</p>
+	<p>svelte-i18n is a runtime dictionary with stores; it works, and it ships every string of every loaded language and offers no type for the keys. <code>@inlang/paraglide-sveltekit</code> was the framework-specific wrapper, and it has been folded into Paraglide 2’s own <code>strategy</code> plus the <code>reroute</code> hook — there is nothing left for a SvelteKit-specific package to do, which is why the ecosystem survey in chapter 37 lists it as “not needed” rather than “rejected”. The pieces here are Paraglide 2.26, one universal hook, one server handler, and a component of links.</p>
 </aside>
 
 <aside class="callout callout--check">

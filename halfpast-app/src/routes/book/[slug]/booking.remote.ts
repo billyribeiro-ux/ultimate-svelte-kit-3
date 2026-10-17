@@ -1,12 +1,18 @@
 import * as v from 'valibot';
 import { and, asc, eq } from 'drizzle-orm';
-import { error, redirect } from '@sveltejs/kit';
+import { error, invalid, redirect } from '@sveltejs/kit';
 import { form, getRequestEvent, query } from '$app/server';
 import { db } from '#lib/server/db/index.ts';
 import { business, service, staff, staffService } from '#lib/server/db/schema.ts';
-import { BookingError, createBooking, loadAvailability } from '#lib/server/scheduling.ts';
+import {
+	BookingError,
+	createBooking,
+	loadAvailability,
+	type BookingErrorCode
+} from '#lib/server/scheduling.ts';
 import { watchDiary } from '#lib/server/diary-events.ts';
 import { addDays, isValidTimeZone, type Slot } from '#lib/time/index.ts';
+import { getManagedBooking } from '../../booking/[token]/manage.remote.ts';
 
 /**
  * The public booking API.
@@ -328,36 +334,77 @@ const bookSchema = v.object({
  * redirect after a POST is not a formality: without it, a refresh re-submits and
  * the customer books twice.
  */
-export const book = form(bookSchema, async (data) => {
-	try {
-		const created = await createBooking({
-			businessSlug: data.slug,
-			serviceId: data.serviceId,
-			staffId: data.slot.staffId,
-			start: data.slot.start,
-			customerName: data.name,
-			customerEmail: data.email,
-			customerPhone: data.phone || undefined,
-			note: data.note || undefined
-		});
+/**
+ * The refusals that are answers about the chosen time. The customer puts each
+ * of them right on this same form, by choosing another time.
+ */
+const REFUSED_TIME: ReadonlySet<BookingErrorCode> = new Set([
+	'slot_taken',
+	'slot_not_offered',
+	'too_soon',
+	'too_far_ahead',
+	'staff_unavailable'
+]);
 
-		// The token, not the id: this URL goes in an email, and it has to be the
-		// thing that proves the holder may cancel.
-		redirect(303, `/booking/${created.manageToken}?new=1`);
-	} catch (thrown) {
-		if (thrown instanceof BookingError) {
-			/*
-			 * These are not server errors, they are answers. Turning them into a
-			 * 4xx with a readable message means the page can say "that time went a
-			 * few seconds ago, here are the nearest ones" instead of showing a
-			 * stack trace or a generic apology.
-			 *
-			 * 409 Conflict is exactly right for `slot_taken`: the request was
-			 * well-formed and would have worked a moment earlier.
-			 */
-			const status = thrown.code === 'slot_taken' ? 409 : 400;
-			error(status, thrown.message);
-		}
-		throw thrown;
-	}
+export const book = form(bookSchema, async (data, issue) => {
+	const created = await createBooking({
+		businessSlug: data.slug,
+		serviceId: data.serviceId,
+		staffId: data.slot.staffId,
+		start: data.slot.start,
+		customerName: data.name,
+		customerEmail: data.email,
+		customerPhone: data.phone || undefined,
+		note: data.note || undefined
+	}).catch((thrown: unknown) => {
+		if (!(thrown instanceof BookingError)) throw thrown;
+
+		/*
+		 * A refused time goes on the form, attached to the `slot` field with
+		 * `invalid(issue.slot(…))`: the page stays, the name and email stay filled
+		 * in, and the sentence appears beside the grid, where the remedy is.
+		 *
+		 * This used to be `error(409, …)`, which sends a form submission to
+		 * `+error.svelte` — a failure screen whose only button is "Back to the
+		 * start", and a customer typing everything in again. It is the mistake
+		 * chapter 21 corrects on the sign-in form, made a second time.
+		 *
+		 * It is the rare case. The live grid normally drops a taken time, and the
+		 * customer's choice of it, before the form is ever sent. When a race does
+		 * reach the server, the loser is usually turned away by the re-check at
+		 * the top of `createBooking`, because the write queue lets the winner
+		 * commit first: "That time is no longer available." Two server processes
+		 * racing each other meet the claim table instead, and the loser gets
+		 * "Sorry — that time was booked moments ago."
+		 */
+		if (REFUSED_TIME.has(thrown.code)) invalid(issue.slot(thrown.message));
+
+		/*
+		 * Not about anything on the form: the studio or the service has gone.
+		 * Nothing the customer can change here fixes that, so it is a failure
+		 * screen, in the server's words.
+		 */
+		error(thrown.code === 'not_found' ? 404 : 400, thrown.message);
+	});
+
+	/*
+	 * A single-flight redirect. Refreshing the confirmation page's own query
+	 * here sends the new booking back in this same response, so the page the
+	 * redirect lands on renders from it without asking the server again.
+	 *
+	 * It also does something less obvious. A `form` with no refresh of its own
+	 * falls back to refreshing *every* query on the page it is leaving — and on
+	 * the booking page that includes the live availability stream, which
+	 * reconnected as the browser navigated away and stayed open on the
+	 * confirmation page, a connection to a page nobody was looking at. Naming
+	 * the one query that matters replaces that blanket refresh.
+	 *
+	 * Without JavaScript none of this applies: the browser follows the 303 and
+	 * loads the confirmation page the ordinary way.
+	 */
+	void getManagedBooking(created.manageToken).refresh();
+
+	// The token, not the id: this URL goes in an email, and it has to be the
+	// thing that proves the holder may cancel.
+	redirect(303, `/booking/${created.manageToken}?new=1`);
 });

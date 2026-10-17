@@ -51,6 +51,48 @@ test('the element dispatches events on its host', async ({ page }) => {
 	await expect(player).not.toHaveAttribute('playing', '');
 });
 
+test('swapping the pattern while it plays throws nothing', async ({ page }) => {
+	const errors: string[] = [];
+	page.on('pageerror', (error) => errors.push(error.message));
+
+	await page.goto('/embed/demo#seedfour');
+	const player = page.locator('ostinato-player');
+	await expect(player).toContainText('Four on the floor');
+
+	// Hold the next pattern back until the test lets it go, so the player
+	// spends that time playing with nothing loaded.
+	let release = () => {};
+	const held = new Promise<void>((resolve) => (release = resolve));
+	await page.route('**/api/patterns/seedboom', async (route) => {
+		await held;
+		await route.continue();
+	});
+
+	await page.evaluate(() =>
+		(document.querySelector('ostinato-player') as unknown as { play(): void }).play()
+	);
+	await expect(player.getByRole('button', { name: '■' })).toBeEnabled();
+
+	await page.evaluate(() =>
+		document.querySelector('ostinato-player')?.setAttribute('pattern', 'seedboom')
+	);
+	await expect(player.getByRole('button', { name: '■' })).toBeDisabled();
+	// Ten frames — well over the scheduler's 25 ms tick — with nothing loaded.
+	await page.evaluate(async () => {
+		for (let i = 0; i < 10; i += 1) await new Promise(requestAnimationFrame);
+	});
+	release();
+
+	await expect(player).toContainText('Boom bap');
+	await expect(player.getByRole('button', { name: '■' })).toBeEnabled();
+	expect(errors).toEqual([]);
+
+	await page.evaluate(() =>
+		(document.querySelector('ostinato-player') as unknown as { stop(): void }).stop()
+	);
+	await expect(player).not.toHaveAttribute('playing', '');
+});
+
 test('the documentation page defines the element from the app itself', async ({ page }) => {
 	await page.goto('/embed#seedstep');
 	await expect(page.locator('ostinato-player')).toContainText('Two-step', { timeout: 10_000 });

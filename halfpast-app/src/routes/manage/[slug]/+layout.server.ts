@@ -17,7 +17,6 @@ export const load: LayoutServerLoad = async ({ params }) => {
 	const context = await requireStaff(params.slug);
 
 	return {
-		slug: params.slug,
 		business: {
 			name: context.business.name,
 			timeZone: context.business.timeZone,

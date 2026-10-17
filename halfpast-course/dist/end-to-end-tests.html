@@ -99,7 +99,11 @@ workers: 1,</code></pre>
 			 * &quot;empty the bookings&quot; is no longer enough to make a test independent —
 			 * the studio itself has to go back to its known shape.
 			 *
-			 * …
+			 * The seed keeps the same business row rather than dropping and
+			 * recreating it, so a live query still streaming to a page the previous
+			 * test has only just closed never finds its business missing. That
+			 * mattered: deleting it produced an intermittent 500 in whichever test
+			 * happened to run next, pointing nowhere near the cause.
 			 */
 			execFileSync('node', ['scripts/seed.ts'], {
 				stdio: 'ignore',
@@ -113,7 +117,8 @@ workers: 1,</code></pre>
 </figure>
 <p><code>auto: true</code> means every test gets this whether it asks for it or not, which is what makes the guarantee unconditional — a test <strong>cannot</strong> forget to reset.</p>
 <p>Without it the tests are order-dependent in a genuinely nasty way. Each one books something, so &quot;the first free time on Thursday&quot; means something different by the fifth test. The suite passes, then fails, then passes again as tests are added or reordered, and every failure looks like an application bug.</p>
-<aside class="callout callout--note"><p>The seed keeps the same business row rather than dropping and recreating it. Deleting it produced an intermittent 500 in whichever test ran next — a live query still streaming to a page the previous test had only just closed would find its business missing.</p></aside>
+<aside class="callout callout--note"><p>The reset is the real seed script, run as a child process with <code>DATABASE_URL</code> pointed at <code>e2e.db</code> — the same <code>scripts/seed.ts</code> you run by hand in chapter 13. So every test starts from exactly the demo studio a developer sees, with no second, test-only idea of what the data looks like to drift away from the first.</p></aside>
+<p>The last paragraph of that comment is the expensive lesson. Tests run one after another against one server, and a page a test has just closed can still have a live query streaming from it for a moment. An early seed deleted the business and inserted it again, with a new id, so that last gasp of a stream asked for a business that no longer existed and the <em>next</em> test — whichever happened to run — failed with a 500 that pointed nowhere near the cause. Re-seeding in place, keeping the row and its id, made the flake disappear, and the comment is there so nobody &quot;simplifies&quot; it back.</p>
 <h3 id="browser-errors">The fixture that finds bugs on its own</h3>
 
 <figure class="code">
@@ -123,7 +128,12 @@ workers: 1,</code></pre>
 	</figcaption>
 	<pre><code class="lang-ts">reportBrowserErrors: [
 	async ({ page }, use) =&gt; {
-		page.on('pageerror', (error) =&gt; console.error('[browser] uncaught:', error.message));
+		const uncaught: string[] = [];
+
+		page.on('pageerror', (error) =&gt; {
+			uncaught.push(error.message);
+			console.error('[browser] uncaught:', error.message);
+		});
 		page.on('console', (message) =&gt; {
 			if (message.type() === 'error') console.error('[browser]', message.text());
 		});
@@ -141,12 +151,15 @@ workers: 1,</code></pre>
 		});
 
 		await use();
+
+		expect(uncaught, 'the page threw an error nothing caught').toEqual([]);
 	},
 	{ auto: true }
 ],</code></pre>
 </figure>
-<p>A remote query that rejects during a client-side navigation renders the error page and writes <strong>nothing</strong> to the server log — the server was never involved. Without this, such a failure appears as &quot;expected a button, found a page saying 500&quot; and the actual message sits in a browser console nobody is reading.</p>
+<p>A bug that throws in the browser during a client-side navigation renders the error page and writes <strong>nothing</strong> to the server log — the server was never involved. Without this, such a failure appears as &quot;expected a button, found a page saying 500&quot; and the actual message sits in a browser console nobody is reading.</p>
 <p>This fixture found the sign-in <code>redirectTo</code> bug the first time it ran, and it is what turned &quot;the hours page mysteriously fails&quot; into &quot;Cannot read properties of undefined (reading 'weekday') at hours/+page.svelte:122&quot;.</p>
+<p>For a long time it only printed, and printing turned out not to be enough. A <code>pageerror</code> is an exception nothing in the page caught, and the booking page's live stream once threw one in the middle of an unrelated test — &quot;Live query connection was interrupted&quot; — which sat in the log under a green suite. So the fixture now collects them, and after <code>use()</code>, once the test body has finished, it asserts the list is empty. A test whose page threw fails, whatever its own assertions thought. Console errors are still only printed: a deliberate 404 logs one, and several tests ask for 404s on purpose.</p>
 <h3 id="selectors">Selectors that break for the right reasons</h3>
 
 <figure class="code">
@@ -154,11 +167,28 @@ workers: 1,</code></pre>
 		<span class="code__file">e2e/dashboard.e2e.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">await page.getByRole('button', { name: /Cancel Doomed Dora/ }).click();
-await expect(nav.getByRole('link', { name: 'Diary' })).toBeVisible();
-await expect(page.getByText('Nothing booked. Enjoy it.')).toBeVisible();</code></pre>
+	<pre><code class="lang-ts">page.once('dialog', (dialog) =&gt; void dialog.accept());
+await page.getByRole('button', { name: /Cancel Doomed Dora/ }).click();
+
+await expect(page.getByText('Doomed Dora')).toHaveCount(0, { timeout: 15_000 });
+
+// …
+
+test('sees only the sections they can use', async ({ page }) =&gt; {
+	await page.goto(MANAGE);
+	const nav = page.getByRole('navigation', { name: 'Dashboard sections' });
+
+	await expect(nav.getByRole('link', { name: 'Diary' })).toBeVisible();
+	await expect(nav.getByRole('link', { name: 'Hours' })).toBeVisible();
+
+	// Hiding the link is manners. The next three tests are the control.
+	await expect(nav.getByRole('link', { name: 'Services' })).toHaveCount(0);
+	await expect(nav.getByRole('link', { name: 'Team' })).toHaveCount(0);
+	await expect(nav.getByRole('link', { name: 'Settings' })).toHaveCount(0);
+});</code></pre>
 </figure>
 <p>Roles and accessible names, not CSS classes. A test written against <code>.btn-cancel</code> breaks when somebody renames a class and passes when somebody removes the button's label — exactly backwards. These break when the interface becomes unusable, which is when you want to hear about it.</p>
+<p>The first half is the end of the cancel test. The diary asks <code>confirm()</code> before it cancels anything, and Playwright dismisses a dialog nobody has answered, so <code>page.once('dialog', …)</code> accepts that one prompt before the click that raises it. The second half signs in as a member rather than the owner and asserts on the navigation by its name, &quot;Dashboard sections&quot;, so the test reads like a description of the screen.</p>
 <aside class="callout callout--warn"><p>One gotcha: <code>getByLabel</code> matches by <strong>substring</strong>. <code>getByLabel('Day')</code> on the hours page matched fifteen elements, because every &quot;Remove Tuesday 09:00…&quot; button contains the letters d-a-y. Scope to a container — <code>page.locator('.adder').getByLabel('Day')</code> — rather than reaching for a test id.</p></aside>
 <h3 id="security-tests">Testing the guard, not the button</h3>
 
@@ -172,6 +202,8 @@ await expect(page.getByText('Nothing booked. Enjoy it.')).toBeVisible();</code><
 		const response = await page.goto(`${MANAGE}/${section}`);
 		expect(response?.status()).toBe(403);
 		await expect(page.getByText(/only an owner/i)).toBeVisible();
+		// A refusal on purpose, so the heading does not claim the app broke.
+		await expect(page.getByRole('heading', { level: 1 })).toHaveText('That did not work');
 	});
 }
 
@@ -184,12 +216,12 @@ test('cannot see another studio s diary', async ({ page }) =&gt; {
 	expect(response?.status()).toBe(404);
 });</code></pre>
 </figure>
-<p>These are the tests worth having. A hidden link is easy to test and proves nothing; typing the URL is what an attacker does, and asserting the *status code* is what pins the 403/404 distinction in place so a future refactor cannot quietly lose it.</p>
+<p>These are the tests worth having. A hidden link is easy to test and proves nothing; typing the URL is what an attacker does, and asserting the <em>status code</em> is what pins the 403/404 distinction in place so a future refactor cannot quietly lose it.</p>
 <p>The same principle drives the two tests that fight the browser: one strips <code>step=&quot;5&quot;</code> before submitting 47 minutes, the other injects an option into the time-zone select. Both exist because a client-side constraint is not a control, and the only way to know the server check is load-bearing is to remove the client one and watch the server refuse.</p>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>
-	<p><code>pnpm test:e2e</code> runs 82 tests across desktop and Pixel 7 and passes. Run it twice in a row and it passes twice — the second run is the one that catches shared state.</p>
+	<p><code>pnpm test:e2e</code> runs 106 tests across desktop and Pixel 7 and passes, with none skipped. Run it twice in a row and it passes twice — the second run is the one that catches shared state.</p>
 </aside>
 		</article>
 

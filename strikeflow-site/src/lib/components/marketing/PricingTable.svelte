@@ -3,8 +3,10 @@
 
 	Three plan cards with a monthly/annual toggle.
 
-	The toggle is a real radiogroup rather than two styled buttons, so arrow keys
-	move between the options the way a keyboard user expects from a segmented control.
+	The toggle is two native radio buttons in a <fieldset>, styled as a segmented
+	control. The browser supplies everything a radio group promises: one tab stop
+	for the whole group, arrow keys to move between the options, and "radio button,
+	2 of 2" to a screen reader. None of it is code of ours that could be missing.
 -->
 
 <script lang="ts">
@@ -20,43 +22,57 @@
 
 	let billing = $state<Billing>('monthly');
 
+	/**
+	 * The radios' shared `name`. A shared name is what makes two radios ONE group to
+	 * the browser — it is what the arrow keys move within. `$props.id()` makes it
+	 * unique per instance, so two pricing tables on one page stay two groups, and
+	 * it is the same on the server and in the browser, so hydration agrees.
+	 */
+	const radioName = $props.id();
+
 	/** Best available saving, used in the toggle label. */
 	const bestSaving = Math.max(...plans.map(annualSavingPercent));
 </script>
 
 <div class="pricing">
 	<!--
-		`role="radiogroup"` + `role="radio"` gives assistive tech the right mental
-		model: "one of two options", not "two unrelated buttons". `aria-checked`
-		carries the state.
+		<fieldset> + <legend> is the native "these controls answer one question"
+		wrapper: the legend becomes the group's accessible name. It is visually
+		hidden because on screen the two labels already explain themselves.
+
+		`bind:group` keeps `billing` and the checked radio in step both ways. Pick a
+		radio before the JavaScript has loaded and Svelte adopts that choice when it
+		hydrates, rather than overwriting it.
 	-->
-	<div class="pricing__toggle" role="radiogroup" aria-label="Billing period">
-		<button
-			type="button"
-			role="radio"
-			aria-checked={billing === 'monthly'}
-			class="pricing__toggle-option"
-			class:is-active={billing === 'monthly'}
-			onclick={() => (billing = 'monthly')}
-		>
+	<fieldset class="pricing__toggle">
+		<legend class="visually-hidden">Billing period</legend>
+
+		<label class="pricing__toggle-option">
+			<input
+				class="pricing__toggle-input"
+				type="radio"
+				name={radioName}
+				value="monthly"
+				bind:group={billing}
+			/>
 			Monthly
-		</button>
-		<button
-			type="button"
-			role="radio"
-			aria-checked={billing === 'annual'}
-			class="pricing__toggle-option"
-			class:is-active={billing === 'annual'}
-			onclick={() => (billing = 'annual')}
-		>
+		</label>
+		<label class="pricing__toggle-option">
+			<input
+				class="pricing__toggle-input"
+				type="radio"
+				name={radioName}
+				value="annual"
+				bind:group={billing}
+			/>
 			Annual
 			<span class="pricing__saving">save {bestSaving}%</span>
-		</button>
-	</div>
+		</label>
+	</fieldset>
 
 	<ul class="pricing__grid" role="list">
 		{#each plans as plan (plan.id)}
-			{@const price = billing === 'annual' ? plan.priceAnnual : plan.priceMonthly}
+			{const price = $derived(billing === 'annual' ? plan.priceAnnual : plan.priceMonthly)}
 			<li class="pricing__item" id={plan.id}>
 				<Card highlighted={plan.featured}>
 					<div class="pricing__head">
@@ -130,6 +146,9 @@
 		display: inline-flex;
 		align-self: center;
 		gap: var(--space-1);
+		margin: 0;
+		/* A fieldset's default minimum is its content's width, not zero. */
+		min-inline-size: 0;
 		padding: var(--space-1);
 		border: 1px solid var(--border);
 		border-radius: var(--radius-full);
@@ -137,6 +156,7 @@
 	}
 
 	.pricing__toggle-option {
+		position: relative;
 		display: inline-flex;
 		align-items: center;
 		gap: var(--space-2);
@@ -147,14 +167,40 @@
 		font-size: var(--fs-sm);
 		font-weight: var(--weight-semibold);
 		color: var(--text-muted);
+		cursor: pointer;
 		transition:
 			background-color var(--dur-fast) var(--ease-out),
 			color var(--dur-fast) var(--ease-out);
 	}
 
-	.pricing__toggle-option.is-active {
+	/*
+	 * The radio is invisible but still THERE: laid over its whole label, so it is
+	 * what a click or tap lands on, and still focusable and announced. `display: none`
+	 * or `visibility: hidden` would take it out of the tab order and the
+	 * accessibility tree, and the group's keyboard behaviour with it.
+	 */
+	.pricing__toggle-input {
+		position: absolute;
+		inset: 0;
+		margin: 0;
+		opacity: 0;
+		appearance: none;
+		cursor: inherit;
+	}
+
+	/*
+	 * The active and focused looks read the radio's own state, so they cannot
+	 * disagree with what a screen reader announces, and they are right even before
+	 * the JavaScript has loaded. The ring moves to the label because the radio
+	 * itself is transparent.
+	 */
+	.pricing__toggle-option:has(.pricing__toggle-input:checked) {
 		background-color: var(--accent);
 		color: var(--accent-contrast);
+	}
+
+	.pricing__toggle-option:has(.pricing__toggle-input:focus-visible) {
+		box-shadow: var(--focus-ring);
 	}
 
 	.pricing__saving {

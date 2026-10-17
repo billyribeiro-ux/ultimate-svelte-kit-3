@@ -254,7 +254,7 @@ export class Clock {
 			},
 			{
 				type: 'warn',
-				text: 'That comment about parameter properties is not padding. `constructor(readonly actor: ActorId)` is one of three TypeScript constructs — with `enum` and namespaces — that has to *emit* code rather than be erased. Node strips types without compiling them, so a file using it cannot be run with `node file.ts`, and `scripts/seed.ts` does exactly that with this module in its import graph. The failure is `ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX`, at runtime, from a file that type-checks perfectly.'
+				text: 'That comment about parameter properties is not padding. `constructor(readonly actor: ActorId)` is one of three TypeScript constructs — with `enum` and namespaces — that has to *emit* code rather than be erased. Node strips types without compiling them, so a file using it cannot be run with `node file.ts`, and `scripts/seed.ts` does exactly that with this module in its import graph. The failure is `ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX`, at runtime, from a file that would otherwise type-check perfectly — which is why chapter 03’s `tsconfig.json` sets `erasableSyntaxOnly`, and `pnpm check` refuses all three before Node ever sees them.'
 			},
 			{
 				type: 'code',
@@ -508,10 +508,10 @@ describe('observing', () => {
 				code: `
 pnpm vitest run src/lib/crdt/clock.spec.ts
 
- ✓ src/lib/crdt/clock.spec.ts (18 tests) 6ms
+ ✓ src/lib/crdt/clock.spec.ts (19 tests) 6ms
 
  Test Files  1 passed (1)
-      Tests  18 passed (18)`
+      Tests  19 passed (19)`
 			},
 
 			{
@@ -681,16 +681,16 @@ export function equal(a: VersionVector, b: VersionVector): boolean {
 			},
 			{
 				type: 'p',
-				text: 'The first version of `apply` began with a fast path that looked obviously correct:'
+				text: 'The first version of `apply` began with a fast path that looked obviously correct. Here it is in the names the code uses today — `has` is re-exported from `crdt/index.ts` as `versionHas`:'
 			},
 			{
 				type: 'code',
 				lang: 'ts',
 				code: `
-apply(operation: Operation): void {
+apply(operation: Operation): ApplyResult {
 	// "We have already seen this one." — and this is wrong.
-	if (has(this.#version, operation.stamp)) return;
-	…
+	if (versionHas(this.#version, operation.stamp)) return { changed: false };
+	// …
 }`
 			},
 			{
@@ -734,7 +734,7 @@ apply(operation: Operation): void {
 			},
 			{
 				type: 'p',
-				text: 'The vector goes back to the one job it is genuinely correct for: telling the server where to resume. And the client advances it from the **watermark** the server sends with each batch — a point the server guarantees is complete — never from the stamps of individual operations. That distinction returns, with consequences, in chapter 25.'
+				text: 'The vector goes back to the one job it is genuinely correct for: telling the server where to resume. And the client advances it from the **watermark** the server sends with each batch — a point the server guarantees is complete — never from the stamps of individual operations. That distinction returns, with consequences, in chapter 24.'
 			},
 			{
 				type: 'code',

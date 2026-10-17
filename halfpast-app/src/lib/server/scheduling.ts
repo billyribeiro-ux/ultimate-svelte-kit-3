@@ -470,7 +470,16 @@ async function createBookingNow(input: CreateBookingInput): Promise<Booking> {
 			})
 			.returning();
 
-		if (!created) throw new BookingError('slot_taken', 'That time was just taken.');
+		/*
+		 * Not a race, and not a `BookingError`. An `insert … returning` either
+		 * returns the row it wrote or throws, so an empty result means the
+		 * database broke its own contract. The check exists because indexing an
+		 * array is `T | undefined` under `noUncheckedIndexedAccess`, and the
+		 * honest answer to "what if it is undefined" is a bug report, not a
+		 * message to a customer about a time being taken. (It once was one, and
+		 * that sentence could never actually be reached.)
+		 */
+		if (!created) throw new Error('Inserting the booking returned no row.');
 
 		/* --- 4. The claim. This is the part that cannot be raced. ------------- */
 

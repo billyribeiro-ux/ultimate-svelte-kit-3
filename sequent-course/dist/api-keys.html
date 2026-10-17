@@ -84,7 +84,9 @@ const secret = randomBytes(32).toString('base64url');</code></pre>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">export const SCOPES = ['read', 'trade', 'admin'] as const;
+export type Scope = (typeof SCOPES)[number];
 
+// …
 if (input.scopes.length === 0) {
 	// A key with no scopes can do nothing and looks like a working key. Making
 	// it an error beats letting somebody debug it for an afternoon.

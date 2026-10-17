@@ -38,7 +38,7 @@
 			
 <figure class="code">
 	<figcaption>
-		<span class="code__file">scripts/seed.ts<span class="code__lines">:1-30</span></span>
+		<span class="code__file">scripts/seed.ts<span class="code__lines">:1-32</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -70,52 +70,101 @@
  *
  * The price is that this file constructs its own database client. The price of
  * the alternative — configuring Better Auth a second time — is a seeded account
- * that the application rejects, so the split is drawn between *environment*</code></pre>
+ * that the application rejects, so the split is drawn between *environment*
+ * (duplicated, three lines) and *configuration* (shared, one function).
+ */</code></pre>
 </figure>
 <p>None of the interesting behaviour in this product is reachable from random input: the percentile that moves, the flame graph with one fat bar, the alert that pends and then fires. A generator that emits noise produces a latency chart that is flat noise and a trace where every span is the same length.</p>
 <h3 id="the-story">A normal afternoon, and twenty minutes that are not</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">scripts/seed.ts<span class="code__lines">:165-192</span></span>
+		<span class="code__file">scripts/seed.ts<span class="code__lines">:197-260</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">	service: string,
-	level: string,
-	message: string,
-	traceId: string,
-	spanId: string
-): EventRow {
-	return {
-		tenantId: TENANT_ID,
-		timestamp: at,
-		receivedAt: at + 150,
-		service,
-		level,
-		message,
-		host: `${service}-${1 + Math.floor(rand() * 3)}`,
-		traceId,
-		spanId,
-		attributes: JSON.stringify({ region: pick(REGIONS) })
-	};
-}
-
-/**
+	<pre><code class="lang-ts">/**
  * Six hours of traffic, one trace at a time.
  *
  * Traces are generated as trees rather than as independent spans, because the
  * viewer's whole job is to reassemble a tree — and data that was never a tree
  * would let a broken assembler pass.
  */
-function generate(): { events: EventRow[]; spans: SpanRow[] } {</code></pre>
+function generate(): { events: EventRow[]; spans: SpanRow[] } {
+	const events: EventRow[] = [];
+	const spans: SpanRow[] = [];
+
+	for (let at = windowStart; at &lt; now; at += 4_000) {
+		const requests = inIncident(at) ? 5 : 3;
+
+		for (let i = 0; i &lt; requests; i += 1) {
+			void i;
+			const traceId = hex(32);
+			const route = pick(ROUTES);
+			const broken = inIncident(at) &amp;&amp; rand() &lt; 0.55;
+
+			const start = at + Math.floor(rand() * 3_000);
+			const gatewayId = hex(16);
+			const checkoutId = hex(16);
+			const paymentsId = hex(16);
+			const inventoryId = hex(16);
+
+			const payments = broken ? latency(2_400, 0.4) : latency(90, 0.9);
+			const inventory = latency(35, 0.8);
+			const checkout = payments + inventory + latency(30, 0.6);
+			const gateway = checkout + latency(12, 0.5);
+
+			const tree: SpanRow[] = [
+				spanRow(traceId, gatewayId, '', 'gateway', `GET ${route}`, start, gateway, broken),
+				spanRow(
+					traceId,
+					checkoutId,
+					gatewayId,
+					'checkout',
+					'checkout.submit',
+					start + 6,
+					checkout,
+					broken
+				),
+				spanRow(
+					traceId,
+					paymentsId,
+					checkoutId,
+					'payments-api',
+					'POST /charge',
+					start + 10,
+					payments,
+					broken
+				),
+				spanRow(
+					traceId,
+					inventoryId,
+					checkoutId,
+					'inventory',
+					'reserve',
+					start + 12,
+					inventory,
+					false
+				)
+			];</code></pre>
 </figure>
-<p>Traces are generated as <strong>trees</strong> rather than as independent spans, because the viewer’s whole job is to reassemble a tree — and data that was never a tree would let a broken assembler pass every test you thought to write.</p>
+<p>Traces are generated as <strong>trees</strong> rather than as independent spans, because the viewer’s whole job is to reassemble a tree — and data that was never a tree would let a broken assembler pass every test you thought to write. Every four seconds of the six hours, a few requests arrive at the gateway, which calls checkout, which calls payments and inventory; inside the incident window more than half of the payment calls take seconds instead of milliseconds, and the spans above them carry the error.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">scripts/seed.ts<span class="code__lines">:93-96</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/** A log-normal-ish latency: mostly fast, with a tail. Real latency is never symmetric. */
+function latency(median: number, spread: number): number {
+	return Math.max(1, Math.round(median * Math.exp((rand() - 0.5) * spread)));
+}</code></pre>
+</figure>
 <p>The latency is log-normal-ish rather than uniform, because real latency is never symmetric: mostly fast, with a tail. A uniform generator produces a p50 and a p99 that are close together, which is the one thing latency never is.</p>
 <h3 id="determinism">Seeded, so the demo is the same demo</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">scripts/seed.ts<span class="code__lines">:61-79</span></span>
+		<span class="code__file">scripts/seed.ts<span class="code__lines">:73-91</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -142,13 +191,101 @@ const rand = random(20260901);</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">scripts/seed.ts<span class="code__lines">:301-316</span></span>
+		<span class="code__file">scripts/seed.ts<span class="code__lines">:360-401</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">	return { events, spans };
-}
+	<pre><code class="lang-ts">/**
+ * One trace, at a known id, with its root deliberately missing.
+ *
+ * The random 2% above exercises the same path and cannot be *tested* — an
+ * end-to-end test that opens traces until it finds an incomplete one is a flake
+ * generator, and one that asserts a random draw is worse. A fixed id makes the
+ * orphan case a thing a test can name.
+ *
+ * The id is all `f`s so that it is obviously synthetic when it turns up in a
+ * demo, and so that nobody mistakes it for a real request.
+ */
+export const INCOMPLETE_TRACE = 'ffffffffffffffffffffffffffffffff';
 
-/**
+function incompleteTrace(): SpanRow[] {
+	const start = now - 15 * 60 * 1000;
+	const missingRoot = '0000000000000001';
+
+	// Two children whose parent was never sent. The assembler must adopt both
+	// under one synthetic root and say that it did.
+	return [
+		spanRow(
+			INCOMPLETE_TRACE,
+			'0000000000000002',
+			missingRoot,
+			'checkout',
+			'checkout.submit',
+			start,
+			420,
+			false
+		),
+		spanRow(
+			INCOMPLETE_TRACE,
+			'0000000000000003',
+			missingRoot,
+			'payments-api',
+			'POST /charge',
+			start + 10,
+			380,
+			true
+		)
+	];
+}</code></pre>
+</figure>
+<h3 id="plain-node">And why it runs under plain Node</h3>
+<p>The seed imports <code>schema.ts</code>, <code>keys.ts</code> and <code>auth.options.ts</code> — and deliberately not <code>db/index.ts</code> or <code>auth.ts</code>, which read <code>$app/env/*</code>. Those modules are generated by SvelteKit’s Vite plugin and do not exist outside it, so importing them would mean booting a Vite dev server to insert some rows. The header above says so; the cost is that the seed reads its own environment.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">scripts/seed.ts<span class="code__lines">:34-58</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/*
+ * `.env` is loaded by Node, before this module or anything it imports has run:
+ * `pnpm db:seed` is `node --env-file-if-exists=.env scripts/seed.ts`.
+ *
+ * Not by a `process.loadEnvFile('.env')` at the top of this file, which is
+ * where it used to be. `import` declarations are hoisted: every imported module
+ * is evaluated before the first line of this one, so the call ran after them
+ * however high it was written, and worked only because none of them happens to
+ * read `process.env` as it loads. The flag puts the order where it looks.
+ *
+ * `-if-exists`, because the file is for a developer's machine. CI and
+ * `prepare-e2e-db.js` put the variables straight into the environment and have
+ * no file to load, and a variable that is already set wins over the file.
+ */
+import { createClient } from '@libsql/client';
+import { drizzle } from 'drizzle-orm/libsql';
+import { eq } from 'drizzle-orm';
+
+import * as schema from '../src/lib/server/db/schema.ts';
+import * as authSchema from '../src/lib/server/db/auth.schema.ts';
+import { hashKey, newKey, prefixOf } from '../src/lib/server/keys.ts';
+import { createAuth } from '../src/lib/server/auth.options.ts';
+
+const url = process.env.DATABASE_URL;
+if (!url) throw new Error('DATABASE_URL is not set. Copy .env.example to .env.');</code></pre>
+</figure>
+<p>Node reads <code>.env</code> for it: the <code>db:seed</code> script is <code>node --env-file-if-exists=.env scripts/seed.ts</code>. The file used to be loaded by a <code>process.loadEnvFile('.env')</code> written above the <code>import</code> lines, as though it ran first, and it did not. <code>import</code> declarations are hoisted — every imported module is evaluated before the first line of the module that imports it — so the call ran after all of them, and the seed worked only because none of them happens to read <code>process.env</code> as it loads. A flag on the command puts the order where it looks.</p>
+<p>And <code>.env</code> is optional, not assumed, which is what <code>-if-exists</code> says. <code>prepare-e2e-db.js</code> and a CI job put the variables straight into the environment and have no file to load, and a variable that is already set wins over the file. The very first version of the line, a bare <code>process.loadEnvFile('.env')</code>, made the end-to-end database refuse to seed on any machine without one.</p>
+
+<aside class="callout callout--why">
+	<h4>The split is between environment and configuration</h4>
+	<p>The seed duplicates the *environment* — three lines reading <code>process.env</code> — and shares the *configuration*, which is one function in <code>auth.options.ts</code>. The alternative, configuring Better Auth a second time, works until the day the two disagree about the password minimum, at which point the seed produces an account the application rejects and the error says nothing about why.</p>
+</aside>
+<h3 id="chunking">Two more things the first version got wrong</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">scripts/seed.ts<span class="code__lines">:316-335</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
  * Insert in chunks.
  *
  * SQLite has a hard limit on the number of bound parameters in one statement,
@@ -160,77 +297,50 @@ async function insertChunked&lt;T&gt;(
 	table: Parameters&lt;typeof db.insert&gt;[0],
 	rows: readonly T[],
 	size: number
-): Promise&lt;void&gt; {</code></pre>
+): Promise&lt;void&gt; {
+	for (let i = 0; i &lt; rows.length; i += size) {
+		await db
+			.insert(table)
+			.values(rows.slice(i, i + size) as never)
+			.run();
+	}
+}</code></pre>
 </figure>
-<h3 id="plain-node">And why it runs under plain Node</h3>
+<p>SQLite has a hard limit on bound parameters in one statement, and a thousand rows of twelve columns is comfortably past it. The error is <code>too many SQL variables</code>, which is a much less obvious message than it should be.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">scripts/seed.ts<span class="code__lines">:1-29</span></span>
+		<span class="code__file">scripts/seed.ts<span class="code__lines">:102-123</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
- * SEED
- * ====
+ * Deterministic hex ids, so two runs of the seed produce the same trace links.
  *
- * A workspace, a person, a key, and six hours of telemetry with an incident in
- * it. Run with `pnpm db:seed`.
+ * Seeded from a counter rather than from a timestamp, and this is not a detail.
+ * The first version seeded from the span's start time, which is unique *most* of
+ * the time — two requests in the same four-second tick can land on the same
+ * millisecond, and then their ids are identical and the insert dies on the
+ * unique index. A counter cannot collide by construction.
  *
- * WHY THE DATA IS SHAPED RATHER THAN RANDOM
- * -----------------------------------------
- * Uniform random data makes every screen in an observability tool look the same,
- * and every one of them look wrong: a latency chart that is flat noise, a trace
- * where every span is the same length, an alert that never fires. None of the
- * interesting behaviour — the percentile that moves, the flame graph with one
- * fat bar, the alert that pends and then fires — is reachable from random input.
- *
- * So this generates a *story*: a normal afternoon, a dependency that starts
- * timing out, twenty minutes of errors and retries, and a recovery. Every view
- * has something to show, and it is the same story every time because the
- * generator is seeded.
- *
- * WHY THIS RUNS UNDER PLAIN NODE
- * ------------------------------
- * It imports `schema.ts`, `keys.ts` and `auth.options.ts` — and deliberately not
- * `db/index.ts` or `auth.ts`, which read `$app/env/*`. Those modules are
- * generated by SvelteKit's Vite plugin and do not exist outside it, so importing
- * them here would mean booting a Vite dev server to insert some rows.
- *
- * The price is that this file constructs its own database client. The price of
- * the alternative — configuring Better Auth a second time — is a seeded account</code></pre>
-</figure>
-<p>The seed imports <code>schema.ts</code>, <code>keys.ts</code> and <code>auth.options.ts</code> — and deliberately not <code>db/index.ts</code> or <code>auth.ts</code>, which read <code>$app/env/*</code>. Those modules are generated by SvelteKit’s Vite plugin and do not exist outside it, so importing them would mean booting a Vite dev server to insert some rows.</p>
-
-<aside class="callout callout--why">
-	<h4>The split is between environment and configuration</h4>
-	<p>The seed duplicates the *environment* — three lines reading <code>process.env</code> — and shares the *configuration*, which is one function in <code>auth.options.ts</code>. The alternative, configuring Better Auth a second time, works until the day the two disagree about the password minimum, at which point the seed produces an account the application rejects and the error says nothing about why.</p>
-</aside>
-<h3 id="chunking">One more thing the first version got wrong</h3>
-
-<figure class="code">
-	<figcaption>
-		<span class="code__file">scripts/seed.ts<span class="code__lines">:250-261</span></span>
-		<button class="code__copy" type="button" data-copy>Copy</button>
-	</figcaption>
-	<pre><code class="lang-ts">/*
- * One trace in fifty loses its root.
- *
- * Not noise for its own sake: a missing root is common in real data — the
- * service that would have sent it was not instrumented — and it is the
- * case that makes a naive assembler render four separate trees instead of
- * one. Having it in the seed means the synthetic-root path is exercised
- * every time anybody opens the demo.
+ * The lengths are OpenTelemetry's: 32 hex characters for a trace (16 bytes) and
+ * 16 for a span (8 bytes). Shortening them to 8 for readability is what made the
+ * collision likely enough to hit at sixteen thousand spans — 32 bits of id and
+ * the birthday bound are not friends.
  */
-if (rand() &lt; 0.02) tree.shift();
+let counter = 0;
 
-spans.push(...tree);</code></pre>
+function hex(length: number): string {
+	const next = random((counter += 1) * 2654435761);
+	let out = '';
+	while (out.length &lt; length) out += Math.floor(next() * 16).toString(16);
+	return out.slice(0, length);
+}</code></pre>
 </figure>
-<p>SQLite has a hard limit on bound parameters in one statement, and a thousand rows of twelve columns is comfortably past it. The error is <code>too many SQL variables</code>, which is a much less obvious message than it should be.</p>
 <p>And the ids are seeded from a <strong>counter</strong> rather than from a timestamp. The first version used the span’s start time, which is unique most of the time — two requests in the same four-second tick can land on the same millisecond, and then their ids are identical and the insert dies on the unique index. That is also why they are OpenTelemetry-sized: 32 hex characters for a trace and 16 for a span. Shortening them to 8 for readability made the collision likely enough to hit at sixteen thousand spans.</p>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>
-	<ul><li><code>pnpm db:seed</code> twice produces byte-identical data.</li><li>Every view — table, chart, flame graph, waterfall, alerts — has something to show.</li><li>There is an incident in the data, and an alert that fires because of it.</li></ul>
+	<ul><li><code>pnpm db:seed</code> twice produces the same traces, ids and incident, placed relative to when it ran.</li><li>Every view — table, chart, flame graph, waterfall, alerts — has something to show.</li><li>There is an incident in the data, and an alert that fires because of it.</li></ul>
 </aside>
 		</article>
 

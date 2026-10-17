@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The gallery — Building Ostinato</title>
-<meta name="description" content="The sort lives in the URL; `await` in an `{#each}` with batched counts; a preview that opens with `preloadData` and `pushState` without leaving; `crossfade` between a card and the dialog; and a delete form per card with `remove.for(id)` and an optimistic override.">
+<meta name="description" content="The sort lives in the URL; `await` in an `{#each}` with batched counts; a preview that opens with `preloadData` and a shallow `goto` without leaving, in a native modal `&lt;dialog&gt;`; `crossfade` between a card and the dialog; and a delete form per card with `remove.for(id)` and an optimistic override.">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -33,12 +33,12 @@
 		<article>
 			<p class="eyebrow">Chapter 30</p>
 			<h1>The gallery</h1>
-			<p class="lede">The sort lives in the URL; <code>await</code> in an <code>{#each}</code> with batched counts; a preview that opens with <code>preloadData</code> and <code>pushState</code> without leaving; <code>crossfade</code> between a card and the dialog; and a delete form per card with <code>remove.for(id)</code> and an optimistic override.</p>
+			<p class="lede">The sort lives in the URL; <code>await</code> in an <code>{#each}</code> with batched counts; a preview that opens with <code>preloadData</code> and a shallow <code>goto</code> without leaving, in a native modal <code>&lt;dialog&gt;</code>; <code>crossfade</code> between a card and the dialog; and a delete form per card with <code>remove.for(id)</code> and an optimistic override.</p>
 			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Build a list page with async Svelte, preview a route without navigating to it, and delete optimistically with a per-item form.</p></aside>
 			
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/gallery/+page.svelte<span class="code__lines">:21-31</span></span>
+		<span class="code__file">src/routes/(app)/gallery/+page.svelte<span class="code__lines">:25-34</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">const sorts: { value: Sort; label: string }[] = [
@@ -48,23 +48,22 @@
 ];
 
 /** The sort lives in the URL, so a sorted gallery is a link. */
-const sort = $derived.by((): Sort =&gt; {
-	const wanted = page.url.searchParams.get('sort');
-	return sorts.some((s) =&gt; s.value === wanted) ? (wanted as Sort) : 'new';
-});</code></pre>
+const sort = $derived(
+	sorts.find((s) =&gt; s.value === page.url.searchParams.get('sort'))?.value ?? 'new'
+);</code></pre>
 </figure>
-<p>The sort is read from <code>page.url.searchParams</code>, so a sorted gallery is a link: <code>/gallery?sort=loved</code>. The chips are plain <code>&lt;a href=&quot;?sort=…&quot;&gt;</code> — SvelteKit navigates, <code>page.url</code> changes, the derived recomputes, and the query below re-runs with a new argument. No state, no handler.</p>
+<p>The sort is read from <code>page.url.searchParams</code>, so a sorted gallery is a link: <code>/gallery?sort=loved</code>. Looking the value up in <code>sorts</code> does two jobs at once: an unknown <code>?sort=</code> falls back to <code>&quot;new&quot;</code>, and what comes out is a <code>Sort</code>, typed by the list it was found in, where a check followed by <code>wanted as Sort</code> would have been a cast. The chips are links to <code>resolve(&quot;/(app)/gallery?sort=…&quot;)</code> — SvelteKit navigates, <code>page.url</code> changes, the derived recomputes, and the query below re-runs with a new argument. No state, no handler.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/gallery/+page.svelte<span class="code__lines">:82-92</span></span>
+		<span class="code__file">src/routes/(app)/gallery/+page.svelte<span class="code__lines">:117-127</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;nav class=&quot;cluster&quot; aria-label=&quot;Sort&quot;&gt;
 	{#each sorts as option (option.value)}
 		&lt;a
 			class=&quot;chip&quot;
-			href=&quot;?sort={option.value}&quot;
+			href={resolve(`/(app)/gallery?sort=${option.value}`)}
 			aria-current={sort === option.value ? 'true' : undefined}
 		&gt;
 			{option.label}
@@ -75,7 +74,7 @@ const sort = $derived.by((): Sort =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/gallery/+page.svelte<span class="code__lines">:94-124</span></span>
+		<span class="code__file">src/routes/(app)/gallery/+page.svelte<span class="code__lines">:129-159</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;svelte:boundary&gt;
@@ -105,17 +104,17 @@ const sort = $derived.by((): Sort =&gt; {
 		&lt;p class=&quot;hint&quot;&gt;Loading the gallery…&lt;/p&gt;
 	{/snippet}
 	{#snippet failed(error, reset)}
-		&lt;p class=&quot;issue&quot;&gt;The gallery could not be loaded: {(error as Error).message}&lt;/p&gt;
+		&lt;p class=&quot;issue&quot;&gt;The gallery could not be loaded: {(error as App.Error).message}&lt;/p&gt;
 		&lt;button type=&quot;button&quot; class=&quot;btn&quot; onclick={reset}&gt;Try again&lt;/button&gt;
 	{/snippet}
 &lt;/svelte:boundary&gt;</code></pre>
 </figure>
-<p>Two <code>await</code>s in one <code>{#each}</code>: the list, and each card’s counts. Every <code>await getCounts(published.id)</code> in this render is one batched request (ch. 23). The boundary shows the <code>pending</code> snippet until the list is in, and because the page is server-rendered, that snippet appears only on a client-side navigation with a cold cache.</p>
+<p>Two <code>await</code>s in one <code>{#each}</code>: the list, and each card’s counts. Every <code>await getCounts(published.id)</code> in this render is one batched request (ch. 23). The boundary shows the <code>pending</code> snippet until the list is in, and because the page is server-rendered, that snippet appears only on a client-side navigation with a cold cache. If <code>getPatterns</code> fails, the <code>failed</code> snippet shows the server’s sentence: what a boundary is handed has been through <code>handleError</code> already and is the <code>App.Error</code> itself, so it is <code>error.message</code> — no <code>body</code> in between (ch. 24 has the other shape).</p>
 <h3 id="preview">Preview without leaving</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/gallery/+page.svelte<span class="code__lines">:47-72</span></span>
+		<span class="code__file">src/routes/(app)/gallery/+page.svelte<span class="code__lines">:55-84</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/**
@@ -123,76 +122,133 @@ const sort = $derived.by((): Sort =&gt; {
  * =======================
  * On a wide screen, clicking a card opens it in a dialog rather than
  * navigating away. `preloadData` runs the pattern page's `load` — which
- * warms the `getPattern` cache — and `pushState` then changes the URL to
- * the pattern's address with `{ preview }` in the history state, *without*
+ * warms the `getPattern` cache — and a *shallow* `goto` then changes the URL
+ * to the pattern's address with `{ preview }` in the history state, *without*
  * rendering the pattern page. Reload, and the real page appears at that
  * URL; press back, and the dialog closes. On a phone, the link is a link.
+ *
+ * `goto(href, { shallow: true, state })` is SvelteKit 3's spelling of what
+ * used to be `pushState(href, state)`, and the change is more than a name.
+ * A shallow navigation runs the navigation hooks, so the root layout sees
+ * it — and declines to cross-fade it. And `page.url` keeps describing the
+ * page that is *rendered*, this one, while `page.shallow.url` describes the
+ * one in the address bar; the sort chips above, which read `page.url`, stay
+ * right while the dialog is open.
  */
 async function open(event: MouseEvent, id: string) {
 	if (event.metaKey || event.ctrlKey || event.shiftKey || (innerWidth.current ?? 0) &lt; 640) return;
 	event.preventDefault();
 
-	const href = `/p/${id}`;
+	const href = resolve('/(app)/p/[id]', { id });
 	const result = await preloadData(href);
 	if (result.type === 'loaded' &amp;&amp; result.status === 200) {
-		pushState(href, { preview: id });
+		await goto(href, { shallow: true, state: { preview: id } });
 	} else {
 		await goto(href);
 	}
-}
-
-function close() {
-	history.back();
 }</code></pre>
 </figure>
+<aside class="callout callout--note"><p><code>href</code> is <code>resolve()</code>d once and handed to both <code>preloadData</code> and <code>goto</code>, so the address that is preloaded is the address that is shown; the route id is checked at build time like every other link (ch. 27).</p></aside>
 
 <aside class="callout callout--why">
-	<h4>Why <code>preloadData</code> and then <code>pushState</code></h4>
-	<p>On a wide screen, clicking a card opens it in a dialog rather than navigating away. <code>preloadData(href)</code> runs the pattern page’s <code>load</code> — which calls <code>getPattern</code> and warms its cache — and <code>pushState(href, { preview })</code> then changes the URL to the pattern’s address with the id in history state, *without* rendering the pattern page. Reload, and the real page appears at that URL; press back, and the dialog closes. On a phone, or with a modifier key held, the link is a link. This is shallow routing again (ch. 18), with a URL this time.</p>
+	<h4>Why <code>preloadData</code> and then a shallow <code>goto</code></h4>
+	<p>On a wide screen, clicking a card opens it in a dialog rather than navigating away. <code>preloadData(href)</code> runs the pattern page’s <code>load</code> — which calls <code>getPattern</code> and warms its cache — and <code>goto(href, { shallow: true, state: { preview } })</code> then changes the URL to the pattern’s address with the id in history state, *without* rendering the pattern page. Reload, and the real page appears at that URL; press back, and the dialog closes. On a phone, or with a modifier key held, the link is a link. This is shallow routing again (ch. 18), with a URL this time — and SvelteKit 3 keeps the two URLs apart: <code>page.url</code> still says <code>/gallery</code>, which is what the sort chips read, and <code>page.shallow.url</code> is the address in the bar.</p>
 </aside>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/gallery/+page.svelte<span class="code__lines">:179-208</span></span>
+		<span class="code__file">src/routes/(app)/gallery/+page.svelte<span class="code__lines">:86-107</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/** Closing is going back: the preview is a history entry, and back removes it. */
+function close() {
+	if (page.state.preview) history.back();
+}
+
+/**
+ * A REAL MODAL
+ * ============
+ * `showModal()` is what makes a `&lt;dialog&gt;` modal: the browser puts it in the
+ * top layer, makes everything behind it inert — so Tab cannot wander onto
+ * the gallery underneath — moves focus inside, closes it on Escape, and
+ * gives focus back to the card that opened it when it closes. A `&lt;div
+ * role=&quot;dialog&quot;&gt;` has to fake each of those, and this one used to fake none.
+ *
+ * An attachment, because &quot;call a method on the element once it exists, and
+ * undo it when it goes&quot; is exactly what one is. The teardown runs after the
+ * fade-out, so the dialog stays modal until it has gone.
+ */
+const modal: Attachment&lt;HTMLDialogElement&gt; = (dialog) =&gt; {
+	dialog.showModal();
+	return () =&gt; dialog.close();
+};</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why a native <code>&lt;dialog&gt;</code> and <code>showModal()</code></h4>
+	<p>The preview covers the page and nothing behind it is any use while it is open, so it is *modal* — and modal is a set of promises a <code>&lt;div role=&quot;dialog&quot;&gt;</code> has to fake one by one: focus moves inside when it opens, Tab cannot reach the page underneath, Escape closes it, focus goes back to whatever opened it, and assistive technology is told the rest of the page is out of reach. <code>dialog.showModal()</code> makes every one of those true. The browser puts the dialog in the top layer — above everything, so it needs no <code>z-index</code> — makes the rest of the document inert, and draws a <code>::backdrop</code> behind it. This page used a <code>&lt;div&gt;</code> and kept none of the promises: a keyboard user who opened a card with Enter was left focused on the card behind the overlay, and Tab walked on into the gallery. The call is an attachment because “call a method on the element once it exists, and undo it when it goes” is exactly what an attachment is for; its teardown, <code>close()</code>, runs after the fade-out, and that is when the browser hands focus back to the card. The sound panel is the contrast: deliberately not modal, and a different element (ch. 18).</p>
+</aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(app)/gallery/+page.svelte<span class="code__lines">:229-274</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">{#if page.state.preview}
-	{const id = page.state.preview}
-	&lt;div
-		class=&quot;backdrop&quot;
-		role=&quot;presentation&quot;
-		onclick={close}
-		transition:fade={{ duration: 160 }}
-	&gt;&lt;/div&gt;
-	&lt;div
+	&lt;!--
+		`$derived`. The `{#if}` asks only whether there is a preview, so
+		nothing ties this block's life to which one: a plain declaration would
+		be right only as long as nothing ever changed the id without closing
+		the dialog first, and a derived makes that a question nobody has to ask.
+	--&gt;
+	{const id = $derived(page.state.preview)}
+	&lt;!--
+		Escape closes a modal dialog by itself; `onclose` turns that into the
+		history step the preview is. A click whose target is the dialog element
+		itself landed on the backdrop — everything inside is in `.preview__body`.
+	--&gt;
+	&lt;dialog
 		class=&quot;preview&quot;
-		role=&quot;dialog&quot;
 		aria-label=&quot;Pattern preview&quot;
-		transition:fade={{ duration: 160 }}
+		{@attach modal}
+		onclose={close}
+		onclick={(event) =&gt; {
+			if (event.target === event.currentTarget) close();
+		}}
+		transition:fade={{ duration: fadeDuration }}
 	&gt;
-		&lt;svelte:boundary&gt;
-			{const published = $derived(await getPattern(id))}
-			&lt;div class=&quot;preview__picture&quot; in:receive={{ key: id }} out:send={{ key: id }}&gt;
-				&lt;MiniGrid pattern={published.pattern} /&gt;
-			&lt;/div&gt;
-			&lt;PatternView {published} compact /&gt;
-			&lt;p class=&quot;cluster&quot;&gt;
-				&lt;a class=&quot;btn btn--ghost&quot; href=&quot;/p/{id}&quot; data-sveltekit-reload&gt;Open the full page&lt;/a&gt;
-				&lt;button type=&quot;button&quot; class=&quot;btn btn--ghost&quot; onclick={close}&gt;Close&lt;/button&gt;
-			&lt;/p&gt;
-			{#snippet pending()}
-				&lt;p class=&quot;hint&quot;&gt;Opening…&lt;/p&gt;
-			{/snippet}
-		&lt;/svelte:boundary&gt;
-	&lt;/div&gt;
+		&lt;div class=&quot;preview__body&quot;&gt;
+			&lt;svelte:boundary&gt;
+				{const published = $derived(await getPattern(id))}
+				&lt;div class=&quot;preview__picture&quot; in:receive={{ key: id }} out:send={{ key: id }}&gt;
+					&lt;MiniGrid pattern={published.pattern} /&gt;
+				&lt;/div&gt;
+				&lt;PatternView {published} compact /&gt;
+				&lt;p class=&quot;cluster&quot;&gt;
+					&lt;!--
+						A plain link to the address already in the bar. Since SvelteKit 3
+						that is a real navigation, not a no-op: it leaves shallow routing,
+						replaces the preview's history entry with the page, and refreshes.
+					--&gt;
+					&lt;a class=&quot;btn btn--ghost&quot; href={resolve('/(app)/p/[id]', { id })}&gt;Open the full page&lt;/a&gt;
+					&lt;button type=&quot;button&quot; class=&quot;btn btn--ghost&quot; onclick={close}&gt;Close&lt;/button&gt;
+				&lt;/p&gt;
+				{#snippet pending()}
+					&lt;p class=&quot;hint&quot;&gt;Opening…&lt;/p&gt;
+				{/snippet}
+			&lt;/svelte:boundary&gt;
+		&lt;/div&gt;
+	&lt;/dialog&gt;
 {/if}</code></pre>
 </figure>
-<p>The dialog reads <code>page.state.preview</code> and calls <code>getPattern(id)</code> — cached by the preload — inside its own boundary. <code>data-sveltekit-reload</code> on “Open the full page” forces a real navigation, because the URL is already the pattern’s address and a client-side navigation to the same URL is a no-op.</p>
+<p>The dialog reads <code>page.state.preview</code> and calls <code>getPattern(id)</code> — cached by the preload — inside its own boundary. The id is <code>{const id = $derived(page.state.preview)}</code>. The <code>{#if}</code> asks only *whether* there is a preview, so nothing ties the block’s life to *which* one: a plain declaration would be right only for as long as nothing ever changed the id without closing the dialog first, and <code>$derived</code> makes that a question nobody has to answer (ch. 16). Escape closes a modal dialog by itself, and <code>onclose</code> turns that into <code>history.back()</code>, the same step the Close button and the back gesture take. A click whose target is the <code>&lt;dialog&gt;</code> element itself landed on its <code>::backdrop</code> — everything inside is wrapped in <code>.preview__body</code> — and closes it too.</p>
+<p>“Open the full page” is a plain link to <code>resolve(&quot;/(app)/p/[id]&quot;, { id })</code> — the address already in the bar. In SvelteKit 3 a click on a link to the current address is not a no-op: it leaves shallow routing, replaces the preview’s history entry with a real navigation to the page, and refreshes. So back from the full page is the gallery, and the navigation is client-side; the gallery test checks both, with a marker on <code>window</code> that a document load would wipe. The same thing from a script is <code>goto(page.shallow.url)</code> — <code>page.shallow</code> describes the address in the bar while shallow routing is active, and <code>goto</code> without <code>shallow: true</code> is how you go there for real.</p>
+<aside class="callout callout--note"><p>This link used to carry <code>data-sveltekit-reload</code>, which forces a document load, on the grounds that a client-side navigation to the same URL did nothing. That was SvelteKit 2’s behaviour. Under SvelteKit 3 the attribute only threw away the client-side navigation and cost a full reload.</p></aside>
 <h3 id="crossfade">Crossfade</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/gallery/+page.svelte<span class="code__lines">:33-45</span></span>
+		<span class="code__file">src/routes/(app)/gallery/+page.svelte<span class="code__lines">:36-52</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/**
@@ -203,76 +259,96 @@ function close() {
  * animated as one thing moving between two places — here, a card's picture
  * travelling into the preview dialog. When there is no partner (the dialog
  * closed by the back button before the card re-rendered), `fallback` runs.
+ *
+ * The durations are functions, asked when a transition starts. Svelte plays
+ * its transitions with the Web Animations API, which the stylesheet's
+ * reduced-motion rule cannot reach, so each one has to ask for itself.
  */
 const [send, receive] = crossfade({
-	duration: 320,
-	fallback: (node) =&gt; fade(node, { duration: 160 })
+	duration: () =&gt; (prefersReducedMotion.current ? 0 : 320),
+	fallback: (node) =&gt; fade(node, { duration: prefersReducedMotion.current ? 0 : 160 })
 });</code></pre>
 </figure>
-<p><code>crossfade</code> returns a pair of transitions. An element leaving with <code>out:send</code> and another entering with <code>in:receive</code> under the same key are animated as one thing moving between two places — here, the card’s picture travelling into the dialog and back. The card renders its picture through the <code>grid</code> snippet with <code>{#if page.state.preview !== published.id}</code>, so opening the preview *removes* the card’s picture (send) as the dialog’s appears (receive). When there is no partner, <code>fallback</code> fades.</p>
+<p><code>crossfade</code> returns a pair of transitions. An element leaving with <code>out:send</code> and another entering with <code>in:receive</code> under the same key are animated as one thing moving between two places — here, the card’s picture travelling into the dialog and back. The card renders its picture through the <code>grid</code> snippet with <code>{#if page.state.preview !== published.id}</code>, so opening the preview *removes* the card’s picture (send) as the dialog’s appears (receive). When there is no partner, <code>fallback</code> fades. The durations are functions rather than numbers, asked each time a transition starts, and they answer zero to anybody who asked for reduced motion. That has to be done here: Svelte plays its transitions through the Web Animations API, <code>element.animate</code>, and the stylesheet’s <code>prefers-reduced-motion</code> rule — which shortens every CSS transition and animation in the app — cannot touch those.</p>
 <h3 id="yours">Yours, with a delete per card</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/gallery/+page.svelte<span class="code__lines">:127-176</span></span>
+		<span class="code__file">src/routes/(app)/gallery/+page.svelte<span class="code__lines">:162-226</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">&lt;svelte:boundary&gt;
+	<pre><code class="lang-svelte">&lt;!--
+	ONE BOUNDARY, NOT TWO
+	A second boundary inside this one, around the list, is the natural place
+	for a &quot;Loading yours…&quot; line — and there was one. On a full page load
+	(Svelte 5.57.2) it hydrated its markup and never ran its effects: no
+	attachments, so the delete forms were never enhanced and Delete fell
+	back to a plain POST. That still deletes, which is why nothing noticed;
+	a refusal became an error page instead of a toast. Removing either the
+	inner boundary or the batched `await getCounts` inside it was enough, so
+	the inner boundary went — this one already waits for everything in it.
+	There is no upstream issue yet: it needs reducing to a page without this
+	app around it first. Until then the condition for putting the inner
+	boundary back is the two-tab test in `e2e/gallery.e2e.ts` passing with
+	it in place.
+--&gt;
+&lt;svelte:boundary&gt;
 	{const me = $derived(await whoAmI())}
 	{#if me}
 		&lt;Section eyebrow=&quot;@{me.handle}&quot; title=&quot;Yours&quot;&gt;
-			&lt;svelte:boundary&gt;
-				&lt;ul class=&quot;cards&quot; id=&quot;yours&quot;&gt;
-					{#each await getMine() as mine (mine.id)}
-						{const del = remove.for(mine.id)}
-						&lt;li&gt;
-							&lt;PatternCard published={mine} counts={await getCounts(mine.id)}&gt;
-								{#snippet actions()}
-									&lt;!--
+			&lt;ul class=&quot;cards&quot; id=&quot;yours&quot;&gt;
+				{#each await getMine() as mine (mine.id)}
+					&lt;!--
+						A plain declaration, worked out once per row, and that is right
+						here: the row is keyed by `mine.id`, so its id never changes, and
+						`remove.for(id)` hands back the same form instance every time.
+					--&gt;
+					{const del = remove.for(mine.id)}
+					&lt;li&gt;
+						&lt;PatternCard published={mine} counts={await getCounts(mine.id)}&gt;
+							{#snippet actions()}
+								&lt;!--
 									One form per card, isolated by `remove.for(id)`, so a pending
 									delete disables *its* button and no other. The optimistic
 									override removes the card before the server has answered;
-									a failure puts it back.
+									a refusal puts it back, and the toast says what the server
+									said — &quot;Not yours, or not there&quot; for a card another tab has
+									already deleted.
 								--&gt;
-									&lt;form
-										{...del.enhance(async (f) =&gt; {
-											try {
-												await f
-													.submit()
-													.updates(
-														getMine().withOverride((list) =&gt; list.filter((p) =&gt; p.id !== mine.id))
-													);
-												toast('Deleted');
-											} catch {
-												toast('Could not delete that', 'error');
-											}
-										})}
-									&gt;
-										&lt;input {...del.fields.id.as('hidden', mine.id)} /&gt;
-										&lt;button class=&quot;btn btn--sm btn--danger&quot; disabled={!!del.pending}
-											&gt;Delete&lt;/button
-										&gt;
-									&lt;/form&gt;
-								{/snippet}
-							&lt;/PatternCard&gt;
-						&lt;/li&gt;
-					{:else}
-						&lt;li class=&quot;hint&quot;&gt;You have not published anything from this browser yet.&lt;/li&gt;
-					{/each}
-				&lt;/ul&gt;
-				{#snippet pending()}
-					&lt;p class=&quot;hint&quot;&gt;Loading yours…&lt;/p&gt;
-				{/snippet}
-			&lt;/svelte:boundary&gt;
+								&lt;form
+									{...del.enhance(async (f) =&gt; {
+										try {
+											await f
+												.submit()
+												.updates(
+													getMine().withOverride((list) =&gt; list.filter((p) =&gt; p.id !== mine.id))
+												);
+											toast('Deleted');
+										} catch (e) {
+											toast(messageOf(e, 'Could not delete that'), 'error');
+										}
+									})}
+								&gt;
+									&lt;input {...del.fields.id.as('hidden', mine.id)} /&gt;
+									&lt;button class=&quot;btn btn--sm btn--danger&quot; disabled={!!del.pending}&gt;Delete&lt;/button&gt;
+								&lt;/form&gt;
+							{/snippet}
+						&lt;/PatternCard&gt;
+					&lt;/li&gt;
+				{:else}
+					&lt;li class=&quot;hint&quot;&gt;You have not published anything from this browser yet.&lt;/li&gt;
+				{/each}
+			&lt;/ul&gt;
 		&lt;/Section&gt;
 	{/if}
 &lt;/svelte:boundary&gt;</code></pre>
 </figure>
-<p><code>remove.for(mine.id)</code> gives each card its own instance of the form, so a pending delete disables *its* button and no other. The <code>enhance</code> callback submits with <code>.updates(getMine().withOverride(list =&gt; list.filter(...)))</code>: the card disappears before the server has answered, and comes back if the server refuses. The <code>id</code> travels as a hidden field, so with JavaScript off the same form still posts and the server still checks ownership.</p>
+<p><code>remove.for(mine.id)</code> gives each card its own instance of the form, so a pending delete disables *its* button and no other. It is a plain declaration, worked out once per row, and here that is right: the row is keyed by <code>mine.id</code>, so its id cannot change while the row exists. The <code>enhance</code> callback submits with <code>.updates(getMine().withOverride(list =&gt; list.filter(...)))</code>: the card disappears before the server has answered, and comes back if the server refuses — with the refusal in the toast. <code>submit()</code> resolves to a boolean, <code>false</code> for a submission the schema refused before anything was sent, and “Deleted” is announced only for <code>true</code>. A second tab that still shows a card this one has deleted gets “Not yours, or not there”, the server’s own <code>error(404, …)</code>, read from <code>body.message</code> by <code>messageOf</code> (ch. 24). The <code>id</code> travels as a hidden field, so with JavaScript off the same form still posts and the server still checks ownership.</p>
+<aside class="callout callout--warn"><p>One boundary around this section, not two, and the comment says why. There used to be a second boundary inside it, around the list, for a “Loading yours…” line. On a full page load that inner boundary hydrated its markup and never ran its effects — no attachments, so the delete forms were never enhanced, and Delete fell back to the plain POST that works with JavaScript off. It still deleted, which is why the suite did not notice; it only showed when a refused delete arrived as an error page instead of a toast. Taking away either the inner boundary or the batched <code>await getCounts</code> inside it was enough to bring the forms back, which points at that combination during hydration rather than at anything the page’s own code does. The inner boundary went, because the outer one already waits for everything in it. There is no upstream issue for it yet, because a report needs the fault reduced to a page without this app around it, and that work is not done; until it is, the condition for putting the inner boundary back is written in the file — the end-to-end test that deletes from two tabs (ch. 38) passing with it in place.</p></aside>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>
-	<ul><li>You can say what <code>preloadData</code> returns and why the code checks <code>result.type</code>.</li><li>You can explain what <code>send</code> and <code>receive</code> need in common to animate as one element.</li><li>You can say why <code>remove.for(id)</code> exists rather than one shared <code>remove</code> form.</li></ul>
+	<ul><li>You can say what <code>preloadData</code> returns and why the code checks <code>result.type</code>.</li><li>You can explain what <code>send</code> and <code>receive</code> need in common to animate as one element.</li><li>You can list what <code>showModal()</code> does that a <code>&lt;div role=&quot;dialog&quot;&gt;</code> does not.</li><li>You can say why <code>remove.for(id)</code> exists rather than one shared <code>remove</code> form.</li><li>You can say what a refused delete looks like with the form enhanced, and without.</li></ul>
 </aside>
 		</article>
 

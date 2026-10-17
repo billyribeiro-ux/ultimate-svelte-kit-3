@@ -51,11 +51,19 @@
 	import SiteHeader from '#lib/components/layout/SiteHeader.svelte';
 	import SiteFooter from '#lib/components/layout/SiteFooter.svelte';
 	import { prefersReducedMotion } from '#lib/motion/index.ts';
+	import type { LayoutProps } from './$types';
 
-	let { children } = $props();
+	let { children }: LayoutProps = $props();
 
 	// …
 	onNavigate((navigation) =&gt; {
+		// Kit 3 runs the navigation hooks for shallow navigations too — a
+		// `goto(url, { shallow: true })` that only changes `page.state`. Nothing on
+		// screen is replaced by one, so a full-page cross-fade would be a flash for
+		// no reason. Same guard as the header drawer; the site has no shallow routing
+		// today, so this is insurance rather than a fix.
+		if (navigation.shallow) return;
+
 		// Not supported in every browser, and correctly skipped for reduced motion.
 		// Returning nothing lets SvelteKit navigate normally.
 		if (!document.startViewTransition || prefersReducedMotion()) return;
@@ -88,7 +96,8 @@
 &lt;/div&gt;</code></pre>
 </figure>
 <p>That first import is the moment the whole design system switches on. Save the file and watch Times New Roman disappear.</p>
-<aside class="callout callout--note"><p>The <code>onNavigate</code> block wires up the View Transitions API: the browser snapshots the outgoing page and cross-fades to the new one, with the animation itself defined in CSS. It ships inert until part 4, where we build <code>#lib/motion/</code> (including this <code>prefersReducedMotion</code> helper) and the <code>::view-transition-*</code> rules in <code>motion.css</code> — building chapter by chapter, add it when you get there. The promise dance is exactly what the API requires: resolving inside the callback is what tells SvelteKit to complete the navigation.</p></aside>
+<aside class="callout callout--note"><p><code>LayoutProps</code> comes from <code>./$types</code>, a module SvelteKit generates for every route folder. It types everything a layout receives: <code>children</code>, the snippet holding the page, and <code>data</code> if the layout has a load function. Pages use its sibling, <code>PageProps</code>. Writing the props type by hand — <code>{ children: Snippet }</code> — works until the route changes, and then quietly lies; the generated type changes with it.</p></aside>
+<aside class="callout callout--note"><p>The <code>onNavigate</code> block wires up the View Transitions API: the browser snapshots the outgoing page and cross-fades to the new one, with the animation itself defined in CSS. It ships inert until part 4, where we build <code>#lib/motion/</code> (including this <code>prefersReducedMotion</code> helper) and the <code>::view-transition-*</code> rules in <code>motion.css</code> — building chapter by chapter, add it when you get there. The promise dance is exactly what the API requires: resolving inside the callback is what tells SvelteKit to complete the navigation. The <code>navigation.shallow</code> guard is the same one the header drawer uses in chapter 20: since Kit 3, <code>onNavigate</code> also fires for <code>goto(url, { shallow: true })</code>, and a change that only touches <code>page.state</code> should not cross-fade the whole page.</p></aside>
 
 <aside class="callout callout--why">
 	<h4>The skip link and tabindex=&quot;-1&quot;</h4>
@@ -128,10 +137,13 @@ main:focus {
 		<span class="code__file">src/routes/+layout.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">export const prerender = true;
+	<pre><code class="lang-ts">// …
+export const prerender = true;
+
+// …
 export const trailingSlash = 'never';</code></pre>
 </figure>
-<p>Options exported from a layout cascade to every page beneath it, so those two lines configure the entire site. At build time SvelteKit crawls your app, renders each page and writes plain HTML files. A visitor gets a static file from the CDN edge — no server render, no cold start.</p>
+<p>Options exported from a layout cascade to every page beneath it, so those two lines configure the entire site (each <code>// …</code> stands for a doc comment in the real file saying what follows here). At build time SvelteKit crawls your app, renders each page and writes plain HTML files. A visitor gets a static file from the CDN edge — no server render, no cold start.</p>
 <aside class="callout callout--note"><p><code>trailingSlash: 'never'</code> matters more than it looks. <code>/about</code> and <code>/about/</code> are <strong>different URLs</strong> to a search engine. If both resolve, you have split your ranking signals in two. Pick one and be consistent; SvelteKit redirects the other form for you.</p></aside>
 <aside class="callout callout--note"><p>A useful side effect of prerendering: the crawler follows every internal link and reports any that 404. Combined with <code>handleHttpError: 'fail'</code> in <code>vite.config.ts</code>, it becomes impossible to ship a dead internal link.</p></aside>
 <h3 id="shell">The HTML shell, and the preload</h3>
@@ -169,7 +181,7 @@ export const trailingSlash = 'never';</code></pre>
 		&lt;!-- … --&gt;
 		&lt;meta name=&quot;color-scheme&quot; content=&quot;dark&quot; /&gt;
 
-		&lt;!-- … the MOTION GATE comment — see the note below … --&gt;
+		&lt;!-- … --&gt;
 		&lt;script&gt;
 			(function () {
 				var root = document.documentElement;
@@ -203,7 +215,7 @@ export const trailingSlash = 'never';</code></pre>
 <aside class="callout callout--warn"><p><code>crossorigin</code> is <strong>required</strong> even for same-origin fonts. Font requests are always made in CORS mode; omit it and the browser downloads the file <strong>twice</strong> — once for the preload, once for the real request. Your preload then makes the page slower, which is a genuinely nasty bug to notice.</p></aside>
 <aside class="callout callout--note"><p>Only preload what is critical. Preloading everything makes every resource high priority, which is the same as making none of them high priority.</p></aside>
 <p><code>data-sveltekit-preload-data=&quot;hover&quot;</code> on <code>&lt;body&gt;</code> makes SvelteKit start loading a route's code and data when the pointer enters a link — roughly 200ms before the click lands. On touch devices it falls back to <code>touchstart</code>. Navigation then feels instant.</p>
-<aside class="callout callout--note"><p>That <code>&lt;script&gt;</code> in the head is the <strong>motion gate</strong> — the only inline script on the site. It adds a <code>motion-pending</code> class to <code>&lt;html&gt;</code> before first paint, which the motion CSS in part 4 uses to hide elements until they animate in; it is skipped entirely under reduced motion, and a 2.5-second failsafe (plus the catch-all <code>catch</code>) removes the class so a failed animation library can never leave the page blank. Part 4 builds the CSS and the loader around it — until then it sits there doing nothing, because nothing styles <code>motion-pending</code> yet.</p></aside>
+<aside class="callout callout--note"><p>That <code>&lt;script&gt;</code> in the head is the <strong>motion gate</strong> — the only inline script on the site, and the <code>&lt;!-- … --&gt;</code> just above it stands for the long comment headed THE MOTION GATE in the real file (the other <code>&lt;!-- … --&gt;</code> lines are the comments explaining each tag). It adds a <code>motion-pending</code> class to <code>&lt;html&gt;</code> before first paint, which the motion CSS in part 4 uses to hide elements until they animate in; it is skipped entirely under reduced motion, and a 2.5-second failsafe (plus the catch-all <code>catch</code>) removes the class so a failed animation library can never leave the page blank. Part 4 builds the CSS and the loader around it — until then it sits there doing nothing, because nothing styles <code>motion-pending</code> yet.</p></aside>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>

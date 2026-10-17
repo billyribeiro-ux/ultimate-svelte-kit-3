@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
+	import { resolve } from '$app/paths';
 	import MiniGrid from './MiniGrid.svelte';
 	import type { Pattern } from '#lib/pattern/model.ts';
 	import type { Published } from '#lib/server/patterns.ts';
@@ -12,19 +13,23 @@
 	let {
 		published,
 		counts,
-		href = `/p/${published.id}`,
 		actions,
 		grid,
 		onopen
 	}: {
 		published: Published;
 		counts?: { plays: number; likes: number };
-		href?: string;
 		actions?: Snippet;
 		/** Replaces the default picture — the gallery uses it to crossfade into a preview. */
 		grid?: Snippet<[Pattern]>;
 		onopen?: (event: MouseEvent) => void;
 	} = $props();
+
+	/*
+	 * A route id and its params, not a string: rename the `p/[id]` folder and
+	 * this stops compiling instead of linking to a 404.
+	 */
+	const href = $derived(resolve('/(app)/p/[id]', { id: published.id }));
 </script>
 
 <article class="card pattern-card">

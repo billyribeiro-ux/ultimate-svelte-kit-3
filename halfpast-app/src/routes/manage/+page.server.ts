@@ -14,8 +14,9 @@ export const load: PageServerLoad = async () => {
 	const user = requireUser();
 	const memberships = await businessesForUser(user.id);
 
-	if (memberships.length === 1) {
-		redirect(303, `/manage/${memberships[0]!.business.slug}`);
+	const [only, ...others] = memberships;
+	if (only && others.length === 0) {
+		redirect(303, `/manage/${only.business.slug}`);
 	}
 
 	return {

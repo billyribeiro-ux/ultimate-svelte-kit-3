@@ -42,7 +42,7 @@
 	<p>When a token is the only way to say &quot;brand blue&quot;, you can change the brand in one place. When forty components hardcode <code>#4F7DFF</code>, you cannot — and six months later nobody knows which blues were deliberate and which were typos.</p>
 </aside>
 <h3 id="mobile-first">Mobile-first, and what that actually means</h3>
-<p>Every style in this project targets the smallest screen first. Media queries only ever *add* things as the screen gets bigger. There is not one <code>max-width</code> query in the entire codebase.</p>
+<p>Every style in this project targets the smallest screen first. Media queries only ever <em>add</em> things as the screen gets bigger. There is not one <code>max-width</code> query in the entire codebase.</p>
 
 <figure class="code">
 	<figcaption>
@@ -69,7 +69,7 @@
 </aside>
 <h3 id="breakpoints">The breakpoint scale</h3>
 <ul><li><strong>(base)</strong> 320px+ — small phones. The default.</li><li><strong>40em</strong> = 640px — large phones, small tablets</li><li><strong>48em</strong> = 768px — tablets, portrait</li><li><strong>64em</strong> = 1024px — tablets landscape, small laptops</li><li><strong>80em</strong> = 1280px — desktops</li><li><strong>96em</strong> = 1536px — large desktops</li></ul>
-<aside class="callout callout--note"><p>We use <code>em</code> rather than <code>px</code> in media queries so the layout responds to a user's browser zoom and default font size, not just their device width. Media queries always measure against the *initial* font size, so 1em is 16px here regardless of what you set on <code>html</code>.</p></aside>
+<aside class="callout callout--note"><p>We use <code>em</code> rather than <code>px</code> in media queries so the layout responds to a user's browser zoom and default font size, not just their device width. Media queries always measure against the <em>initial</em> font size, so 1em is 16px here regardless of what you set on <code>html</code>.</p></aside>
 <aside class="callout callout--warn"><p>You cannot put breakpoints in CSS variables. <code>@media (min-width: var(--bp-md))</code> does not work — custom properties resolve per element at paint time, and media queries are evaluated before that. Write the values literally and document the scale in a comment.</p></aside>
 <h3 id="colours">Colours</h3>
 
@@ -79,22 +79,29 @@
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-css">:root {
+	/* ---------------------------------------------------------------
+	 * PALETTE — raw colour values.
+	 * These are never used directly by components. See &quot;SEMANTIC&quot; below.
+	 * --------------------------------------------------------------- */
+
 	/* Neutrals. A trading product lives in the dark; these are cool-tinted
 	   near-blacks rather than pure grey, which reads as more deliberate. */
 	--ink-950: #05070c;
 	--ink-900: #080b12;
 	--ink-850: #0b0f18;
 	--ink-800: #10151f;
-	/* … */
+	--ink-750: #131926;
 	--ink-700: #171d2a;
 	--ink-600: #202839;
 	--ink-500: #2b3549;
 	--ink-400: #3a465e;
 
 	--paper-50: #f4f7fc;
-	/* … */
+	--paper-100: #e4eaf5;
+	--paper-200: #c9d3e5;
 	--paper-300: #b9c3d6;
 	--paper-400: #7f8ba3;
+	--paper-500: #626e86;
 
 	/* Brand. Deliberately blue/indigo — NOT green and NOT red.
 	   In a trading product green and red already mean something (up and down).
@@ -103,14 +110,21 @@
 	--brand-400: #6e93ff;
 	--brand-500: #4f7dff;
 	--brand-600: #3b63e8;
-	/* … */
+	--brand-700: #2c4cbe;
+
+	--violet-400: #a78bfa;
+	--violet-500: #8b5cf6;
 
 	/* Market semantics. These encode data, never decoration. */
+	--bull-400: #34e0a1;
 	--bull-500: #16c784;
-	/* … */
+	--bull-600: #0f9f68;
+	--bear-400: #ff5c66;
 	--bear-500: #ea3943;
-	/* … */
+	--bear-600: #c22630;
+	--warn-400: #f5cb4a;
 	--warn-500: #f0b90b;
+	/* … */
 }</code></pre>
 </figure>
 
@@ -119,7 +133,7 @@
 	<p>In a trading product, green and red already mean something: up and down. If the brand colour were green, every button on the site would read as a buy signal. Keeping brand and data colours in separate families is a small decision that prevents a permanent low-grade confusion.</p>
 </aside>
 <h3 id="semantic">Semantic aliases</h3>
-<p>Components never use <code>--ink-800</code> directly. They ask for what they *mean*:</p>
+<p>Components never use <code>--ink-800</code> directly. They ask for what they <em>mean</em>:</p>
 
 <figure class="code">
 	<figcaption>
@@ -163,15 +177,24 @@
 	--font-body: 'Sofia Sans Variable', 'Sofia Sans Fallback', system-ui, sans-serif;
 	--font-mono: ui-monospace, 'SF Mono', 'Cascadia Mono', 'Roboto Mono', Menlo, monospace;
 
-	--fs-xs:   clamp(0.75rem,  0.735rem + 0.08vw, 0.8125rem);
-	--fs-sm:   clamp(0.875rem, 0.855rem + 0.1vw,  0.9375rem);
-	--fs-base: clamp(1rem,     0.965rem + 0.18vw, 1.0625rem);
-	--fs-md:   clamp(1.0625rem, 1.01rem + 0.28vw, 1.1875rem);
-	--fs-lg:   clamp(1.25rem,   1.16rem + 0.45vw, 1.5rem);
-	--fs-xl:   clamp(1.5rem,    1.35rem + 0.75vw, 1.9375rem);
-	--fs-2xl:  clamp(1.875rem,  1.62rem + 1.25vw, 2.5rem);
-	--fs-3xl:  clamp(2.25rem,   1.83rem + 2.1vw,  3.25rem);
-	--fs-4xl:  clamp(2.625rem,  1.95rem + 3.4vw,  4.25rem);
+	/*
+	 * Fluid type scale.
+	 *
+	 * Each step is `clamp(min, preferred, max)`. The middle value grows with the
+	 * viewport, so text scales smoothly between phone and desktop instead of
+	 * jumping at breakpoints. The `rem` part of the preferred value is what keeps
+	 * it accessible: a pure `vw` value would ignore the user's font-size setting,
+	 * which is a WCAG 1.4.4 failure.
+	 */
+	--fs-xs: clamp(0.75rem, 0.735rem + 0.08vw, 0.8125rem);
+	--fs-sm: clamp(0.875rem, 0.855rem + 0.1vw, 0.9375rem);
+	--fs-base: clamp(1rem, 0.965rem + 0.18vw, 1.0625rem);
+	--fs-md: clamp(1.0625rem, 1.01rem + 0.28vw, 1.1875rem);
+	--fs-lg: clamp(1.25rem, 1.16rem + 0.45vw, 1.5rem);
+	--fs-xl: clamp(1.5rem, 1.35rem + 0.75vw, 1.9375rem);
+	--fs-2xl: clamp(1.875rem, 1.62rem + 1.25vw, 2.5rem);
+	--fs-3xl: clamp(2.25rem, 1.83rem + 2.1vw, 3.25rem);
+	--fs-4xl: clamp(2.625rem, 1.95rem + 3.4vw, 4.25rem);
 
 	--lh-tight: 1.08;
 	--lh-snug: 1.22;
@@ -199,34 +222,74 @@
 		<span class="code__file">src/lib/styles/tokens.css</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-css">	/* 4px scale */
-	--space-1: 0.25rem;  --space-2: 0.5rem;   --space-3: 0.75rem;
-	--space-4: 1rem;     --space-5: 1.25rem;  --space-6: 1.5rem;
-	--space-8: 2rem;     --space-10: 2.5rem;  --space-12: 3rem;
-	--space-16: 4rem;    --space-20: 5rem;    --space-24: 6rem;
-	/* … */
+	<pre><code class="lang-css">	/* ---------------------------------------------------------------
+	 * SPACE — a 4px-based scale.
+	 * Restricting spacing to a scale is what makes a layout feel designed
+	 * rather than nudged into place.
+	 * --------------------------------------------------------------- */
+	--space-1: 0.25rem;
+	--space-2: 0.5rem;
+	--space-3: 0.75rem;
+	--space-4: 1rem;
+	--space-5: 1.25rem;
+	--space-6: 1.5rem;
+	--space-8: 2rem;
+	--space-10: 2.5rem;
+	--space-12: 3rem;
+	--space-16: 4rem;
+	--space-20: 5rem;
+	--space-24: 6rem;
+	--space-32: 8rem;
 
 	/* Vertical rhythm between page sections — fluid, so mobile isn't wastefully airy. */
 	--section-y: clamp(3.5rem, 2.4rem + 5.5vw, 7rem);
 
-	--container-max: 75rem;
-	--container-narrow: 46rem;
-	/* … */
+	/* ---------------------------------------------------------------
+	 * LAYOUT
+	 * --------------------------------------------------------------- */
+	--container-max: 75rem; /* 1200px */
+	--container-narrow: 46rem; /* 736px — comfortable measure for prose */
+	--container-wide: 87.5rem; /* 1400px */
 	--gutter: clamp(1rem, 0.55rem + 2.2vw, 2rem);
+
 	--header-height: 4rem;
 
-	--radius-sm: 0.375rem; --radius-md: 0.625rem;
-	--radius-lg: 0.875rem; --radius-xl: 1.25rem;
+	/* ---------------------------------------------------------------
+	 * SHAPE &amp; DEPTH
+	 * --------------------------------------------------------------- */
+	--radius-sm: 0.375rem;
+	--radius-md: 0.625rem;
+	--radius-lg: 0.875rem;
+	--radius-xl: 1.25rem;
 	--radius-full: 9999px;
-	/* … */
 
-	--dur-fast: 120ms; --dur-base: 200ms; --dur-slow: 320ms;
+	--shadow-sm: 0 1px 2px rgb(0 0 0 / 0.35);
+	--shadow-md: 0 4px 16px -4px rgb(0 0 0 / 0.45);
+	--shadow-lg: 0 18px 48px -12px rgb(0 0 0 / 0.6);
+	--shadow-glow: 0 0 48px -12px color-mix(in srgb, var(--brand-500) 55%, transparent);
+
+	/* ---------------------------------------------------------------
+	 * MOTION
+	 * Durations are short on purpose. Marketing sites that animate slowly
+	 * feel slow, and &quot;feels slow&quot; is indistinguishable from &quot;is slow&quot;.
+	 * --------------------------------------------------------------- */
+	--dur-fast: 120ms;
+	--dur-base: 200ms;
+	--dur-slow: 320ms;
 	--ease-out: cubic-bezier(0.22, 1, 0.36, 1);
-	/* … */
+	--ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
 
-	/* Named z-indexes. If you ever type `z-index: 9999`, you've lost. */
-	/* … */
-	--z-header: 200; --z-drawer: 300; --z-modal: 400; --z-skip-link: 600;</code></pre>
+	/* ---------------------------------------------------------------
+	 * LAYERS
+	 * Named z-indexes. If you ever type `z-index: 9999`, you've lost.
+	 * --------------------------------------------------------------- */
+	--z-base: 1;
+	--z-sticky: 100;
+	--z-header: 200;
+	--z-drawer: 300;
+	--z-modal: 400;
+	--z-toast: 500;
+	--z-skip-link: 600;</code></pre>
 </figure>
 
 <aside class="callout callout--check">

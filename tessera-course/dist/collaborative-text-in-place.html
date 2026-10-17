@@ -74,9 +74,7 @@
 		<span class="code__file">src/lib/components/LabelEditor.svelte</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">let field = $state&lt;HTMLTextAreaElement | null&gt;(null);
-
-/**
+	<pre><code class="lang-svelte">/**
  * Take focus, and select what is there.
  *
  * Without this the field appears and the keystrokes go to the board, where
@@ -112,11 +110,16 @@ const takeFocus: Attachment&lt;HTMLTextAreaElement&gt; = (node) =&gt; {
  * person has not committed. Diffing it produces a stream of insertions and
  * deletions that other replicas watch flicker, and it breaks the IME's own
  * candidate window. So nothing is sent until composition ends.
+ *
+ * A plain `let`, like `mirror` and `ids` below: they are read only by the
+ * event handlers, `commit` and the attachment, never by the markup, a
+ * `$derived` or an `$effect`, so there is nothing for a signal to notify.
  */
-let composing = $state(false);</code></pre>
+let composing = false;</code></pre>
 </figure>
 <p>Japanese, Chinese and Korean input builds a word from several keystrokes, and the textarea’s value during that time is <strong>provisional</strong> — pre-edit text the person has not committed. Diffing it produces a stream of insertions and deletions that other replicas watch flicker, and it breaks the IME’s own candidate window.</p>
 <p>This is a good example of a feature you cannot find by testing in English. It is also why <code>ja</code> is one of the three languages: having it in the catalogue means somebody actually types Japanese into the thing at some point.</p>
+<aside class="callout callout--note"><p><code>composing</code> is a plain <code>let</code>, not <code>$state</code>. Only the event handlers read it — never the markup, a <code>$derived</code> or an <code>$effect</code> — so a signal would be written on every composition for nobody to hear. <code>$state</code> is for values something *reacts* to; a flag that only code reads is just a variable.</p></aside>
 <h3 id="the-caret">A remote edit, and where the caret goes</h3>
 
 <figure class="code">
@@ -125,38 +128,112 @@ let composing = $state(false);</code></pre>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/**
- * The last text we know the document holds.
+ * The last text we know the document holds, and the id of each of its
+ * characters, in order.
  *
  * Tracked separately from `value` because the diff must be against what the
  * *document* had, not what the textarea last rendered — those differ for one
- * frame after a remote edit lands.
+ * frame after a remote edit lands. The ids are what an offset in the field
+ * *meant* while the two were in step: by the time a remote edit reaches this
+ * component the document already holds the new text, so asking it which
+ * character sits at the caret's old offset would answer about the wrong text.
  */
 // svelte-ignore state_referenced_locally
 // Intentional. `mirror` is seeded from the current text once and then tracks
 // what the *document* holds, which is not the same thing as what this prop
 // last rendered — the two differ for one frame after a remote edit lands, and
 // that frame is exactly when the diff must not use the newer value.
-let mirror = $state(value);
+let mirror = value;
+let ids: readonly Stamp[] = [];
 
-$effect(() =&gt; {
-	// A remote edit arrived. Update the field without disturbing the caret more
-	// than the change itself requires.
-	if (!field || field.value === value) {
-		mirror = value;
+/** The field and the document now agree on `text`. */
+function inStep(text: string) {
+	mirror = text;
+	ids = board
+		.label(target)
+		.visible()
+		.map((item) =&gt; item.id);
+}
+
+/**
+ * Put the document's text into the field, keeping the caret on its character.
+ *
+ * The field has no `value={value}` in the markup, and that is the point.
+ * Svelte writes a changed `value` into the textarea before any effect runs,
+ * and assigning a textarea's value moves its caret to the end — so by the
+ * time code meant to keep the caret still got to look, the text already
+ * matched and the caret had already gone. This attachment is the only thing
+ * that writes the value, and it reads the caret before it does.
+ *
+ * An attachment, not `bind:this` and an `$effect`: it is handed the element,
+ * so there is no variable that is `null` until mount, and it runs in an
+ * effect of its own — reading `value` is what re-runs it when somebody else's
+ * edit lands. Like `takeFocus`, it is a `const`, so that read is the only
+ * thing that does.
+ */
+const followDocument: Attachment&lt;HTMLTextAreaElement&gt; = (field) =&gt; {
+	if (field.value === value) {
+		inStep(value);
 		return;
 	}
 
-	const anchor = board.label(target).idBefore(field.selectionStart);
+	// Not focused yet — the first run, on mount. Nothing to keep in place.
+	if (field.ownerDocument.activeElement !== field) {
+		field.value = value;
+		inStep(value);
+		return;
+	}
+
+	// The character the caret sat after, by id, read from the text the field
+	// still shows. Chapter 11's `offsetAfter` then says where it is now.
+	const before = field.selectionStart;
+	const anchor = before &gt; 0 ? (ids[before - 1] ?? null) : null;
+
 	field.value = value;
-	mirror = value;
+	inStep(value);
 
 	const offset = board.label(target).offsetAfter(anchor);
-	const caret = offset ?? Math.min(field.selectionStart, value.length);
+	const caret = offset ?? Math.min(before, value.length);
 	field.setSelectionRange(caret, caret);
-});</code></pre>
+};</code></pre>
 </figure>
-<p>Five lines, and they are chapter 11’s <code>idBefore</code>/<code>offsetAfter</code> pair doing the job they exist for. Remember the character id under the caret <strong>before</strong> the value changes, then ask the RGA where that character is now. Somebody inserting three characters above you does not move your cursor, because the character it is anchored to has not moved.</p>
-<aside class="callout callout--note"><p><code>mirror</code> is tracked separately from the <code>value</code> prop, and the <code>svelte-ignore state_referenced_locally</code> is intentional rather than a suppression. The diff must be against what the *document* had, not what the textarea last rendered — those differ for exactly one frame after a remote edit lands, and that frame is precisely when the diff must not use the newer value.</p></aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/LabelEditor.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;!--
+	`followDocument` before `takeFocus`: the text has to be in the field before
+	there is anything to select.
+--&gt;
+&lt;textarea
+	{@attach followDocument}
+	{@attach takeFocus}
+	class=&quot;label-editor&quot;
+	readonly={readOnly}</code></pre>
+</figure>
+<p>The caret is remembered as a <strong>character</strong>, not an offset. <code>ids</code> holds the id of every character in <code>mirror</code>, refreshed each time the field and the document agree; when somebody else’s edit lands, the character before the caret is looked up in that list — in the text the field is *still showing* — and chapter 11’s <code>offsetAfter</code> says where that character is now. Somebody inserting three characters before you does not move your cursor, because the character it is anchored to has not moved.</p>
+
+<aside class="callout callout--why">
+	<h4>The version that looked right</h4>
+	<p>The first version did this with <code>bind:this</code>, an <code>$effect</code>, and <code>value={value}</code> on the textarea, and its caret code never ran. Svelte writes a changed <code>value</code> into the element in its template effect, which runs *before* any <code>$effect</code> — and assigning a textarea’s <code>value</code> moves its caret to the end. By the time the effect looked, the field already matched and the caret had already gone. Its anchor was wrong too: it asked the document for the character at the caret’s offset, but the document already held the new text. Now the textarea has no <code>value</code> in its markup at all. <code>followDocument</code> is the only thing that writes it, and it reads the caret, and the id under it, before it does.</p>
+</aside>
+<aside class="callout callout--note"><p>An <strong>attachment</strong> rather than <code>bind:this</code> and an <code>$effect</code>. It is handed the element, so there is no variable that is <code>null</code> until mount, and the documentation’s description is exactly the job: attachments “run in an effect when an element is mounted to the DOM or when state read inside the function updates.” Reading <code>value</code> is that state. The order of the two <code>{@attach}</code> tags is the order they run, so the text is in the field before <code>takeFocus</code> selects it.</p></aside>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>$ pnpm exec vitest --run --project client src/lib/components/LabelEditor.svelte.spec.ts
+
+  ✓ the label editor › keeps the caret on its character when somebody types before it
+  ✓ the label editor › opens with the whole label selected, so typing replaces it
+
+  before the fix: expected 11 to be 9 — the caret after &quot;wor&quot; in &quot;world&quot; had jumped to the end of &quot;hello world&quot;</code></pre>
+</figure>
+<aside class="callout callout--note"><p><code>mirror</code> is tracked separately from the <code>value</code> prop, and the <code>svelte-ignore state_referenced_locally</code> is intentional rather than a suppression. The diff must be against what the *document* had, not what the textarea last rendered — those differ for exactly one frame after a remote edit lands, and that frame is precisely when the diff must not use the newer value. Like <code>composing</code>, <code>mirror</code> and <code>ids</code> are plain <code>let</code>s: the handlers, <code>commit</code> and the attachment read them, and nothing renders from them.</p></aside>
 <h3 id="the-diff">The diff</h3>
 
 <figure class="code">
@@ -190,7 +267,7 @@ $effect(() =&gt; {
 	if (removed &gt; 0) board.deleteText(target, start, start + removed);
 	if (added) board.insertText(target, start, added);
 
-	mirror = next;
+	inStep(next);
 }</code></pre>
 </figure>
 <p>Common prefix, common suffix, and the difference between them. That is exactly right for how people actually edit — a keystroke, a paste, a selection replaced — and wrong for a change that moves text around inside the field. Accepting that is a much better trade than a real diff algorithm running on every keystroke.</p>

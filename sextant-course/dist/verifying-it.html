@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Verifying it, and the six bugs the tests found — Building Sextant</title>
-<meta name="description" content="337 unit tests, 83 end-to-end across two viewports, and the specific things each layer caught that the other could not.">
+<meta name="description" content="337 unit tests, 149 end-to-end across two viewports, and the specific things each layer caught that the other could not.">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -33,7 +33,7 @@
 		<article>
 			<p class="eyebrow">Chapter 46</p>
 			<h1>Verifying it, and the six bugs the tests found</h1>
-			<p class="lede">337 unit tests, 83 end-to-end across two viewports, and the specific things each layer caught that the other could not.</p>
+			<p class="lede">337 unit tests, 149 end-to-end across two viewports, and the specific things each layer caught that the other could not.</p>
 			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Get to green, and understand what each kind of test is actually for.</p></aside>
 			<p>One command runs everything, in the order that fails fastest.</p>
 
@@ -59,7 +59,7 @@
 	&quot;db:generate&quot;: &quot;drizzle-kit generate&quot;,
 	&quot;db:migrate&quot;: &quot;drizzle-kit migrate&quot;,
 	&quot;db:studio&quot;: &quot;drizzle-kit studio&quot;,
-	&quot;db:seed&quot;: &quot;node scripts/seed.ts&quot;,
+	&quot;db:seed&quot;: &quot;node --env-file-if-exists=.env scripts/seed.ts&quot;,
 	&quot;auth:schema&quot;: &quot;auth generate --config src/lib/server/auth.ts --output src/lib/server/db/auth.schema.ts --yes&quot;
 },</code></pre>
 </figure>
@@ -101,6 +101,7 @@ export default defineConfig({</code></pre>
 <h3 id="the-six">The six bugs</h3>
 <p>Every test in the end-to-end suite was chosen by one rule — each covers a claim made in a comment somewhere in the source. Writing them found six things, and none of the six was findable by a unit test.</p>
 <ol><li><strong><code>flush()</code> never reached the address bar.</strong> One marker for two questions; typing a query and pressing Run immediately left the URL on the old one, permanently. Both halves worked in isolation. Chapter 35.</li><li><strong><code>db.select()</code> leaked internal columns and Drizzle’s key names.</strong> The chart view picked <code>id</code> as its numeric column and drew a line of primary keys; and a predicate on <code>trace_id</code> worked when pushed to SQL and matched nothing when it was not. Chapter 24.</li><li><strong>The ingest 401 had a comment about a <code>WWW-Authenticate</code> header and no header</strong> — <code>error()</code> throws an <code>HttpError</code> and cannot carry one. Chapter 22.</li><li><strong><code>error(400, …)</code> inside a remote <code>form</code> renders a 500 page over the whole form.</strong> <code>invalid(issue.query(…))</code> puts the message beside the field. Chapter 39.</li><li><strong>Remote form fields must come from <code>fields.&lt;key&gt;.as(type)</code></strong>; a plain <code>name=</code> attribute throws and the submission 500s. Chapter 39.</li><li><strong><code>forkPreloads</code> broke opening a trace one time in three on the phone profile.</strong> Three runs on, three failures; three off, three passes. Chapter 3.</li></ol>
+<p>A later audit of every error path found four more, by forcing each error under a live page and reading what reached the screen. Five <code>failed</code> snippets looked for the message where an <code>HttpError</code> keeps it, and always showed their fallback; a sixth, on the views list, did not look at the error at all. The explore page’s results boundary never ran at all, because the values made from the result were <code>$derived</code>s in the script — and the review of that fix found the query’s own <code>await</code> in the script as well, which still turned a link to a refused query into SvelteKit’s error page on the server. The alert toggle’s refusal went unhandled. And the live tail asked for a stream alone and was answered with an HTML error page. Each has a test now that fails on the old code: one per boundary, each forcing a real refusal, and one each for the toggle, the tail and the explore page. Chapters 38, 39 and 43.</p>
 
 <aside class="callout callout--why">
 	<h4>What each layer is for</h4>
@@ -137,7 +138,7 @@ test('the sign-in form works without JavaScript', async ({ browser }) =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">e2e/trace.e2e.ts<span class="code__lines">:102-129</span></span>
+		<span class="code__file">e2e/trace.e2e.ts<span class="code__lines">:119-146</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -172,7 +173,7 @@ test('a trace with no root still renders as one tree, and says so', async ({ pag
 <p>The first version of that test opened traces one by one until it found an incomplete one — a coin toss it could not see. The seed now plants one at a fixed id, and the case becomes something a test can name. A flaky test is worse than no test, because it teaches people to re-run the suite.</p>
 <h3 id="co-located">A test that lives next to what it tests</h3>
 <p>The read API’s body schema is a contract with people writing scripts against a documented endpoint, and its *defaults* are the part nobody reads and everybody depends on — <code>maxRows</code> quietly becoming twenty thousand would turn one scheduled report into an outage. That belongs in a fast unit test, beside the thing it describes.</p>
-<p>It could not live there before. Every <code>+</code>-prefixed file under <code>src/routes</code> was a route, so <code>+server.test.ts</code> would have been an endpoint exporting <code>describe</code> and <code>it</code>, and <code>svelte-kit sync</code> would have refused it. SvelteKit 3.0.0-next.19 skips <code>+</code> files whose names contain <code>.test.</code>, <code>.spec.</code> or <code>.stories.</code> when the route table is built.</p>
+<p>It could not live there before. Every <code>+</code>-prefixed file under <code>src/routes</code> was a route, so <code>+server.test.ts</code> would have been an endpoint exporting <code>describe</code> and <code>it</code>, and <code>svelte-kit sync</code> would have refused it. SvelteKit 3 skips <code>+</code> files whose names contain <code>.test.</code>, <code>.spec.</code> or <code>.stories.</code> when the route table is built.</p>
 
 <figure class="code">
 	<figcaption>
@@ -225,7 +226,7 @@ $ npx vitest run src/routes/api/v1/query
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code>$ node sextant-course/verify.js
-46 chapters · 228 blocks quoted from sextant/ by line range · 0 illustrative
+46 chapters · 276 blocks quoted from sextant/ by line range · 0 illustrative
 every range is inside its file, whole, and starts somewhere a reader can follow
 
 $ pnpm verify
@@ -233,7 +234,7 @@ $ pnpm verify
 ✓ eslint           clean
 ✓ vitest           337 passed
 ✓ vite build       done
-✓ playwright       83 passed, 4 skipped, 2 viewports</code></pre>
+✓ playwright       149 passed, 4 skipped, 2 viewports</code></pre>
 </figure>
 
 <aside class="callout callout--check">

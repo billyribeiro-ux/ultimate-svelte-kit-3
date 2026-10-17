@@ -37,7 +37,7 @@
 			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>You'll recognise SvelteKit 3 code on sight and know why each change was made.</p></aside>
 			<p>Before we write anything, let's get the version differences out of the way. If you search for SvelteKit help over the next few hours, almost every result will describe version 2. Here is what changed, so you can translate on the fly.</p>
 <h3 id="config">1. Configuration lives in vite.config.ts</h3>
-<p>There is no <code>svelte.config.js</code>. Open <code>vite.config.ts</code> and you will find everything inside the <code>sveltekit()</code> plugin call:</p>
+<p>In SvelteKit 2, configuration lived in <code>svelte.config.js</code>. SvelteKit 3 no longer supports that file: open <code>vite.config.ts</code> and you will find everything inside the <code>sveltekit()</code> plugin call:</p>
 
 <figure class="code">
 	<figcaption>
@@ -45,8 +45,10 @@
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">import { defineConfig } from 'vitest/config';
+// …
 import adapter from '@sveltejs/adapter-node';
 import { sveltekit } from '@sveltejs/kit/vite';
+// …
 
 export default defineConfig({
 	plugins: [
@@ -55,12 +57,21 @@ export default defineConfig({
 				// …
 				experimental: { async: true }
 			},
+
 			adapter: adapter(),
+
 			experimental: {
+				// …
 				remoteFunctions: true
-			}
-		})
-	]
+			},
+
+			// …
+		}),
+
+		// …
+	],
+
+	// …
 });</code></pre>
 </figure>
 <p>Everything that used to live under <code>kit.*</code> is now a top-level option on the plugin.</p>
@@ -73,10 +84,12 @@ export default defineConfig({
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-json">{
+	…
 	&quot;imports&quot;: {
 		&quot;#lib&quot;: &quot;./src/lib/index.js&quot;,
 		&quot;#lib/*&quot;: &quot;./src/lib/*&quot;
-	}
+	},
+	…
 }</code></pre>
 </figure>
 <p>And because subpath imports are a real Node feature rather than a bundler alias, they follow Node rules — which means <strong>you must write the file extension</strong>:</p>
@@ -114,8 +127,10 @@ const img = assets + '/logo.png';
 
 // SvelteKit 3 — base, assets and resolveRoute are gone
 import { resolve, asset } from '$app/paths';
-const url = resolve('/blog/[slug]', { slug });
-const img = asset('logo.png');   // note: no leading slash</code></pre>
+const url = resolve('/blog/[slug]', { slug });   // a route ID — leading slash
+const page = resolve('about');                   // a pathname — no leading slash
+const link = resolve('/about#team');             // either may carry ?search or #hash
+const img = asset('logo.png');                   // note: no leading slash</code></pre>
 </figure>
 <h3 id="nav">5. Navigation consolidated into goto()</h3>
 
@@ -134,7 +149,25 @@ import { goto, refreshAll } from '$app/navigation';
 await goto('/foo', { shallow: true, state });
 await refreshAll();</code></pre>
 </figure>
+<p>In 3, <code>pushState</code>, <code>replaceState</code> and <code>invalidateAll</code> are deprecated rather than removed, so older code still runs — but write new code the 3 way, because <code>refreshAll</code> differs in one useful respect: unlike <code>invalidateAll</code>, it does not reset <code>page.state</code>. Shallow navigations now run <code>beforeNavigate</code>, <code>onNavigate</code> and <code>afterNavigate</code> too. A hook that should ignore them — the header drawer, which closes on navigation — checks <code>navigation.shallow</code> first.</p>
+<h3 id="modules">6. $app/stores is gone, and $app/environment is now $app/env</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">the difference</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">// SvelteKit 2
+import { page } from '$app/stores'; // a store, read as $page
+import { browser } from '$app/environment';
+
+// SvelteKit 3
+import { page } from '$app/state'; // Svelte 5 state, read as page
+import { browser } from '$app/env';</code></pre>
+</figure>
+<p>Both are removals, not deprecations: paste either SvelteKit 2 line and you get a module-not-found error, not a warning. <code>$app/state</code> gives you <code>page</code>, <code>navigating</code> and <code>updated</code> as Svelte 5 state, so you write <code>page.url.pathname</code> where older code wrote <code>$page.url.pathname</code>, and only the parts you read cause updates. <code>$app/env</code> is the old module under a new name — <code>browser</code>, <code>dev</code>, <code>building</code> and <code>version</code> — and it can now be imported inside a service worker too. We use <code>page</code> in the header (chapter 20) and <code>browser</code> in the motion loader (chapter 32).</p>
 <p>Also: <code>error(404, { message: 'Not found' })</code> became <code>error(404, 'Not found')</code>, with any extra properties in a third argument. And <code>page.url</code> is now read-only — clone it if you need to change a search param.</p>
+<aside class="callout callout--note"><p>Two more things changed between the long 3.0 prerelease and the 3.0.1 we use, so even Kit 3 tutorials from the summer get them wrong. First, single-flight refreshes that the <em>client</em> asks for — <code>submit().updates(getPosts)</code> on a <code>form</code>, or <code>myCommand().updates(getPosts)</code> on a <code>command</code> — must be accepted on the server with <code>requested(getPosts, limit)</code>. The <code>limit</code> is required: the client controls that list, and each entry makes the server validate an argument and usually re-fetch, so an unbounded one is a denial-of-service risk. Loop over it — <code>for (const { arg, query, ignore } of requested(getPosts, 10))</code>, calling <code>query.refresh()</code>, <code>query.set(...)</code> or <code>ignore()</code> per entry — or use the shorthands <code>requested(getPosts, 10).refreshAll()</code> and <code>.ignoreAll()</code>. An entry you neither refresh nor ignore puts <em>that query</em> into an error state on the client; the command or form itself still succeeds. Our guide form never calls <code>.updates()</code>, so there is nothing to handle, but you will meet this the day you add one. Second, <code>adapter-node</code> no longer reads an <code>ORIGIN</code> environment variable; the public origin is <code>paths.origin</code> in <code>vite.config.ts</code> (chapter 37).</p></aside>
 <aside class="callout callout--note"><p>You don't need to memorise this. Come back to it when something you copied from a blog post doesn't compile.</p></aside>
 
 <aside class="callout callout--check">

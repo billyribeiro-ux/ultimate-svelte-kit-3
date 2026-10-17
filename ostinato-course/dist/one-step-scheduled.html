@@ -38,7 +38,7 @@
 			
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/audio/schedule.ts<span class="code__lines">:1-31</span></span>
+		<span class="code__file">src/lib/audio/schedule.ts<span class="code__lines">:1-25</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -65,22 +65,22 @@ export interface Outputs {
 	output(track: Track): AudioNode;
 	/** The decoded file on a `sample` track, if one has been loaded. */
 	sample(track: Track): AudioBuffer | undefined;
-}
-
-/**
- * Schedule every audible hit of step `index` to sound at `time`.
- *
- * @param time the step's position on the context's clock, *before* swing
- * @returns the time the earliest voice was scheduled for — the playhead uses it</code></pre>
+}</code></pre>
 </figure>
 <p><code>Outputs</code> is the whole of what the function needs from its caller: where a track’s sound goes, and the decoded file for a sample track. The live engine answers with a channel strip; the offline renderer answers with a plain gain. Neither knows about the other.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/audio/schedule.ts<span class="code__lines">:33-88</span></span>
+		<span class="code__file">src/lib/audio/schedule.ts<span class="code__lines">:27-88</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">export function scheduleStep(
+	<pre><code class="lang-ts">/**
+ * Schedule every audible hit of step `index` to sound at `time`.
+ *
+ * @param time the step's position on the context's clock, *before* swing
+ * @returns the time the earliest voice was scheduled for — the playhead uses it
+ */
+export function scheduleStep(
 	ctx: BaseAudioContext,
 	outputs: Outputs,
 	pattern: Pattern,

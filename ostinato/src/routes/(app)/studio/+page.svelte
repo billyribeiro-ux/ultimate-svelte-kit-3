@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { onMount, settled, untrack } from 'svelte';
 	import { SvelteDate } from 'svelte/reactivity';
-	import { pushState } from '$app/navigation';
+	import { goto, snapshot } from '$app/navigation';
 	import { page } from '$app/state';
 	import { ArrowUUpLeftIcon, ArrowUUpRightIcon, PlusIcon, ShareNetworkIcon } from 'phosphor-svelte';
-	import type { PageProps, Snapshot } from './$types.js';
+	import type { PageProps } from './$types.js';
 	import { AudioEngine } from '#lib/audio/engine.svelte.ts';
 	import { SampleBank } from '#lib/audio/samples.svelte.ts';
 	import { Scheduler } from '#lib/audio/scheduler.svelte.ts';
@@ -12,7 +12,7 @@
 	import { decodePattern } from '#lib/pattern/codec.ts';
 	import { KINDS, type Kind } from '#lib/pattern/model.ts';
 	import { PRESET_NAMES, preset } from '#lib/pattern/presets.ts';
-	import { Session } from '#lib/studio/session.svelte.ts';
+	import { Session, type Brush } from '#lib/studio/session.svelte.ts';
 	import Mixer from '#lib/studio/Mixer.svelte';
 	import Sheet from '#lib/studio/Sheet.svelte';
 	import SharePanel from '#lib/studio/SharePanel.svelte';
@@ -62,14 +62,35 @@
 	 * SNAPSHOT
 	 * ========
 	 * Navigating away and back — to the gallery to steal an idea, say — must
-	 * not lose the pattern. `capture` runs before the page is left, `restore`
-	 * when it comes back, and the value is kept with the history entry. It is
-	 * the encoded string: small, serialisable, and exactly what a link holds.
+	 * not lose the pattern. `snapshot()` from `$app/navigation` registers a
+	 * `capture` that runs before the page is left and a `restore` that runs
+	 * when its history entry comes back; the value is kept with that entry, and
+	 * in `sessionStorage`, so a reload brings it back too. The code is the
+	 * encoded pattern: small, and exactly what a link holds. The `id` keeps
+	 * the stored value readable by the next deployment, whose stack traces —
+	 * the default id — would differ.
+	 *
+	 * The helper also captures on *shallow* navigations, which the old
+	 * `export const snapshot` never did, and this page makes one every time a
+	 * panel opens. So closing the sound panel restores what was captured when
+	 * it opened — and, taken at its word, would throw away every change made
+	 * in the panel, and the undo history with them. `lineage` tells the two
+	 * cases apart. It names the studio that wrote a value: a value from this
+	 * same studio is a panel closing over a pattern that is already newer, and
+	 * is left alone; a value from another one is a studio rebuilt — after the
+	 * gallery, or a reload — and is loaded. The studio that loads it takes the
+	 * lineage on, so stepping further back through its old panels stays a no-op.
 	 */
-	export const snapshot: Snapshot<string> = {
-		capture: () => session.encoded,
-		restore: (code) => session.load(decodePattern(code), { remixOf: session.remixOf })
-	};
+	let lineage = Math.random().toString(36).slice(2);
+	snapshot<{ code: string; lineage: string }>({
+		id: 'studio',
+		capture: () => ({ code: session.encoded, lineage }),
+		restore: (value) => {
+			if (value.lineage === lineage) return;
+			lineage = value.lineage;
+			session.load(decodePattern(value.code), { remixOf: session.remixOf });
+		}
+	});
 
 	// Autosave to localStorage after every change; the root effect's teardown is this effect's cleanup.
 	$effect(() => session.autosave());
@@ -98,13 +119,21 @@
 	 * SHALLOW ROUTING
 	 * ===============
 	 * Opening the sound panel pushes a history entry with `{ panel: 'sound' }`
-	 * in its state and no change to the URL. The back button — or a swipe on a
+	 * in its state and no change to the URL: `goto('')` is "stay here", and
+	 * `shallow: true` is "but add an entry". The back button — or a swipe on a
 	 * phone — closes it, which is what a person expects of something that
 	 * covers the screen. `page.state.panel` is typed by `App.PageState`.
+	 *
+	 * SvelteKit 2 spelled this `pushState('', state)`. 3.0 folded shallow
+	 * routing into `goto`, so there is one function for going somewhere and
+	 * the options say how deep — and a shallow navigation now runs the
+	 * navigation hooks like any other, which the two layouts allow for.
 	 */
 	function open(panel: NonNullable<App.PageState['panel']>) {
 		if (page.state.panel === panel) return;
-		pushState('', { panel });
+		// `''` is "this page": there is no route to resolve, only an entry to add.
+		// eslint-disable-next-line svelte/no-navigation-without-resolve
+		void goto('', { shallow: true, state: { panel } });
 	}
 
 	function close() {
@@ -139,9 +168,27 @@
 	/* Keyboard                                                          */
 	/* ---------------------------------------------------------------- */
 
+	/** The four brushes, by the number key that picks each. */
+	const BRUSH_KEYS: Partial<Record<string, Brush>> = {
+		'1': 'cycle',
+		'2': 'accent',
+		'3': 'soft',
+		'4': 'erase'
+	};
+
+	/*
+	 * Escape is not handled here. An open sheet listens for it itself and
+	 * closes with `history.back()`; a second listener on the same window made
+	 * one key press two steps back — out of the studio altogether.
+	 */
 	function keydown(event: KeyboardEvent) {
-		const target = event.target as HTMLElement | null;
-		if (target?.closest('input, textarea, select, [contenteditable]')) return;
+		if (
+			event.target instanceof Element &&
+			event.target.closest('input, textarea, select, [contenteditable]')
+		)
+			return;
+
+		const brush = BRUSH_KEYS[event.key];
 
 		if (event.key === ' ') {
 			event.preventDefault();
@@ -153,10 +200,8 @@
 		} else if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'y') {
 			event.preventDefault();
 			session.redo();
-		} else if (event.key >= '1' && event.key <= '4' && !event.metaKey && !event.ctrlKey) {
-			session.brush = (['cycle', 'accent', 'soft', 'erase'] as const)[Number(event.key) - 1]!;
-		} else if (event.key === 'Escape') {
-			close();
+		} else if (brush && !event.metaKey && !event.ctrlKey) {
+			session.brush = brush;
 		}
 	}
 
@@ -285,7 +330,7 @@
 				transition from the old one plays against the new.
 			-->
 			{#key session.generation}
-				<svelte:boundary onerror={(error) => toast((error as Error).message, 'error')}>
+				<svelte:boundary onerror={(error) => toast((error as App.Error).message, 'error')}>
 					<StepGrid
 						pattern={session.pattern}
 						step={scheduler.step}
@@ -307,7 +352,7 @@
 					/>
 
 					{#snippet failed(error, reset)}
-						<p class="issue">The grid could not be drawn: {(error as Error).message}</p>
+						<p class="issue">The grid could not be drawn: {(error as App.Error).message}</p>
 						<button type="button" class="btn" onclick={reset}>Try again</button>
 					{/snippet}
 				</svelte:boundary>

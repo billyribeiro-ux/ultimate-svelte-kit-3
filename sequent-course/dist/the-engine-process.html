@@ -153,7 +153,7 @@ after 2000 transactions: 4033
 after 3000 transactions: 6033
 after 4000 transactions: 8033</code></pre>
 </figure>
-<p><code>@libsql/client</code>'s <code>client.transaction()</code> opens a <strong>second connection</strong> to the database, and never releases it. Not on <code>commit()</code>. Not on <code>rollback()</code>. Not on an explicit <code>close()</code>. Two descriptors per transaction, forever.</p>
+<p><code>@libsql/client</code> 0.17.4's <code>client.transaction()</code> opens a <strong>second connection</strong> to the database, and never releases it. Not on <code>commit()</code>. Not on <code>rollback()</code>. Not on an explicit <code>close()</code>. Two descriptors per transaction, forever.</p>
 <p>The engine opens one transaction per command, so at the default file-descriptor limit it dies after about ten thousand orders. A venue would have run for a few minutes of real trading.</p>
 <p>Two alternatives were measured, and both are flat:</p>
 
@@ -171,39 +171,45 @@ after 3000: 35
 === transaction() + commit() + close() ===
 after 500: 1033</code></pre>
 </figure>
+<p>So <code>withTransaction</code> was written to avoid <code>transaction()</code> altogether: <code>BEGIN IMMEDIATE</code> and <code>COMMIT</code> as plain statements on the one connection a client then had, with a promise chain in front so two callers could never interleave their statements into one transaction. That shipped, and a regression test that counts <code>/proc/self/fd</code> shipped with it.</p>
+<h3 id="the-sequel">The sequel: the library fixed it, and broke the fix</h3>
+<p><code>@libsql/client</code> 0.18 fixed the leak properly. A client is now a small <strong>pool</strong> of connections; a transaction borrows one and gives it back on commit, rollback or close. Good news — except that a plain statement borrows a connection too, and the pool rolls back anything left open on a connection before the next borrower can inherit it. So <code>BEGIN IMMEDIATE</code> on one <code>execute</code> was undone before <code>COMMIT</code> arrived on the next:</p>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>Migration 1 (firm.billable_from) failed and was rolled back:
+SQLITE_ERROR: cannot commit - no transaction is active
+
+ Test Files  13 failed | 8 passed (21)
+      Tests  204 failed | 170 passed (374)</code></pre>
+</figure>
+<p>Two hundred tests, on the first <code>pnpm install</code> after the bump. Which is the point of having two hundred tests. The fix is to go back to <code>client.transaction('write')</code> — which is <code>BEGIN IMMEDIATE</code> under the hood — and to keep the chain, because with a pool it matters *more*, not less:</p>
 
 <figure class="code">
 	<figcaption>
 		<span class="code__file">packages/store/src/client.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">/**
- * Run a function inside a transaction, on **this** connection.
- *
- * …
- *
- * `BEGIN IMMEDIATE` on the existing connection has none of that. It is also
- * *more* correct for our purposes: `IMMEDIATE` takes the write lock at the
- * start rather than upgrading half way through, so a busy venue gets a clean
- * wait on `busy_timeout` instead of `SQLITE_BUSY` mid-transaction.
- */
-export async function withTransaction&lt;T&gt;(
-	client: Executor,
+	<pre><code class="lang-ts">export async function withTransaction&lt;T&gt;(
+	client: Client,
 	work: (tx: Executor) =&gt; Promise&lt;T&gt;
 ): Promise&lt;T&gt; {
 	const previous = chains.get(client) ?? Promise.resolve();
 
 	const run = previous.then(async () =&gt; {
-		await client.execute('BEGIN IMMEDIATE');
+		const transaction = await client.transaction('write');
 
 		try {
-			const result = await work(client);
-			await client.execute('COMMIT');
+			const result = await work(transaction);
+			await transaction.commit();
 			return result;
 		} catch (thrown) {
-			/* … */
+			// …
 			try {
-				await client.execute('ROLLBACK');
+				await transaction.rollback();
 			} catch {
 				// The original error is the one worth having.
 			}
@@ -213,7 +219,7 @@ export async function withTransaction&lt;T&gt;(
 	});
 
 	// The chain must continue whether this call succeeded or not, or one failed
-	// transaction would block every later one on this connection forever.
+	// transaction would block every later one on this client forever.
 	chains.set(
 		client,
 		run.then(
@@ -225,13 +231,13 @@ export async function withTransaction&lt;T&gt;(
 	return run;
 }</code></pre>
 </figure>
-<aside class="callout callout--note"><p>The promise chain is not decoration. SQLite allows one write transaction per connection, and in <code>apps/engine</code> the engine loop and the projector loop share a client — without the queue their statements would land in one transaction and commit together. Not a deadlock, not an error, and completely wrong.</p></aside>
+<aside class="callout callout--note"><p>The promise chain is not decoration. In <code>apps/engine</code> the engine loop and the projector loop share a client. On the old single connection, two overlapping transactions would land their statements in one transaction and commit together. On the pool, the second one blocks the event loop waiting for a lock the first one can only release when the event loop runs. Different failure, same fix: one writer at a time, queued in JavaScript. The function's own doc comment tells this whole story — 0.17.4, the workaround, 0.18 — so the next person to touch it meets the history before they meet the code.</p></aside>
 
 <aside class="callout callout--why">
 	<h4>What a load test is actually for</h4>
-	<p>Not to produce a number for a slide. This bug was invisible below ten thousand transactions, which means it was invisible to every unit test, every integration test, and every hour of manual use. Volume is a *category* of test, and this is the class of thing it finds.</p>
+	<p>Not to produce a number for a slide. The original bug was invisible below ten thousand transactions, which means it was invisible to every unit test, every integration test, and every hour of manual use. Volume is a *category* of test, and this is the class of thing it finds.</p>
 </aside>
-<p>There is now a regression test that counts <code>/proc/self/fd</code>, so a refactor back to <code>client.transaction()</code> fails in two seconds rather than in production.</p>
+<p>The regression test that counts <code>/proc/self/fd</code> stays. It is now a test of the library rather than of us — and the library has been wrong about this once, so if a release leaks again it fails in two seconds rather than in production.</p>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>

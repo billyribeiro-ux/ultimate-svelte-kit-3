@@ -1,13 +1,112 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import {
+		ArrowRightIcon,
 		GlobeHemisphereWestIcon,
 		MapPinIcon,
 		ReceiptIcon,
 		UsersThreeIcon
 	} from 'phosphor-svelte';
 	import { m } from '#lib/paraglide/messages.js';
-	import { localizeHref } from '#lib/paraglide/runtime.js';
-	import { reveal } from '#lib/motion/reveal.ts';
+	import { href } from '#lib/href.ts';
+	import { hero, inview } from '#lib/motion/hero.ts';
+	import { theme } from '#lib/ui/theme.svelte.ts';
+	import day from '#lib/assets/hero.png?w=640;960;1280;1600&enhanced';
+	import night from '#lib/assets/hero-night.png?w=640;960;1280;1600&enhanced';
+	import dayPhone from '#lib/assets/hero-phone.png?w=640;960;1200&enhanced';
+	import nightPhone from '#lib/assets/hero-phone-night.png?w=640;960;1200&enhanced';
+	import type { PageProps } from './$types';
+
+	let { data }: PageProps = $props();
+
+	/*
+	 * FOUR PRINTS, ONE DOWNLOAD
+	 * -------------------------
+	 * The hero has a day print and a night print (`scripts/make-hero.ts`),
+	 * each drawn twice — for a desktop, and for a phone, with pins and
+	 * numbers big enough to read at 360px — and a page should fetch only
+	 * the one it shows. `<picture>` chooses before any script runs, by the
+	 * first `<source>` whose `media` and `type` match, so the order is the
+	 * decision:
+	 *
+	 *   - nobody chose a theme: the night prints come first and carry
+	 *     `(prefers-color-scheme: dark)`, the day prints follow without it,
+	 *     and the system decides;
+	 *   - somebody chose: only that print's sources are rendered, with no
+	 *     colour scheme in their media, so a dark choice on a light phone
+	 *     gets the night print and never downloads the day one;
+	 *   - within each, the desktop print carries `(min-width: 37em)` and the
+	 *     phone print, after it, carries no width at all. 37em is where the
+	 *     desktop print's numbers reach 11px — 30px of a 1600px drawing,
+	 *     shown 590px wide — so below it the phone print takes over, with
+	 *     its 21px pins.
+	 *
+	 * The server learns the choice from a cookie the boot script keeps
+	 * (`theme-cookie.ts`); once the page is running, the choice is the live
+	 * one, so flipping the toggle on this page swaps the print. All four are
+	 * `?enhanced` imports with the widths named, which is the same
+	 * `<enhanced:img>` pipeline — AVIF and WebP at three or four widths,
+	 * width and height known so nothing shifts (the phone print has the
+	 * desktop's 16:10) — rendered by hand because the component cannot put
+	 * a `media` on a source.
+	 */
+
+	/*
+	 * WHY `running`, AND NOT `theme.choice` FROM THE START
+	 * ----------------------------------------------------
+	 * The server has no `localStorage`; it knows the choice from the cookie,
+	 * as `data.theme`, and renders the sources for that. The first render in
+	 * the browser is hydration, which does not draw the page again: it walks
+	 * the elements the server sent and attaches to them, so it must describe
+	 * the same markup. Read `theme.choice` straight away and a person whose
+	 * storage and cookie disagree — another tab changed the theme a moment
+	 * ago — describes different `<source>`s from the ones in the document.
+	 * Where only a `srcset` differs, Svelte keeps the server's and ignores
+	 * its own; where the number of sources differs, hydration fails, and
+	 * Svelte clears the server's page and renders all of it again. So the
+	 * first render reads `data.theme`, as the server did; `onMount` runs once
+	 * hydration is done, and from then on the live choice decides.
+	 */
+	let running = $state(false);
+	onMount(() => {
+		running = true;
+	});
+
+	const chosen = $derived(running ? (theme.choice === 'system' ? null : theme.choice) : data.theme);
+
+	const WIDE = '(min-width: 37em)';
+	const DARK = '(prefers-color-scheme: dark)';
+	const both = (...queries: (string | undefined)[]) =>
+		queries.filter(Boolean).join(' and ') || undefined;
+
+	const prints = $derived.by(() => {
+		const scheme = chosen === null ? DARK : undefined;
+		return [
+			...(chosen === 'light'
+				? []
+				: [
+						{
+							name: 'night',
+							picture: night,
+							media: both(WIDE, scheme),
+							sizes: '(min-width: 64em) 40rem, 100vw'
+						},
+						{ name: 'night-phone', picture: nightPhone, media: scheme, sizes: '100vw' }
+					]),
+			...(chosen === 'dark'
+				? []
+				: [
+						{ name: 'day', picture: day, media: WIDE, sizes: '(min-width: 64em) 40rem, 100vw' },
+						{ name: 'day-phone', picture: dayPhone, media: undefined, sizes: '100vw' }
+					])
+		];
+	});
+
+	const sources = (picture: typeof day) =>
+		Object.entries(picture.sources).map(([format, srcset]) => ({
+			type: `image/${format}`,
+			srcset
+		}));
 </script>
 
 <svelte:head>
@@ -15,37 +114,75 @@
 	<meta name="description" content={m.home_hero_lede()} />
 </svelte:head>
 
-<section class="hero container">
-	<div class="hero__copy stack" {@attach reveal()}>
-		<p class="eyebrow">{m.app_tagline()}</p>
-		<h1 class="hero__title">{m.home_hero_title()}</h1>
-		<p class="hero__lede">{m.home_hero_lede()}</p>
-		<div class="cluster">
-			<a class="btn btn--primary" href={localizeHref('/trips/new')}>{m.home_cta()}</a>
-			<a class="btn" href={localizeHref('/t/seedjapan2')}>{m.home_cta_secondary()}</a>
+<!--
+	The hero is the one cinematic moment the product allows itself: the title
+	in the display face at its largest cut, a glow of the sea colour behind
+	the image, and the image itself bleeding to the screen's edge on a phone
+	and sitting in a soft frame on a desktop. `{@attach hero()}` plays the
+	one GSAP timeline when the hero arrives by navigation — never over a page
+	somebody has already seen (`hero.ts` says how it knows); the copy and the
+	image are marked with data attributes so the attachment finds them
+	without knowing the markup.
+-->
+<section class="hero" {@attach hero()}>
+	<div class="container hero__grid">
+		<div class="hero__copy stack" data-hero-copy>
+			<p class="overline">{m.app_tagline()}</p>
+			<h1 class="hero__title">{m.home_hero_title()}</h1>
+			<p class="hero__lede">{m.home_hero_lede()}</p>
+			<div class="hero__actions">
+				<a class="btn btn--primary hero__btn" href={href('/(site)/(app)/trips/new')}>
+					{m.home_cta()}
+				</a>
+				<a
+					class="btn btn--ghost hero__btn"
+					href={href('/(site)/t/[slug=slug]', { slug: 'seedjapan2' })}
+				>
+					{m.home_cta_secondary()}
+					<ArrowRightIcon size={16} aria-hidden="true" />
+				</a>
+			</div>
+		</div>
+
+		<!--
+			`media` says which print a source is for; `sizes` tells the browser how
+			wide that print is on screen, so it picks the smallest file that is
+			still sharp for that width; `fetchpriority` says it is the largest
+			thing on the first screen.
+		-->
+		<div class="hero__figure" data-hero-image>
+			<picture>
+				{#each prints as print (print.name)}
+					{#each sources(print.picture) as source (source.type)}
+						<source
+							srcset={source.srcset}
+							sizes={print.sizes}
+							type={source.type}
+							media={print.media}
+						/>
+					{/each}
+				{/each}
+				<img
+					class="hero__img"
+					src={chosen === 'dark' ? night.img.src : day.img.src}
+					width={day.img.w}
+					height={day.img.h}
+					alt=""
+					fetchpriority="high"
+				/>
+			</picture>
 		</div>
 	</div>
-
-	<!--
-		`<enhanced:img>` is rewritten at build time into a `<picture>` with AVIF
-		and WebP sources at several widths, plus width/height so nothing shifts
-		while it loads. The source is a PNG drawn by `scripts/make-hero.ts`.
-		`sizes` tells the browser how wide the image is on screen, so it picks
-		the smallest file that is still sharp for that width.
-	-->
-	<enhanced:img
-		class="hero__img"
-		src="../../lib/assets/hero.png"
-		alt=""
-		sizes="(min-width: 64em) 40rem, 100vw"
-		fetchpriority="high"
-	/>
 </section>
 
 <!--
 	`{const}` in markup: the list of features exists only for this loop, so it
-	is declared where the loop is, in the markup, rather than a screen away in
-	the script. It re-runs when the messages' locale changes.
+	is declared where the loop is, rather than a screen away in the script. It
+	is bare on purpose. A bare declaration tag is worked out once, and nothing
+	it reads changes while the page is open: a language switch is a full
+	reload (the `LocaleSwitcher` links carry `data-sveltekit-reload`), and the
+	new page works the list out afresh in the new language. The header's
+	links, which must follow a sign-in, are the opposite case: `$derived`.
 -->
 {const features = [
 	{ icon: MapPinIcon, title: m.home_feature_map_title(), text: m.home_feature_map_text() },
@@ -58,64 +195,192 @@
 	{ icon: UsersThreeIcon, title: m.home_feature_live_title(), text: m.home_feature_live_text() }
 ]}
 
-<section class="container features grid" {@attach reveal({ stagger: 0.1 })}>
-	{#each features as feature (feature.title)}
-		{@const Icon = feature.icon}
-		<article class="card card--pad stack stack--sm">
-			<Icon size={28} weight="duotone" class="feature__icon" aria-hidden="true" />
-			<h2>{feature.title}</h2>
-			<p class="muted">{feature.text}</p>
+<!-- The cards rise in 70ms apart the first time they scroll into view; CSS does the motion, `inview` says when. -->
+<section class="container features grid" {@attach inview()}>
+	{#each features as feature, i (feature.title)}
+		{const Icon = $derived(feature.icon)}
+		<article class="card card--pad feature stack stack--sm" style:--i={i}>
+			<span class="feature__icon" aria-hidden="true">
+				<Icon size={28} weight="duotone" />
+			</span>
+			<h2 class="feature__title">{feature.title}</h2>
+			<p class="feature__text">{feature.text}</p>
 		</article>
 	{/each}
 </section>
 
 <style>
+	/*
+	 * The glow: a radial of the soft sea colour behind the image, in both
+	 * themes. It is the single decorative gradient in the product, and it is
+	 * on the section rather than the image so the image can bleed over it.
+	 */
 	.hero {
+		position: relative;
+		padding-block: var(--space-7) var(--space-6);
+		background: radial-gradient(
+			60% 50% at 70% 40%,
+			color-mix(in oklab, var(--sea-soft) 60%, transparent),
+			transparent 70%
+		);
+		overflow: clip;
+	}
+
+	.hero__grid {
 		display: grid;
 		gap: var(--space-6);
-		padding-block: var(--space-7) var(--space-6);
 		align-items: center;
 	}
 
+	/* The largest cut Fraunces draws, a hair lighter than the headings, and tight. */
 	.hero__title {
-		font-size: var(--text-3xl);
-		max-width: 14ch;
+		font-size: var(--text-4xl);
+		font-weight: 450;
+		font-variation-settings: 'opsz' 144;
+		line-height: var(--leading-display);
+		letter-spacing: var(--tracking-4xl);
+		max-inline-size: 12ch;
 	}
 
 	.hero__lede {
 		font-size: var(--text-lg);
+		line-height: var(--leading-body);
 		color: var(--ink-2);
-		max-width: 46ch;
+		max-inline-size: 38ch;
 	}
 
-	.eyebrow {
-		color: var(--sea);
-		font-weight: 600;
-		font-size: var(--text-sm);
-		letter-spacing: 0.02em;
+	.hero__actions {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-2);
+		padding-block-start: var(--space-2);
 	}
 
-	.hero :global(.hero__img) {
+	/* The two calls to action are the tallest buttons in the product: 48px, full width on a phone. */
+	.hero__btn {
+		min-height: 3rem;
+		font-size: var(--text-md);
+	}
+
+	/*
+	 * Phone: the image is the full width of the screen — it steps out of the
+	 * gutter — with no frame, and its bottom edge fades into the paper, so it
+	 * has no hard line where the cards begin. Only the bottom: a fade at the
+	 * top as well turned the map into a faint band with dead space under it.
+	 * The mask changes nothing about layout, so the space the image's width
+	 * and height reserve is still exact.
+	 */
+	.hero__figure {
+		position: relative;
+		margin-inline: calc(-1 * var(--gutter));
+		mask-image: linear-gradient(to bottom, #000 70%, transparent);
+	}
+
+	.hero__img {
+		display: block;
 		width: 100%;
 		height: auto;
-		border-radius: var(--radius-lg);
-		border: 1px solid var(--line);
-		box-shadow: var(--shadow-3);
+		aspect-ratio: 16 / 10;
+		object-fit: cover;
 	}
 
 	.features {
-		padding-block: var(--space-6) var(--space-8);
-		--grid-min: 16rem;
+		padding-block: var(--space-6) var(--section);
+		--grid-min: 15rem;
 	}
 
-	.features :global(.feature__icon) {
+	.feature__icon {
+		display: grid;
+		place-items: center;
+		width: 2.75rem;
+		height: 2.75rem;
+		border-radius: var(--radius);
+		background: var(--sea-soft);
 		color: var(--sea);
+	}
+
+	.feature__title {
+		font-size: var(--text-lg);
+		letter-spacing: 0;
+	}
+
+	.feature__text {
+		color: var(--ink-2);
+		font-size: var(--text-sm);
+	}
+
+	/*
+	 * Rule 1 of the hero: nothing is hidden until JavaScript runs. The
+	 * attachment sets `data-animate` only in the browser, and only when
+	 * motion is wanted; without it, this rule never matches and every card
+	 * is simply there. `:global` because the attributes are written by the
+	 * attachment, not the template, and the compiler would otherwise drop
+	 * a selector it cannot see matching.
+	 */
+	@media (prefers-reduced-motion: no-preference) {
+		:global(.features[data-animate]:not([data-inview]) .feature) {
+			opacity: 0;
+		}
+		:global(.features[data-inview] .feature) {
+			animation: rise var(--dur-5) var(--ease-out) both;
+			animation-delay: calc(var(--i) * 70ms);
+		}
+	}
+
+	@keyframes rise {
+		from {
+			opacity: 0;
+			translate: 0 12px;
+		}
+	}
+
+	@media (min-width: 40em) {
+		.hero__actions {
+			flex-direction: row;
+		}
 	}
 
 	@media (min-width: 64em) {
 		.hero {
-			grid-template-columns: 1.1fr 1fr;
-			padding-block: var(--space-8);
+			padding-block: var(--section);
+		}
+
+		.hero__grid {
+			grid-template-columns: 1fr 1.1fr;
+			gap: var(--space-8);
+		}
+
+		/*
+		 * Desktop: the image sits in a soft frame — a large shadow and the
+		 * hairline ring, no border — raised 4% so it is not quite level with
+		 * the copy, and its bottom-right corner sinks into the page through
+		 * the gradient on `::after`. Static: a composition, not a parallax.
+		 */
+		.hero__figure {
+			position: relative;
+			margin-inline: 0;
+			translate: 0 -4%;
+			mask-image: none;
+			border-radius: var(--radius-xl);
+			box-shadow: var(--shadow-3), var(--ring-hairline);
+			overflow: hidden;
+		}
+
+		.hero__figure::after {
+			content: '';
+			position: absolute;
+			inset: 0;
+			border-radius: inherit;
+			background: linear-gradient(
+				160deg,
+				transparent 55%,
+				color-mix(in oklab, var(--paper) 40%, transparent)
+			);
+			pointer-events: none;
+		}
+
+		.hero__img {
+			border-radius: var(--radius-xl);
 		}
 	}
 </style>

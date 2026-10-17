@@ -35,9 +35,9 @@ const COURSE = {
 	lede: `A step sequencer, a synthesiser, a gallery, a jam room, an embeddable
 		player and the adapter that deploys it — built from an empty folder, using
 		every part of Svelte 5 and SvelteKit 3 that earns its place, including
-		everything the September 2026 releases added. Every feature is used for
+		everything the September and October 2026 releases added. Every feature is used for
 		something, explained from first principles, and tested end to end.`,
-	badges: ['Svelte 5.57', 'SvelteKit 3', 'Web Audio', 'A custom adapter'],
+	badges: ['Svelte 5.57', 'SvelteKit 3.0.1', 'Vitest 5', 'Web Audio', 'A custom adapter'],
 	closing: `Every code block in this course is read out of the finished project
 		in <code>ostinato</code> at build time — file and line numbers included — so
 		it cannot drift from what the code actually says. Type it out rather than

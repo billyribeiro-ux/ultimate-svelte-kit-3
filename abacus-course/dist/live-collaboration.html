@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Live collaboration: a live query, a mailbox, and numbered operations — Building Abacus</title>
-<meta name="description" content="`watchSheet` is a `query.live`: an async generator that yields every time something happens on the sheet. Operations go the other way through a command, the server numbers them, and every tab applies the ones that are not its own echo.">
+<meta name="description" content="watchSheet is a query.live: an async generator that yields every time something happens on the sheet. Operations go the other way through a command, the server numbers them, and every tab applies the ones that are not its own echo.">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -52,9 +52,9 @@
  * runs the `finally` and leaves the room.
  *
  * Operations go the other way through `send`, a command that applies them
- * to the stored document, numbers them, and broadcasts them. The sending
- * tab receives its own operations back with its `client` id and ignores
- * them; every other tab applies them without an undo entry.
+ * to the stored document, numbers them, and broadcasts them as a batch. The
+ * sending tab receives its own batch back with its `client` id and ignores
+ * it; every other tab applies it without an undo entry.
  */
 
 import * as v from 'valibot';
@@ -67,7 +67,7 @@ import { currentUser, requireUser } from '#lib/server/session.ts';</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/server/live.ts<span class="code__lines">:1-41</span></span>
+		<span class="code__file">src/lib/server/live.ts<span class="code__lines">:1-54</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -99,12 +99,25 @@ export interface Presence {
 	cell: string | null;
 }
 
-export interface LiveMessage {
-	/** The sheet version after these operations. */
+/**
+ * One `send`: the operations it carried, and the version they produced.
+ *
+ * The version is what makes a batch recognisable. A browser can be handed
+ * the same batch twice — a reconnect replays everything since the page was
+ * loaded — and a batch it has already applied must not be applied again:
+ * cells written twice come out the same, but a row inserted twice is two
+ * rows.
+ */
+export interface Batch {
 	version: number;
-	ops: Op[];
-	/** Which tab sent them, so that tab can ignore its own echo. */
+	/** Which tab sent it, so that tab can skip its own echo; `null` from before it was recorded. */
 	client: string | null;
+	ops: Op[];
+}
+
+export interface LiveMessage {
+	/** Oldest first. Empty when all that changed is who is here. */
+	batches: Batch[];
 	present: Presence[];
 }
 
@@ -115,7 +128,7 @@ const rooms = new Map&lt;string, Map&lt;Listener, Presence&gt;&gt;();</code></pr
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/server/live.ts<span class="code__lines">:43-90</span></span>
+		<span class="code__file">src/lib/server/live.ts<span class="code__lines">:56-99</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">export function presentIn(sheetId: string): Presence[] {
@@ -137,28 +150,24 @@ export function join(sheetId: string, presence: Presence, listener: Listener): (
 	};
 }
 
-export function broadcast(sheetId: string, message: Omit&lt;LiveMessage, 'present'&gt;): void {
+/** Tell the room about a batch — or, with `null`, only about who is here. */
+export function broadcast(sheetId: string, batch: Batch | null): void {
 	const room = rooms.get(sheetId);
 	if (!room) return;
-	const present = [...room.values()];
-	for (const listener of room.keys()) listener({ ...message, present });
+	const message: LiveMessage = { batches: batch ? [batch] : [], present: [...room.values()] };
+	for (const listener of room.keys()) listener(message);
 }
 
 /** A cursor moved: update that tab's presence and tell the room. */
-export function moveCursor(
-	sheetId: string,
-	client: string,
-	cell: string | null,
-	version: number
-): void {
+export function moveCursor(sheetId: string, client: string, cell: string | null): void {
 	const room = rooms.get(sheetId);
 	if (!room) return;
 	for (const presence of room.values()) if (presence.client === client) presence.cell = cell;
-	broadcast(sheetId, { version, ops: [], client: null });
+	broadcast(sheetId, null);
 }
 
 function announce(sheetId: string): void {
-	broadcast(sheetId, { version: -1, ops: [], client: null });
+	broadcast(sheetId, null);
 }
 
 export function openConnections(): number {
@@ -167,12 +176,12 @@ export function openConnections(): number {
 	return n;
 }</code></pre>
 </figure>
-<p>The broadcaster is a <code>Map</code> of rooms, each a <code>Map</code> from listener to presence. <code>join</code> returns a leave function; <code>broadcast</code> sends a message to every listener with the current presence attached; a cursor move updates one presence and broadcasts an empty operation set. In-process, which is right for one server and would need a shared channel for two — the header says so.</p>
+<p>What travels is a <em>batch</em>: the operations one <code>send</code> carried, the version they produced, and the tab that sent them. A message is a list of batches, oldest first, plus who is in the room. The broadcaster is a <code>Map</code> of rooms, each a <code>Map</code> from listener to presence. <code>join</code> returns a leave function; <code>broadcast</code> sends one batch — or, given <code>null</code>, only the presence — to every listener; a cursor move updates one presence and broadcasts no batch at all. In-process, which is right for one server and would need a shared channel for two — the header says so.</p>
 <h3 id="the-mailbox">The mailbox</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/remote/live.remote.ts<span class="code__lines">:24-82</span></span>
+		<span class="code__file">src/lib/remote/live.remote.ts<span class="code__lines">:24-77</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -196,12 +205,7 @@ class Mailbox {
 			return;
 		}
 		this.#pending = this.#pending
-			? {
-					version: Math.max(this.#pending.version, message.version),
-					ops: [...this.#pending.ops, ...message.ops],
-					client: message.ops.length &gt; 0 ? message.client : this.#pending.client,
-					present: message.present
-				}
+			? { batches: [...this.#pending.batches, ...message.batches], present: message.present }
 			: message;
 	}
 
@@ -238,25 +242,33 @@ class Mailbox {
 
 <aside class="callout callout--why">
 	<h4>Why the mailbox coalesces, and why it can be closed</h4>
-	<p>Live streams are not event logs. If the sheet changes three times while a slow browser is still receiving the first message, it should get all three *operations*, in one message — so a push while nobody is waiting is merged into what is there. And <code>close()</code> exists because an async generator suspended on an <code>await</code> cannot be interrupted from outside: <code>return()</code> queues behind the pending promise, so a browser that closed its tab would keep its seat in the room until the next message happened to arrive. The end-to-end test that asserts Bob’s chip disappears when Bob leaves is the test that found this.</p>
+	<p>Live streams are not event logs. If the sheet changes three times while a slow browser is still receiving the first message, it should get all three <em>batches</em>, in one message — so a push while nobody is waiting is appended to what is there. And <code>close()</code> exists because an async generator suspended on an <code>await</code> cannot be interrupted from outside: <code>return()</code> queues behind the pending promise, so a browser that closed its tab would keep its seat in the room until the next message happened to arrive. The end-to-end test that asserts Bob’s chip disappears when Bob leaves is the test that found this.</p>
 </aside>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/remote/live.remote.ts<span class="code__lines">:84-126</span></span>
+		<span class="code__file">src/lib/remote/live.remote.ts<span class="code__lines">:79-123</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">const WatchSchema = v.object({
+	<pre><code class="lang-ts">/** One id per tab, so a tab can recognise its own operations coming back. Stored with each batch. */
+const ClientSchema = v.pipe(v.string(), v.minLength(4), v.maxLength(40));
+
+const WatchSchema = v.object({
 	id: v.string(),
-	/** One id per tab, so a tab can recognise its own operations coming back. */
-	client: v.pipe(v.string(), v.minLength(4), v.maxLength(40)),
-	/** The version this tab already has; operations after it are replayed first. */
+	client: ClientSchema,
+	/**
+	 * The version this tab loaded; every batch after it is replayed first. It is
+	 * fixed for the life of the query, so a reconnect replays from here again —
+	 * which is why every batch carries its version, and the browser skips the
+	 * ones it has.
+	 */
 	since: v.pipe(v.number(), v.integer(), v.minValue(0))
 });
 
 export const watchSheet = query.live(WatchSchema, async function* ({ id, client, since }) {
 	const user = requireUser();
-	const sheet = await requireSheet(id, user);
+	// Whoever may open the sheet may watch it, and nobody else.
+	await requireSheet(id, user);
 
 	const mailbox = new Mailbox();
 	const leave = join(id, { client, userId: user.id, name: user.name, cell: null }, (m) =&gt;
@@ -272,13 +284,7 @@ export const watchSheet = query.live(WatchSchema, async function* ({ id, client,
 
 	try {
 		// Catch up first: whatever happened between the page load and now.
-		const missed = await opsSince(id, since);
-		yield {
-			version: sheet.version,
-			ops: missed.flatMap((m) =&gt; m.ops),
-			client: null,
-			present: presentIn(id)
-		} satisfies LiveMessage;
+		yield { batches: await opsSince(id, since), present: presentIn(id) } satisfies LiveMessage;
 
 		while (true) {
 			const message = await mailbox.next();
@@ -290,42 +296,39 @@ export const watchSheet = query.live(WatchSchema, async function* ({ id, client,
 	}
 });</code></pre>
 </figure>
-<p>The generator: require a person, join the room, and wire the request’s abort signal to the mailbox — the adapter fires it when the socket closes. Then catch up (every operation since the version the tab has), and loop on the mailbox until it is closed. The <code>finally</code> leaves the room, and it now runs promptly.</p>
+<p>The generator: require a person who may open the sheet, join the room, and wire the request’s abort signal to the mailbox — the adapter fires it when the socket closes. Then catch up — every batch since the version the tab loaded — and loop on the mailbox until it is closed. The <code>finally</code> leaves the room, and it now runs promptly. Every id a tab sends is checked by one schema, <code>ClientSchema</code>, because it is now stored with each batch.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/remote/live.remote.ts<span class="code__lines">:125-147</span></span>
+		<span class="code__file">src/lib/remote/live.remote.ts<span class="code__lines">:125-144</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">	}
-});
-
-export const send = command(
+	<pre><code class="lang-ts">export const send = command(
 	v.object({
 		id: v.string(),
-		client: v.string(),
+		client: ClientSchema,
 		ops: v.pipe(v.array(OpSchema), v.minLength(1), v.maxLength(100))
 	}),
 	async ({ id, client, ops }) =&gt; {
-		const { version } = await applySheetOps(id, requireUser(), ops);
-		broadcast(id, { version, ops, client });
+		const { version } = await applySheetOps(id, requireUser(), client, ops);
+		broadcast(id, { version, client, ops });
 		return { version };
 	}
 );
 
 export const setCursor = command(
-	v.object({ id: v.string(), client: v.string(), cell: v.nullable(v.string()) }),
+	v.object({ id: v.string(), client: ClientSchema, cell: v.nullable(v.string()) }),
 	async ({ id, client, cell }) =&gt; {
-		const sheet = await requireSheet(id, currentUser());
-		moveCursor(id, client, cell, sheet.version);
+		await requireSheet(id, currentUser());
+		moveCursor(id, client, cell);
 	}
 );</code></pre>
 </figure>
-<p><code>send</code> applies a batch of operations to the stored document in a transaction with the op log, gets back the new version, and broadcasts the batch with the sender’s client id. The sender receives its own batch and ignores it; everyone else applies it.</p>
+<p><code>send</code> applies a batch of operations to the stored document in a transaction with the op log, gets back the new version, and broadcasts the batch with its version and the sender’s client id. The sender receives its own batch and skips it; everyone else applies it.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/server/sheets.ts<span class="code__lines">:172-217</span></span>
+		<span class="code__file">src/lib/server/sheets.ts<span class="code__lines">:173-220</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -336,6 +339,7 @@ export const setCursor = command(
 export async function applySheetOps(
 	id: string,
 	user: User,
+	client: string,
 	ops: Op[]
 ): Promise&lt;{ version: number; cellCount: number }&gt; {
 	const row = await requireSheetRow(id, user);
@@ -357,29 +361,30 @@ export async function applySheetOps(
 			.where(eq(schema.sheets.id, id));
 		await tx
 			.insert(schema.ops)
-			.values({ sheetId: id, version, userId: user.id, payload: JSON.stringify(ops) });
+			.values({ sheetId: id, version, userId: user.id, client, payload: JSON.stringify(ops) });
 	});
 
 	return { version, cellCount: next.cells.length };
 }
 
-/** The operations after a version, oldest first, for a browser catching up. */
-export async function opsSince(
-	id: string,
-	version: number
-): Promise&lt;{ version: number; ops: Op[] }[]&gt; {
+/** The batches after a version, oldest first, for a browser catching up. */
+export async function opsSince(id: string, version: number): Promise&lt;Batch[]&gt; {
 	const rows = await db.query.ops.findMany({
 		where: and(eq(schema.ops.sheetId, id), gt(schema.ops.version, version)),
 		orderBy: [schema.ops.version]
 	});
-	return rows.map((r) =&gt; ({ version: r.version, ops: JSON.parse(r.payload) as Op[] }));
+	return rows.map((r) =&gt; ({
+		version: r.version,
+		client: r.client,
+		ops: JSON.parse(r.payload) as Op[]
+	}));
 }</code></pre>
 </figure>
 <h3 id="the-browser">The browser’s side</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/sheet/live.svelte.ts<span class="code__lines">:1-48</span></span>
+		<span class="code__file">src/lib/sheet/live.svelte.ts<span class="code__lines">:1-78</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -389,11 +394,11 @@ export async function opsSince(
  * The glue between a `Sheet` in this tab and the same sheet on the server
  * and in every other tab. Local commands become operations, batched for a
  * hundred milliseconds and sent with `send`; the live query delivers
- * everybody's operations, and the ones that are not this tab's echo are
- * applied with no undo entry. Cursor moves go the same way, throttled.
+ * everybody's batches, and each one this tab has not seen — and did not send
+ * — is applied with no undo entry. Cursor moves go the same way, throttled.
  *
  * `status` is the honest state of the connection — live, saving, offline,
- * or in conflict — and the page shows it, because a sheet that silently
+ * or refused — and the page shows it, because a sheet that silently
  * stopped saving is worse than one that says so.
  */
 
@@ -405,16 +410,35 @@ import { tabId } from './local.ts';
 import type { Op } from './ops.ts';
 import type { Sheet } from './sheet.svelte.ts';
 
-export type LiveStatus = 'live' | 'saving' | 'offline' | 'conflict';
+/**
+ * Where this tab stands with the server, as one value.
+ *
+ * `refused` carries the server's own sentence, and nothing can leave it: once
+ * the server has turned a batch down, this tab holds edits the stored sheet
+ * does not, and every later operation would be built on that difference. Only
+ * a reload — the stored sheet, read again — brings the two back together. A
+ * separate `problem` field beside a `status` string could say &quot;Saved&quot; and a
+ * stale reason at the same time; one union cannot.
+ */
+export type LiveStatus =
+	| { readonly kind: 'live' }
+	| { readonly kind: 'saving' }
+	| { readonly kind: 'offline' }
+	| { readonly kind: 'refused'; readonly message: string };
+
+// One object per plain state, so writing the state a tab is already in is the
+// same value — and a `$state.raw` given the value it holds notifies nobody.
+const LIVE: LiveStatus = { kind: 'live' };
+const SAVING: LiveStatus = { kind: 'saving' };
+const OFFLINE: LiveStatus = { kind: 'offline' };
 
 export class LiveSheet {
 	readonly sheet: Sheet;
 	readonly id: string;
 	readonly client = tabId();
 
-	/** The server version this tab has caught up to. */
-	version = $state(0);
-	status = $state&lt;LiveStatus&gt;('live');
+	/** Replaced, never mutated, so `$state.raw`: there is nothing inside it to watch. */
+	status = $state.raw&lt;LiveStatus&gt;(LIVE);
 	/** Everybody else on the sheet. */
 	present = $state&lt;Presence[]&gt;([]);
 
@@ -424,80 +448,164 @@ export class LiveSheet {
 	#cursorTimer: ReturnType&lt;typeof setTimeout&gt; | null = null;
 	#lastCursor: string | null = null;
 
+	/** The version of the document this tab loaded: every batch up to it is already in the sheet. */
+	readonly #loaded: number;
+	/**
+	 * Every later batch this tab has taken in — applied, or sent itself — by
+	 * version. A set rather than a high-water mark, because two batches can
+	 * arrive out of order, and the earlier one must still be applied. Plain,
+	 * not reactive: nothing on screen reads it.
+	 */
+	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- bookkeeping, never rendered
+	readonly #seen = new Set&lt;number&gt;();
+
 	constructor(id: string, sheet: Sheet, version: number) {
 		this.id = id;
 		this.sheet = sheet;
-		this.version = version;
+		this.#loaded = version;
 		sheet.onop = (op) =&gt; this.#enqueue(op);
 	}</code></pre>
 </figure>
+<p><code>status</code> is one value with four shapes, and only <code>refused</code> carries anything: the server’s own sentence. It is <code>$state.raw</code> because it is replaced, never changed inside — there is nothing in it for a deep proxy to watch — and the three plain shapes are single objects, so writing the state a tab is already in hands <code>$state.raw</code> the value it holds, which notifies nobody. The first version kept a <code>status</code> string and a separate <code>problem</code>, and nothing stopped the two disagreeing: the chip said “Saved” over a reason that no longer applied.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/sheet/live.svelte.ts<span class="code__lines">:50-58</span></span>
+		<span class="code__file">src/lib/sheet/live.svelte.ts<span class="code__lines">:80-137</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">/** A message from the live query. */
+	<pre><code class="lang-ts">/**
+ * Apply the room's messages as they arrive, until `signal` aborts.
+ *
+ * A live query is async-iterable, and iterating it is SvelteKit's API for
+ * the *stream* — each value as it comes — where `current` is the API for
+ * the latest value. An effect that read `current` would see a message only
+ * if Svelte happened to run it before the next one landed.
+ *
+ * Iterating has a rule of its own: &quot;if values arrive faster than the
+ * consumer drains the iterator, only the latest pending value is kept&quot;. So
+ * the loop never keeps the stream waiting. `receive` is synchronous, and the
+ * loop asks for the next message in the same turn as it was handed the last
+ * — before the connection can deliver another, since that takes at least
+ * one more trip through the promise queue, which runs in order.
+ *
+ * One loop lasts as long as the stream. A dropped connection does not end
+ * it: SvelteKit reconnects behind the same iterator, and the loop simply
+ * waits. It ends when the server ends the stream or refuses it, and
+ * `reconnect()` opens a new one. A new iterator starts with the latest
+ * message, which this tab may already have applied; `receive` skips what it
+ * has seen.
+ */
+async follow(stream: AsyncIterable&lt;LiveMessage&gt;, signal: AbortSignal): Promise&lt;void&gt; {
+	const messages = stream[Symbol.asyncIterator]();
+	signal.addEventListener('abort', () =&gt; void messages.return?.(), { once: true });
+	try {
+		for (let next = await messages.next(); !next.done; next = await messages.next()) {
+			this.receive(next.value);
+		}
+	} catch {
+		// The server refused the stream. The query is `done`, the page offers
+		// Reconnect, and the page starts a new loop when it reconnects.
+	}
+}
+
+/**
+ * A message from the live query.
+ *
+ * The same batch can arrive more than once. A reconnect replays every batch
+ * since the page was loaded; a new iterator starts with the last message; a
+ * batch committed while the server was reading the catch-up is in both. So
+ * a batch is taken in once, by its version: cells written twice would come
+ * out the same, but a row inserted twice is two rows.
+ */
 receive(message: LiveMessage): void {
 	this.present = message.present.filter((p) =&gt; p.client !== this.client);
-	if (message.client !== this.client) {
-		for (const op of message.ops) this.sheet.applyRemote(op);
+	let applied = false;
+	for (const batch of message.batches) {
+		if (batch.version &lt;= this.#loaded || this.#seen.has(batch.version)) continue;
+		this.#seen.add(batch.version);
+		// This tab's own batch is on screen already: it was applied as it was typed.
+		if (batch.client === this.client) continue;
+		for (const op of batch.ops) this.sheet.applyRemote(op);
+		applied = true;
 	}
-	if (message.version &gt; this.version) this.version = message.version;
-	if (message.ops.length &gt; 0 &amp;&amp; message.client !== this.client) this.sheet.markSaved();
+	// Somebody else's operations are on the server by definition.
+	if (applied) this.sheet.markSaved();
 }</code></pre>
 </figure>
 
+<aside class="callout callout--why">
+	<h4>Why every batch carries its version, and the browser counts them</h4>
+	<p>A browser can be handed the same batch twice, and there are three ways it happens. <code>since</code> is an argument of the live query, fixed when the page made it, so a reconnect after a dropped connection replays <em>every</em> batch since the page loaded. A new iterator — the page makes one after <code>reconnect()</code> — starts with the latest message, which the old loop may already have applied. And a batch committed between the room hearing about it and the catch-up being read is in both. Cells written twice come out the same; a row inserted twice is two rows, and every later edit lands one row out. The first version applied whatever arrived, and a probe that dropped the connection for half a second left the second tab showing a cell twice that the server held once. So each batch is taken in once, by version: anything at or below the version the page loaded is already in the sheet, and every later one is remembered in a set. A set, not a high-water mark, because two batches can arrive out of order and the earlier one must still be applied. The tab that sent a batch knows it by its client id — stored in the op log, so it survives the replay too — and skips it, because its own edits were applied as they were typed.</p>
+</aside>
+
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/sheet/live.svelte.ts<span class="code__lines">:90-128</span></span>
+		<span class="code__file">src/lib/sheet/live.svelte.ts<span class="code__lines">:169-220</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">#enqueue(op: Op): void {
+	// Refused once, refused for good. The edit stays on screen, and the page
+	// already says that nothing after the refusal reaches the server.
+	if (this.status.kind === 'refused') return;
 	this.#queue.push(op);
-	this.status = 'saving';
+	this.status = SAVING;
 	this.#timer ??= setTimeout(() =&gt; {
 		this.#timer = null;
 		void this.#send();
 	}, 100);
 }
 
+/**
+ * Send up to a hundred queued operations.
+ *
+ * Two kinds of failure, told apart by whether the server answered. A 4xx is
+ * the server refusing *this batch* — too many cells, a sheet that is gone, a
+ * session that ended — and sending it again would be refused again, so the
+ * tab stops and says so. Anything else — no answer at all, or a 5xx — may
+ * well work in a moment, so the operations go back on the queue.
+ *
+ * Nothing is thrown. Every caller is fire-and-forget — a timer, the page's
+ * `beforeNavigate` — and the outcome is `status`, which the page renders.
+ */
 async #send(): Promise&lt;void&gt; {
 	if (this.#inflight || this.#queue.length === 0) return;
 	const ops = this.#queue.splice(0, 100);
 	this.#inflight = true;
 	try {
 		const { version } = await send({ id: this.id, client: this.client, ops });
-		if (version &gt; this.version) this.version = version;
-		this.status = this.#queue.length &gt; 0 ? 'saving' : 'live';
+		this.#seen.add(version);
+		this.status = this.#queue.length &gt; 0 ? SAVING : LIVE;
 		if (this.#queue.length === 0) this.sheet.markSaved();
 	} catch (error) {
-		if (
-			isHttpError(error) &amp;&amp;
-			(error.status === 409 || error.status === 413 || error.status === 404)
-		) {
-			this.status = 'conflict';
+		if (isHttpError(error) &amp;&amp; error.status &lt; 500) {
+			// An `HttpError` carries the server's words in `body`, not on itself.
+			this.status = { kind: 'refused', message: error.body.message };
 			this.#queue.length = 0;
-			throw error;
+			return;
 		}
-		// A network failure: keep the operations and try again shortly.
 		this.#queue.unshift(...ops);
-		this.status = 'offline';
+		this.status = OFFLINE;
 		this.#timer ??= setTimeout(() =&gt; {
 			this.#timer = null;
 			void this.#send();
 		}, 2000);
 	} finally {
 		this.#inflight = false;
-		if (this.#queue.length &gt; 0 &amp;&amp; !this.#timer &amp;&amp; this.status !== 'offline') void this.#send();
+		if (this.#queue.length &gt; 0 &amp;&amp; !this.#timer &amp;&amp; this.status.kind === 'saving')
+			void this.#send();
 	}
 }</code></pre>
 </figure>
-<p><code>LiveSheet</code> hooks the sheet’s <code>onop</code>: every local operation is queued, batched for a hundred milliseconds, and sent — a hundred at a time. A 409, 413 or 404 is a conflict the page must show and a reload must fix; anything else is a network failure, the operations are put back, and it tries again in two seconds. <code>status</code> is the honest state of the connection, and the page shows it, because a sheet that silently stopped saving is worse than one that says so.</p>
+<p><code>LiveSheet</code> hooks the sheet’s <code>onop</code>: every local operation is queued, batched for a hundred milliseconds, and sent — a hundred at a time. What happens when a send fails depends on whether the server answered. A 4xx is the server refusing <em>this batch</em> — “A sheet may hold at most 200,000 cells”, a sheet that has been deleted, a session that has ended — and sending it again would be refused again, so the tab moves to <code>refused</code> with the server’s sentence and stops sending. Anything else — no answer at all, or a 5xx — may work in a moment, so the operations go back on the queue and it tries again in two seconds. Nothing is thrown: every caller is a timer or a navigation hook that would only turn a refusal into an unhandled rejection, and the outcome is <code>status</code>, which the page renders.</p>
+
+<aside class="callout callout--why">
+	<h4>Why a refused sheet stops for good</h4>
+	<p>When the server turns a batch down, the tab holds edits the stored sheet does not. Every operation after that is built on a sheet the server never saw: send it, and it may be accepted — a deleted cell, say — and the chip goes back to “Saved” over a sheet whose import is gone. That is what the first version did, and it is the worst thing a sheet can do: say it saved what it lost. So <code>#enqueue</code> refuses to queue anything once the status is <code>refused</code>, the edit stays on screen, and the page says what happened and offers the only honest way back: a reload, which builds the sheet again from what the server kept.</p>
+</aside>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/sheet/[id]/+page.svelte<span class="code__lines">:30-53</span></span>
+		<span class="code__file">src/routes/(app)/sheet/[id]/+page.svelte<span class="code__lines">:32-68</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">const sheet = new Sheet({ locale: initial.locale });
@@ -506,9 +614,13 @@ sheet.load(initial.sheet.doc);
 const live = new LiveSheet(initial.sheet.id, sheet, initial.sheet.version);
 
 /**
- * `watchSheet` is a `query.live`. Its `current` is the latest message
- * the server yielded and is reactive, so an effect that reads it runs
- * once per message — which is where the room's operations are applied.
+ * `watchSheet` is a `query.live`. The room's operations are applied by
+ * iterating it (`live.follow`), one loop for as long as the stream lasts.
+ * A dropped connection is not the end of it — SvelteKit reconnects behind
+ * the same iterator, and the loop waits. A stream the server ended or
+ * refused is `done`; `reconnect()` opens a new one, `done` turns false,
+ * and the effect starts a new loop. The cleanup stops the old one.
+ * `current` and `connected` stay for the status chip below.
  */
 const stream = watchSheet({
 	id: initial.sheet.id,
@@ -516,20 +628,80 @@ const stream = watchSheet({
 	since: initial.sheet.version
 });
 $effect(() =&gt; {
-	const message = stream.current;
-	if (message) live.receive(message);
+	if (stream.done) return;
+	const controller = new AbortController();
+	// Starting the loop reads the query's latest value. Untracked, so a new
+	// message does not re-run this effect and start the loop all over again.
+	untrack(() =&gt; void live.follow(stream, controller.signal));
+	return () =&gt; controller.abort();
 });
 
+// The autofixer asks whether these effects write state that could be
+// derived. They do not: one applies other people's operations as they
+// arrive, the other sends what is queued and lets go of the sheet as the
+// page goes. Both are side effects with a cleanup, which is what `$effect`
+// is for.
 $effect(() =&gt; () =&gt; live.dispose());
 
 // Whatever is queued goes before the page is left.
 beforeNavigate(() =&gt; void live.flush());</code></pre>
 </figure>
-<p>On the page, <code>watchSheet(...)</code> returns the live query. Its <code>current</code> is the latest message and is reactive, so an effect that reads it runs once per message — which is where the room’s operations are applied. <code>beforeNavigate</code> flushes the queue before the page is left, and the effect’s cleanup disposes the connection.</p>
+<p>On the page, <code>watchSheet(...)</code> returns the live query, and the room’s operations are applied by iterating it. A live query is async-iterable, and the SvelteKit docs offer that for “direct, imperative access to the underlying stream of values (rather than the reactive <code>current</code> property)”. The first version applied messages in an effect that read <code>current</code>, which holds only the latest message: it saw each one only if Svelte happened to run the effect before the next arrived. The iterator has a rule too — “if values arrive faster than the consumer drains the iterator, only the latest pending value is kept” — so <code>live.follow</code> never keeps it waiting: <code>receive</code> is synchronous, and the loop asks for the next message in the same turn as it was handed the last, before the connection can deliver another. One loop lasts as long as the stream. A dropped connection does not end it — SvelteKit reconnects behind the same iterator, and the loop waits — so the effect starts a loop whenever the query is not <code>done</code>, and only a stream the server ended or refused needs a new one, which <code>reconnect()</code> brings. Starting the loop is wrapped in <code>untrack</code>. Subscribing reads the query’s latest value, and an effect depends on whatever it reads while it runs: without <code>untrack</code>, every message re-ran the effect, which threw its loop away and subscribed again — the new loop starting, as a new iterator does, with the message the old one had just applied. The version check absorbed the duplicates; <code>untrack</code> stops them being made. <code>current</code> and <code>connected</code> stay, for the status chip. <code>beforeNavigate</code> flushes the queue before the page is left, and the last effect’s cleanup disposes the connection.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/collab.e2e.ts<span class="code__lines">:84-126</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">test('a dropped connection catches up without applying anything twice', async ({ page }) =&gt; {
+	const device = await attachAuthenticator(page);
+	await register(page, 'Grace');
+	await page.getByLabel('Title').fill('Rows');
+	await page.getByRole('button', { name: 'New sheet' }).click();
+	await page.waitForURL(/\/sheet\/[a-z0-9]{8}$/);
+	await expect(page.getByText('Saved', { exact: true })).toBeVisible();
+
+	// The same person in a second tab: its own tab id, its own live query.
+	const other = await page.context().newPage();
+	await other.goto(page.url());
+	await expect(other.getByText('Saved', { exact: true })).toBeVisible();
+
+	// Two batches from the first tab: a cell, then a row inserted above it.
+	await type(page, 0, 0, 'first');
+	await expect(cell(other, 0, 0)).toHaveText('first');
+	await cell(page, 0, 0).click();
+	await page.getByRole('button', { name: 'Rows and columns', exact: true }).click();
+	await page.getByRole('button', { name: 'Insert 1 row above' }).click();
+	await expect(cell(other, 1, 0)).toHaveText('first');
+	// Both cursors well away from the cells being read: a cursor's name shows in its cell.
+	await cell(page, 5, 3).click();
+	await cell(other, 6, 3).click();
+
+	// The connection drops and comes back. The catch-up replays every batch
+	// since the page was loaded; taken in again, the insert would push
+	// &quot;first&quot; down a second row, in both tabs.
+	await page.context().setOffline(true);
+	await expect(other.getByText('Reconnecting…')).toBeVisible();
+	await page.context().setOffline(false);
+	for (const tab of [page, other]) {
+		await expect(tab.getByText('Saved', { exact: true })).toBeVisible();
+		await expect(cell(tab, 0, 0)).toHaveText('');
+		await expect(cell(tab, 1, 0)).toHaveText('first');
+		await expect(cell(tab, 2, 0)).toHaveText('');
+	}
+
+	// And it is still live: an edit after the reconnect goes through.
+	await type(other, 3, 0, 'after');
+	await expect(cell(page, 3, 0)).toHaveText('after');
+
+	await device.detach();
+});</code></pre>
+</figure>
+<p>The test for the replay: two tabs, a cell and then a row inserted above it, and the connection taken away and given back with <code>setOffline</code>. Against the first version it fails before the connection even drops: the second tab never shows the inserted row, because the effect reading <code>current</code> met a later message first. With the loop in place and the version check taken out, it fails after the reconnect instead — “first” pushed down a second row, because the catch-up applied the insert again. The refused batch has its own test in chapter 37, which imports more cells than the end-to-end server allows.</p>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>
-	<ul><li>You can say what happens when three operations arrive while a browser is slow, and how many messages it gets.</li><li>You can explain why <code>return()</code> on the generator was not enough and what the abort signal adds.</li><li>You can trace one keystroke from <code>sheet.onop</code> to another tab’s <code>applyRemote</code>.</li></ul>
+	<ul><li>You can say what happens when three operations arrive while a browser is slow, and how many messages it gets.</li><li>You can explain why <code>return()</code> on the generator was not enough and what the abort signal adds.</li><li>You can trace one keystroke from <code>sheet.onop</code> to another tab’s <code>applyRemote</code>.</li><li>You can name three ways a browser receives a batch it already has, and say what stops it applying one twice.</li><li>You can say which failures put operations back on the queue and which stop the tab, and why a refused tab does not resume.</li></ul>
 </aside>
 		</article>
 

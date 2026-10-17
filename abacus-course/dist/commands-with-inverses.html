@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Commands with inverses: undo, structure, clipboard, fill, sort — Building Abacus</title>
-<meta name="description" content="Every change is a command that knows how to undo itself. An edit remembers what the cells held; a deleted row remembers its cells *and* every formula the deletion rewrote. Then the operations built on top: the clipboard, the fill handle, sorting, find and replace.">
+<meta name="description" content="Every change is a command that knows how to undo itself. An edit remembers what the cells held; a deleted row remembers its cells and every formula the deletion rewrote. Then the operations built on top: the clipboard, the fill handle, sorting, find and replace.">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -33,12 +33,12 @@
 		<article>
 			<p class="eyebrow">Chapter 16</p>
 			<h1>Commands with inverses: undo, structure, clipboard, fill, sort</h1>
-			<p class="lede">Every change is a command that knows how to undo itself. An edit remembers what the cells held; a deleted row remembers its cells *and* every formula the deletion rewrote. Then the operations built on top: the clipboard, the fill handle, sorting, find and replace.</p>
+			<p class="lede">Every change is a command that knows how to undo itself. An edit remembers what the cells held; a deleted row remembers its cells <em>and</em> every formula the deletion rewrote. Then the operations built on top: the clipboard, the fill handle, sorting, find and replace.</p>
 			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Build undo as commands rather than snapshots, and handle the case that snapshots would have hidden: an inverse that is not a mirror image.</p></aside>
 			
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:559-590</span></span>
+		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:560-591</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/* ---------------------------------------------------------------- */
@@ -79,7 +79,7 @@ redo(): void {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:245-263</span></span>
+		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:246-264</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/* ---------------------------------------------------------------- */
@@ -105,7 +105,7 @@ deleteColumns(at: number, count = 1): void {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:265-324</span></span>
+		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:266-325</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">#shift(shift: Shift): void {
@@ -172,12 +172,12 @@ deleteColumns(at: number, count = 1): void {
 
 <aside class="callout callout--why">
 	<h4>Why undoing a deletion needs a snapshot of formulas it did not delete</h4>
-	<p>Delete row 2 from a sheet where A3 says <code>=SUM(A1:A2)</code>. The engine rewrites the formula to <code>=SUM(A1:A1)</code> and moves it up. Undo inserts a row at 2 — and <code>A1:A1</code> stays <code>A1:A1</code>, because an insertion *below* a range does not grow it. The inverse shift restores the shape of the sheet but not the text of the formulas, and a reference into the deleted band became <code>#REF!</code> for good. So a deletion snapshots two things: the cells in the band, and every formula the shift would rewrite, found by rewriting and comparing. Undo runs the inverse shift and then restores both. The browser test that undoes a deleted row, cells and all, is what found this; a snapshot-based undo would have hidden it and cost the memory instead.</p>
+	<p>Delete row 2 from a sheet where A3 says <code>=SUM(A1:A2)</code>. The engine rewrites the formula to <code>=SUM(A1:A1)</code> and moves it up. Undo inserts a row at 2 — and <code>A1:A1</code> stays <code>A1:A1</code>, because an insertion <em>below</em> a range does not grow it. The inverse shift restores the shape of the sheet but not the text of the formulas, and a reference into the deleted band became <code>#REF!</code> for good. So a deletion snapshots two things: the cells in the band, and every formula the shift would rewrite, found by rewriting and comparing. Undo runs the inverse shift and then restores both. The browser test that undoes a deleted row, cells and all, is what found this; a snapshot-based undo would have hidden it and cost the memory instead.</p>
 </aside>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:326-361</span></span>
+		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:327-362</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/** Column widths and row heights move with their columns and rows. */
@@ -221,7 +221,7 @@ rename(title: string): void {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:363-398</span></span>
+		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:364-399</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/* ---------------------------------------------------------------- */
@@ -264,7 +264,7 @@ cut(target: Rect = this.selection): ClipboardPayload {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:400-431</span></span>
+		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:401-432</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -305,7 +305,7 @@ pasteText(text: string, at: Address = this.anchor): void {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:433-488</span></span>
+		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:434-489</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/* ---------------------------------------------------------------- */
@@ -369,7 +369,7 @@ fill(source: Rect, target: Rect): void {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:719-734</span></span>
+		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:720-735</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -393,7 +393,7 @@ export function detectSeries(values: Scalar[]): ((offset: number) =&gt; string) 
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:490-524</span></span>
+		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:491-525</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/* ---------------------------------------------------------------- */
@@ -436,7 +436,7 @@ sort(target: Rect, byCol: number, direction: 'asc' | 'desc'): void {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:526-557</span></span>
+		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:527-558</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/* ---------------------------------------------------------------- */

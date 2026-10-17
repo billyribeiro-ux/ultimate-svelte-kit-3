@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>An adapter, from scratch — Building Ostinato</title>
-<meta name="description" content="What an adapter is: `writeClient`, `writePrerendered`, `generateManifest` per function, a runtime bundled with rolldown, `builder.instrument`, an `emulate()` for development, and adapter-provided Vite plugins. Then the part that is only this adapter: a catch-all with no routes, and `applyReroute`.">
+<meta name="description" content="What an adapter is: `writeClient`, `writePrerendered`, `generateServerInstance` per function, a runtime bundled with rolldown, an instrumentation initialiser and `builder.instrument`, an `emulate()` for development, and adapter-provided Vite plugins. Then the part that is only this adapter: a catch-all with no routes, and `applyReroute`.">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -33,12 +33,12 @@
 		<article>
 			<p class="eyebrow">Chapter 34</p>
 			<h1>An adapter, from scratch</h1>
-			<p class="lede">What an adapter is: <code>writeClient</code>, <code>writePrerendered</code>, <code>generateManifest</code> per function, a runtime bundled with rolldown, <code>builder.instrument</code>, an <code>emulate()</code> for development, and adapter-provided Vite plugins. Then the part that is only this adapter: a catch-all with no routes, and <code>applyReroute</code>.</p>
-			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Read a whole adapter and know which five steps every adapter takes; understand the manifest-per-function split; and see how SvelteKit 3’s <code>applyReroute</code> hands a request between functions.</p></aside>
+			<p class="lede">What an adapter is: <code>writeClient</code>, <code>writePrerendered</code>, <code>generateServerInstance</code> per function, a runtime bundled with rolldown, an instrumentation initialiser and <code>builder.instrument</code>, an <code>emulate()</code> for development, and adapter-provided Vite plugins. Then the part that is only this adapter: a catch-all with no routes, and <code>applyReroute</code>.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Read a whole adapter and know which of its five steps every adapter takes and which are this one’s own; understand the server-per-function split; and see how SvelteKit 3’s <code>applyReroute</code> hands a request between functions.</p></aside>
 			
 <figure class="code">
 	<figcaption>
-		<span class="code__file">adapters/ostinato/index.js<span class="code__lines">:1-26</span></span>
+		<span class="code__file">adapters/ostinato/index.js<span class="code__lines">:1-32</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -58,28 +58,42 @@
  *   2. writes the client assets, the prerendered pages and the server code
  *      with `builder.writeClient`, `writePrerendered` and `writeServer` (the
  *      last one implicitly, through `getServerDirectory()`);
- *   3. generates one manifest per function with `builder.generateManifest`;
- *   4. bundles its own runtime — `files/` — together with the server, so a
- *      deployment needs only the production dependencies;
+ *   3. generates one server instance per function with
+ *      `builder.generateServerInstance` — a module exporting a ready-made
+ *      `server` whose manifest knows only that function's routes;
+ *   4. bundles each function on its own, and its runtime — `files/` — once
+ *      more beside them, so a deployment needs only the production
+ *      dependencies;
  *   5. wires `instrumentation.server.js` in front of the entrypoint, so tracing
  *      is set up before any application code runs.
  *
- * Everything after step 2 is about *this* adapter. Everything up to it is
- * every adapter.
+ * Steps 1 to 4 are what every adapter does, in the order SvelteKit's guide
+ * to writing one gives them: clear, write, generate a server, bundle. What is
+ * *this* adapter is the plural in 3 and 4 — a server and a bundle for each
+ * function — and step 5, which only an adapter that runs
+ * `instrumentation.server.js` needs.
  */</code></pre>
 </figure>
-<p>An adapter is the thing that takes SvelteKit’s build output and turns it into a program for a particular place. Everything up to step 2 in that list is *every* adapter; everything after it is this one. It targets a plain Node process, like <code>adapter-node</code>, and is smaller in every way that does not matter and one that does: it deploys the app as two functions and a catch-all.</p>
+<p>An adapter is the thing that takes SvelteKit’s build output and turns it into a program for a particular place. Steps 1 to 4 in that list are what *every* adapter does — SvelteKit’s guide to writing one lists them in the same order: clear the output, write the client, server and prerendered files, generate a server instance and the code that starts it, bundle. What is this adapter’s own is the plural in steps 3 and 4 — a server and a bundle for *each* function — and step 5, which only an adapter that runs <code>instrumentation.server.js</code> needs. It targets a plain Node process, like <code>adapter-node</code>, and is smaller in every way that does not matter and one that does: it deploys the app as two functions and a catch-all.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">adapters/ostinato/index.js<span class="code__lines">:47-74</span></span>
+		<span class="code__file">adapters/ostinato/index.js<span class="code__lines">:50-85</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
+ * @typedef {object} Options
+ * @property {string} [out] where the deployable program is written. Default `build`.
+ * @property {boolean} [precompress] write `.gz` and `.br` beside every asset. Default `true`.
+ * @property {Record&lt;string, string&gt;} [headers] response headers for every file the runtime
+ *   serves itself — assets and prerendered pages, which no hook ever sees. Default none.
+ */
+
+/**
  * @param {Options} [options]
  * @returns {import('@sveltejs/kit').Adapter}
  */
-export default function ostinato({ out = 'build', precompress = true } = {}) {
+export default function ostinato({ out = 'build', precompress = true, headers = {} } = {}) {
 	const startedAt = Date.now();
 
 	return {
@@ -104,7 +118,7 @@ export default function ostinato({ out = 'build', precompress = true } = {}) {
 				]);
 			}</code></pre>
 </figure>
-<h3 id="the-split">The split, and a manifest per function</h3>
+<h3 id="the-split">The split, and a server per function</h3>
 
 <figure class="code">
 	<figcaption>
@@ -136,7 +150,7 @@ export default function ostinato({ out = 'build', precompress = true } = {}) {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">adapters/ostinato/partition.js<span class="code__lines">:23-48</span></span>
+		<span class="code__file">adapters/ostinato/partition.js<span class="code__lines">:23-49</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -151,7 +165,8 @@ export function isApi(route) {
 /**
  * Split the route table. Fully prerendered routes go to neither function —
  * they are files, and the runtime serves them as files — which mirrors what
- * `builder.generateManifest()` does by default when no subset is given.
+ * `builder.generateServerInstance()` does by default when no `routes` subset is
+ * given.
  *
  * @template {RouteLike} R
  * @param {R[]} routes
@@ -174,7 +189,7 @@ export function partition(routes) {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">adapters/ostinato/index.js<span class="code__lines">:76-121</span></span>
+		<span class="code__file">adapters/ostinato/index.js<span class="code__lines">:87-142</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/*
@@ -182,12 +197,22 @@ export function partition(routes) {
  * ---------
  * `builder.routes` is every route with its pattern and its prerender
  * setting. `partition` decides which function owns which, and each
- * function gets a manifest that knows *only* its own routes.
+ * function gets a server whose manifest knows *only* its own routes.
  *
- * The third manifest has no routes at all. A `Server` built from it can
- * still run the hooks — and when `reroute` changes the path of a request
- * it received, SvelteKit sets an `x-sveltekit-rerouted-url` header on the
- * response, which is what `applyReroute` reads in `files/handler.js`.
+ * `generateServerInstance` writes a whole module — the manifest, the
+ * import of the runtime, and `export const server`, already constructed.
+ * SvelteKit 3.0 replaced `generateManifest` with it, and the difference is
+ * what the adapter gets to see: a manifest string to pair with a `Server`
+ * class before, and no server manifest at all now. The shape of one is
+ * SvelteKit's business, and an adapter that read it would break on the
+ * next change to it; `routes` is still the hook for a subset, and
+ * `builder.manifest` is there for an adapter that wants `$app/manifest`'s
+ * list of the app's files.
+ *
+ * The third server has no routes at all. It can still run the hooks — and
+ * when `reroute` changes the path of a request it received, SvelteKit sets
+ * an `x-sveltekit-rerouted-url` header on the response, which is what
+ * `applyReroute` reads in `files/handler.js`.
  */
 const split = partition(builder.routes);
 builder.log.info(
@@ -196,18 +221,16 @@ builder.log.info(
 );
 
 const server = builder.getServerDirectory();
-const manifest = (/** @type {typeof split.pages} */ routes) =&gt;
-	`export const manifest = ${builder.generateManifest({ relativePath: './', routes })};`;
-
-writeFileSync(`${server}/manifest-pages.js`, manifest(split.pages));
-writeFileSync(`${server}/manifest-api.js`, manifest(split.api));
-writeFileSync(`${server}/manifest-router.js`, manifest([]));
+builder.generateServerInstance(`${server}/server-pages.js`, { routes: split.pages });
+builder.generateServerInstance(`${server}/server-api.js`, { routes: split.api });
+builder.generateServerInstance(`${server}/server-router.js`, { routes: [] });
 
 /*
  * What the runtime needs to know that only the build knows: the origin
- * baked in for CSRF, which paths are prerendered files, and the route
+ * baked in for CSRF, which paths are prerendered files, the route
  * patterns each function answers to — as regex sources, because a RegExp
- * does not survive `JSON.stringify` and a string does.
+ * does not survive `JSON.stringify` and a string does — and the headers
+ * the files it serves itself must carry.
  */
 writeFileSync(
 	`${server}/entries.js`,
@@ -215,27 +238,87 @@ writeFileSync(
 		`export const origin = ${JSON.stringify(builder.config.paths.origin || null)};`,
 		`export const base = ${JSON.stringify(builder.config.paths.base)};`,
 		`export const appDir = ${JSON.stringify(builder.config.appDir)};`,
+		`export const functions = ${JSON.stringify(FUNCTIONS)};`,
 		`export const prerendered = new Set(${JSON.stringify(builder.prerendered.paths)});`,
 		`export const patterns = ${JSON.stringify({
 			pages: split.pages.map((route) =&gt; route.pattern.source),
 			api: split.api.map((route) =&gt; route.pattern.source)
 		})};`,
-		`export const precompress = ${JSON.stringify(precompress)};`
+		`export const precompress = ${JSON.stringify(precompress)};`,
+		`export const headers = ${JSON.stringify(headers)};`
 	].join('\n')
 );</code></pre>
 </figure>
-<p><code>builder.generateManifest({ routes })</code> produces a manifest that knows *only* those routes. Three are written: pages, api, and one with no routes at all. A <code>Server</code> built from the empty manifest can still run the hooks — and when <code>reroute</code> changes the path of a request it received, SvelteKit sets an <code>x-sveltekit-rerouted-url</code> header on the response. That header is set only when the manifest has zero routes, which is why the catch-all is route-less rather than a copy of pages. <code>entries.js</code> carries what the runtime needs that only the build knows: the origin baked in for CSRF, the prerendered paths, the route patterns as regex sources.</p>
+<p><code>builder.generateServerInstance(dest, { routes })</code> writes a module whose <code>server</code> knows *only* those routes. Three are written: pages, api, and one with no routes at all. It replaced <code>generateManifest</code> in 3.0, and the difference is what the adapter gets to see: a manifest string to pair with a <code>Server</code> class before, no server manifest at all now — its shape is SvelteKit’s business, <code>SSRManifest</code> is no longer a public type, and an adapter that read it would break on the next change. (<code>builder.manifest</code> is still there, and the migration guide points adapters at it: it is <code>$app/manifest</code>, the list of the app’s files, not the server’s route table.) A server with no routes can still run the hooks — and when <code>reroute</code> changes the path of a request it received, SvelteKit sets an <code>x-sveltekit-rerouted-url</code> header on the response. That header is set only when the route table is empty, which is why the catch-all is route-less rather than a copy of pages. <code>entries.js</code> carries what the runtime needs that only the build knows: the origin baked in for CSRF, the prerendered paths, the route patterns as regex sources, and the headers the files must carry (ch. 36).</p>
 <h3 id="bundling">Bundling the runtime</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">adapters/ostinato/index.js<span class="code__lines">:123-189</span></span>
+		<span class="code__file">adapters/ostinato/index.js<span class="code__lines">:144-213</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">builder.log.minor('Building server');
 
-// Copy the runtime beside the server output, then bundle the two together
-// so that shared modules exist once.
+const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
+
+/*
+ * Production dependencies stay external; they are installed on the
+ * target. Everything else — including this adapter's own `sirv` — is
+ * bundled in, which is what lets `build/` run with `pnpm install --prod`.
+ * The SvelteKit runtime and `instrumentation.server.js` must share one
+ * copy of the OpenTelemetry API, or the spans go to two different worlds.
+ */
+const external = [
+	...Object.keys(pkg.dependencies || {}).map(
+		(d) =&gt; new RegExp(`^${escapeRegex(d)}(\\/.*)?$`)
+	),
+	/^@opentelemetry\/api(\/.*)?$/
+];
+
+/*
+ * ONE BUNDLE PER FUNCTION
+ * -----------------------
+ * SvelteKit 3 configures a server as *module-level* state: `server.init`
+ * writes the manifest into the runtime that `server.respond` reads, and
+ * one module graph holds exactly one of them. Put three servers in one
+ * bundle and the last `init` wins — every route answers 404, from the
+ * right function, which is how this was found. (SvelteKit 2's `Server`
+ * class kept its manifest on the instance, so the first version of this
+ * adapter shared one bundle; 3.0 took that away along with the class.)
+ *
+ * So each function is bundled on its own, with its own copy of the app
+ * and of the runtime, and the process imports the three results by path.
+ * Bigger than one bundle, and also the truth: on a real multi-function
+ * platform a function *is* its own deployment, and nothing it keeps in a
+ * module variable is visible to its neighbours. `lib/server/tracing.ts`
+ * says what that cost the span ring.
+ */
+for (const fn of FUNCTIONS) {
+	const bundle = await rolldown({
+		input: { index: `${server}/server-${fn}.js` },
+		external,
+		platform: 'node',
+		resolve: { conditionNames: ['node'] }
+	});
+	await bundle.write({
+		dir: `${out}/functions/${fn}`,
+		format: 'esm',
+		sourcemap: true,
+		chunkFileNames: 'chunks/[name]-[hash].js'
+	});
+}
+
+/*
+ * THE PROCESS
+ * -----------
+ * `files/` is the HTTP server and the dispatcher, bundled once more on
+ * its own. The three functions are not in this bundle at all: `handler.js`
+ * loads `functions/&lt;name&gt;/index.js` with a dynamic `import()` of a path it
+ * computes from `dir.js` when the process starts, and a bundler leaves a
+ * computed path alone. That is the whole reason their module graphs stay
+ * apart — and why the list of names travels through `entries.js` rather
+ * than being spelled twice.
+ */
 const entries = `${tmp}/entries`.replace(/\\/g, '/');
 builder.copy(files, entries);
 
@@ -243,27 +326,46 @@ builder.copy(files, entries);
 const input = {
 	index: `${entries}/index.js`,
 	handler: `${entries}/handler.js`
-};
+};</code></pre>
+</figure>
+<p>Four bundles, not one. SvelteKit 3 configures a server as *module-level* state — <code>server.init</code> writes the manifest into the runtime that <code>server.respond</code> reads — so one module graph holds exactly one server, and three in one bundle means the last <code>init</code> wins and every route answers 404. Each function is therefore bundled on its own under <code>functions/</code>, with its own copy of the app, and the runtime in <code>files/</code> is bundled once more beside them. The runtime does not import the functions at all: <code>handler.js</code> loads <code>functions/&lt;name&gt;/index.js</code> by path when the process starts, and the names travel through <code>entries.js</code>. Production dependencies stay external and everything else is bundled in, so <code>build/</code> runs with <code>pnpm install --prod</code>. One thing must not be bundled twice: the OpenTelemetry API, or the SvelteKit runtime and the instrumentation file would report spans to two different worlds. And one thing must be bundled *with* the server rather than beside it: the instrumentation initialiser from <code>createInstrumentationInitializer</code>, which fills in the environment before <code>instrumentation.server.js</code> runs and has to share the server’s copy of <code>env.js</code> to do it — hence the extra entry.</p>
 
+<figure class="code">
+	<figcaption>
+		<span class="code__file">adapters/ostinato/index.js<span class="code__lines">:215-234</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/*
+ * INSTRUMENTATION, PART ONE: THE INITIALIZER
+ * ------------------------------------------
+ * Since 3.0 the environment variables are populated *before*
+ * `instrumentation.server.js` runs, so that an exporter can read its
+ * endpoint from `$app/env/private` like any other module. The code that
+ * does the populating is generated here by
+ * `createInstrumentationInitializer`, and it goes through the same
+ * bundling step as the file it serves: it imports the runtime's `env.js`,
+ * and the two must end up sharing one copy of that module or the
+ * initializer would fill in an environment nobody reads. Hence an entry
+ * of its own, and `initializer` pointing at the *bundled* file when
+ * `instrument` runs below.
+ */
+let initializer = null;
 if (builder.hasServerInstrumentationFile()) {
 	input['instrumentation.server'] = `${server}/instrumentation.server.js`;
-}
+	input['env-init'] = builder.createInstrumentationInitializer({ outputDirectory: tmp });
+	initializer = `${out}/env-init.js`;
+}</code></pre>
+</figure>
+<p><code>builder.instrument</code> renames <code>index.js</code> to <code>start.js</code> and writes a new <code>index.js</code> that imports the initialiser, then the instrumentation file, and *then* dynamically imports <code>start.js</code>. That order is the whole feature (ch. 32): the environment exists before the SDK asks for it, and the SDK is registered before the modules it patches are loaded.</p>
 
-const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
-
-const bundle = await rolldown({
+<figure class="code">
+	<figcaption>
+		<span class="code__file">adapters/ostinato/index.js<span class="code__lines">:236-291</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">const bundle = await rolldown({
 	input,
-	external: [
-		// Production dependencies stay external; they are installed on the
-		// target. Everything else — including this adapter's own `sirv` — is
-		// bundled in, which is what lets `build/` run with `pnpm install --prod`.
-		...Object.keys(pkg.dependencies || {}).map(
-			(d) =&gt; new RegExp(`^${escapeRegex(d)}(\\/.*)?$`)
-		),
-		// The SvelteKit runtime and `instrumentation.server.js` must share one
-		// copy of the OpenTelemetry API, or the spans go to two different worlds.
-		/^@opentelemetry\/api(\/.*)?$/
-	],
+	external,
 	platform: 'node',
 	resolve: { conditionNames: ['node'] },
 	plugins: [
@@ -271,10 +373,6 @@ const bundle = await rolldown({
 			// The runtime imports these by name; they exist only after the build.
 			name: 'adapter-ostinato:resolve-app',
 			resolveId(id) {
-				if (id === 'SERVER') return `${server}/index.js`;
-				if (id === 'MANIFEST_PAGES') return `${server}/manifest-pages.js`;
-				if (id === 'MANIFEST_API') return `${server}/manifest-api.js`;
-				if (id === 'MANIFEST_ROUTER') return `${server}/manifest-router.js`;
 				if (id === 'ENTRIES') return `${server}/entries.js`;
 				// The runtime shares `pick` with the build step; it lives beside
 				// this file, not beside the copied runtime.
@@ -292,96 +390,98 @@ await bundle.write({
 	/*
 	 * `dir.js` must land at the top of `build/`, on its own, because it
 	 * computes the build directory from its *own* location. Bundled into a
-	 * chunk under `server/chunks/` it would report that folder instead, and
-	 * every static file would 404.
+	 * chunk under `chunks/` it would report that folder instead, and every
+	 * static file — and every function — would be looked for in the wrong
+	 * place. Nothing else gets a promise about where it lands: `handler.js`
+	 * is an entry and *still* ends up mostly in a chunk, because `index.js`
+	 * imports it and a bundler puts shared code in one place. Which is why
+	 * everything that needs a location asks `dir.js` for it.
 	 */
 	codeSplitting: { groups: [{ name: 'dir', test: `${entries}/dir.js` }] },
-	chunkFileNames: (chunk) =&gt;
-		chunk.name === 'dir' ? '[name].js' : 'server/chunks/[name]-[hash].js'
-});</code></pre>
-</figure>
-<p>The runtime in <code>files/</code> imports <code>SERVER</code>, <code>MANIFEST_PAGES</code> and friends by name — modules that exist only after the build. A rolldown plugin resolves each to the generated file. Production dependencies stay external and everything else is bundled in, so <code>build/</code> runs with <code>pnpm install --prod</code>. One thing must not be bundled twice: the OpenTelemetry API, or the SvelteKit runtime and the instrumentation file would report spans to two different worlds.</p>
+	chunkFileNames: (chunk) =&gt; (chunk.name === 'dir' ? '[name].js' : 'chunks/[name]-[hash].js')
+});
 
-<figure class="code">
-	<figcaption>
-		<span class="code__file">adapters/ostinato/index.js<span class="code__lines">:191-203</span></span>
-		<button class="code__copy" type="button" data-copy>Copy</button>
-	</figcaption>
-	<pre><code class="lang-ts">/*
+/*
+ * INSTRUMENTATION, PART TWO: THE FACADE
+ * -------------------------------------
  * `builder.instrument` renames `index.js` to `start.js` and writes a new
- * `index.js` that imports the instrumentation file and *then* dynamically
- * imports `start.js`. That order is the whole feature: an OpenTelemetry
- * SDK has to be registered before the modules it patches are loaded.
+ * `index.js` that imports the initializer, then the instrumentation file,
+ * and *then* dynamically imports `start.js`. That order is the whole
+ * feature: an OpenTelemetry SDK has to be registered before the modules
+ * it patches are loaded, and the environment has to exist before the SDK
+ * asks for it.
  */
-if (builder.hasServerInstrumentationFile()) {
+if (initializer) {
 	builder.instrument({
 		entrypoint: `${out}/index.js`,
 		instrumentation: `${out}/instrumentation.server.js`,
+		initializer,
 		module: { exports: ['server', 'host', 'port'] }
 	});
 }</code></pre>
 </figure>
-<p><code>builder.instrument</code> renames <code>index.js</code> to <code>start.js</code> and writes a new <code>index.js</code> that imports the instrumentation file and *then* dynamically imports <code>start.js</code>. That order is the whole feature (ch. 32).</p>
+<p>Three more things an adapter can declare. <code>emulate()</code> fills in <code>event.platform</code> during <code>vite dev</code>, <code>vite build</code> and <code>vite preview</code>, with the same shape the runtime produces, so nothing has to guard against <code>undefined</code>. <code>supports</code> says what the runtime can do — <code>read()</code> from <code>$app/server</code>, instrumentation. And in SvelteKit 3 an adapter can contribute Vite plugins, <code>pre</code> or <code>post</code>: this one provides <code>virtual:adapter</code>, which the diagnostics page imports.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">adapters/ostinato/index.js<span class="code__lines">:206-253</span></span>
+		<span class="code__file">adapters/ostinato/index.js<span class="code__lines">:294-343</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">/**
- * During `vite dev`, `vite build` and `vite preview` there is no adapter
- * runtime, so `event.platform` would be `undefined` and every read of it
- * would need a guard. The emulator fills it in with the same shape the
- * runtime produces, marked so a page can say which it is looking at.
- */
-emulate() {
-	return {
-		platform: () =&gt; ({ adapter: 'adapter-ostinato (emulated)', entry: 'pages', startedAt })
-	};
-},
+	<pre><code class="lang-ts">		/**
+		 * During `vite dev`, `vite build` and `vite preview` there is no adapter
+		 * runtime, so `event.platform` would be `undefined` and every read of it
+		 * would need a guard. The emulator fills it in with the same shape the
+		 * runtime produces, marked so a page can say which it is looking at.
+		 */
+		emulate() {
+			return {
+				platform: () =&gt; ({ adapter: 'adapter-ostinato (emulated)', entry: 'pages', startedAt })
+			};
+		},
 
-supports: {
-	// `read()` from `$app/server` works: the runtime streams files from `client/`.
-	read: () =&gt; true,
-	// `instrumentation.server.js` is loaded before the app — see `builder.instrument` above.
-	instrumentation: () =&gt; true
-},
+		supports: {
+			// `read()` from `$app/server` works: the runtime streams files from `client/`.
+			read: () =&gt; true,
+			// `instrumentation.server.js` is loaded before the app — see `builder.instrument` above.
+			instrumentation: () =&gt; true
+		},
 
-/*
- * ADAPTER-PROVIDED VITE PLUGINS (SvelteKit 3.0.0-next.18)
- * -------------------------------------------------------
- * An adapter can contribute Vite plugins, placed before (`pre`) or after
- * (`post`) SvelteKit's own. This one provides a virtual module so that the
- * app can say which adapter built it without hard-coding the name — the
- * diagnostics page imports it. `pre`, because a module that other modules
- * import has to be resolvable before SvelteKit's plugins start asking.
- */
-vite: {
-	plugins: {
-		pre: [
-			{
-				name: 'adapter-ostinato:virtual-module',
-				resolveId(id) {
-					return id === 'virtual:adapter' ? '\0virtual:adapter' : null;
-				},
-				load(id) {
-					if (id !== '\0virtual:adapter') return null;
-					return [
-						`export const name = 'adapter-ostinato';`,
-						`export const entries = ['pages', 'api', 'router'];`,
-						`export const precompress = ${JSON.stringify(precompress)};`
-					].join('\n');
-				}
+		/*
+		 * ADAPTER-PROVIDED VITE PLUGINS
+		 * -----------------------------
+		 * An adapter can contribute Vite plugins, placed before (`pre`) or after
+		 * (`post`) SvelteKit's own. This one provides a virtual module so that the
+		 * app can say which adapter built it without hard-coding the name — the
+		 * diagnostics page imports it. `pre`, because a module that other modules
+		 * import has to be resolvable before SvelteKit's plugins start asking.
+		 */
+		vite: {
+			plugins: {
+				pre: [
+					{
+						name: 'adapter-ostinato:virtual-module',
+						resolveId(id) {
+							return id === 'virtual:adapter' ? '\0virtual:adapter' : null;
+						},
+						load(id) {
+							if (id !== '\0virtual:adapter') return null;
+							return [
+								`export const name = 'adapter-ostinato';`,
+								`export const entries = ${JSON.stringify(FUNCTIONS)};`,
+								`export const precompress = ${JSON.stringify(precompress)};`
+							].join('\n');
+						}
+					}
+				]
 			}
-		]
-	}
+		}
+	};
 }</code></pre>
 </figure>
-<p>Three more things an adapter can declare. <code>emulate()</code> fills in <code>event.platform</code> during <code>vite dev</code> and <code>vite preview</code>, with the same shape the runtime produces, so nothing has to guard against <code>undefined</code>. <code>supports</code> says what the runtime can do — <code>read()</code> from <code>$app/server</code>, instrumentation. And since SvelteKit 3.0.0-next.18 an adapter can contribute Vite plugins, <code>pre</code> or <code>post</code>: this one provides <code>virtual:adapter</code>, which the diagnostics page imports.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/app.d.ts<span class="code__lines">:41-54</span></span>
+		<span class="code__file">src/app.d.ts<span class="code__lines">:41-55</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">interface Platform {
@@ -389,8 +489,9 @@ vite: {
 	 * What the adapter knows that the framework does not.
 	 *
 	 * `adapters/ostinato` fills this in from its runtime, and `emulate()` in
-	 * the same file fills it in during `vite dev` and `vite preview`, so code
-	 * reading `event.platform` sees the same shape everywhere.
+	 * the same file fills it in during `vite dev`, `vite build` and
+	 * `vite preview`, so code reading `event.platform` sees the same shape
+	 * everywhere.
 	 */
 	adapter: string;
 	/** Which of the adapter's functions answered — the two real ones, or the catch-all. */
@@ -399,6 +500,7 @@ vite: {
 	startedAt: number;
 }</code></pre>
 </figure>
+<p><code>App.Platform</code> is the shape both of them promise. <code>entry</code> is the function that answered, and the runtime reports the truth — <code>router</code> for the catch-all. It once reported the catch-all as <code>pages</code>, which made the type’s third member a value nothing ever saw, and hid a branch in <code>handleFetch</code> that could never run (ch. 26).</p>
 <h3 id="the-runtime">The runtime: four steps per request</h3>
 
 <figure class="code">
@@ -416,7 +518,7 @@ vite: {
  *      `_app/immutable` files) and `prerendered/`
  *   2. otherwise, which function? — `pick` matches the path against the route
  *      patterns each function owns
- *   3. that function's `Server.respond`
+ *   3. that function's `server.respond`
  *   4. if that function was the catch-all and the `reroute` hook moved the
  *      request, `applyReroute` hands it to the function that owns the new path
  *
@@ -427,33 +529,60 @@ vite: {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">adapters/ostinato/files/handler.js<span class="code__lines">:19-61</span></span>
+		<span class="code__file">adapters/ostinato/files/handler.js<span class="code__lines">:19-88</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">import process from 'node:process';
+	<pre><code class="lang-ts">import { pathToFileURL } from 'node:url';
 import sirv from 'sirv';
 import { createReadableStream, getRequest, setResponse } from '@sveltejs/kit/node';
 import { applyReroute } from '@sveltejs/kit/adapter';
-import { Server } from 'SERVER';
-import { manifest as pagesManifest } from 'MANIFEST_PAGES';
-import { manifest as apiManifest } from 'MANIFEST_API';
-import { manifest as routerManifest } from 'MANIFEST_ROUTER';
-import { appDir, base, origin, patterns, precompress, prerendered } from 'ENTRIES';
+import {
+	appDir,
+	base,
+	functions,
+	headers,
+	origin,
+	patterns,
+	precompress,
+	prerendered
+} from 'ENTRIES';
 import { dir } from './dir.js';
 import { pick } from 'PARTITION';
 
 const startedAt = Date.now();
 
+/** @typedef {(typeof functions)[number]} Entry */
+
 /*
- * Three servers from three manifests. Each is the whole SvelteKit runtime with
- * a different idea of which routes exist; the code behind the routes is shared,
- * because the bundle has one copy of it.
+ * Three servers, each written by `builder.generateServerInstance` with a
+ * different idea of which routes exist, and each in a bundle of its own under
+ * `functions/` — `../index.js` says why they cannot share one. Each is the
+ * whole SvelteKit runtime, `init` and `respond` and nothing else, over its own
+ * copy of the app. SvelteKit 3.0 deprecated the `Server` class in favour of
+ * these ready-made objects: an adapter no longer builds a server from a
+ * manifest, it imports one.
+ *
+ * Imported *by path, at run time*, with a dynamic `import()` the bundler is
+ * not allowed to touch — `functions/&lt;name&gt;/index.js` next to `dir.js`, which
+ * knows where the build is. The first version of this file used three static
+ * imports and asked rolldown to rewrite them into relative paths, and it did,
+ * verbatim: `./functions/pages/index.js`. The trouble is that the module the
+ * rewrite lands in is wherever the bundler put this code — `index.js` and
+ * `handler.js` are both entries, so the body they share became a chunk under
+ * `chunks/` — and from there `./functions/` is a folder that does not exist.
+ * The server died on its first import. A path computed from `dir` is right
+ * from any chunk, which is the same reason `dir.js` exists for `client/`.
  */
-const servers = {
-	pages: new Server(pagesManifest),
-	api: new Server(apiManifest),
-	router: new Server(routerManifest)
-};
+/** @type {Record&lt;Entry, import('@sveltejs/kit').Server&gt;} */
+const servers = Object.fromEntries(
+	await Promise.all(
+		functions.map(async (fn) =&gt; {
+			/** @type {{ server: import('@sveltejs/kit').Server }} */
+			const { server } = await import(pathToFileURL(`${dir}/functions/${fn}/index.js`).href);
+			return [fn, server];
+		})
+	)
+);
 
 const compiled = {
 	pages: patterns.pages.map((source) =&gt; new RegExp(source)),
@@ -474,11 +603,11 @@ const ready = Promise.all(
 	)
 );</code></pre>
 </figure>
-<p>Three <code>Server</code>s from three manifests — the whole SvelteKit runtime each, with a different idea of which routes exist; the code behind the routes is shared, because the bundle has one copy. <code>server.init</code> runs the app’s <code>init</code> hook and hands each server its environment and a <code>read</code> implementation that streams files from <code>client/</code>.</p>
+<p>Three <code>server</code>s, each written by <code>generateServerInstance</code> — the whole SvelteKit runtime each, <code>init</code> and <code>respond</code> and nothing else, with a different idea of which routes exist, each in a bundle of its own. 3.0 deprecated the <code>Server</code> class for these ready-made objects: an adapter no longer builds a server from a manifest, it imports one. It imports them *by path*, with a dynamic <code>import()</code> computed from <code>dir.js</code>, and the comment says why the obvious alternative failed: three static imports rewritten by rolldown into <code>./functions/…</code> land in whatever chunk the bundler put this code in — <code>index.js</code> and <code>handler.js</code> are both entries, so their shared body became <code>chunks/handler-….js</code> — and from there the relative path points at nothing. The end-to-end suite found that one on its first run against the new adapter. <code>server.init</code> runs the app’s <code>init</code> hook and hands each server its environment and a <code>read</code> implementation that streams files from <code>client/</code>.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">adapters/ostinato/partition.js<span class="code__lines">:62-81</span></span>
+		<span class="code__file">adapters/ostinato/partition.js<span class="code__lines">:63-82</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -505,20 +634,26 @@ export function pick(pathname, patterns) {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">adapters/ostinato/files/handler.js<span class="code__lines">:126-163</span></span>
+		<span class="code__file">adapters/ostinato/files/handler.js<span class="code__lines">:157-198</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
- * The origin SvelteKit compares against for CSRF: baked in at build time when
- * `PUBLIC_ORIGIN` was set, else `ORIGIN` from the environment, else guessed
- * from the request — which is the guess that goes wrong behind a proxy, and
- * why the first two options exist.
+ * The origin SvelteKit compares against for CSRF: baked in at build time from
+ * `paths.origin` — which `vite.config.ts` fills from `PUBLIC_ORIGIN` — else
+ * guessed from the request, which is the guess that goes wrong behind a proxy
+ * and why the first option exists.
+ *
+ * There used to be a third option between those two: an `ORIGIN` environment
+ * variable read when the process started. adapter-node 6 removed it in favour
+ * of the config value, and this adapter follows, for the reason `PUBLIC_ORIGIN`
+ * is declared `static` in `src/env.ts`: an origin that could differ between the
+ * build and the process would make the CSRF check compare two different
+ * origins, and the way to make a mismatch impossible is to have one place.
  *
  * @param {import('node:http').IncomingMessage} req
  */
 function originFor(req) {
 	if (origin) return origin;
-	if (process.env.ORIGIN) return process.env.ORIGIN;
 
 	const protocol = req.headers['x-forwarded-proto'] ?? 'http';
 	const host = req.headers['x-forwarded-host'] ?? req.headers.host ?? 'localhost';
@@ -526,7 +661,7 @@ function originFor(req) {
 }
 
 /**
- * @param {'pages' | 'api' | 'router'} entry
+ * @param {Entry} entry
  * @param {Request} request
  * @param {import('node:http').IncomingMessage} req
  */
@@ -539,19 +674,17 @@ function respond(entry, request, req) {
 		},
 		// `event.platform` in the app. `emulate()` in `../index.js` produces the
 		// same shape during development, so nothing has to guard against `undefined`.
-		platform: {
-			adapter: 'adapter-ostinato',
-			entry: entry === 'router' ? 'pages' : entry,
-			startedAt
-		}
+		// `entry` is the truth, catch-all included: nothing in the app branches on
+		// it, and a diagnostics page that said `pages` for a 404 would be lying.
+		platform: { adapter: 'adapter-ostinato', entry, startedAt }
 	});
 }</code></pre>
 </figure>
-<p><code>originFor</code> is the origin SvelteKit compares against for CSRF: baked in at build time, else <code>ORIGIN</code> from the environment, else guessed from the headers — the guess that goes wrong behind a proxy, and why the first two exist. <code>respond</code> passes <code>platform</code>, which becomes <code>event.platform</code> in the app: the adapter’s name, which function answered, when the process started.</p>
+<p><code>originFor</code> is the origin SvelteKit compares against for CSRF: baked in at build time from <code>paths.origin</code>, else guessed from the headers — the guess that goes wrong behind a proxy, and why the first exists. There used to be an <code>ORIGIN</code> environment variable between the two; adapter-node 6 removed it and this adapter follows, because an origin that could differ between the build and the process is exactly what <code>static: true</code> on <code>PUBLIC_ORIGIN</code> rules out (ch. 36). <code>getRequest</code> is synchronous in 3.0 — the body becomes a stream, nothing is read yet — so there is no <code>await</code> on it. <code>respond</code> passes <code>platform</code>, which becomes <code>event.platform</code> in the app: the adapter’s name, which function answered — catch-all included — and when the process started.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">adapters/ostinato/files/handler.js<span class="code__lines">:165-211</span></span>
+		<span class="code__file">adapters/ostinato/files/handler.js<span class="code__lines">:200-248</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -564,7 +697,9 @@ async function sveltekit(req, res) {
 	/** @type {Request} */
 	let request;
 	try {
-		request = await getRequest({ request: req, base: originFor(req), bodySizeLimit: 512 * 1024 });
+		// Synchronous since 3.0: the body becomes a stream, nothing is read yet,
+		// so there was never anything to wait for and now there is no `await`.
+		request = getRequest({ request: req, base: originFor(req), bodySizeLimit: 512 * 1024 });
 	} catch {
 		res.statusCode = 400;
 		res.end('Bad Request');
@@ -607,11 +742,11 @@ async function sveltekit(req, res) {
 	<h4>Why <code>applyReroute</code></h4>
 	<p>The catch-all has no routes. If its <code>reroute</code> hook produced a different path, the response carries <code>x-sveltekit-rerouted-url</code>, and <code>applyReroute(response, next)</code> calls <code>next</code> with that URL; otherwise it returns the response untouched — a 404, or <code>/_app/env.js</code>, which every server can answer. The rerouted request is a *new* request to the owning function, so <code>event.url</code> there is the rerouted URL. That is the same trade every multi-function platform makes, and it is why the <code>reroute</code> hook is documented as not changing <code>event.url</code>: within one function it does not; across two, the second never saw the original.</p>
 </aside>
-<aside class="callout callout--warn"><p>Two things bit while building this, both about the catch-all having no routes. SvelteKit’s in-process same-origin <code>fetch</code> in a route-less server falls through to a *real* <code>fetch</code>, so <code>PUBLIC_ORIGIN</code> must match the port the server is actually on — the end-to-end config sets both. And <code>handleFetch</code> has to use <code>globalThis.fetch</code> when <code>event.platform.entry</code> is <code>router</code> (ch. 26), or the resolver call answers itself with a 404.</p></aside>
+<aside class="callout callout--warn"><p>The catch-all having no routes has one consequence worth knowing before it bites. When its <code>reroute</code> hook fetches <code>/api/resolve</code>, SvelteKit tries to answer in-process, finds no route, and — because it is a sub-request — makes a real HTTP request to the request’s own origin instead (<code>respond.js</code>, ch. 26). That request goes to <code>PUBLIC_ORIGIN</code>, so <code>PUBLIC_ORIGIN</code> must name the port the server is actually on; the end-to-end config sets both. Nothing in <code>handleFetch</code> has to help: an earlier version switched to <code>globalThis.fetch</code> itself for the catch-all, and that branch never ran, because SvelteKit had already done it.</p></aside>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">adapters/ostinato/files/handler.js<span class="code__lines">:217-231</span></span>
+		<span class="code__file">adapters/ostinato/files/handler.js<span class="code__lines">:254-268</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -669,7 +804,7 @@ process.on('SIGINT', shutdown);</code></pre>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>
-	<ul><li>You can list the five things every adapter does and the two that only this one does.</li><li>You can say why the third manifest has no routes and what would break if it had one.</li><li>You can trace <code>/@ostinato/four-on-the-floor</code> from the socket to the <code>pages</code> function.</li></ul>
+	<ul><li>You can say which of the five steps every adapter takes, and what this adapter adds to steps 3 and 4.</li><li>You can say why the third server has no routes and what would break if it had one, and why the three cannot share a bundle.</li><li>You can trace <code>/@ostinato/four-on-the-floor</code> from the socket to the <code>pages</code> function.</li></ul>
 </aside>
 		</article>
 

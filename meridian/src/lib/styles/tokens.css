@@ -3,41 +3,90 @@
  * =============
  *
  * Every colour, size and duration the interface uses, named once. Components
- * reference the names; nothing else in the project writes a hex code.
+ * reference the names. A hex code outside this file is a copy made where a
+ * custom property cannot be read — the map's canvas (`map/style.ts`), the
+ * globe's WebGL scene (`globe/Scene.svelte`), the custom element's shadow
+ * root (`embed/MeridianRoute.svelte`) and the `theme-color` meta tags in
+ * `app.html`, which the browser reads before any stylesheet — and each of
+ * those says so where it is written. Two more are not copies: print, in
+ * `base.css`, is black on white whatever the theme, and `#000` in a
+ * `mask-image` gradient is not a colour at all — it means "opaque". (The
+ * hex codes in `design/contrast.spec.ts` are test data for the arithmetic,
+ * not colours anybody sees.)
+ *
+ * Every ratio quoted below is checked, not remembered: `pnpm run lint` ends
+ * with `scripts/contrast.ts`, which reads this file, resolves both sides of
+ * every pair the design puts on top of each other, and fails under the
+ * floor — 4.5:1 for text, 3:1 for an edge or a ring. `--report` prints the
+ * table.
  *
  * Colour is done with `light-dark()`: each token holds its light value and
  * its dark value, and the browser picks by `color-scheme` — which follows
  * the system by default and is pinned by `data-theme` on <html> when a
  * person chooses. No duplicated blocks, no cascade tricks, no flash.
  *
- * The palette is "a map on a table": warm paper, ink, and a teal that reads
- * as water. It is deliberately quiet, because the map, the globe and the
- * photographs are the colour.
+ * The palette is "a map on a table, lit like a film": warm paper, ink, and
+ * one teal that reads as water. It is deliberately quiet, because the map,
+ * the globe and the route are the colour. Everything saturated that is not
+ * teal is a stop kind or a state (warning, danger) — never a second accent.
  */
 
 :root {
 	color-scheme: light dark;
 
-	/* Surfaces */
+	/*
+	 * SURFACE TIERS
+	 * 0 canvas · 1 raised (cards, inputs) · 2 sunken/hover (chips, table
+	 * head) · 3 overlay (dialog, popover, toast, nav sheet).
+	 *
+	 * In light mode tiers 1 and 3 are both white: the tier is told apart by
+	 * shadow and the hairline ring below. In dark mode a lighter surface *is*
+	 * the elevation, so every tier is one visible step up and shadows are
+	 * nearly invisible — which is how dark interfaces read as solid rather
+	 * than smeared.
+	 */
 	--paper: light-dark(#f8f5ee, #101318);
 	--paper-2: light-dark(#ffffff, #171b22);
 	--paper-3: light-dark(#efeae0, #1e232c);
-	--line: light-dark(#dcd5c7, #2b323d);
+	--paper-4: light-dark(#ffffff, #242a34);
+	--line: light-dark(#e2dccf, #2b323d);
 	--line-2: light-dark(#c9c0ae, #3a4350);
+	--line-3: light-dark(#b5ab97, #4a5566);
 
-	/* Ink */
+	/*
+	 * INK
+	 * `--ink-3` is the darkest "tertiary" grey that still passes AA (4.5:1)
+	 * as small text on every tier — 5.36:1 on paper, 4.87:1 on paper-3 in
+	 * light. `--ink-4` does not, and is for things that are not text: grips,
+	 * disabled icons, the dots between facts.
+	 */
 	--ink: light-dark(#171a1f, #eef1f5);
 	--ink-2: light-dark(#4b5160, #aeb6c2);
-	--ink-3: light-dark(#7a8191, #7c8595);
+	--ink-3: light-dark(#5f6574, #8b95a5);
+	--ink-4: light-dark(#8a9099, #6b7484);
 
-	/* Accents */
+	/* The accent. Hover goes darker in light and lighter in dark: towards the ink, never away. */
 	--sea: light-dark(#0f766e, #2dd4bf);
-	--sea-2: light-dark(#0d9488, #5eead4);
+	--sea-strong: light-dark(#0b5f59, #5eead4);
 	--sea-soft: light-dark(#d6f0ec, #103b37);
-	--sun: light-dark(#b45309, #f59e0b);
+	--on-sea: light-dark(#ffffff, #052926);
+
+	/* State colours, not accents. Light `--sun` is pulled down to 5.75:1 on paper so the "food" chip is readable. */
+	--sun: light-dark(#9a4a06, #f59e0b);
 	--sun-soft: light-dark(#fdebd0, #3d2a08);
 	--coral: light-dark(#be123c, #fb7185);
 	--coral-soft: light-dark(#fde2e7, #4a1220);
+	--ok: var(
+		--sea
+	); /* success is the brand colour; there is no green (the toast's check reads it) */
+
+	/*
+	 * Text on any saturated fill: pins, route numbers, avatars. Dark kind
+	 * colours are pastel, so white on them fails (1.86:1 on dark `--sea`);
+	 * near-black ink reads at 6.19:1 or better on every one. In light the
+	 * kinds are deep enough for white, at 5.17:1 or better.
+	 */
+	--on-fill: light-dark(#ffffff, #0b1220);
 
 	/* Stop kinds — one hue each, used on the map and in the itinerary */
 	--kind-place: var(--sea);
@@ -47,8 +96,29 @@
 	--kind-activity: var(--coral);
 	--kind-idea: var(--ink-3);
 
-	/* Focus */
+	/* Focus: a 2px ring and a soft halo, so it survives on hovered surfaces */
 	--focus: light-dark(#2563eb, #93c5fd);
+	--focus-halo: light-dark(rgb(37 99 235 / 0.18), rgb(147 197 253 / 0.25));
+
+	/*
+	 * The edge of a chosen segment (theme toggle, notes toolbar, stop kind).
+	 * A tier step alone is 1.1:1 in dark and 1.2:1 in light — a state nobody
+	 * can see — so the chosen pill also draws a 1px edge at 3:1 or better
+	 * against both the track (3.21 / 3.35) and itself (3.84 / 3.06).
+	 */
+	--segment-edge: light-dark(#8a8172, #6b7484);
+
+	/* The scrim behind a dialog or sheet */
+	--scrim: light-dark(rgb(23 26 31 / 0.45), rgb(0 0 0 / 0.6));
+
+	/*
+	 * NIGHT — the globe's frame. Not `light-dark()`: the globe is a night
+	 * scene in both themes (space is dark), so these are one value each.
+	 * `--night-ink` is 10.4:1 on `--night`.
+	 */
+	--night: #0a1220;
+	--night-ink: #b3c3d1;
+	--night-raised: rgb(255 255 255 / 0.05);
 
 	/* Type */
 	--font-display: 'Fraunces Variable', Georgia, 'Times New Roman', serif;
@@ -56,16 +126,37 @@
 		'Inter Variable', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 	--font-mono: ui-monospace, 'SF Mono', 'Cascadia Mono', Menlo, monospace;
 
-	/* A fluid scale: each step is a clamp between a phone and a desktop size. */
-	--text-xs: clamp(0.75rem, 0.72rem + 0.15vw, 0.8125rem);
-	--text-sm: clamp(0.875rem, 0.85rem + 0.15vw, 0.9375rem);
-	--text-md: clamp(1rem, 0.96rem + 0.2vw, 1.0625rem);
-	--text-lg: clamp(1.125rem, 1.05rem + 0.4vw, 1.25rem);
-	--text-xl: clamp(1.375rem, 1.2rem + 0.9vw, 1.75rem);
-	--text-2xl: clamp(1.75rem, 1.4rem + 1.8vw, 2.5rem);
-	--text-3xl: clamp(2.25rem, 1.6rem + 3.2vw, 3.75rem);
+	/*
+	 * A fluid scale: each step is a clamp between a 360px phone (1vw = 3.6px)
+	 * and a 1280px desktop. Eight steps; the last two are for page titles and
+	 * the hero — the trip name uses 2xl so "a page" and "the thing" differ.
+	 */
+	--text-xs: clamp(0.75rem, 0.73rem + 0.1vw, 0.8125rem); /* 12 → 13 */
+	--text-sm: clamp(0.875rem, 0.86rem + 0.1vw, 0.9375rem); /* 14 → 15 */
+	--text-md: clamp(1rem, 0.97rem + 0.15vw, 1.0625rem); /* 16 → 17 */
+	--text-lg: clamp(1.125rem, 1.07rem + 0.3vw, 1.25rem); /* 18 → 20 */
+	--text-xl: clamp(1.375rem, 1.23rem + 0.65vw, 1.625rem); /* 22 → 26 */
+	--text-2xl: clamp(1.75rem, 1.45rem + 1.3vw, 2.25rem); /* 28 → 36 */
+	--text-3xl: clamp(2.375rem, 1.85rem + 2.4vw, 3.5rem); /* 38 → 56 */
+	--text-4xl: clamp(2.875rem, 2.1rem + 3.5vw, 4.5rem); /* 46 → 72 — hero and 404 numeral only */
+
+	/* Leading: the bigger the type, the tighter the lines. */
+	--leading-display: 1.05;
+	--leading-tight: 1.1;
+	--leading-snug: 1.2;
+	--leading-body: 1.55;
+	--leading-ui: 1.4;
+	--leading-prose: 1.65;
+
+	/* Tracking: a 56px serif wants to close up; an 18px one wants to be left alone. */
+	--tracking-4xl: -0.025em;
+	--tracking-3xl: -0.02em;
+	--tracking-2xl: -0.015em;
+	--tracking-xl: -0.01em;
+	--tracking-caps: 0.06em; /* uppercase labels: table th, palette headings, eyebrows */
 
 	/* Space */
+	--space-0: 0.125rem;
 	--space-1: 0.25rem;
 	--space-2: 0.5rem;
 	--space-3: 0.75rem;
@@ -74,32 +165,78 @@
 	--space-6: 2rem;
 	--space-7: 3rem;
 	--space-8: 4rem;
+	--section: clamp(3rem, 2rem + 4vw, 6rem); /* the one fluid padding, for sections */
+	--gutter: var(--space-4); /* 16px phone gutter — a house rule */
 
-	/* Shape */
+	/*
+	 * Shape. Nesting rule: inner radius = outer radius − padding, floor 4px.
+	 * A 14px card with 16px padding holds 4px children; a 20px dialog with
+	 * 24px padding holds 6px inputs.
+	 */
+	--radius-xs: 4px;
 	--radius-sm: 6px;
 	--radius: 10px;
-	--radius-lg: 16px;
+	--radius-lg: 14px;
+	--radius-xl: 20px;
+	--radius-2xl: 28px;
 	--radius-pill: 999px;
 
-	--shadow-1: 0 1px 2px light-dark(rgb(23 26 31 / 0.06), rgb(0 0 0 / 0.4));
+	/* Shadows: light does the lifting; dark is a whisper plus the hairline ring. */
+	--shadow-1: 0 1px 2px light-dark(rgb(23 26 31 / 0.06), rgb(0 0 0 / 0.35));
 	--shadow-2:
-		0 4px 12px light-dark(rgb(23 26 31 / 0.08), rgb(0 0 0 / 0.5)),
-		0 1px 3px light-dark(rgb(23 26 31 / 0.06), rgb(0 0 0 / 0.4));
+		0 4px 12px light-dark(rgb(23 26 31 / 0.08), rgb(0 0 0 / 0.45)),
+		0 1px 3px light-dark(rgb(23 26 31 / 0.06), rgb(0 0 0 / 0.35));
 	--shadow-3:
-		0 16px 40px light-dark(rgb(23 26 31 / 0.14), rgb(0 0 0 / 0.6)),
+		0 24px 48px -12px light-dark(rgb(23 26 31 / 0.18), rgb(0 0 0 / 0.65)),
 		0 2px 6px light-dark(rgb(23 26 31 / 0.08), rgb(0 0 0 / 0.5));
+	/* A 1px inner edge light: how a tier-3 surface shows its top edge in the dark. */
+	--ring-hairline: inset 0 0 0 1px light-dark(rgb(255 255 255 / 0.6), rgb(255 255 255 / 0.06));
 
-	/* Motion — the restraint is the point. */
+	/*
+	 * Layers, in one place. A popover sits above the dialog, not below it:
+	 * the place search opens inside the stop dialog, and a list drawn under
+	 * the scrim is a list nobody can pick from. Toasts stay above all of it.
+	 */
+	--z-header: 30;
+	--z-sticky: 20;
+	--z-banner: 40;
+	--z-scrim: 60;
+	--z-dialog: 61;
+	--z-popover: 62;
+	--z-toast: 70;
+	--z-skip: 80;
+
+	/* Control heights: 44px is the touch minimum, and the phone comes first. */
+	--control: 2.75rem;
+	--control-sm: 2.25rem;
+
+	/*
+	 * MOTION — the restraint is the point.
+	 * Five durations, from a press to a reveal, and three curves: `--ease-in`
+	 * is for exits only (things leaving accelerate away); `--ease-sheet` is
+	 * the iOS bottom-sheet curve and is used by the bottom sheet alone.
+	 */
+	--dur-1: 80ms;
+	--dur-2: 160ms;
+	--dur-3: 240ms;
+	--dur-4: 400ms;
+	--dur-5: 700ms;
+	/* The gap between items arriving one after another: the nav sheet's links. */
+	--stagger: 30ms;
 	--ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
-	--ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
-	--dur-fast: 120ms;
-	--dur: 220ms;
-	--dur-slow: 420ms;
+	--ease-in: cubic-bezier(0.4, 0, 1, 1);
+	--ease-sheet: cubic-bezier(0.32, 0.72, 0, 1);
 
 	/* Layout */
 	--measure: 68ch;
 	--container: 76rem;
 	--header-h: 3.5rem;
+}
+
+@media (min-width: 48em) {
+	:root {
+		--header-h: 4rem;
+	}
 }
 
 /* A person's choice beats the system's. */
@@ -110,10 +247,23 @@
 	color-scheme: dark;
 }
 
+/*
+ * Reduced motion means no motion — not less. Most CSS transitions and
+ * animations read a `--dur-*`, so zeroing them here switches those off. The
+ * few durations written as numbers sit behind a reduced-motion check of
+ * their own: the view transitions are not started at all (`+layout.svelte`),
+ * the live dot's pulse and the home page's card stagger are inside
+ * `prefers-reduced-motion` media queries, and JavaScript-driven motion — the
+ * tab indicator's tween, the list's flip, the map's camera — reads
+ * `reducedMotion` in `src/lib/motion` and becomes 0.
+ */
 @media (prefers-reduced-motion: reduce) {
 	:root {
-		--dur-fast: 0ms;
-		--dur: 0ms;
-		--dur-slow: 0ms;
+		--dur-1: 0ms;
+		--dur-2: 0ms;
+		--dur-3: 0ms;
+		--dur-4: 0ms;
+		--dur-5: 0ms;
+		--stagger: 0ms;
 	}
 }

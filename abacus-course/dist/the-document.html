@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The document, the operations, and the templates — Building Abacus</title>
-<meta name="description" content="What a sheet looks like at rest: a valibot schema shared by the server, the browser and the local file, with inputs and never values. Operations are the unit of change between browsers, and `applyOps` keeps the stored document current without running the engine.">
+<meta name="description" content="What a sheet looks like at rest: a valibot schema shared by the server, the browser and the local file, with inputs and never values. Operations are the unit of change between browsers, and applyOps keeps the stored document current without running the engine.">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -63,7 +63,7 @@ import type { CellFormat } from './format.ts';
 
 const index = (max: number) =&gt; v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(max - 1));</code></pre>
 </figure>
-<p>Two decisions. Cells are a *list*, because a sheet is sparse and a list of forty is forty. And each cell carries its <strong>input</strong>, never its value — values are recomputed on load, because a stored value can disagree with the formula that produced it and a recomputed one cannot.</p>
+<p>Two decisions. Cells are a <em>list</em>, because a sheet is sparse and a list of forty is forty. And each cell carries its <strong>input</strong>, never its value — values are recomputed on load, because a stored value can disagree with the formula that produced it and a recomputed one cannot.</p>
 
 <figure class="code">
 	<figcaption>
@@ -290,12 +290,12 @@ export function applyOps(doc: Document, ops: readonly Op[]): Document {
 	};
 }</code></pre>
 </figure>
-<p>The server does not run the engine — it has nothing to calculate — but it does keep the stored document *current* as operations arrive, so that a browser opening the sheet later loads the truth rather than replaying a log. <code>applyOps</code> is that: a pure function from a document and operations to a new document. Its shift branch reuses <code>shiftIndex</code> and <code>shiftFormula</code> from chapter 11, so the server and the browser rewrite formulas with the same code.</p>
+<p>The server does not run the engine — it has nothing to calculate — but it does keep the stored document <em>current</em> as operations arrive, so that a browser opening the sheet later loads the truth rather than replaying a log. <code>applyOps</code> is that: a pure function from a document and operations to a new document. Its shift branch reuses <code>shiftIndex</code> and <code>shiftFormula</code> from chapter 11, so the server and the browser rewrite formulas with the same code.</p>
 <h3 id="templates">Templates</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/sheet/templates.ts<span class="code__lines">:19-36</span></span>
+		<span class="code__file">src/lib/sheet/templates.ts<span class="code__lines">:19-57</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">export interface Template {
@@ -315,7 +315,28 @@ const percent: CellFormat = { kind: 'percent', decimals: 1 };
 
 export const TEMPLATES: Record&lt;string, Template&gt; = {
 	budget: {
-		slug: 'budget',</code></pre>
+		slug: 'budget',
+		title: 'Monthly budget',
+		summary: 'Income, expenses by category, and what is left — with the share each category takes.',
+		rows: [
+			['Category', 'Budgeted', 'Actual', 'Difference', 'Share of spend'],
+			['Rent', 1400, 1400, '=B2-C2', '=C2/$C$9'],
+			['Groceries', 450, 512.4, '=B3-C3', '=C3/$C$9'],
+			['Transport', 120, 96.5, '=B4-C4', '=C4/$C$9'],
+			['Utilities', 180, 174.2, '=B5-C5', '=C5/$C$9'],
+			['Insurance', 95, 95, '=B6-C6', '=C6/$C$9'],
+			['Going out', 200, 263.75, '=B7-C7', '=C7/$C$9'],
+			['Savings', 400, 400, '=B8-C8', '=C8/$C$9'],
+			['Total', '=SUM(B2:B8)', '=SUM(C2:C8)', '=B9-C9', '=SUM(E2:E8)'],
+			[],
+			['Income', 3400, null, null, null],
+			['Left over', '=B11-C9', null, null, null],
+			['Over budget?', '=IF(C9&gt;B11, &quot;Yes&quot;, &quot;No&quot;)', null, null, null]
+		],
+		formats: { B: money, C: money, D: money, E: percent },
+		columns: { '0': 140, '1': 110, '2': 110, '3': 110, '4': 120 },
+		frozen: { rows: 1, cols: 1 }
+	},</code></pre>
 </figure>
 
 <figure class="code">

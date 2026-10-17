@@ -42,9 +42,12 @@
 
 <svelte:element
 	this={tag}
-	class="btn btn--{variant} btn--{size}"
-	class:btn--icon={!children}
-	class:btn--pressed={pressed}
+	class={[
+		'btn',
+		`btn--${variant}`,
+		`btn--${size}`,
+		{ 'btn--icon': !children, 'btn--pressed': pressed }
+	]}
 	href={disabled ? undefined : href}
 	type={href ? undefined : type}
 	disabled={href ? undefined : disabled}

@@ -23,22 +23,29 @@ import {
 	BellRingingIcon,
 	RewindIcon
 } from 'phosphor-svelte';
+import type { IconComponentProps } from 'phosphor-svelte';
 import type { Component } from 'svelte';
 import type { IconName } from '#lib/data/features.ts';
 
 /**
- * Typed as a full Record keyed by `IconName`.
+ * Typed as a full Record keyed by `IconName`, with Phosphor's own props type.
  *
  * That's the important bit: add a new icon name to the `IconName` union in
  * `features.ts` and forget to register it here, and TypeScript fails the build.
  * The alternative — a plain object and a runtime lookup — fails silently with an
  * invisible icon in production.
+ *
+ * The annotation is the whole check, so there is no `as` on the object. A cast
+ * would switch it off: TypeScript accepts `{ A, B } as Record<'A' | 'B' | 'C', …>`
+ * without a word, and the missing icon would be back to failing silently.
+ * `IconComponentProps` also types the call site — `<Icon weight="duotne" />` is a
+ * build error rather than a regular-weight icon.
  */
-export const featureIcons: Record<IconName, Component<Record<string, unknown>>> = {
+export const featureIcons: Record<IconName, Component<IconComponentProps>> = {
 	PulseIcon,
 	CrosshairIcon,
 	FunctionIcon,
 	EyeIcon,
 	BellRingingIcon,
 	RewindIcon
-} as Record<IconName, Component<Record<string, unknown>>>;
+};

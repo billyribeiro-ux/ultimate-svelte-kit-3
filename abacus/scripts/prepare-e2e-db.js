@@ -26,7 +26,8 @@ const env = {
 	DATABASE_URL: `file:${DB}`,
 	PUBLIC_ORIGIN: 'http://localhost:4173',
 	SESSION_SECRET: 'e2e-only-secret-of-at-least-thirty-two-characters',
-	CELL_LIMIT: '50000'
+	// The same values the server gets in `playwright.config.ts`.
+	CELL_LIMIT: '1000'
 };
 
 /*

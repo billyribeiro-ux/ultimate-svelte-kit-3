@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Passkeys: signing in without a password — Building Abacus</title>
-<meta name="description" content="A key pair: the private half stays in the device, the public half lives in `credentials`. Two remote calls per ceremony — begin and finish — with single-use challenges that expire, a counter that detects a cloned key, and the origin checked against `PUBLIC_ORIGIN`.">
+<meta name="description" content="A key pair: the private half stays in the device, the public half lives in credentials. Two remote calls per ceremony — begin and finish — with single-use challenges that expire, a counter that detects a cloned key, and the origin checked against PUBLIC_ORIGIN.">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -85,7 +85,7 @@ const CHALLENGE_TTL_MS = 5 * 60 * 1000;
 
 const encoder = new TextEncoder();</code></pre>
 </figure>
-<p>The verification is <code>@simplewebauthn/server</code>; what this file adds is the bookkeeping every relying party has to do. The relying-party id is the *hostname* of <code>PUBLIC_ORIGIN</code> — no scheme, no port — which is why that variable is <code>static</code> and baked in at build time: a passkey registered for one hostname must not be asserted against another.</p>
+<p>The verification is <code>@simplewebauthn/server</code>; what this file adds is the bookkeeping every relying party has to do. The relying-party id is the <em>hostname</em> of <code>PUBLIC_ORIGIN</code> — no scheme, no port — which is why that variable is <code>static</code> and baked in at build time: a passkey registered for one hostname must not be asserted against another.</p>
 
 <figure class="code">
 	<figcaption>
@@ -123,7 +123,7 @@ async function takeChallenge(id: string, kind: 'register' | 'login') {
 	return row;
 }</code></pre>
 </figure>
-<p>A challenge is stored with a five-minute expiry and *consumed* when taken: deleted on the way out, so it cannot be used twice. Expired ones are swept whenever a new one is stored.</p>
+<p>A challenge is stored with a five-minute expiry and <em>consumed</em> when taken: deleted on the way out, so it cannot be used twice. Expired ones are swept whenever a new one is stored.</p>
 <h3 id="registration">Registration</h3>
 
 <figure class="code">
@@ -170,7 +170,7 @@ export async function beginRegistration(
 	return { options, challengeId };
 }</code></pre>
 </figure>
-<p>For a new person, a user id is minted now and travels through the challenge row; it becomes a row in <code>users</code> only when the ceremony finishes, so an abandoned sign-up leaves nothing behind. For an existing person adding a second passkey, their current credentials are *excluded* so the same key is not registered twice — the end-to-end suite checks that the same virtual device is refused with exactly that error.</p>
+<p>For a new person, a user id is minted now and travels through the challenge row; it becomes a row in <code>users</code> only when the ceremony finishes, so an abandoned sign-up leaves nothing behind. For an existing person adding a second passkey, their current credentials are <em>excluded</em> so the same key is not registered twice — the end-to-end suite checks that the same virtual device is refused with exactly that error.</p>
 
 <figure class="code">
 	<figcaption>
@@ -195,7 +195,7 @@ export async function beginRegistration(
 			requireUserVerification: false
 		});
 	} catch (e) {
-		error(400, `That passkey could not be verified: ${(e as Error).message}`);
+		error(400, `That passkey could not be verified: ${e instanceof Error ? e.message : String(e)}`);
 	}
 	if (!verification.verified) error(400, 'That passkey could not be verified');
 
@@ -282,7 +282,7 @@ export async function finishAuthentication(
 			}
 		});
 	} catch (e) {
-		error(400, `That passkey could not be verified: ${(e as Error).message}`);
+		error(400, `That passkey could not be verified: ${e instanceof Error ? e.message : String(e)}`);
 	}
 	if (!verification.verified) error(400, 'That passkey could not be verified');
 
@@ -303,7 +303,7 @@ export async function finishAuthentication(
 
 <aside class="callout callout--why">
 	<h4>Why there is no username field</h4>
-	<p>The passkey is *discoverable*: <code>beginAuthentication</code> sends no <code>allowCredentials</code>, so the browser shows the person their accounts for this site and nobody types a name first. The counter check after verification is the cloned-key defence: a response with a counter at or below the stored one came from a copy, the library refuses it, and the new value is stored so the next copy is caught too.</p>
+	<p>The passkey is <em>discoverable</em>: <code>beginAuthentication</code> sends no <code>allowCredentials</code>, so the browser shows the person their accounts for this site and nobody types a name first. The counter check after verification is the cloned-key defence: a response with a counter at or below the stored one came from a copy, the library refuses it, and the new value is stored so the next copy is caught too.</p>
 </aside>
 <h3 id="the-wire">The wire: a schema that matches the library’s types</h3>
 
@@ -346,7 +346,7 @@ const RegistrationResponseSchema = v.object({
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/remote/auth.remote.ts<span class="code__lines">:67-85</span></span>
+		<span class="code__file">src/lib/remote/auth.remote.ts<span class="code__lines">:67-81</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">export const finishRegistration = command(
@@ -363,16 +363,12 @@ const RegistrationResponseSchema = v.object({
 		void listPasskeys().refresh();
 		return user;
 	}
-);
-
-/* ------------------------------------------------------------------ */
-/* Signing in                                                          */
-/* ------------------------------------------------------------------ */</code></pre>
+);</code></pre>
 </figure>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/auth/passkey.ts<span class="code__lines">:1-27</span></span>
+		<span class="code__file">src/lib/auth/passkey.ts<span class="code__lines">:1-28</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -387,6 +383,7 @@ const RegistrationResponseSchema = v.object({
  * the authenticator.
  */
 
+import { isHttpError } from '@sveltejs/kit';
 import {
 	browserSupportsWebAuthn,
 	startAuthentication,
@@ -406,7 +403,7 @@ export const passkeysSupported = (): boolean =&gt;
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/auth/passkey.ts<span class="code__lines">:40-64</span></span>
+		<span class="code__file">src/lib/auth/passkey.ts<span class="code__lines">:41-73</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/** Create a passkey — for a new account with `name`, or as an extra key for the current one. */
@@ -423,8 +420,16 @@ export async function signInWithPasskey(): Promise&lt;User&gt; {
 	return finishAuthentication({ challengeId, response });
 }
 
-/** A message a person can act on, from the errors the credential API throws. */
+/**
+ * A message a person can act on, from whichever half failed.
+ *
+ * The server's half — `finishAuthentication` refusing a passkey it has never
+ * seen — rejects with an `HttpError`, which is not an `Error`: its sentence
+ * is in `body.message`. The browser's half throws an `Error` whose `name`
+ * says what happened, and the three that mean something are told apart.
+ */
 export function explain(error: unknown): string {
+	if (isHttpError(error)) return error.body.message;
 	if (error instanceof Error) {
 		if (error.name === 'NotAllowedError') return 'The passkey prompt was cancelled or timed out.';
 		if (error.name === 'InvalidStateError')
@@ -435,14 +440,15 @@ export function explain(error: unknown): string {
 	return 'Something went wrong with the passkey.';
 }</code></pre>
 </figure>
-<p>The browser’s half: ask for options, hand them to <code>startRegistration</code> or <code>startAuthentication</code>, send the answer back. <code>explain</code> turns the credential API’s error names into sentences a person can act on — <code>NotAllowedError</code> is a cancelled prompt, <code>InvalidStateError</code> is “this device already has a passkey for that account”.</p>
+<p>The browser’s half: ask for options, hand them to <code>startRegistration</code> or <code>startAuthentication</code>, send the answer back. <code>explain</code> turns a failure from either half into a sentence a person can act on. The server’s half fails with SvelteKit’s <code>HttpError</code> — <code>finishAuthentication</code> refusing a passkey it has never seen — and its sentence is in <code>body.message</code>. The browser’s half throws an <code>Error</code> whose <code>name</code> says what happened: <code>NotAllowedError</code> is a cancelled prompt, <code>InvalidStateError</code> is “this device already has a passkey for that account”. The first version checked only for an <code>Error</code>, and an <code>HttpError</code> is not one, so every refusal from the server came out as “Something went wrong with the passkey.” Chapter 29 has the two shapes side by side.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">e2e/passkeys.ts<span class="code__lines">:1-44</span></span>
+		<span class="code__file">e2e/passkeys.ts<span class="code__lines">:1-64</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">import type { Page } from '@playwright/test';
+	<pre><code class="lang-ts">import { generateKeyPairSync, randomBytes } from 'node:crypto';
+import type { Page } from '@playwright/test';
 
 /**
  * A PASSKEY DEVICE THAT EXISTS FOR ONE TEST
@@ -480,6 +486,25 @@ export async function attachAuthenticator(page: Page) {
 			const { credentials } = await cdp.send('WebAuthn.getCredentials', { authenticatorId });
 			return credentials;
 		},
+		/**
+		 * A passkey for this site that no server ever issued — what a person
+		 * holds after the database their account lived in was reset. The
+		 * browser offers it; the server has never heard of it.
+		 */
+		async addUnknownPasskey() {
+			const { privateKey } = generateKeyPairSync('ec', { namedCurve: 'P-256' });
+			await cdp.send('WebAuthn.addCredential', {
+				authenticatorId,
+				credential: {
+					credentialId: randomBytes(16).toString('base64'),
+					isResidentCredential: true,
+					rpId: 'localhost',
+					privateKey: privateKey.export({ format: 'der', type: 'pkcs8' }).toString('base64'),
+					userHandle: randomBytes(16).toString('base64'),
+					signCount: 0
+				}
+			});
+		},
 		async detach() {
 			await cdp.send('WebAuthn.removeVirtualAuthenticator', { authenticatorId });
 			await cdp.detach();
@@ -487,7 +512,7 @@ export async function attachAuthenticator(page: Page) {
 	};
 }</code></pre>
 </figure>
-<p>How this is tested: Chromium’s DevTools protocol attaches a *virtual authenticator* — a software device that creates key pairs and signs challenges — and everything else is real. Chapter 37 has the tests.</p>
+<p>How this is tested: Chromium’s DevTools protocol attaches a <em>virtual authenticator</em> — a software device that creates key pairs and signs challenges — and everything else is real. Chapter 37 has the tests.</p>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>

@@ -54,19 +54,19 @@
 <p>You visit that page while signed in to the venue. The browser sends the request with your session cookie attached, the venue sees a valid session, and you have just sold a million shares. You clicked nothing on our site. That is cross-site request forgery.</p>
 <p>What stops it is the <code>Origin</code> header. The browser sets it to the site the request came *from*, and page JavaScript cannot change it. Same origin — fine. Different origin — refuse.</p>
 <h3 id="the-bug">The bug</h3>
-<p>While testing the public API by hand, this happened:</p>
+<p>While testing the public API by hand against a production build, this happened:</p>
 
 <figure class="code code--terminal">
 	<figcaption>
 		<span class="code__file">terminal</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code>$ curl -X DELETE http://localhost:5173/api/v1/orders/ORD-1 \
-    -H &quot;Authorization: Bearer sq_live_9f2a…&quot;
+	<pre><code>$ curl -X DELETE http://localhost:4173/api/v1/orders/ORD-1 \
+    -H &quot;Authorization: Bearer ak_7f2cQe9xKm4t.Zq4mR8sT…&quot;
 
-Cross-site POST form submissions are forbidden</code></pre>
+Cross-site DELETE form submissions are forbidden</code></pre>
 </figure>
-<p>A body-less <code>DELETE</code>, authenticated with a Bearer token, from a command-line tool with no origin at all, refused as a cross-site form submission.</p>
+<p>A body-less <code>DELETE</code>, authenticated with a Bearer token, from a command-line tool with no origin at all, refused as a cross-site form submission. Port 4173 is <code>vite preview</code>, and that matters: Kit runs its CSRF check only in production, so the same request against <code>vite dev</code> goes straight through and the bug waits for the first deploy.</p>
 <p>Kit's rule is: block a non-GET request when its <code>Content-Type</code> is form-like <strong>or absent</strong> and the <code>Origin</code> does not match. A <code>DELETE</code> with no body sends no content type. There is nothing an API client can do about this — you cannot ask people to set a content type on a request that has no content.</p>
 <p>And there is a second half. A cross-origin <code>POST</code> carrying <code>Content-Type: application/json</code> is *allowed*, because browsers cannot send one without a CORS preflight that our server would decline. That is true today. It also means our safety depends on a browser behaviour rather than on something we check.</p>
 
@@ -88,7 +88,26 @@ Cross-site POST form submissions are forbidden</code></pre>
 	/*
 	 * Kit's own cross-site check is turned off, and replaced by a stricter
 	 * one in `hooks.server.ts`. Read that before deciding this is reckless.
-	 * …
+	 *
+	 * Kit blocks a non-GET request when its `Content-Type` is form-like *or
+	 * absent* and the `Origin` does not match. Two consequences:
+	 *
+	 *   1. A body-less `DELETE /api/v1/orders/ORD-1` sends no content type,
+	 *      so it is blocked — and there is no way for an API client to know
+	 *      it must send a content type on a request with no body.
+	 *   2. A cross-origin `POST` with `Content-Type: application/json` is
+	 *      *allowed*, because browsers cannot send one without a CORS
+	 *      preflight. True, but it makes our safety depend on the browser.
+	 *
+	 * Our rule instead: **any state-changing request authenticated by a
+	 * cookie must carry a matching Origin.** Bearer-token requests are
+	 * exempt because CSRF is a cookie attack — a browser attaches cookies to
+	 * a forged cross-site request automatically and never attaches an
+	 * `Authorization` header. That covers case 1 and closes case 2.
+	 *
+	 * `['*']` turns off Kit's check on form submissions and nothing else.
+	 * A call to a remote function still meets Kit's own same-origin check,
+	 * which ignores `trustedOrigins` entirely, before it reaches our hook.
 	 */
 	csrf: { trustedOrigins: ['*'] },
 
@@ -96,6 +115,7 @@ Cross-site POST form submissions are forbidden</code></pre>
 })</code></pre>
 </figure>
 <aside class="callout callout--warn"><p><code>trustedOrigins: ['*']</code> on its own is a serious vulnerability. It is only acceptable here because the hook below runs on every request and is strictly stronger. If you copy the config line without the hook, you have removed your CSRF protection and added nothing.</p></aside>
+<aside class="callout callout--note"><p>Be precise about what the setting switches off. Kit has two origin checks, and <code>trustedOrigins</code> reaches only one of them: the check on form submissions and other ordinary non-GET requests. What the page's JavaScript sends to a remote function — every <code>command</code> from chapter 24, and a <code>form</code> submitted with scripts running — goes to Kit's remote endpoint, which has a check of its own that refuses any non-GET call whose <code>Origin</code> is not the app's; Kit's source says outright that &quot;entries in <code>trusted_origins</code> are *not* honoured&quot; there. So placing and cancelling orders meets Kit's check first and our hook second. A form posted without JavaScript is an ordinary form submission to the page, and the public API is an ordinary endpoint: those meet our hook alone, which is exactly why the hook has to be right.</p></aside>
 
 <figure class="code">
 	<figcaption>
@@ -104,7 +124,7 @@ Cross-site POST form submissions are forbidden</code></pre>
 	</figcaption>
 	<pre><code class="lang-ts">const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
-/* … */
+// …
 const handleCsrf: Handle = async ({ event, resolve }) =&gt; {
 	if (SAFE_METHODS.has(event.request.method)) return resolve(event);
 

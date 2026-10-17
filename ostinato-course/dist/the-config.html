@@ -35,11 +35,11 @@
 			<h1>One file to configure everything</h1>
 			<p class="lede">SvelteKit 3 keeps its whole configuration inside the Vite plugin. This chapter reads <code>vite.config.ts</code> top to bottom: what each option does, what it costs, and what was removed since SvelteKit 2.</p>
 			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Read a SvelteKit 3 config and know what every line is for — including the ones that are there because a test found a bug.</p></aside>
-			<p>There is no <code>svelte.config.js</code>. SvelteKit 3 moved every option into the <code>sveltekit()</code> plugin call in <code>vite.config.ts</code>, and the config is a *function* because it needs to read the environment before the build starts.</p>
+			<p>There is no <code>svelte.config.js</code>. In SvelteKit 2 that file held the framework options; SvelteKit 3 moved every one of them into the <code>sveltekit()</code> plugin call in <code>vite.config.ts</code>, and the config is a *function* because it needs to read the environment before the build starts.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:1-32</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:1-48</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">// `defineConfig` comes from `vitest/config` so the `test` block below type-checks;
@@ -51,7 +51,13 @@ import { playwright } from '@vitest/browser-playwright';
 import { sveltekit } from '@sveltejs/kit/vite';
 import { sveltePhosphorOptimize } from 'phosphor-svelte/vite';
 import ostinato from './adapters/ostinato/index.js';
-import { version as packageVersion } from './package.json' with { type: 'json' };
+import { FILE_HEADERS } from './src/lib/security.ts';
+/*
+ * A default import rather than `{ version }`: a JSON module has only a default
+ * export per spec, and Vite 8's native config loader — the default in the next
+ * major — refuses the named form. Vite says so, politely, on every `sync`.
+ */
+import pkg from './package.json' with { type: 'json' };
 
 /*
  * SvelteKit 3 keeps ALL framework configuration here, inside the `sveltekit()`
@@ -73,14 +79,24 @@ export default defineConfig(({ mode }) =&gt; {
 				 * reconstruct `https://…` from headers and reject every POST as
 				 * cross-site.
 				 */
-				paths: { origin: env.PUBLIC_ORIGIN },</code></pre>
+				/*
+				 * `relative: false`: links are root-relative — `/studio` — on the server
+				 * as well as in the browser. The default writes them relative to the page
+				 * being rendered (`./studio`, `../studio`), which is for a build that
+				 * must work from any folder or from `file://`. This one is served at the
+				 * root of one origin by its own adapter, and a link should read the same
+				 * whichever side of hydration drew it — the navigation's `aria-current`
+				 * compares `resolve()` against `page.url.pathname`, and a relative href
+				 * never matches a pathname.
+				 */
+				paths: { origin: env.PUBLIC_ORIGIN, relative: false },</code></pre>
 </figure>
-<p>Two things to notice. <code>defineConfig</code> comes from <code>vitest/config</code> rather than <code>vite</code>, so the <code>test</code> block at the bottom type-checks. And <code>paths.origin</code> is a build-time value: the adapter bakes it into the server so that CSRF checks compare the origin you declared, not one reconstructed from headers.</p>
+<p>Three things to notice. <code>defineConfig</code> comes from <code>vitest/config</code> rather than <code>vite</code>, so the <code>test</code> block at the bottom type-checks. <code>paths.origin</code> is a build-time value: the adapter bakes it into the server so that CSRF checks compare the origin you declared, not one reconstructed from headers. And <code>paths.relative</code> is <code>false</code>, so a link the server writes is <code>/studio</code> rather than <code>./studio</code> or <code>../studio</code>. The relative default is for a build that has to work from any folder; this one is served at the root of one origin, and every internal link goes through <code>resolve()</code> (ch. 27), which on the server would otherwise answer relative to the page being rendered.</p>
 <h3 id="compiler">The compiler options</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:34-52</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:50-68</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">compilerOptions: {
@@ -107,7 +123,7 @@ export default defineConfig(({ mode }) =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:54-86</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:70-108</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -142,14 +158,20 @@ dynamicCompileOptions({ filename, environment }) {
  * request from one to the other when the `reroute` hook says so. It
  * exists to show what an adapter *is*; the end-to-end suite runs against
  * its output, which is the only proof of an adapter that counts.
- */</code></pre>
+ *
+ * `headers` go on every file the adapter serves itself, prerendered
+ * pages included. No hook runs for those, so without this the landing
+ * page — the first page most people see — would go out with none of
+ * the headers `handleSecurity` puts on everything else.
+ */
+adapter: ostinato({ headers: FILE_HEADERS }),</code></pre>
 </figure>
-<p><code>dynamicCompileOptions</code> is called per file and, since vite-plugin-svelte 7.3.0, per *environment*. That second argument is what lets one folder be compiled as a custom element *for the client only* — a server render of a custom element is a thing that cannot exist, and the guard says so instead of relying on the compiler to quietly decline.</p>
+<p><code>dynamicCompileOptions</code> is called per file and, since vite-plugin-svelte 7.3.0, per *environment*. That second argument is what lets one folder be compiled as a custom element *for the client only* — a server render of a custom element is a thing that cannot exist, and the guard says so instead of relying on the compiler to quietly decline. The adapter is handed one option, <code>headers</code>: the files it serves itself never pass through a hook, so the security headers have to be given to it directly (ch. 36).</p>
 <h3 id="experimental">Experimental, with evidence</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:89-131</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:110-138</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">experimental: {
@@ -180,21 +202,7 @@ dynamicCompileOptions({ filename, environment }) {
 	 * for turning it back on.
 	 */
 	forkPreloads: false
-},
-
-/*
- * TRACING
- * =======
- *
- * OpenTelemetry spans for `handle`, `load`, form actions and remote
- * functions. A top-level option in SvelteKit 3 — it graduated from
- * `experimental.tracing` — and the matching `instrumentation.server.ts`
- * no longer needs a flag at all: if the file exists and the adapter says
- * it can (`supports.instrumentation`), it runs before the app.
- *
- * The spans go to an in-memory ring rather than to a collector, and the
- * diagnostics page reads them back out, so &quot;why was that publish slow&quot;
- * has an answer without a second service.</code></pre>
+},</code></pre>
 </figure>
 
 <aside class="callout callout--why">
@@ -206,34 +214,74 @@ dynamicCompileOptions({ filename, environment }) {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:133-141</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:140-160</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">tracing: { server: true },
+	<pre><code class="lang-ts">/*
+ * TRACING
+ * =======
+ *
+ * OpenTelemetry spans for `handle`, `load`, form actions and remote
+ * functions. A top-level option in SvelteKit 3 — it graduated from
+ * `experimental.tracing` — and the matching `instrumentation.server.ts`
+ * no longer needs a flag at all: if the file exists and the adapter says
+ * it can (`supports.instrumentation`), it runs before the app.
+ *
+ * The spans go to an in-memory ring rather than to a collector, and the
+ * diagnostics page reads them back out, so &quot;why was that publish slow&quot;
+ * has an answer without a second service.
+ */
+tracing: { server: true },
 
 prerender: {
 	// A broken internal link fails the build instead of shipping a 404.
 	handleHttpError: 'fail',
 	handleMissingId: 'fail'
-},
-
-/*</code></pre>
+},</code></pre>
 </figure>
 <aside class="callout callout--note"><p>The removal list lives in SvelteKit’s own <code>src/core/config/options.js</code>, where each removed key names its replacement. When an upgrade fails on “has been removed”, that file is the changelog.</p></aside>
 <h3 id="security-and-versioning">Policy, origin, version</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:157-211</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:162-255</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">csp: {
+	<pre><code class="lang-ts">/*
+ * CONTENT SECURITY POLICY
+ * =======================
+ *
+ * `mode: 'auto'`: hashes for prerendered pages, where the whole document
+ * is known at build time, and nonces for dynamically rendered ones,
+ * which stream `resolve(…)` scripts after the header has gone.
+ *
+ * The directives that are specific to this app:
+ *   `media-src blob:`  the exported WAV is played back from a Blob URL
+ *   `font-src data:`   Vite inlines any asset under 4 KB as a data URL
+ *                      (`build.assetsInlineLimit`), and one of fontsource's
+ *                      subset files is that small — so the stylesheet
+ *                      carries a `url(data:font/woff2;…)`.
+ *   `style-src 'unsafe-inline'` — a deliberate trade. Knobs and the
+ *                      playhead set `style:--angle` per frame; attributes
+ *                      cannot be hashed and a nonce does not apply to them.
+ *                      The exposure is CSS injection, not script execution.
+ *
+ * Images are `'self'` only. The share card in the studio and on the
+ * pattern page is a URL on this origin, `/p/&lt;id&gt;/card.svg`, not a data
+ * URL, and nothing else draws one. The end-to-end test that visits both
+ * and listens for violations is what keeps that true.
+ *
+ * `frame-ancestors` only works in a header. A prerendered page gets its
+ * policy as a `&lt;meta&gt;` tag, where browsers ignore it, which is why the
+ * adapter adds `X-Frame-Options` to the files it serves (`lib/security.ts`).
+ */
+csp: {
 	mode: 'auto',
 	directives: {
 		'default-src': ['self'],
 		'script-src': ['self'],
 		'style-src': ['self', 'unsafe-inline'],
-		'img-src': ['self', 'data:'],
+		'img-src': ['self'],
 		'media-src': ['self', 'blob:'],
 		'font-src': ['self', 'data:'],
 		'connect-src': ['self'],
@@ -268,7 +316,7 @@ csrf: { trustedOrigins: [] },
  * to reload for nothing.
  */
 version: {
-	name: commitHash() ?? packageVersion,
+	name: commitHash() ?? pkg.version,
 	pollInterval: 60_000
 },
 
@@ -281,85 +329,80 @@ version: {
  *
  * There is no `preloadStrategy` any more. SvelteKit 3 removed the option
  * and always emits `&lt;link rel=&quot;modulepreload&quot;&gt;`; the alternatives existed
- * for browsers that no longer exist.</code></pre>
+ * for browsers that no longer exist.
+ */
+output: { bundleStrategy: 'split' },
+
+/*
+ * Route resolution on the client, which is the default and worth stating
+ * because the alternative was considered. `'server'` keeps the route
+ * manifest off the wire and lets a middleware intercept navigations, at
+ * the cost of a round trip for every unvisited path. This app has a dozen
+ * routes; its manifest is smaller than the round trip.
+ */
+router: { type: 'pathname', resolution: 'client' }</code></pre>
 </figure>
 <p>The CSP directives are each a decision, and chapter 36 takes them one at a time. <code>version.pollInterval</code> is worth a sentence now: it makes SvelteKit poll for a new deployment every minute and set <code>updated.current</code>, so the layout can offer a reload *before* a navigation asks for a JavaScript file that no longer exists.</p>
 <h3 id="tests">Two test projects</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:249-318</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:282-335</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">		test: {
-			// A test that asserts nothing is a test that cannot fail.
-			expect: { requireAssertions: true },
-			projects: [
-				{
-					/*
-					 * Component and engine tests — a real Chromium, not a DOM emulator.
-					 *
-					 * Non-negotiable for an audio application: jsdom has no
-					 * `AudioContext`, no `OfflineAudioContext` and no layout, so the
-					 * scheduler, the knobs and the waveform would all pass every test you
-					 * thought to write while doing nothing at all.
-					 */
-					extends: './vite.config.ts',
-					test: {
-						name: 'client',
-						browser: {
-							enabled: true,
-							provider: playwright({
-								// Web Audio starts suspended without a user gesture. The tests
-								// are not a person, so the flag says so.
-								launchOptions: { args: ['--autoplay-policy=no-user-gesture-required'] }
-							}),
-							instances: [{ browser: 'chromium', headless: true }]
-						},
-						include: ['src/**/*.svelte.{test,spec}.{js,ts}'],
-						exclude: ['src/lib/server/**']
-					}
+	<pre><code class="lang-ts">test: {
+	// A test that asserts nothing is a test that cannot fail.
+	expect: { requireAssertions: true },
+	projects: [
+		{
+			/*
+			 * Component and engine tests — a real Chromium, not a DOM emulator.
+			 *
+			 * Non-negotiable for an audio application: jsdom has no
+			 * `AudioContext`, no `OfflineAudioContext` and no layout, so the
+			 * scheduler, the knobs and the waveform would all pass every test you
+			 * thought to write while doing nothing at all.
+			 *
+			 * No `extends` line: Vitest 5 hands every inline project the root
+			 * config — the plugins, `ssr.external`, `requireAssertions` — by
+			 * default. Vitest 4 needed `extends: './vite.config.ts'` here, which
+			 * loaded this very file a second time per project.
+			 */
+			test: {
+				name: 'client',
+				browser: {
+					enabled: true,
+					provider: playwright({
+						// Web Audio starts suspended without a user gesture. The tests
+						// are not a person, so the flag says so.
+						launchOptions: { args: ['--autoplay-policy=no-user-gesture-required'] }
+					}),
+					instances: [{ browser: 'chromium', headless: true }]
 				},
-				{
-					// Pure logic — plain Node, no browser, fast. The pattern model, the
-					// codec, the identity cookie and the adapter's route partition live
-					// here, and these are the tests that run on every save.
-					extends: './vite.config.ts',
-					test: {
-						name: 'server',
-						environment: 'node',
-						include: ['src/**/*.{test,spec}.{js,ts}', 'adapters/**/*.{test,spec}.js'],
-						exclude: ['src/**/*.svelte.{test,spec}.{js,ts}'],
+				include: ['src/**/*.svelte.{test,spec}.{js,ts}'],
+				exclude: ['src/lib/server/**']
+			}
+		},
+		{
+			// Pure logic — plain Node, no browser, fast. The pattern model, the
+			// codec, the identity cookie and the adapter's route partition live
+			// here, and these are the tests that run on every save.
+			test: {
+				name: 'server',
+				environment: 'node',
+				include: ['src/**/*.{test,spec}.{js,ts}', 'adapters/**/*.{test,spec}.js'],
+				exclude: ['src/**/*.svelte.{test,spec}.{js,ts}'],
 
-						/*
-						 * One file at a time: SQLite allows exactly one writer, and two
-						 * spec files seeding the same database meet `SQLITE_BUSY` as a
-						 * dozen unrelated assertions failing in whichever file lost the
-						 * race.
-						 */
-						fileParallelism: false
-					}
-				}
-			]
+				/*
+				 * One file at a time: SQLite allows exactly one writer, and two
+				 * spec files seeding the same database meet `SQLITE_BUSY` as a
+				 * dozen unrelated assertions failing in whichever file lost the
+				 * race.
+				 */
+				fileParallelism: false
+			}
 		}
-	};
-});
-
-/**
- * The current commit, or `null` when there is no repository to ask.
- *
- * `null` rather than a throw: a Docker build context usually has no `.git`,
- * and a build that fails because it could not compute a version string is a
- * build that fails for the least important thing in it.
- */
-function commitHash(): string | null {
-	try {
-		return execSync('git rev-parse --short HEAD', { stdio: ['ignore', 'pipe', 'ignore'] })
-			.toString()
-			.trim();
-	} catch {
-		return null;
-	}
+	]
 }</code></pre>
 </figure>
 <p>The <code>client</code> project runs in a real Chromium, because jsdom has no <code>AudioContext</code> and no layout: a scheduler test under jsdom would pass while doing nothing. The <code>server</code> project is plain Node for the pure logic — the codec, the cookie, the adapter’s route partition — and runs one file at a time because SQLite has one writer.</p>
@@ -426,11 +469,11 @@ export const variables = defineEnvVars({
 	}
 });</code></pre>
 </figure>
-<p><code>defineEnvVars</code> replaced the <code>$env/*</code> magic modules. A variable not declared here cannot be imported — a build error, not an <code>undefined</code> in production — and <code>public: true</code> has to be typed, so a secret cannot reach the browser by accident. <code>TRACE_BUFFER</code> shows the pattern for a number: a string comes in, valibot turns it into an integer with bounds, and every file that reads it gets a number.</p>
+<p>In SvelteKit 2 a variable came from one of the <code>$env/*</code> magic modules; SvelteKit 3 deprecates those (they go in SvelteKit 4) in favour of <code>defineEnvVars</code> in this one file. A variable not declared here cannot be imported — a build error, not an <code>undefined</code> in production — and <code>public: true</code> has to be typed, so a secret cannot reach the browser by accident. <code>TRACE_BUFFER</code> shows the pattern for a number: a string comes in, valibot turns it into an integer with bounds, and every file that reads it gets a number.</p>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>
-	<ul><li>You can explain why the config is a function.</li><li>You know which three options were removed in SvelteKit 3 and what replaced each.</li><li>You can say, from the comment, why <code>forkPreloads</code> is off — and what would turn it back on.</li></ul>
+	<ul><li>You can explain why the config is a function.</li><li>You know which three options this file used that SvelteKit 3 removed, and what replaced each.</li><li>You can say, from the comment, why <code>forkPreloads</code> is off — and what would turn it back on.</li></ul>
 </aside>
 		</article>
 

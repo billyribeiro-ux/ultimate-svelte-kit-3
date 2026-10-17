@@ -8,7 +8,22 @@
  * written to disk as a static JSON asset. The client's first call is a plain
  * GET of a file a CDN can cache forever. The gazetteer is a hundred cities
  * in a JSON module — small enough to prerender whole, and the explore page,
- * the place search and the custom element all read the same copy.
+ * the new-trip form and the stop dialog's place search read the same copy.
+ *
+ * `dynamic: true` is for the OTHER side: the server, rendering the explore
+ * page or the new-trip form for a request (the stop dialog asks only in the
+ * browser). It does not read the prerendered file off the disk. It
+ * *fetches* it, over the network, from the request's own origin — which,
+ * with `paths.origin` set, is `PUBLIC_ORIGIN`, the public address in front
+ * of the proxy. If that request fails, SvelteKit falls back to running the
+ * function itself; and a `prerender` function is left out of the server
+ * bundle unless it is dynamic, so without this option the fallback throws
+ * `remote_prerender_not_dynamic` and the page is a 500. A container that
+ * cannot reach its own public hostname — common behind a proxy that
+ * terminates TLS — rendered every `/explore` that way. With it, the
+ * fallback runs here, in-process, from the same JSON module. The test suite
+ * could not see the difference: its server listens on `PUBLIC_ORIGIN`
+ * itself, so the fetch always succeeded.
  *
  * `tripPreview` is a `query.batch`: the trips page renders one card per
  * trip and each card asks for its own preview, and SvelteKit collects every
@@ -38,7 +53,7 @@ export interface Place {
 	readonly lat: number;
 }
 
-export const places = prerender(async (): Promise<Place[]> => gazetteer);
+export const places = prerender(async (): Promise<Place[]> => gazetteer, { dynamic: true });
 
 export interface TripPreview {
 	readonly id: string;

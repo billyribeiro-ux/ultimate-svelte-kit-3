@@ -38,7 +38,7 @@
 			<p>Not a penetration test — a walk through the eight categories that actually cause incidents in applications shaped like this one. Two of them found something real in this project.</p>
 <h3 id="bola">1. Object-level authorisation</h3>
 <p>The number one entry in the OWASP API list, and the one this app is most exposed to: every URL contains somebody else's identifier.</p>
-<ul><li><code>/manage/[slug]</code> → <code>requireStaff(slug)</code> checks membership, not just sign-in.</li><li><code>removeHours({ ruleId })</code> → loads the rule, checks its staff member belongs to <strong>this</strong> business, then checks the viewer may manage that person. Three checks, because a rule id alone proves nothing.</li><li><code>setStaffService</code> → <code>requireOwner</code>, and the staff and service ids are both re-scoped to the owner's business.</li><li><code>/booking/[token]</code> → the token *is* the credential; nothing else is trusted.</li></ul>
+<ul><li><code>/manage/[slug]</code> → <code>requireStaff(slug)</code> checks membership, not just sign-in.</li><li><code>removeHours({ ruleId })</code> → loads the rule, checks its staff member belongs to <strong>this</strong> business, then checks the viewer may manage that person. Three checks, because a rule id alone proves nothing.</li><li><code>setStaffService</code> → <code>requireOwner</code>, and the staff and service ids are both re-scoped to the owner's business.</li><li><code>/booking/[token]</code> → the token <em>is</em> the credential; nothing else is trusted.</li></ul>
 <aside class="callout callout--warn"><p>The pattern to look for in your own code: any handler that takes an id and trusts it. &quot;The client sent us this id, so the client must be allowed to have it&quot; is the whole bug, and it reads as perfectly reasonable code.</p></aside>
 <h3 id="inputs">2. Every input, at the boundary</h3>
 <p>Every remote function that accepts input validates it with a schema at the boundary. The one function without a schema is <code>signOut</code>, which takes no argument at all — there is nothing to validate. A first pass worth running on your own project: count the declarations, then count the ones with a schema visibly in place.</p>
@@ -62,6 +62,8 @@ grep -rn &quot;export const .* = \(query\|command\|form\)(v\.\|export const .* =
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">const SAFE_REDIRECT = /^\/(?!\/)[^\s]{0,512}$/;
+
+// …
 
 redirectTo: v.optional(
 	v.pipe(
@@ -132,7 +134,7 @@ response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocatio
 
 return response;</code></pre>
 </figure>
-<ul><li><code>referrer-policy</code> matters more than usual here: without it, a manage link's <strong>token</strong> travels in the <code>Referer</code> header to any external site the page links to.</li><li>CSRF is handled by SvelteKit via <code>paths.origin</code> — which is why getting that setting right in chapter 15 was a security fix, not only a bug fix.</li><li>Cookies are <code>httpOnly</code>, <code>sameSite: 'lax'</code> and <code>secure</code> in production, all from Better Auth's defaults. Verify them rather than assuming them.</li></ul>
+<ul><li><code>referrer-policy</code> matters more than usual here: without it, a manage link's <strong>token</strong> travels in the <code>Referer</code> header to any external site the page links to.</li><li>CSRF is handled by SvelteKit via <code>paths.origin</code> — which is why getting that setting right in chapter 15 was a security fix, not only a bug fix.</li><li>Cookies are <code>httpOnly</code> and <code>sameSite: 'lax'</code> by Better Auth's defaults, and <code>secure</code> whenever <code>ORIGIN</code> is https, because <code>auth.ts</code> sets <code>useSecureCookies</code> from it. Verify all three in the browser rather than assuming them.</li></ul>
 <h3 id="rate">8. What we deliberately did not build</h3>
 <p>There is no rate limiting on the booking endpoint. For a single-salon deployment behind a host that already does connection-level limiting, that is a defensible choice — and stating it is the point. An unwritten decision is indistinguishable from an oversight.</p>
 <p>If Halfpast became multi-tenant and public, the list to work through would be: per-IP limits on booking and sign-in, email verification before a booking holds a slot, and an audit log on the owner screens.</p>

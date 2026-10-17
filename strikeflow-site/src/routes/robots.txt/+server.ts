@@ -16,7 +16,13 @@
  * see the noindex.
  *
  * So: `Disallow` is for pages you don't want crawl budget spent on. `noindex` is
- * for pages you don't want found. We use each for its own job.
+ * for pages you don't want found. We use each for its own job — which is why the
+ * noindexed thank-you page is NOT listed below.
+ *
+ * Nor is `/_app/`. It holds no pages, but it holds the CSS and JavaScript every
+ * page links to, and Google renders a page with them to see what a visitor sees.
+ * Google's own guidance is to block a resource only if pages are not significantly
+ * affected without it; a page without its stylesheet is.
  */
 
 import type { RequestHandler } from './$types';
@@ -32,15 +38,9 @@ export const GET: RequestHandler = () => {
 User-agent: *
 Allow: /
 
-# SvelteKit's internal asset directory. Nothing here is a page; letting crawlers
-# walk it just burns crawl budget on hashed JS chunks.
-Disallow: /_app/
-
-# Gated confirmation page. Also carries a noindex meta tag, which is what actually
-# keeps it out of the index — this line just saves the crawl.
-Disallow: /guide/thank-you
-
-# Signed, single-use download links. Never useful to a crawler.
+# Signed, expiring download links. Never useful to a crawler, so this saves the
+# crawl. It is not what keeps the PDF out of the index: the only page that links
+# to it is the thank-you page, which is noindex, nofollow.
 Disallow: /guide/download
 
 Sitemap: ${absoluteUrl('/sitemap.xml')}

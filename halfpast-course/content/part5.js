@@ -176,6 +176,8 @@ class ThemeStore {
 			this.#systemIsDark = event.matches;
 		});
 	}
+
+	// …
 }`
 			},
 			{
@@ -212,34 +214,106 @@ const serviceSlug = $derived(page.url.searchParams.get('service'));
 
 // …
 
-function pickService(slug: string | null) {
-	/*
-	 * \`page.url\` is a \`ReadonlyURL\` in SvelteKit 3 — its \`searchParams\` has no
-	 * \`set\` or \`delete\`, and assigning to \`pathname\` throws. That is a good
-	 * change: mutating the page's URL object never did anything useful and
-	 * silently looked like it might. Copy it through \`href\` to get a real one.
-	 */
-	const url = new URL(page.url.href);
-	if (slug) url.searchParams.set('service', slug);
-	else url.searchParams.delete('service');
+const staffId = $derived.by(() => {
+	const asked = page.url.searchParams.get('with');
+	return asked !== null && offeredBy.some((person) => person.id === asked) ? asked : null;
+});
 
-	/*
-	 * \`reset: false\` keeps the scroll position and the focused element.
-	 * SvelteKit 3 replaced the old \`noScroll\` and \`keepFocus\` pair with this
-	 * one option, because wanting one without the other was almost always a
-	 * mistake — a page that stays put but throws focus to \`<body>\` strands a
-	 * keyboard user in a place they cannot see.
-	 */
-	void goto(url, { reset: false });
+// …
+const today = $derived(todayIn(viewerZone));
+const selectedDay = $derived.by(() => {
+	const asked = parseIsoDate(page.url.searchParams.get('day'));
+	return asked !== null && asked >= today ? asked : today;
+});
+const weekFrom = $derived(addDays(today, 7 * Math.floor(daysBetween(today, selectedDay) / 7)));`
+			},
+			{
+				type: 'p',
+				text: 'Every choice before the time itself lives in the query string: `?service=cut-and-finish&with=<staff id>&day=2026-10-20`. None of it is `$state`. Each value is *derived* from `page.url`, and each is checked on the way in — `with` must be somebody who offers the service, `day` must be a real calendar day that is not in the past (`parseIsoDate`, from the time layer, returns `null` for anything else) — so a stale or hand-edited link falls back to "anyone" and "today" instead of asking the server for something it will never offer. Even the visible week is derived: weeks are counted in sevens from today, so the strip always contains the chosen day.'
+			},
+			{
+				type: 'p',
+				text: 'Putting the choices in the URL buys three things for free: a refresh does not lose the customer\'s place, the salon can link straight to `?service=cut-and-finish` from Instagram, and a customer can send a friend the exact day they are looking at. It buys a fourth that matters more than all three: every choice is now a plain link, so the page works before its JavaScript arrives, and without it at all.'
+			},
+			{
+				type: 'code',
+				file: 'src/routes/book/[slug]/+page.svelte',
+				lang: 'ts',
+				code: `
+function bookingHref(choice: { service?: string; with?: string | null; day?: IsoDate }) {
+	if (!params.slug) return undefined;
+	if (!choice.service) return resolve('/book/[slug]', { slug: params.slug });
+
+	const chosen = Object.entries(choice).filter(
+		(entry): entry is [string, string] => typeof entry[1] === 'string' && entry[1] !== ''
+	);
+	const query = new URLSearchParams(chosen).toString();
+
+	return resolve(\`/book/[slug]?\${query}\`, { slug: params.slug });
 }`
 			},
 			{
 				type: 'p',
-				text: 'Putting the choices in the query string buys three things for free: a refresh does not lose the customer\'s progress, the salon can link straight to `?service=cut-and-finish` from Instagram, and a customer can send a friend the exact page they are looking at.'
+				text: 'Every link on the page comes from here. `resolve()` takes a route ID with a query string attached, so `[slug]` is still filled in and type-checked, and `URLSearchParams` does the encoding. The `if (!params.slug)` guard has a story of its own in the comment above the function in the real file: during a navigation away, the outgoing page renders once more with the incoming route\'s props, and `resolve()` throws on a missing parameter.'
 			},
 			{
 				type: 'note',
-				text: 'Two SvelteKit 3 changes are visible in those twenty lines, and the comments explain both. Read them rather than skimming: `ReadonlyURL` and the merged `reset` option are the sort of thing that costs an hour when you meet them in an error message instead of in prose.'
+				text: 'Two SvelteKit 3 changes sit behind these lines, and the comments in the file explain both. `page.url` is a `ReadonlyURL` — its `searchParams` has no `set`, and assigning to `pathname` throws — which retires the old habit of copying the URL, poking the query string and handing the copy to `goto`; building the link from the choices with `resolve()` is the replacement. And the `data-sveltekit-reset="false"` you will see on the day strip below is the link form of the one `reset` option that replaced SvelteKit 2\'s `noScroll` and `keepFocus` pair, because wanting one without the other was almost always a mistake.'
+			},
+
+			{ type: 'h3', id: 'days', text: 'A day is a link' },
+			{
+				type: 'code',
+				file: 'src/routes/book/[slug]/+page.svelte',
+				lang: 'svelte',
+				code: `
+<DateStrip
+	from={weekFrom}
+	selected={selectedDay}
+	zone={viewerZone}
+	{countFor}
+	hrefFor={(day) => bookingHref({ service: service.slug, with: staffId, day })}
+/>`
+			},
+			{
+				type: 'code',
+				file: 'src/lib/components/booking/DateStrip.svelte',
+				lang: 'svelte',
+				code: `
+<div class="strip" data-sveltekit-reset="false" data-sveltekit-replacestate>
+	<!-- … -->
+	<ul class="days" role="list" aria-label="Choose a day">
+		{#each days as entry (entry.day)}
+			<li>
+				<!-- … -->
+					<a
+						class="day"
+						href={hrefFor(entry.day)}
+						data-day={entry.day}
+						aria-current={selected === entry.day ? 'true' : undefined}
+					>
+						<!-- … -->
+					</a>
+				{/if}
+			</li>
+		{/each}
+	</ul>
+
+	<!-- … -->
+</div>`
+			},
+			{
+				type: 'p',
+				text: 'The strip draws links and owns no state: the page passes the days to show, the one that is chosen, and `hrefFor`, a function that turns a day into a link with everything else in the URL kept. Its type is `(day: IsoDate) => ResolvedPathname | undefined`, and `ResolvedPathname` is what `resolve()` returns, so only a link built by `resolve()` fits — and the `svelte/no-navigation-without-resolve` lint rule can see that inside the component.'
+			},
+			{
+				type: 'p',
+				text: 'With JavaScript, SvelteKit turns a click into a client-side navigation, and the two attributes on the strip shape it. `data-sveltekit-reset="false"` keeps the scroll position and the focused link, because throwing a keyboard user back to the top of the page for every day they look at would be cruel, and the link they pressed is still there afterwards. `data-sveltekit-replacestate` replaces the history entry instead of adding one, so Back leaves the time picker rather than replaying every day that was looked at. Without JavaScript both are ignored, the link is a page load, and the server renders that day\'s times.'
+			},
+			{
+				type: 'why',
+				title: 'Why links, and not buttons with role="radio"',
+				text: 'The strip used to be a row of `<button role="radio">` inside a `role="radiogroup"`, with a comment claiming the role "gives arrow-key navigation for free". It does not. ARIA roles describe behaviour; they do not add it. A screen reader announced "radio button, 1 of 7", the user pressed the arrow keys as a radio group invites, and nothing happened, while every day was its own Tab stop. The buttons also did nothing at all without JavaScript, inside a form this course calls progressive. A list of links needs no keyboard code because it uses the keyboard behaviour links already have, `aria-current` marks the chosen one, and the chosen day is styled from `[aria-current=\'true\']` itself, so what is seen and what is announced cannot drift apart.'
 			},
 
 			{ type: 'h3', id: 'progressive', text: 'Revealing the form at the right moment' },
@@ -248,16 +322,45 @@ function pickService(slug: string | null) {
 				file: 'src/routes/book/[slug]/+page.svelte',
 				lang: 'svelte',
 				code: `
-{#if selectedStart !== null}
-	<section class="step details" {@attach reveal({ y: 14 })}>
-		<h3>Your details</h3>
-		<!-- … name, email, phone, note … -->
-	</section>
-{/if}`
+<section class="step details" {@attach reveal({ y: 14 })}>
+	<h3>Your details</h3>
+
+	{#if selected !== null}
+		<p class="summary">
+			<strong>{service.name}</strong> ·
+			{formatIsoDate(instantToIsoDate(selected.start, viewerZone))} at
+			{formatTime(selected.start, viewerZone, { withZone: zonesDiffer })}
+		</p>
+	{/if}
+
+	<!-- … -->
+
+	<Button type="submit" size="lg" full loading={book.pending > 0}>Book this time</Button>
+
+	<!-- … -->
+</section>`
+			},
+			{
+				type: 'code',
+				file: 'src/routes/book/[slug]/+page.svelte',
+				lang: 'css',
+				code: `
+.booking:not(:has(:global(.slot input:checked))) .details {
+	display: none;
+}`
 			},
 			{
 				type: 'p',
-				text: 'A form asking for a name and email while the customer is still deciding which Tuesday is noise. Worse on a phone, where it pushes the actual choice off the screen. It appears when a time is chosen and animates in, which also tells the customer *something happened* without a message saying so.'
+				text: 'A form asking for a name and email while the customer is still deciding which Tuesday is noise. Worse on a phone, where it pushes the actual choice off the screen. So the details stay out of sight until a time is chosen, and animate in when one is, which also tells the customer *something happened* without a message saying so. Between the heading and the button sit a one-line summary of the chosen time, the error alert from the end of this chapter, and the four fields: name, email, phone and a note.'
+			},
+			{
+				type: 'p',
+				text: 'The section is always rendered, and the CSS rule decides whether it shows. `:has()` asks the browser whether any time in the grid is checked; the radios are rendered by `SlotGrid`, another component, hence the `:global(...)` inside it. The `selected` that the summary reads is chapter 23\'s derived value: the chosen slot, if it is still one of the times on screen.'
+			},
+			{
+				type: 'why',
+				title: 'Why CSS, and not {#if}',
+				text: 'This section used to sit inside `{#if selectedStart !== null}`, where `selectedStart` came from the form field\'s value. With JavaScript, fine. Without it, that value is whatever the server rendered — nothing — and it never changes, so the name, the email and the Book button were never in the page at all, and a checkpoint in this course that told you to book with JavaScript disabled could not be passed. Whether a radio is checked is something the browser knows by itself, script or no script, so the rule that reveals the form now asks the browser. A browser without `:has()` shows the details all the time: a worse layout, and the same working form.'
 			},
 
 			{ type: 'h3', id: 'only-one', text: 'Not asking questions with one answer' },
@@ -266,28 +369,48 @@ function pickService(slug: string | null) {
 				file: 'src/routes/book/[slug]/+page.svelte',
 				lang: 'svelte',
 				code: `
-{#if service.staffIds.length > 1}
+{#if offeredBy.length > 1}
 	<section class="step">
 		<h3>Who with?</h3>
-		<div class="who" role="radiogroup" aria-label="Choose who with">
-			<button
-				type="button"
-				role="radio"
-				aria-checked={staffId === null}
-				class="who-option"
-				class:selected={staffId === null}
-				onclick={() => (staffId = null)}
-			>
-				Anyone
-			</button>
-			<!-- … one button per person who offers this service … -->
-		</div>
+		<!-- … -->
+		<ul
+			class="who"
+			role="list"
+			aria-label="Choose who with"
+			data-sveltekit-reset="false"
+			data-sveltekit-replacestate
+		>
+			<li>
+				<a
+					class="who-option"
+					href={bookingHref({ service: service.slug, day: selectedDay })}
+					aria-current={staffId === null ? 'true' : undefined}
+				>
+					Anyone
+				</a>
+			</li>
+			{#each offeredBy as person (person.id)}
+				<li>
+					<a
+						class="who-option"
+						href={bookingHref({ service: service.slug, with: person.id, day: selectedDay })}
+						aria-current={staffId === person.id ? 'true' : undefined}
+					>
+						{person.displayName}
+					</a>
+				</li>
+			{/each}
+		</ul>
 	</section>
 {/if}`
 			},
 			{
 				type: 'p',
 				text: 'If only one person offers the service, there is no question to ask, so we do not ask it. This is the kind of thing that separates software that feels considered from software that feels like a form.'
+			},
+			{
+				type: 'p',
+				text: 'When there is a question, it is an "Anyone" link followed by one link per person who offers this service, each the same page with `?with=` changed, built the same way as the day strip\'s and for the same reasons: it works without JavaScript, survives a refresh, and is a Tab stop that Enter follows. `offeredBy` is a `$derived` in the script — the team filtered to the people who offer this service — rather than a `.filter()` written into the `{#each}`, so the markup says what it lists and the script says how.'
 			},
 
 			{ type: 'h3', id: 'zones', text: 'Two clocks, honestly labelled' },
@@ -298,13 +421,13 @@ function pickService(slug: string | null) {
 				code: `
 <SlotGrid slots={daySlots} zone={viewerZone} field={book.fields.slot} />
 
-{#if zonesDiffer && selectedStart !== null}
+{#if zonesDiffer && selected !== null}
 	<p class="zone-note">
-		That is {formatTime(selectedStart, businessZone)} at the studio ({offsetLabel(
-			selectedStart,
+		That is {formatTime(selected.start, businessZone)} at the studio ({offsetLabel(
+			selected.start,
 			businessZone
 		)}), and
-		{formatTime(selectedStart, viewerZone)} where you are.
+		{formatTime(selected.start, viewerZone)} where you are.
 	</p>
 {/if}`
 			},
@@ -320,23 +443,69 @@ function pickService(slug: string | null) {
 			{ type: 'h3', id: 'errors', text: 'When the answer is no' },
 			{
 				type: 'code',
+				file: 'src/routes/book/[slug]/booking.remote.ts',
+				lang: 'ts',
+				code: `
+}).catch((thrown: unknown) => {
+	if (!(thrown instanceof BookingError)) throw thrown;
+
+	// …
+	if (REFUSED_TIME.has(thrown.code)) invalid(issue.slot(thrown.message));
+
+	// …
+	error(thrown.code === 'not_found' ? 404 : 400, thrown.message);
+});`
+			},
+			{
+				type: 'p',
+				text: 'Most refusals are the schema\'s — a missing name, an email that is not one — and they arrive on the fields themselves. The handler\'s own refusals are about the chosen time: it was taken, it fell inside the notice period, it is past the booking horizon, the person no longer does it. `REFUSED_TIME` is the set of those `BookingError` codes, and each goes on the form with `invalid(issue.slot(…))`, attached to the `slot` field. Only a studio or service that has vanished is a failure screen, because nothing on the form can fix that.'
+			},
+			{
+				type: 'code',
 				file: 'src/routes/book/[slug]/+page.svelte',
 				lang: 'svelte',
 				code: `
-{#if book.result === undefined && book.fields.allIssues()?.length}
-	<Alert tone="error" title="Please check the form">
-		<p>Some details need another look.</p>
-	</Alert>
+{#if slotIssue && selected === null}
+	<Alert tone="error"><p>{slotIssue}</p></Alert>
 {/if}`
 			},
 			{
 				type: 'p',
-				text: 'For a lost race the message comes from the server: "That time was just taken." — or, when the race is lost at the claim itself, "Sorry — that time was booked moments ago." And because availability is a live query, the grid has already removed it by the time they look up. Being told what happened *and* seeing the world agree is what makes an error feel like an event rather than a fault.'
+				text: 'The page shows that sentence beside the grid, where the remedy is, once the refused time has left the screen — which it does by itself: the live grid drops a taken slot within moments, and one that has slid inside the notice period at the next minute\'s tick, and the selection derived from it goes too. Without JavaScript the page that comes back is rendered without it. Choose another time and the alert gives way; the details below were never cleared, so the name and email are still there.'
+			},
+			{
+				type: 'why',
+				title: 'The same rule as chapter 21',
+				text: 'This handler used to call `error(409, …)` for a lost race, which sent the submission to `+error.svelte`: a failure screen whose only button is "Back to the start", and a customer typing their name and email in again to try a different time. That is precisely the mistake chapter 21 corrects on the sign-in form — a refusal the person can put right on the same form belongs on the form — made a second time, on the page where it costs a booking.'
+			},
+			{
+				type: 'p',
+				text: 'A lost race is rarer than it sounds, because availability is a live query: a time somebody else takes disappears from the grid, usually before the customer reaches the button. When one does reach the server, the loser is normally turned away by the re-check at the top of `createBooking`, because the write queue lets the winner commit first, and the sentence is "That time is no longer available." Only two server processes racing each other get as far as the claim table, where the loser hears "Sorry — that time was booked moments ago." Either way it is the same answer on the same form.'
+			},
+			{
+				type: 'code',
+				file: 'e2e/booking.e2e.ts',
+				lang: 'ts',
+				code: `
+await page.getByRole('button', { name: 'Book this time' }).click();
+
+// …
+await expect(page).toHaveURL(/\\/book\\/willow-lane\\?/);
+await expect(page.getByRole('alert')).toContainText('That time is no longer available.');
+await expect(page.locator('label.slot', { hasText: lostTime })).toHaveCount(0);
+
+await page.locator('label.slot').first().click();
+await expect(page.getByLabel('Your name')).toHaveValue('Second Sasha');
+await expect(page.getByRole('button', { name: 'Book this time' })).toBeVisible();`
+			},
+			{
+				type: 'p',
+				text: 'The race is made deterministic by running the loser with JavaScript off. That browser picks a time and fills in its details; a second, ordinary browser books the same time with the same stylist; then the first presses Book. With no script there is no live grid to drop the time first, so the submission really does reach the server and lose — and the page that comes back is the booking form, with the sentence, without the lost time, and with the name still filled in.'
 			},
 
 			{
 				type: 'checkpoint',
-				text: 'Choosing a service updates the URL; refreshing keeps it; the details form appears only after a time is picked; and the whole flow works with JavaScript disabled.'
+				text: 'Choosing a service, a person or a day updates the URL; refreshing keeps all three; the details form appears only after a time is picked; and with JavaScript disabled the whole flow still works, from the service list to the confirmation page.'
 			}
 		]
 	},
@@ -359,9 +528,13 @@ function pickService(slug: string | null) {
 				code: `
 <div class="grid" bind:this={grid}>
 	{#each slots as slot (slot.start)}
-		{@const value = valueOf(slot)}
-		<label class="slot" class:selected={selectedValue === value}>
-			<input {...field.as('radio', value)} />
+		<!--
+			No \`selected\` class. The label is styled from its radio's own state,
+			\`:has(input:checked)\`, so the chosen time looks chosen with or without
+			JavaScript, and the look can never disagree with what the form posts.
+		-->
+		<label class="slot">
+			<input {...field.as('radio', slotValue(slot))} />
 			<span>{labelFor(slot)}</span>
 		</label>
 	{/each}
@@ -374,7 +547,11 @@ function pickService(slug: string | null) {
 			},
 			{
 				type: 'p',
-				text: 'The input is visually hidden but never `display: none` — a hidden-that-way radio is unfocusable and unsubmittable. Clip it instead, and style the `<label>` from `:has(:checked)` and `:has(:focus-visible)`.'
+				text: 'The input is visually hidden but never `display: none` — a hidden-that-way radio is unfocusable and unsubmittable. Clip it instead, and style the `<label>` from `:has(input:checked)` and `:has(input:focus-visible)`. The chosen time used to be marked with a `selected` class worked out in JavaScript from the field\'s value, which meant that without script the radio you had checked looked exactly like the ones you had not. Asking the radio itself fixes that and deletes the bookkeeping.'
+			},
+			{
+				type: 'p',
+				text: '`slotValue(slot)` writes each radio\'s value: the start instant and the staff member fused into one string, so the form posts a complete choice with no JavaScript. It lives in the component\'s `<script module>` block, which runs once per module rather than once per instance, and that is what lets the booking page import it beside the component (`import SlotGrid, { slotValue } from …`) and ask whether the chosen value is still on offer in exactly the terms the grid wrote it.'
 			},
 
 			{ type: 'h3', id: 'touch', text: 'Sized for a thumb' },
@@ -435,12 +612,23 @@ function pickService(slug: string | null) {
  *   Play    — animate those transforms away. The elements slide to their new
  *             homes because the browser has already decided where those are.
  *
- * …
+ * The trick is that nothing animates layout. Layout happens once, in a single
+ * frame; what animates is a \`transform\`, which costs no layout and no repaint
+ * per frame — the browser moves pixels it has already painted. GSAP still
+ * writes that transform from JavaScript on every frame, so the main thread is
+ * not idle; it is just doing almost nothing. Animating \`top\` and \`left\`
+ * directly forces a reflow every frame and drops to roughly 20fps on a phone
+ * with forty cells on screen.
+ *
+ * Why it matters here specifically: when somebody else books the 11:00 slot,
+ * that button vanishes and every later slot shifts up. Without FLIP the grid
+ * snaps and the customer's finger is suddenly over a different time than the one
+ * they were reaching for. With it, the movement is visible — which is the point.
  */`
 			},
 			{
 				type: 'p',
-				text: 'Nothing animates layout. Layout happens once, in a single frame; what animates is a `transform`, which the compositor handles without touching the main thread. Animating `top` and `left` forces a reflow every frame and drops to roughly 20fps on a phone with forty cells on screen.'
+				text: 'The comment is the documentation, and the paragraph beginning "The trick" is the part to remember: nothing animates layout. The browser lays the grid out once, in a single frame, and what moves afterwards is only a `transform`, which costs no layout and no repaint per frame. It is not free — GSAP drives the animation from JavaScript, writing the transform on every frame — but the work per frame is tiny, where animating `top` and `left` makes the browser lay the whole grid out again forty times a second.'
 			},
 			{
 				type: 'p',
@@ -462,7 +650,11 @@ export function prefersReducedMotion(): boolean {
 	return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
+// …
+
 let pending: Promise<Motion | null> | null = null;
+
+// …
 
 export function loadMotion(): Promise<Motion | null> {
 	if (!browser || prefersReducedMotion()) return Promise.resolve(null);
@@ -584,7 +776,11 @@ export const cancelOwnBooking = command(
 		if (!found) error(404, 'We could not find that booking.');
 
 		try {
-			await cancelBooking({ bookingId: found.id, by: 'customer', reason: reason || undefined });
+			await cancelBooking({
+				bookingId: found.id,
+				by: 'customer',
+				reason: reason || undefined
+			});
 		} catch (thrown) {
 			if (thrown instanceof BookingError) {
 				// 409 for "too late": the request was valid, the world moved on.
@@ -650,8 +846,12 @@ export const cancelOwnBooking = command(
 	{/if}
 </header>
 
+<!-- … -->
+
 {#if result.entries.length === 0}
 	<p class="empty">Nothing booked. Enjoy it.</p>
+{:else}
+	<!-- … -->
 {/if}`
 			},
 			{
@@ -700,25 +900,42 @@ export const cancelOwnBooking = command(
 				code: `
 <li class="entry" style="--hue: {entry.colourHue}">
 	<!-- … -->
-	<p class="who">
-		<strong>{entry.customerName}</strong>
-		<!-- … -->
-	</p>
 
-	<p class="with text-muted">
-		with {entry.staffName}
+	<div class="body">
+		<p class="who">
+			<strong>{entry.customerName}</strong>
+			<span class="text-muted"> · {entry.serviceName}</span>
+		</p>
+
+		<p class="with text-muted">
+			with {entry.staffName} ·
+			<!-- … -->
+		</p>
+
 		<!-- … -->
-	</p>
+	</div>
+
 	<!-- … -->
 </li>`
 			},
 			{
+				type: 'p',
+				text: 'And in the same component\'s `<style>` block:'
+			},
+			{
 				type: 'code',
-				file: 'and in the stylesheet',
+				file: 'src/routes/manage/[slug]/+page.svelte',
 				lang: 'css',
 				code: `
 .entry {
+	/* … */
+	/*
+	 * The staff member's colour, as a stripe rather than a background. A tinted
+	 * card would put text on an arbitrary hue and lose the contrast guarantee;
+	 * a stripe carries the same information and costs nothing in legibility.
+	 */
 	border-inline-start: 4px solid oklch(60% 0.14 var(--hue));
+	/* … */
 }`
 			},
 			{
@@ -734,10 +951,14 @@ export const cancelOwnBooking = command(
 				code: `
 <nav class="tabs" aria-label="Dashboard sections">
 	<div class="tabs-inner container">
-		{#each visible as section (section.path)}
-			{@const Icon = section.icon}
-			{@const active = activePath === section.path}
-			<a class="tab" class:active href="{base}{section.path}" aria-current={active ? 'page' : undefined}>
+		{#each visible as section (section.route)}
+			{const Icon = $derived(section.icon)}
+			{const active = $derived(page.route.id === section.route)}
+			<a
+				class={['tab', { active }]}
+				href={resolve(section.route, { slug: params.slug })}
+				aria-current={active ? 'page' : undefined}
+			>
 				<Icon weight={active ? 'fill' : 'regular'} aria-hidden="true" />
 				{section.label}
 			</a>
@@ -753,6 +974,15 @@ export const cancelOwnBooking = command(
 				type: 'p',
 				text: '`aria-current="page"` is what tells a screen reader which tab is the current one. The colour and the filled icon say it to everybody else.'
 			},
+			{
+				type: 'p',
+				text: 'Each section is named by its **route ID** — `/manage/[slug]/hours` — and that one name does two jobs. `resolve(section.route, { slug: params.slug })` turns it into the link, with `slug` filled in and type-checked, so renaming the `hours` folder fails svelte-check here rather than shipping a tab that 404s. And `page.route.id`, from `$app/state`, is the route ID of the page on screen, so the active tab is a single comparison.'
+			},
+			{
+				type: 'why',
+				title: 'Why not a base URL and a suffix',
+				text: 'The tabs used to be `href="{base}{section.path}"`, with `base` the resolved `/manage/willow-lane` and each section a suffix such as `/hours`, and the active tab found by a longest-prefix search over the pathname. It worked, and it was the one place in the app that built links by gluing strings together, against the root layout\'s rule that every link goes through `resolve()` with a route ID. It also read, to anybody who knew SvelteKit 2, like the `base` export from `$app/paths`, which SvelteKit 3 removed. Route IDs make the link and the active test use the same name the router does.'
+			},
 
 			{ type: 'h3', id: 'owner-only', text: 'Hiding doors, and locking them' },
 			{
@@ -761,11 +991,11 @@ export const cancelOwnBooking = command(
 				lang: 'ts',
 				code: `
 const SECTIONS = [
-	{ path: '', label: 'Diary', icon: CalendarDotsIcon, ownerOnly: false },
-	{ path: '/services', label: 'Services', icon: ScissorsIcon, ownerOnly: true },
-	{ path: '/hours', label: 'Hours', icon: ClockIcon, ownerOnly: false },
-	{ path: '/team', label: 'Team', icon: UsersThreeIcon, ownerOnly: true },
-	{ path: '/settings', label: 'Settings', icon: GearIcon, ownerOnly: true }
+	{ route: '/manage/[slug]', label: 'Diary', icon: CalendarDotsIcon, ownerOnly: false },
+	{ route: '/manage/[slug]/services', label: 'Services', icon: ScissorsIcon, ownerOnly: true },
+	{ route: '/manage/[slug]/hours', label: 'Hours', icon: ClockIcon, ownerOnly: false },
+	{ route: '/manage/[slug]/team', label: 'Team', icon: UsersThreeIcon, ownerOnly: true },
+	{ route: '/manage/[slug]/settings', label: 'Settings', icon: GearIcon, ownerOnly: true }
 ] as const;
 
 const visible = $derived(
@@ -779,7 +1009,7 @@ const visible = $derived(
 
 			{
 				type: 'checkpoint',
-				text: 'Sign in as the staff member: three tabs are missing, and typing their URLs directly returns 403. Sign in as the owner and book something from another window: it appears in the diary without a reload.'
+				text: 'Sign in as the staff member: three tabs are missing, and typing their URLs directly returns 403 with a page headed "That did not work". Sign in as the owner, step the diary to a day with free times, and book one of them from another window: it appears in the diary without a reload.'
 			}
 		]
 	},
@@ -804,6 +1034,9 @@ const visible = $derived(
 				code: `
 <input
 	{...editForm.fields.durationMinutes.as('number', entry.durationMinutes)}
+	{id}
+	aria-describedby={describedBy}
+	aria-invalid={invalid}
 	min="5"
 	max="480"
 	step="5"
@@ -855,7 +1088,7 @@ function toClock(minutes: number): string {
 			},
 			{
 				type: 'p',
-				text: 'Read the comment in `toClock` again. A shift running to 02:00 the next morning is stored as minute 1560, and showing that as "01:30" would be a lie about which day it belongs to. `25:30` looks odd for exactly the right reason.'
+				text: 'Read the comment in `toClock` again. A shift running to 01:30 the next morning is stored as minute 1530, and showing that as "01:30" would be a lie about which day it belongs to. `25:30` looks odd for exactly the right reason.'
 			},
 			{
 				type: 'p',
@@ -878,9 +1111,15 @@ export const setStaffService = command(
 	async ({ slug, staffId, serviceId, offers }) => {
 		const context = await requireOwner(slug);
 
-		// … both staffId and serviceId are looked up scoped to
-		// context.business.id first, and a 404 stops an owner of one studio
-		// wiring their staff to another studio's services by id …
+		// Both sides must belong to this business, or an owner of one studio could
+		// wire their staff to another studio's services by id.
+		const member = await db.query.staff.findFirst({
+			where: and(eq(staff.id, staffId), eq(staff.businessId, context.business.id))
+		});
+		const target = await db.query.service.findFirst({
+			where: and(eq(service.id, serviceId), eq(service.businessId, context.business.id))
+		});
+		if (!member || !target) error(404, 'No such staff member or service.');
 
 		if (offers) {
 			/*

@@ -1,5 +1,7 @@
 <script lang="ts">
+	import { langParam } from '#lib/i18n/index.ts';
 	import { page } from '$app/state';
+	import { resolve } from '$app/paths';
 </script>
 
 <div class="error container">
@@ -17,7 +19,16 @@
 		<p class="error__id">Reference <code>{page.error.id}</code></p>
 	{/if}
 
-	<p><a href="/">Back to the start</a></p>
+	<!--
+		`resolve()` even for the home page, like every internal link, in the
+		visitor's language. From `page.data`, not `page.params`: a URL that matched
+		no route has no params at all, but the root layout's data is always there.
+	-->
+	<p>
+		<a href={resolve('/[[lang=locale]]', { lang: langParam(page.data.locale) })}>
+			Back to the start
+		</a>
+	</p>
 </div>
 
 <style>

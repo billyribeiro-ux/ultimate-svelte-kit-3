@@ -7,8 +7,9 @@ updates every open browser when somebody books, honest time zone handling, and
 a database schema that makes double-booking impossible to write rather than
 merely unlikely.
 
-Requires **Node 24.20.0** (the current LTS, pinned in `.nvmrc` and `engines`)
-and **pnpm 11+**.
+Requires **Node 24.21.0** (the current LTS, pinned in `.nvmrc` and `engines`)
+and **pnpm 12.10.1** (pinned in `packageManager`, so Corepack picks it for you).
+Built on SvelteKit 3.0.1, Svelte 5.57, Vite 8 and Vitest 5.
 
 ## Quick start
 
@@ -50,6 +51,51 @@ pnpm run check      # svelte-check across the project
 pnpm test           # unit suite, then the Playwright e2e suite
 pnpm run db:studio  # poke at the database in a browser
 ```
+
+## Building without a `.env`
+
+`pnpm run build` needs two variables, and both are public:
+
+```sh
+PUBLIC_ORIGIN=https://halfpast.example \
+PUBLIC_DEFAULT_TIME_ZONE=Europe/London \
+pnpm run build
+```
+
+SvelteKit validates every variable declared in `src/env.ts` when it builds, not
+only the ones it inlines — "SvelteKit analyses your app during the `build` step
+by running it" — and the two kinds are treated differently:
+
+- **`PUBLIC_ORIGIN` and `PUBLIC_DEFAULT_TIME_ZONE` are `static: true`.** For a
+  static variable "the build time value is inlined into the bundle", so the value
+  you build with is the value that ships. Build with the real ones.
+  `PUBLIC_ORIGIN` also becomes `paths.origin` in `vite.config.ts`, the origin the
+  CSRF check trusts.
+- **`DATABASE_URL`, `ORIGIN` and `BETTER_AUTH_SECRET` are dynamic**: "the value
+  is read from the environment when the app starts". Their schemas use the opt-out
+  the [environment variables docs](https://svelte.dev/docs/kit/environment-variables)
+  give for exactly this, `building` from `$app/env` with a validator that accepts
+  a missing value, so they may be absent while building and are required the
+  moment `node build` starts. `DATABASE_AUTH_TOKEN` is optional everywhere.
+
+The modules that read those three check `building` too. While building,
+`src/lib/server/db/index.ts` opens an in-memory database and skips its pragmas,
+and `src/lib/server/auth.ts` gives Better Auth a throwaway secret, so a build
+touches no real database and knows no secret. An earlier version of this README
+told you to pass placeholders — `DATABASE_URL=:memory:` and a made-up secret —
+because without the opt-out the build stopped with `env_invalid`, and a build
+given a real database URL connected to that database.
+
+Locally, `.env` supplies everything. The e2e suite sets its own variables in
+`playwright.config.ts`, which is why it never notices a missing `.env`.
+
+## Toolchain notes
+
+- `pnpm install` is clean except for one widened peer: `better-auth` still
+  declares `@sveltejs/kit ^2`. The reason it is safe, and the rule that widens
+  it, are both in `pnpm-workspace.yaml`.
+- pnpm 12 holds back packages younger than a day; the three it excluded when the
+  toolchain was pinned are listed in `pnpm-workspace.yaml` with the same note.
 
 ## Provenance
 

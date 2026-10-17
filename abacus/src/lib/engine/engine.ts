@@ -7,10 +7,11 @@
  * and the procedure that — when one cell changes — recomputes exactly the
  * cells that depended on it, in an order that never reads a stale value.
  *
- * It is plain TypeScript with no Svelte in it, on purpose. Chapter 12 builds
- * the same thing out of `$derived` and shows that Svelte's runtime *is* one
- * of these; the reason to write it by hand first is that the algorithm is
- * the lesson, and a lesson hidden inside a framework is a lesson missed.
+ * It is plain TypeScript with no Svelte in it, on purpose. The `$derived`
+ * lesson (`#lib/lesson/reactive.svelte.ts`) builds the same thing out of runes
+ * and shows that Svelte's runtime *is* one of these; the reason to write it by
+ * hand first is that the algorithm is the lesson, and a lesson hidden inside
+ * a framework is a lesson missed.
  *
  * HOW A RECALCULATION WORKS
  * -------------------------

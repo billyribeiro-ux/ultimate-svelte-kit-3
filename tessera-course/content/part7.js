@@ -1,6 +1,6 @@
 /**
  * PART 7 — SvelteKit 3 in anger
- * (chapters 31–35)
+ * (chapters 30–34)
  *
  * Remote functions, live queries, progressive forms, the two universal hooks,
  * and an i18n layer with no library in it. This is the part of the course that
@@ -81,7 +81,7 @@ export const pushOps = command(PushSchema, async ({ boardId, actor, ops }) => {
 			{
 				type: 'why',
 				title: 'A refusal is data, not a crash',
-				text: 'The client has already applied these operations locally — that is what local-first means — so it needs a status it can *act on*. 403 means "stop and reload". 422 means "your clock is wrong and this will keep happening". A 500 would tell it to retry forever, which for a permanent failure is a client that hammers the server until the tab closes. The `IngestError` → `error(status, message)` translation is three lines and it is what makes `#onPushFailure` in chapter 24 able to distinguish retryable from not.'
+				text: 'The client has already applied these operations locally — that is what local-first means — so it needs a status it can *act on*. 403 means "stop and reload". 422 means "your clock is wrong and this will keep happening". A 500 would tell it to retry forever, which for a permanent failure is a client that hammers the server until the tab closes. The `IngestError` → `error(status, message)` translation is three lines and it is what makes `#onPushFailure` in chapter 23 able to distinguish retryable from not.'
 			},
 
 			{ type: 'h3', id: 'query', text: '`query`' },
@@ -151,6 +151,183 @@ export const openBoard = query(boardId, async (id) => {
 			{
 				type: 'warn',
 				text: 'The alternative — a server that materialises the current state on every open — looks tidier and gives the server an **opinion about the document**, which then has to agree with the client’s opinion forever. When two authorities disagree about a CRDT, the one with the database usually wins, and the user’s unsynced work is what loses.'
+			},
+
+			{ type: 'h3', id: 'awaiting-the-board', text: 'Awaiting the board, and what a boundary is handed' },
+			{
+				type: 'p',
+				text: 'The page learns which board to open from its props, not from a global. SvelteKit generates a `$types` module beside every route, and its `PageProps` types both things a page is given: `data`, from the load functions above it, and `params`, from the URL — for this route, `{ lang?: Locale; board: string }`.'
+			},
+			{
+				type: 'code',
+				file: 'src/routes/[[lang=locale]]/boards/[board]/+page@.svelte',
+				lang: 'svelte',
+				code: `
+/*
+ * \`PageProps\`, generated for this route: \`data\` and \`params\`, both typed.
+ *
+ * \`params.board\` is a \`string\` here — the route is \`[board]\`, so it is never
+ * missing — where the global \`page.params.board\` from \`$app/state\` is
+ * \`string | undefined\` and needs a \`!\` to call anything with.
+ */
+let { data, params }: PageProps = $props();`
+			},
+			{
+				type: 'p',
+				text: 'This page used to read `page.params.board!` from `$app/state`. The global `page` is typed for every route at once, so `board` is `string | undefined` there, and calling anything with it took a `!` — an assertion that can be wrong, about a value this route already guarantees. The props are typed for *this* route. A hand-written `interface Props { data: PageData }` is the older spelling of half the same thing: the documentation marks it legacy, “before 2.16.0”, and every route component in Tessera now takes `PageProps` or `LayoutProps` instead.'
+			},
+			{
+				type: 'p',
+				text: 'Then the query: **derived** from that parameter in the script, and **awaited** in the markup, inside a `<svelte:boundary>`.'
+			},
+			{
+				type: 'code',
+				file: 'src/routes/[[lang=locale]]/boards/[board]/+page@.svelte',
+				lang: 'svelte',
+				code: `
+/**
+ * \`+page@.svelte\` — the \`@\` resets the layout.
+ *
+ * This page inherits the root layout only, skipping the marketing chrome from
+ * \`[[lang=locale]]/+layout.svelte\`. An editor that is meant to fill the screen
+ * should not have a site header above it, and the alternative — a layout that
+ * hides itself when the URL looks like a board — is a conditional in a
+ * component that has no business knowing about routes.
+ *
+ * The query is \`$derived\`, because SvelteKit reuses this component when the
+ * URL goes from one board to another: same route, new \`params\`. Called once,
+ * \`openBoard(...)\` would capture whichever board was open when the component
+ * mounted and go on showing it. Derived, it re-runs when \`params.board\`
+ * changes — the same reason \`Comments.svelte\` derives its query.
+ *
+ * And it is *awaited* in the markup below, inside the boundary, rather than
+ * read through \`board.current\`. \`.current\` never throws: a query that fails
+ * leaves it \`undefined\` and puts the error on \`board.error\`, so a boundary
+ * around \`{#if board.current}\` never reaches its \`failed\` snippet, and a
+ * board that does not exist renders as an empty screen. \`await\` is what hands
+ * the rejection — \`openBoard\`'s "No such board." — to the boundary.
+ */
+const board = $derived(openBoard(params.board));
+
+/**
+ * The headline above the server's own message.
+ *
+ * Only 404 has its own. \`openBoard\` needs \`viewer\`, the lowest role, so a
+ * signed-in person either has access or gets "No such board." — never a 403 —
+ * and a signed-out one never gets this far: \`+page.server.ts\` sends them to
+ * sign in first.
+ */
+const heading = (status: number) => (status === 404 ? t.errors.notFound : t.errors.generic);`
+			},
+			{
+				type: 'why',
+				title: 'Why `$derived`',
+				text: 'SvelteKit reuses a page component when the URL changes but the route does not: going from `/boards/a` to `/boards/b` keeps this instance and hands it new `params`. A query called once — `const board = openBoard(params.board)` — would go on showing board `a`. `$derived` re-runs the call when `params.board` changes, and the compiler agrees: a plain `const` that reads a prop earns a warning that it “only captures the initial value”. It is the documentation’s own idiom for a query with an argument — `let { params } = $props(); const post = $derived(await getPost(params.slug));` — with one difference, explained next: the `await` here is in the markup rather than the script.'
+			},
+			{
+				type: 'p',
+				text: 'The `await` lives in the markup because of where its boundary is. An `await` in the *script* suspends the whole component, so the boundary in its own markup could not catch it; the wait and the failure would belong to whatever is above. Awaited inside the page’s own `<svelte:boundary>`, it gives that boundary both of its jobs: until the promise resolves it shows its `pending` snippet, and if the promise rejects it shows its `failed` snippet instead. In the documentation’s words, “until the promise resolves — and if it errors — the nearest `<svelte:boundary>` will be invoked.”'
+			},
+			{
+				type: 'code',
+				file: 'src/routes/[[lang=locale]]/boards/[board]/+page@.svelte',
+				lang: 'svelte',
+				code: `
+<svelte:boundary>
+	<Workspace loaded={await board} {t} locale={data.locale} />
+
+	{#snippet pending()}
+		<p class="state">{t.sync.connecting}</p>
+	{/snippet}
+
+	<!--
+		\`error\` is an \`App.Error\` — \`{ status, message }\` plus this app's \`id\` —
+		because SvelteKit runs everything a boundary catches through \`handleError\`
+		first. So the server's words are its \`message\`; \`String(error)\` prints
+		"[object Object]". Svelte types \`error\` as \`unknown\`, since it cannot know
+		what SvelteKit's \`transformError\` returns, which is what the cast is for.
+	-->
+	{#snippet failed(error)}
+		{const caught = $derived(error as App.Error)}
+		<div class="state">
+			<p>{heading(caught.status)}</p>
+			<p class="state__detail">{caught.message}</p>
+		</div>
+	{/snippet}
+</svelte:boundary>`
+			},
+			{
+				type: 'note',
+				text: '`{const caught = $derived(error as App.Error)}` is a **declaration tag**: a `const` (or `let`) written in markup, which names a value for everything after it in the same scope. Since Svelte 5.56 it is how markup declares a value, and the older `{@const}` tag is, in the documentation’s words, “considered legacy — use declaration tags instead.” The `$derived` is not decoration. A bare `{const}` is evaluated once, when the tag is reached, and the documentation’s rule is that “when values should be reactive, you can use `$state` and `$derived`” — which is what keeps `caught` in step with the `error` it reads. Chapter 31 uses one to name an awaited list, and chapter 36 one inside an `{#each}`, where its scope matters.'
+			},
+			{
+				type: 'why',
+				title: 'Why `await`, and not `.current`',
+				text: 'A query also has `current`, `loading` and `error` properties, and `current` looks like the simpler thing to read: `{#if board.current}<Workspace … />{/if}`. That is what this page first did, and a board that did not exist rendered as an empty screen. **`.current` never throws.** A query that fails leaves it `undefined` and puts the error on `.error`, so nothing inside the boundary ever fails and its `failed` snippet never runs — the person sees a blank page and nothing is logged anywhere. `await` is what hands the rejection to the boundary.'
+			},
+			{
+				type: 'p',
+				text: 'What arrives in `failed` is worth knowing exactly, because it is not the value that was thrown. SvelteKit passes everything a boundary catches through the `handleError` hook first, so the snippet receives an **`App.Error`**: `{ status, message }`, plus whatever fields you declared in `app.d.ts` — here the correlation `id`. The server’s `error(404, \'No such board.\')` arrives as `{ status: 404, message: \'No such board.\' }`. A plain exception thrown while rendering arrives as whatever `hooks.client.ts` made of it — “Something went wrong in the browser. Your board is safe on this device.” Either way the text is its `message`. `String(error)`, which is what this snippet first printed, gives `[object Object]`.'
+			},
+			{
+				type: 'note',
+				text: 'The documentation writes the snippet as `failed(error: App.Error)`. Under this project’s strict settings `svelte-check` rejects that annotation: Svelte types the parameter as `unknown`, because it cannot know what SvelteKit’s `transformError` returns, and a snippet that only accepts an `App.Error` is not assignable to one that must accept anything. So the parameter stays untyped and the value is cast where it is read. The cast says out loud what the type system cannot know, and the end-to-end test below is what keeps it honest.'
+			},
+
+			{ type: 'h3', id: 'when-a-command-says-no', text: 'The other shape: a command that says no' },
+			{
+				type: 'p',
+				text: 'A command, or a form submission you `await` yourself, fails differently. It never goes near a boundary: it rejects, at the `await`, with an **`HttpError`** — `{ status, body }`, where `body` is the `App.Error`. An `HttpError` is not an `Error`, so it has no `message` of its own. The server’s words are `body.message`, and `isHttpError` from `@sveltejs/kit` is the type guard that lets TypeScript see it.'
+			},
+			{
+				type: 'ul',
+				items: [
+					'A boundary’s `failed` snippet or `onerror` handler, a query’s `.error`, and `page.error` on an error page: an `App.Error`. Read `error.message`.',
+					'An awaited `command()`, or `form.submit()` inside `enhance`: an `HttpError`. Read `thrown.body.message`.',
+					'A `form()` spread without `enhance` that fails: SvelteKit renders the nearest `+error.svelte`, where `page.error` is an `App.Error` again.'
+				]
+			},
+			{
+				type: 'p',
+				text: 'Mixing them up fails quietly in both directions. `error.body.message` in a `failed` snippet throws inside the snippet; `thrown.message` in a `catch` is `undefined`, and the line meant to explain the refusal is blank. Chapter 36 has the second case, where a viewer presses a button the server will refuse — and chapter 23’s `#onPushFailure` reads the same shape through the same `isHttpError` guard, for exactly this reason.'
+			},
+			{
+				type: 'p',
+				text: 'One status never reaches this boundary: 401. `openBoard` would answer it for a visitor who is not signed in, and a heading over “Sign in to continue.” with nothing to click is a dead end — on the one URL in the app that people paste into chat. So the route has a server load whose only job is to send a signed-out visitor to the sign-in page, with `from` set so they come straight back:'
+			},
+			{
+				type: 'code',
+				file: 'src/routes/[[lang=locale]]/boards/[board]/+page.server.ts',
+				lang: 'ts',
+				code: `
+import { userOrSignIn } from '#lib/server/session.ts';
+import type { PageServerLoad } from './$types';
+
+/**
+ * Signed out? The sign-in page first, and straight back here afterwards.
+ *
+ * The board itself comes from \`openBoard\`, a remote query, and a query cannot
+ * redirect a visitor anywhere useful — it can only fail, and a 401 inside the
+ * page's boundary is a heading with nothing to click. A board link is the URL
+ * that gets pasted into chat, so it is the one most often opened by somebody
+ * who is not signed in on that device. The guard lives in the route, where a
+ * redirect means a whole navigation.
+ */
+export const load: PageServerLoad = () => {
+	userOrSignIn();
+};`
+			},
+			{
+				type: 'terminal',
+				code: `
+[board] a board › that does not exist says so, in the server’s words
+
+  sign in, open /boards/no-such-board
+  openBoard throws error(404, 'No such board.')
+  the boundary's failed snippet  → "That board does not exist, or you do not have access to it."
+                                   "No such board."
+
+  before: an empty screen — .current never threw, and String(error) was [object Object]`
 			},
 
 			{ type: 'h3', id: 'transport', text: 'Returning something with behaviour' },
@@ -277,6 +454,10 @@ export const transport: Transport = {
 				items: [
 					'You can call the server from a component with no `fetch`, no route and no manual types.',
 					'Changing a schema breaks the caller at build time.',
+					'A board that does not exist says “No such board.” rather than showing an empty page.',
+					'The board page reads its id from `PageProps`’ typed `params`, with no `!`, and derives its query from it.',
+					'A signed-out visitor who opens a board link is sent to sign in, and then back to the board.',
+					'You can say which of the two error shapes a `failed` snippet gets, and which one a `catch` gets.',
 					'You can name the two things a remote function is not for.'
 				]
 			}
@@ -349,6 +530,33 @@ export const myBoards = query.live(async function* () {
 				text: 'The generator could just as easily be driven by an event. It is not, and the comment says why: the board list is a page people leave open in a background tab, and it changes a few times an hour. An event bus for it would be infrastructure serving a list nobody is watching. **The operation stream is where push matters, and it has its own channel** — which is the honest way to make this trade rather than reaching for the same mechanism everywhere.'
 			},
 
+			{
+				type: 'p',
+				text: 'The board list awaits its live query in the markup, the same way the board page awaits `openBoard`:'
+			},
+			{
+				type: 'code',
+				file: 'src/routes/[[lang=locale]]/boards/+page.svelte',
+				lang: 'svelte',
+				code: `
+/**
+ * A live query, so a board created in another tab — or by a colleague in a
+ * workspace you belong to — appears here without a reload.
+ *
+ * Awaited in the markup, inside the boundary, rather than read through
+ * \`boards.current\`. Awaiting a live query is not a one-off: every value the
+ * stream yields resolves it again, so the list still updates in place. What
+ * \`await\` adds is that the boundary sees the wait (its \`pending\` snippet) and
+ * the failure (its \`failed\` snippet). \`.current\` is \`undefined\` in both cases
+ * and says nothing — a stream that fails just leaves an empty page.
+ */
+const boards = myBoards();`
+			},
+			{
+				type: 'p',
+				text: 'Awaiting a live query is not a one-off. Each value the stream yields resolves it again, so `{const list = $derived(await boards)}` inside the boundary is a list that keeps itself up to date — with the boundary’s `pending` snippet covering the wait for the first value, and its `failed` snippet showing the server’s message if the stream is refused. Read through `boards.current` instead, a refused stream leaves the space under the heading blank, with nothing to say why.'
+			},
+
 			{ type: 'h3', id: 'reconnect', text: 'Refreshing a live query' },
 			{
 				type: 'code',
@@ -401,8 +609,15 @@ export const createBoard = form(
 		 * navigate with. It is what the form does with JavaScript switched off, and
 		 * making the enhanced path do something different is how two code paths
 		 * drift until only one of them is ever exercised.
+		 *
+		 * Built with \`resolve()\`, like every link: the route id is checked, and the
+		 * new board opens in the language the list was in.
 		 */
-		redirect(303, \`/boards/\${id}\`);
+		const { locale } = getRequestEvent().locals;
+		redirect(
+			303,
+			resolve('/[[lang=locale]]/boards/[board]', { lang: langParam(locale), board: id })
+		);
 	}
 );`
 			},
@@ -412,7 +627,7 @@ export const createBoard = form(
 			},
 			{
 				type: 'note',
-				text: 'In SvelteKit 3 this is `reconnect()`. If you have written `refresh()` on a live query before, that is the name that changed, and the error is a runtime `is not a function` rather than a type error, because the object is created dynamically.'
+				text: 'A live query has `reconnect()` and no `refresh()`. It updates itself, so the only thing left to ask of it is to restart its stream — and asked inside a form or command handler, as here, the restart travels back with that handler’s own response. Reach for `refresh()` out of habit from an ordinary `query` and `svelte-check` stops you: `RemoteLiveQuery` has no such method.'
 			},
 
 			{ type: 'h3', id: 'form-vs-command', text: '`form()` versus `command()`' },
@@ -436,29 +651,36 @@ export const createBoard = form(
 				type: 'warn',
 				text: 'Note the `redirect(303, …)` from the server rather than returning the id for the client to navigate with. It is what the form does with JavaScript switched off, and making the enhanced path do something *different* is how two code paths drift until only one of them is ever exercised — and it is always the enhanced one, because that is the one you test in.'
 			},
+			{
+				type: 'p',
+				text: 'The target is built with `resolve()` from `$app/paths` rather than as a template string, which is how every internal URL in the app is built, links and redirects alike — chapter 33 explains it. On the server, `resolve()` answers with a path *relative* to the page the form was submitted from, and the browser resolves a redirect against that same page, with JavaScript or without.'
+			},
 
 			{ type: 'h3', id: 'form-for', text: 'One definition, many instances' },
 			{
 				type: 'code',
+				file: 'src/lib/components/Comments.svelte',
 				lang: 'svelte',
 				code: `
-{#each open as thread (thread.id)}
-	{@const reply = postComment.for(thread.id)}
-	<form {...reply} class="thread__reply-form">
-		<input {...reply.fields.boardId.as('hidden', boardId)} />
-		<input {...reply.fields.parentId.as('hidden', thread.id)} />
-		<input id="reply-{thread.id}" {...reply.fields.body.as('text')} placeholder="Reply…" />
-		<Button size="sm" type="submit">{t.comments.post}</Button>
-	</form>
-{/each}`
+<form {...reply.enhance((form) => send(form, thread.id))} class="thread__reply-form">
+	<input {...reply.fields.boardId.as('hidden', boardId)} />
+	<input {...reply.fields.parentId.as('hidden', thread.id)} />
+	<label class="visually-hidden" for="{uid}-reply-{thread.id}">{t.comments.reply}</label>
+	<input
+		id="{uid}-reply-{thread.id}"
+		{...reply.fields.body.as('text')}
+		placeholder={t.comments.replyPlaceholder}
+	/>
+	<Button size="sm" type="submit">{t.comments.post}</Button>
+</form>`
 			},
 			{
 				type: 'p',
-				text: '`postComment.for(thread.id)` gives every thread its own form instance from one definition. Each keeps its own pending state and its own validation issues, so a failed reply in one thread does not put an error message under every other one. Spreading the bare `postComment` into a loop gives every thread the same instance and exactly that bug — which chapter 36 shows in full.'
+				text: 'That form sits inside `{#each open as thread (thread.id)}`, and `reply` is declared once per thread at the top of the loop as `postComment.for(thread.id)`. That call gives every thread its own form instance from one definition. Each keeps its own pending state and its own validation issues, so a failed reply in one thread does not put an error message under every other one. Spreading the bare `postComment` into a loop gives every thread the same instance and exactly that bug — which chapter 36 shows in full, along with the `enhance` callback and the `uid` in the label’s `for`.'
 			},
 			{
 				type: 'p',
-				text: 'And `fields.x.as(\'hidden\', value)` spreads name, value and type together, so a renamed field is a build error rather than a silently missing parameter.'
+				text: 'And `fields.x.as(\'hidden\', value)` spreads name, value and type together, so a renamed field is a build error rather than a silently missing parameter. In SvelteKit 3 it is also the only way in: a control whose `name` was typed by hand instead of spread from a field gets the whole submission rejected.'
 			},
 
 			{
@@ -570,9 +792,12 @@ const LANGUAGE_LIKE = /^\\/([a-z]{2,3})(?:-[A-Za-z]{2,4})?(\\/|$)/;
  * and then sat empty while the browser retried a stream that could never exist.
  * Nothing logged an error; the reroute was doing exactly what it was told.
  *
- * Deriving this from the route manifest would be tidier and is not possible: the
- * universal hook runs in the browser too, where the manifest is not available.
- * A short explicit list, next to the code that needs it, is the honest version.
+ * Why not derive it from the routes? Two of the three could be: \`$app/manifest\`
+ * can be imported anywhere, the browser included, and its \`routes\` carry the
+ * ids that start \`/api\` and \`/embed\`. The third cannot. \`b\` is not a route at
+ * all — it is this hook's own short-link alias, rewritten below before the
+ * router ever sees it. A list half-derived and half-written is harder to read
+ * than three strings next to the code that needs them, so it stays explicit.
  */
 const RESERVED = new Set(['api', 'b', 'embed']);`
 			},
@@ -582,7 +807,7 @@ const RESERVED = new Set(['api', 'b', 'embed']);`
 			},
 			{
 				type: 'p',
-				text: 'The tidier fix — derive the list from the route manifest — is not possible: the universal hook runs in the browser too, where the manifest is not available. A short explicit list next to the code that needs it is the honest version.'
+				text: 'Could the list be derived instead? Partly. SvelteKit 3’s `$app/manifest` can be imported anywhere, the browser included — in SvelteKit 2 there was no route list a browser could import at all — and its `routes` carry every route id, so `api` and `embed` could be read off the ids that begin `/api` and `/embed`. `b` could not. It is not a route: it is this hook’s own short-link alias, rewritten to `/boards` before the router ever sees it. A list half read from the manifest and half typed by hand is harder to follow than three strings next to the code that needs them, so the list is explicit — by choice, now, rather than by necessity.'
 			},
 			{
 				type: 'note',
@@ -653,19 +878,19 @@ export const params = defineParams({
 				type: 'terminal',
 				code: `
 routes/
-  +layout.svelte                        site chrome: header, footer, nav
+  +layout.svelte                        the stylesheet and the live region: every page
   [[lang=locale]]/
-    +layout.svelte                      language context
+    +layout.svelte                      the chrome: logo, nav, language, theme
     boards/+page.svelte                 ← inherits both layouts
-    boards/[board]/+page@.svelte        ← inherits NEITHER`
+    boards/[board]/+page@.svelte        ← inherits the root one only`
 			},
 			{
 				type: 'p',
-				text: '`+page@.svelte` with a bare `@` resets layout inheritance to the root. The editor is a full-viewport application: it does not want a site header taking sixty pixels off the top of a canvas, and it does not want the footer at all. Its siblings do.'
+				text: '`+page@.svelte` with a bare `@` resets layout inheritance to the root: the board page keeps the root layout — the stylesheet, and the one live region every page shares — and skips the chrome. The editor is a full-viewport application, and it does not want a site header taking sixty pixels off the top of a canvas. Its siblings do.'
 			},
 			{
 				type: 'p',
-				text: 'The alternative — a `hideChrome` prop threaded through two layouts — works and puts one route’s special case into the code every other route runs. The `@` is one character in a filename.'
+				text: 'The alternative — a layout that hides its own header when the URL looks like a board — works, and puts one route’s special case into the code every other route runs. The `@` is one character in a filename.'
 			},
 
 			{ type: 'h3', id: 'server-hooks', text: 'The server side' },
@@ -691,10 +916,11 @@ routes/
 
 import { building } from '$app/env';
 /*
- * SvelteKit 3 moved every hook type into \`@sveltejs/kit/hooks\`. Importing them
- * from \`@sveltejs/kit\` compiles to \`any\` for each destructured argument — which
- * is not an error, so the file keeps working and every parameter silently loses
- * its type.
+ * SvelteKit 3 moved every hook type into \`@sveltejs/kit/hooks\`. The old import
+ * from \`@sveltejs/kit\` still builds and runs, because a type import is erased
+ * before anything executes — but \`svelte-check\` reports that the module has no
+ * such export, and an implicit \`any\` for every destructured argument after it.
+ * A green build proves nothing about the types; the type checker is the gate.
  */
 import {
 	sequence,
@@ -708,7 +934,7 @@ import { DEFAULT_LOCALE, HTML_LANG, isLocale, negotiate, type Locale } from '#li
 			},
 			{
 				type: 'warn',
-				text: 'SvelteKit 3 moved every hook type into `@sveltejs/kit/hooks`. Importing them from `@sveltejs/kit` compiles to `any` for each destructured argument — which is **not an error**, so the file keeps working and every parameter silently loses its type. That is worth a grep in any project you migrate.'
+				text: 'SvelteKit 3 moved every hook type into `@sveltejs/kit/hooks`, and the old import is dangerous precisely because it keeps working. Type imports are erased before anything runs, so `import { type Handle } from \'@sveltejs/kit\'` leaves `vite dev` and `vite build` perfectly happy. `svelte-check` is not fooled: it reports `Module \'"@sveltejs/kit"\' has no exported member \'Handle\'`, then an implicit `any` for every destructured argument after it. A green build proves nothing about the types — run `pnpm check` in any project you migrate.'
 			},
 			{
 				type: 'p',
@@ -730,11 +956,13 @@ export const handleError: HandleServerError = ({ error, event, kind }) => {
 	/*
 	 * \`kind\` rather than a status code.
 	 *
-	 * SvelteKit 3 discriminates the three cases that used to be inferred from a
-	 * number: \`app\` is a deliberate \`error(...)\` call and already says what it
-	 * means, \`framework\` is a 404 or a malformed request, and \`unknown\` is
-	 * something genuinely broken. Only the last is worth a log line and an id —
-	 * writing a correlation id for every 404 buries the one that matters.
+	 * SvelteKit 3 names the cases that used to be inferred from a number. On the
+	 * server there are four: \`app\` is a deliberate \`error(...)\` call and already
+	 * says what it means, \`framework\` is a 404 or a malformed request,
+	 * \`validation\` is a remote function argument that failed its schema, and
+	 * \`unknown\` is something genuinely broken. Only the last is worth a log line
+	 * and an id — writing a correlation id for every 404 buries the one that
+	 * matters — so the other three keep SvelteKit's defaults.
 	 */
 	if (kind !== 'unknown') return;
 
@@ -750,7 +978,7 @@ export const handleError: HandleServerError = ({ error, event, kind }) => {
 			},
 			{
 				type: 'p',
-				text: '`handleError` takes `{ error, event, kind }` in SvelteKit 3, and `kind` discriminates the three cases that used to be inferred from a status code. `app` is a deliberate `error(...)` call and already says what it means. `framework` is a 404 or a malformed request. `unknown` is something genuinely broken — and only that one is worth a log line and a correlation id, because writing an id for every 404 buries the one that matters.'
+				text: '`handleError` takes `{ error, event, kind }` in SvelteKit 3, and `kind` names the cases that used to be inferred from a status code. On the server there are four. `app` is a deliberate `error(...)` call and already says what it means. `framework` is a 404 or a malformed request. `validation` is a remote function argument that failed its schema — what SvelteKit 2 sent to a separate `handleValidationError` hook. `unknown` is something genuinely broken, and only that one is worth a log line and a correlation id, because writing an id for every 404 buries the one that matters. `kind !== \'unknown\'` lets the other three keep SvelteKit’s defaults, which is exactly right for all of them. The browser’s `handleError` in `hooks.client.ts` makes the same test; no remote function runs there to fail validation, so it only ever sees the other three.'
 			},
 
 			{
@@ -848,7 +1076,8 @@ export const en = {
 		open: 'Open',
 		empty: 'Nothing here yet. Press N to add your first box.',
 		nodes: (count: number) => (count === 1 ? '1 shape' : \`\${count} shapes\`),
-		lastEdited: (when: string) => \`Edited \${when}\`
+		lastEdited: (when: string) => \`Edited \${when}\`,
+		exporting: 'Exporting…'
 	},`
 			},
 			{
@@ -888,6 +1117,19 @@ export type Locale = (typeof LOCALES)[number];
 
 export const DEFAULT_LOCALE: Locale = 'en';
 
+/**
+ * The value of the \`[[lang=locale]]\` route parameter for a link in this language.
+ *
+ * English is the unprefixed default — \`/boards\`, not \`/en/boards\` — and the
+ * segment is *optional*, so \`resolve()\` leaves it out when the parameter is
+ * \`undefined\`. One call yields \`/boards\` for English and \`/fr/boards\` for French,
+ * and the "is this the default?" question is asked here, once, instead of at
+ * every link and every redirect.
+ */
+export function langParam(locale: Locale): Locale | undefined {
+	return locale === DEFAULT_LOCALE ? undefined : locale;
+}
+
 export function isLocale(value: string | undefined): value is Locale {
 	return value !== undefined && (LOCALES as readonly string[]).includes(value);
 }
@@ -906,6 +1148,10 @@ export const ENDONYM: Record<Locale, string> = { en: 'English', fr: 'Français',
 			{
 				type: 'note',
 				text: '`ENDONYM` is never translated. A language picker in a language you cannot read is useless — somebody looking for Japanese is looking for 日本語, not for the word "Japanese" written in French.'
+			},
+			{
+				type: 'p',
+				text: '`langParam` is the smallest function in the folder and the one every link uses. English is the unprefixed default — `/boards`, not `/en/boards` — so the value of the `[[lang=locale]]` parameter is `undefined` for English and the locale for everything else. The next section is why that particular shape is useful.'
 			},
 			{
 				type: 'code',
@@ -949,6 +1195,138 @@ export function negotiate(header: string | null): Locale {
 			},
 
 
+
+			{ type: 'h3', id: 'links', text: 'Links that know their language' },
+			{
+				type: 'p',
+				text: 'Every internal URL in Tessera — every `href`, and every `redirect()` on the server — is built with `resolve()` from `$app/paths`, never written as a string. The documentation describes it in one line: it will “resolve a pathname by prefixing it with the base path, if any, or resolve a route ID by populating dynamic segments with parameters.” The second half is the one this app leans on.'
+			},
+			{
+				type: 'code',
+				file: 'src/routes/[[lang=locale]]/+layout.svelte',
+				lang: 'svelte',
+				code: `
+/**
+ * The language segment of every link in the chrome, or nothing.
+ *
+ * English is the unprefixed default — \`/boards\`, not \`/en/boards\` — and the
+ * route is \`[[lang=locale]]\`, an *optional* segment. \`resolve()\` drops an
+ * optional segment whose parameter is \`undefined\`, which is what \`langParam\`
+ * returns for English, so one expression yields \`/boards\` for English and
+ * \`/fr/boards\` for French.
+ *
+ * Why \`resolve()\` at all, rather than the string the browser will get? The
+ * route id is checked against the generated \`RouteId\` union, so renaming a
+ * route breaks these links in \`svelte-check\` instead of in production as a
+ * 404, and the parameters are checked against the route's own. It also puts
+ * the base path in front, if the app is ever served from one.
+ * \`eslint-plugin-svelte\` holds the line: \`no-navigation-without-resolve\`
+ * flags an internal \`href\` that is not a \`resolve()\` call, or a value typed
+ * as what one returns.
+ */
+const lang = $derived(langParam(data.locale));`
+			},
+			{
+				type: 'code',
+				file: 'src/routes/[[lang=locale]]/+layout.svelte',
+				lang: 'svelte',
+				code: `
+<a class="chrome__home" href={resolve('/[[lang=locale]]', { lang })}>
+	<Logo size={22} wordmark />
+</a>
+
+<nav class="chrome__nav" aria-label="Main">
+	{#if data.user}
+		<a href={resolve('/[[lang=locale]]/boards', { lang })}>{t.nav.boards}</a>
+	{:else}
+		<a href={resolve('/[[lang=locale]]/sign-in', { lang })}>{t.nav.signIn}</a>
+	{/if}
+</nav>`
+			},
+			{
+				type: 'p',
+				text: 'The first argument is a **route id** — the path of the route’s folder, `[[lang=locale]]` and all — and the second fills in its parameters. Pass `lang: undefined` and `resolve()` leaves the optional segment out; pass `\'fr\'` and it puts `/fr` in front. So the one expression gives `/boards` to an English reader and `/fr/boards` to a French one, and `langParam` asks “is this the default?” once, for every link and every redirect in the app.'
+			},
+			{
+				type: 'why',
+				title: 'Why not just write the string',
+				text: '`href="/boards"` works today. It stops working the day somebody renames the folder, and nothing tells you until a person clicks it. A route id is checked against the `RouteId` union SvelteKit generates, so a rename breaks every link to the old route in `svelte-check`; the parameters are checked against that route’s own, so a missing `board` is a type error too; and if the app is ever served under a base path, `resolve()` puts it in front. The lint config enforces the habit: `eslint-plugin-svelte`’s `no-navigation-without-resolve` flags an internal `href` that is not a `resolve()` call — or a value typed as what one returns — so a hand-built link fails `pnpm lint` before anybody can click it.'
+			},
+			{
+				type: 'note',
+				text: 'On the server, `resolve()` answers with a *relative* path: in the documentation’s words, “during server rendering, the base path is relative and depends on the page currently being rendered.” That is harmless in an `href` and in a `redirect()`, which the browser resolves against the same page. It is not harmless where an absolute path is required — which is why the sign-in redirect’s `from` is the request’s own `url.pathname`, and why the sign-in form refuses any `from` that does not start with `/`.'
+			},
+
+			{ type: 'h3', id: 'the-switcher', text: 'The switcher is links' },
+			{
+				type: 'p',
+				text: 'Changing language is a navigation, so the control for it is a set of links. The first version was a `<select>` that navigated when it changed, and that fails WCAG’s “On Input” rule in the way that hurts most: in Chromium on Windows and Linux, arrowing through a closed `<select>` fires `change` at every step, so a keyboard user heading for 日本語 was sent to Français on the first key press.'
+			},
+			{
+				type: 'code',
+				file: 'src/routes/[[lang=locale]]/+layout.svelte',
+				lang: 'svelte',
+				code: `
+/**
+ * This page, in another language.
+ *
+ * The same URL with its language segment swapped, query string and hash
+ * included, rather than a link to the site root: a switcher that sends people
+ * home is the reason people stop using switchers.
+ *
+ * The one link here not built from a route id, because it is the one that has
+ * to work on whichever page it is rendered on. It edits the URL it is given,
+ * and \`resolve()\` takes the result as a pathname — written without its leading
+ * slash, which is how \`resolve()\` tells a pathname from a route id — so the
+ * value is a \`ResolvedPathname\` like every other link in the chrome.
+ */
+function inLanguage(locale: Locale) {
+	const { pathname, search, hash } = page.url;
+	const rest = page.params.lang ? pathname.slice(page.params.lang.length + 1) : pathname;
+	const path = [langParam(locale), rest.replace(/^\\//, '')].filter(Boolean).join('/');
+	return resolve(\`\${path}\${search}\${hash}\`);
+}`
+			},
+			{
+				type: 'code',
+				file: 'src/routes/[[lang=locale]]/+layout.svelte',
+				lang: 'svelte',
+				code: `
+<details class="chrome__language">
+	<summary>
+		<TranslateIcon size={18} aria-hidden="true" />
+		<span class="visually-hidden">{t.nav.language}:</span>
+		<span lang={HTML_LANG[data.locale]}>{ENDONYM[data.locale]}</span>
+	</summary>
+
+	<ul class="chrome__languages">
+		{#each LOCALES as locale (locale)}
+			<li>
+				<a
+					href={inLanguage(locale)}
+					hreflang={HTML_LANG[locale]}
+					lang={HTML_LANG[locale]}
+					aria-current={locale === data.locale ? 'page' : undefined}
+					data-sveltekit-reload
+				>
+					{ENDONYM[locale]}
+				</a>
+			</li>
+		{/each}
+	</ul>
+</details>`
+			},
+			{
+				type: 'ul',
+				items: [
+					'**A `<details>` disclosure**, so the three links take the room of one button in a crowded header, and work with no JavaScript at all.',
+					'**`resolve()` with a pathname** rather than a route id, because this one link has to work on whichever page it is rendered on. Written without a leading slash, which is how `resolve()` tells a pathname from a route id, it still comes back as a `ResolvedPathname`, and the lint rule is satisfied for a real reason rather than silenced.',
+					'**`data-sveltekit-reload`**, because the language decides what the server renders, and the client router would keep the old layout data.',
+					'**`lang` and `hreflang`**: the first so a screen reader pronounces 日本語 as Japanese, the second to say which language the page at the other end is in.',
+					'**`aria-current="page"`** on the language you are already reading, because that link does lead to the current page.'
+				]
+			},
+
 			{ type: 'h3', id: 'context', text: '`createContext`, and the third function it returns' },
 			{
 				type: 'p',
@@ -956,7 +1334,7 @@ export function negotiate(header: string | null): Locale {
 			},
 			{
 				type: 'p',
-				text: 'Svelte 5.57 added `createContext`, and it is not sugar for `getContext`. `getContext(\'messages\')` is a string key and an `any`: two components can disagree about what is under it, a typo is a runtime `undefined`, and the type has to be re-asserted at every call. `createContext` hands back the accessors instead, so the key is a closure nobody can misspell and the type is written down once.'
+				text: '`createContext` arrived in Svelte 5.40, and it is not sugar for `getContext`. `getContext(\'messages\')` is a string key and an `any`: two components can disagree about what is under it, a typo is a runtime `undefined`, and the type has to be re-asserted at every call. `createContext` hands back the accessors instead, so the key is a closure nobody can misspell and the type is written down once.'
 			},
 			{
 				type: 'code',
@@ -1010,7 +1388,7 @@ export const hasMessages = has;`
 			},
 			{
 				type: 'p',
-				text: 'Three functions, and the third is the new one. `read()` returns the value **or throws** when no ancestor provided it — which is right, because a component that needs messages and cannot find them is broken, and a silent `undefined` surfaces as `Cannot read properties of undefined` three frames later in a component that is not the problem. `provide(value)` sets it. `has()` answers *without* throwing, which is the only way to ask whether you are inside a provider at all.'
+				text: 'Three functions, and the third is the one people miss. `read()` returns the value **or throws** when no ancestor provided it — which is right, because a component that needs messages and cannot find them is broken, and a silent `undefined` surfaces as `Cannot read properties of undefined` three frames later in a component that is not the problem. `provide(value)` sets it. `has()` answers *without* throwing, which is the only way to ask whether you are inside a provider at all.'
 			},
 			{
 				type: 'why',
@@ -1115,7 +1493,7 @@ export function ago(locale: Locale, when: Date, now: Date = new Date()): string 
 			{
 				type: 'why',
 				title: '`getOrInsertComputed`, borrowed rather than called',
-				text: 'Svelte 5.57 added exactly this shape to `SvelteMap`: `getOrInsertComputed(key, build)` reads, or builds and remembers. These two caches are deliberately **not** `SvelteMap`s, so `cached` is a local four-line version of it. A formatter cache is not state anything should re-render for, and reading one inside a `$derived` must not make that derived depend on which languages have been formatted so far — which is precisely what a reactive map would do. The name is worth having anyway: what it replaced was a `get(…) ?? new …` followed by an *unconditional* `set`, putting a write on the hot path of every timestamp on the page to re-store a value that was already there. Nobody would have noticed, which is rather the point of giving the pattern a name.'
+				text: '`SvelteMap` has exactly this shape built in: `getOrInsertComputed(key, build)` reads, or builds and remembers. These two caches are deliberately **not** `SvelteMap`s, so `cached` is a local four-line version of it. A formatter cache is not state anything should re-render for, and reading one inside a `$derived` must not make that derived depend on which languages have been formatted so far — which is precisely what a reactive map would do. The name is worth having anyway: what it replaced was a `get(…) ?? new …` followed by an *unconditional* `set`, putting a write on the hot path of every timestamp on the page to re-store a value that was already there. Nobody would have noticed, which is rather the point of giving the pattern a name.'
 			},
 			{
 				type: 'p',
@@ -1127,7 +1505,9 @@ export function ago(locale: Locale, when: Date, now: Date = new Date()): string 
 				items: [
 					'A key added to English and forgotten in French fails the build.',
 					'Passing a string where a message wants a number fails the build.',
-					'Adding a fourth language touches one folder.'
+					'Adding a fourth language touches one folder.',
+					'Every internal link and redirect is a `resolve()` call, and `pnpm lint` says so when one is not.',
+					'Switching language keeps you on the same page, and arrowing through the choices navigates nowhere.'
 				]
 			}
 		]

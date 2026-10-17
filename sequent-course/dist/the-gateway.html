@@ -47,12 +47,22 @@
 	<pre><code class="lang-ts">/*
  * Identity is stamped on **before** the command is parsed, not after.
  *
- * The order is the point. A client that could name its own firm could trade as
- * anybody, so `firmId` and `actorId` are overwritten with the viewer's — and
- * doing it first means a client-supplied value is never even syntactically
+ * The order is the point. A client that could name its own firm could trade
+ * as anybody, so `firmId` and `actorId` are overwritten with the viewer's —
+ * and doing it first means a client-supplied value is never even syntactically
  * meaningful. There is no window in which a parsed command carries a firm
  * somebody else chose.
+ *
+ * Doing it the other way round — parse, then overwrite — also worked, and had
+ * a subtler cost: the schema required a `firmId`, so every caller had to
+ * invent one purely to have it thrown away. The public API's first order was
+ * rejected with `Expected &quot;firmId&quot; but received undefined`, which is a
+ * confusing thing to tell somebody about a field they are not allowed to set.
  */
+if (typeof input !== 'object' || input === null || Array.isArray(input)) {
+	error(400, 'A command must be an object.');
+}
+
 const claimed = {
 	...(input as Record&lt;string, unknown&gt;),
 	firmId: viewer.firmId,
@@ -67,6 +77,7 @@ try {
 }</code></pre>
 </figure>
 <aside class="callout callout--warn"><p>This is the single most important line in the gateway, and it is one line — which is exactly why it is easy to leave out. Without it, <code>{&quot;firmId&quot;: &quot;lowfield&quot;, ...}</code> in a request body lets Northgate trade as Lowfield.</p></aside>
+<p>The <code>typeof</code> guard comes first because spreading something that is not an object is perfectly legal JavaScript: <code>{ ...'abc' }</code> is <code>{ 0: 'a', 1: 'b', 2: 'c' }</code>. Without the guard, a request body that was a string or an array would reach the schema as a heap of numbered keys, and the 400 would complain about missing fields instead of naming the real mistake.</p>
 <h3 id="ordering-bug">Why it moved from after to before</h3>
 <p>The first version parsed the command and *then* overwrote the identity. That also worked, and had a subtler cost: the schema required a <code>firmId</code>, so every caller had to invent one purely to have it thrown away.</p>
 <p>The public API's very first order came back with:</p>
@@ -111,10 +122,10 @@ try {
  * The flag check goes **after** authorisation and before the append.
  *
  * After, because &quot;the venue is paused&quot; is not something to tell somebody who
- * was not allowed to send this anyway — that would leak which commands exist to
- * whoever is probing. Before the append, because a paused venue must not put
- * the command in the log at all: a log entry is a promise the engine will apply
- * it, and pausing means not making that promise.
+ * was not allowed to send this anyway — that would leak which commands exist
+ * to whoever is probing. Before the append, because a paused venue must not
+ * put the command in the log at all: a log entry is a promise the engine will
+ * apply it, and pausing means not making that promise.
  */
 const flag = FLAG_FOR[authorised.kind];
 if (flag &amp;&amp; !(await flags.enabled(flag))) {

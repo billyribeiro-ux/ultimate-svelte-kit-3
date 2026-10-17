@@ -1,12 +1,13 @@
 <script lang="ts">
-	import { resolve } from '$app/paths';
 	import { untrack } from 'svelte';
 	import { toast } from 'svelte-sonner';
+	import { errorMessage } from '#lib/ui/errors.ts';
+	import { ArrowLeftIcon, LinkIcon, LockSimpleIcon } from 'phosphor-svelte';
 	import { m } from '#lib/paraglide/messages.js';
-	import { localizeHref } from '#lib/paraglide/runtime.js';
+	import { href } from '#lib/href.ts';
 	import { CURRENCIES } from '#lib/domain/money.ts';
 	import type { Visibility } from '#lib/domain/schemas.ts';
-	import { deleteTrip, tripBySlug, updateTrip } from '#lib/remote/trips.remote.ts';
+	import { tripBySlug, updateTrip } from '#lib/remote/trips.remote.ts';
 	import type { Trip } from '#lib/server/db/schema.ts';
 	import DateRangeField from '#lib/ui/DateRangeField.svelte';
 
@@ -46,9 +47,9 @@
 				currency,
 				visibility
 			}).updates(tripBySlug(trip.slug));
-			toast(m.trip_saved());
+			toast.success(m.trip_saved());
 		} catch (error) {
-			toast.error(error instanceof Error ? error.message : String(error));
+			toast.error(errorMessage(error));
 		} finally {
 			saving = false;
 		}
@@ -61,12 +62,13 @@
 
 <section class="container settings stack stack--lg">
 	<header class="stack stack--sm">
-		<p>
-			<a href={localizeHref(resolve('/(site)/t/[slug=slug]', { slug: trip.slug }))}>
-				← {trip.name}
+		<p class="back">
+			<a class="btn btn--ghost btn--sm" href={href('/(site)/t/[slug=slug]', { slug: trip.slug })}>
+				<ArrowLeftIcon size={14} aria-hidden="true" />
+				{trip.name}
 			</a>
 		</p>
-		<h1>{m.trip_settings()}</h1>
+		<h1 class="title-page">{m.trip_settings()}</h1>
 	</header>
 
 	<form class="card card--pad stack" onsubmit={save}>
@@ -98,46 +100,126 @@
 			</select>
 		</label>
 
+		<!--
+			Who can see it, as two cards to choose between rather than two
+			radios in a row: each carries an icon and a line that says what it
+			means, and `:has(:checked)` paints the chosen one. The label texts
+			are exactly the message strings, which the end-to-end suite uses.
+		-->
 		<fieldset class="field">
 			<legend class="label">{m.trip_visibility()}</legend>
-			<label class="radio">
-				<input type="radio" name="visibility" value="private" bind:group={visibility} />
-				{m.trip_visibility_private()}
-			</label>
-			<label class="radio">
-				<input type="radio" name="visibility" value="link" bind:group={visibility} />
-				{m.trip_visibility_link()}
-			</label>
+			<div class="choices">
+				<label class="choice">
+					<input
+						class="radio"
+						type="radio"
+						name="visibility"
+						value="private"
+						bind:group={visibility}
+					/>
+					<LockSimpleIcon size={20} aria-hidden="true" class="choice__icon" />
+					<span class="choice__text">
+						<span class="choice__title">{m.trip_visibility_private()}</span>
+						<span class="choice__desc">{m.trip_visibility_private_desc()}</span>
+					</span>
+				</label>
+				<label class="choice">
+					<input
+						class="radio"
+						type="radio"
+						name="visibility"
+						value="link"
+						bind:group={visibility}
+					/>
+					<LinkIcon size={20} aria-hidden="true" class="choice__icon" />
+					<span class="choice__text">
+						<span class="choice__title">{m.trip_visibility_link()}</span>
+						<span class="choice__desc">{m.trip_visibility_link_desc()}</span>
+					</span>
+				</label>
+			</div>
 		</fieldset>
 
-		<div>
+		<div class="actions">
 			<button class="btn btn--primary" type="submit" disabled={saving}>{m.trip_save()}</button>
 		</div>
-	</form>
-
-	<!-- A remote form: deleting works with JavaScript off, and asks first when it is on. -->
-	<form
-		class="card card--pad cluster cluster--between"
-		{...deleteTrip}
-		onsubmit={(event) => {
-			if (!confirm(m.trip_delete_confirm())) event.preventDefault();
-		}}
-	>
-		<input {...deleteTrip.fields.id.as('hidden', trip.id)} />
-		<span class="muted">{m.trip_delete_confirm()}</span>
-		<button class="btn btn--danger" type="submit">{m.trip_delete()}</button>
 	</form>
 </section>
 
 <style>
 	.settings {
 		max-width: 40rem;
-		padding-block: var(--space-6) var(--space-8);
+		padding-block: var(--space-6) var(--space-6);
 	}
 
-	.radio {
-		display: flex;
-		align-items: center;
+	.back {
+		margin-inline-start: calc(-1 * var(--space-3));
+	}
+
+	.choices {
+		display: grid;
 		gap: var(--space-2);
+	}
+
+	/*
+	 * The radio and the icon line up with the title, the first line, not
+	 * with the middle of a description that wraps to two or three lines on
+	 * a phone: `start`, and nudged down to sit on the title's line.
+	 */
+	.choice {
+		display: grid;
+		grid-template-columns: auto auto minmax(0, 1fr);
+		align-items: start;
+		gap: var(--space-3);
+		min-height: var(--control);
+		padding: var(--space-3) var(--space-4);
+		border: 1px solid var(--line-2);
+		border-radius: var(--radius);
+		background: var(--paper-2);
+		cursor: pointer;
+		transition:
+			background-color var(--dur-2) var(--ease-out),
+			border-color var(--dur-2) var(--ease-out);
+	}
+
+	.choice:hover {
+		border-color: var(--line-3);
+	}
+
+	.choice:has(:checked) {
+		background: var(--sea-soft);
+		border-color: var(--sea);
+	}
+
+	.choice :global(.radio) {
+		margin-block-start: 0.2em;
+	}
+
+	.choice :global(.choice__icon) {
+		margin-block-start: 0.15em;
+		color: var(--ink-3);
+	}
+
+	.choice:has(:checked) :global(.choice__icon) {
+		color: var(--sea);
+	}
+
+	.choice__text {
+		display: grid;
+		gap: var(--space-0);
+	}
+
+	.choice__title {
+		font-weight: 500;
+	}
+
+	.choice__desc {
+		color: var(--ink-2);
+		font-size: var(--text-sm);
+	}
+
+	.actions {
+		display: flex;
+		justify-content: flex-end;
 	}
 </style>

@@ -17,12 +17,17 @@ export default defineConfig({
 	testMatch: '**/*.e2e.ts',
 
 	/*
-	 * `ORIGIN` must match the URL the tests actually use.
+	 * `PUBLIC_ORIGIN` and `ORIGIN` must both match the URL the tests actually use.
 	 *
-	 * SvelteKit refuses cross-site form POSTs by comparing the request's `Origin`
-	 * header against the origin it believes it is serving from. Point the server
-	 * at :5173 and drive it on :4173 and every form submission is a 403 — which
-	 * looks like a broken app and is in fact the CSRF protection doing its job.
+	 * `PUBLIC_ORIGIN` is read at *build* time — the `command` below runs the build
+	 * under this `env` — and becomes `paths.origin`, the origin SvelteKit trusts
+	 * when it compares a form POST's `Origin` header against its own. adapter-node
+	 * 6 no longer reads an `ORIGIN` variable at runtime, so the value has to be
+	 * right when `vite build` runs, not when the server starts. `ORIGIN` is this
+	 * app's own variable (see `src/env.ts`): Better Auth signs its cookies against
+	 * it. Point either one at :5173 and drive the browser on :4173 and every form
+	 * submission is a 403 — which looks like a broken app and is in fact the CSRF
+	 * protection doing its job.
 	 */
 	webServer: {
 		command: 'npm run build && node build/index.js',

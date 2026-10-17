@@ -3,8 +3,8 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { Client } from '@libsql/client';
-import { openStore, withTransaction } from './client.ts';
+import type { Client, Transaction } from '@libsql/client';
+import { openStore, POOL_SIZE, withTransaction } from './client.ts';
 
 let client: Client;
 let directory: string;
@@ -60,7 +60,7 @@ describe('withTransaction', () => {
 
 		/*
 		 * The chain must continue past a rejection. Wiring it with a plain
-		 * `.then()` would leave every later transaction on this connection waiting
+		 * `.then()` would leave every later transaction on this client waiting
 		 * on a promise that never settles — one failed write and the process
 		 * silently stops writing, forever.
 		 */
@@ -74,10 +74,13 @@ describe('withTransaction', () => {
 
 	it('serialises concurrent callers rather than interleaving them', async () => {
 		/*
-		 * SQLite allows one write transaction per connection. Two overlapping
-		 * `withTransaction` calls would otherwise put their statements into *one*
-		 * transaction and commit them together — not a deadlock, not an error,
-		 * and completely wrong.
+		 * Two overlapping `withTransaction` calls on a pooled client each get a
+		 * connection of their own, and the second `BEGIN IMMEDIATE` waits for the
+		 * first's write lock inside a synchronous native call — blocking the event
+		 * loop the first one needs in order to finish. A deadlock with a
+		 * five-second timeout on it. (On the single connection a client used to
+		 * be, the same overlap merged both into one transaction instead.) The
+		 * chain makes the second caller wait in JavaScript.
 		 *
 		 * The engine and the projector share a client in `apps/engine`, so this is
 		 * not hypothetical.
@@ -117,8 +120,8 @@ describe('file descriptors', () => {
 	/**
 	 * The regression test for the bug that killed the engine.
 	 *
-	 * `@libsql/client` 0.17.4's `client.transaction()` opens a second connection
-	 * and never releases it — not on commit, not on rollback, not on an explicit
+	 * `@libsql/client` 0.17.4's `client.transaction()` opened a second connection
+	 * and never released it — not on commit, not on rollback, not on an explicit
 	 * `close()`. Two descriptors per transaction, forever.
 	 *
 	 * The engine opens one transaction per command, so at the default limit it
@@ -126,10 +129,13 @@ describe('file descriptors', () => {
 	 * database file` — an error about opening a database, from code that had the
 	 * database open throughout.
 	 *
-	 * A load test asking for exactly ten thousand orders found it. This test
-	 * makes sure a future refactor back to `client.transaction()` fails here,
-	 * loudly, in two seconds, instead of in production after a few minutes of
-	 * real trading.
+	 * A load test asking for exactly ten thousand orders found it. 0.18 fixed it
+	 * upstream — a transaction now borrows a pooled connection and returns it —
+	 * and `withTransaction` went back to `client.transaction()` because the pool
+	 * made the workaround impossible. The test stays: it is now a test of the
+	 * library, and the library has been wrong about this once. If a release leaks
+	 * again it fails here, loudly, in two seconds, instead of in production after
+	 * a few minutes of real trading.
 	 */
 	it('does not leak one per transaction', async () => {
 		// `/proc/self/fd` is Linux-only. Elsewhere this test has nothing to
@@ -176,5 +182,57 @@ describe('file descriptors', () => {
 		 * margin and still nowhere near it.
 		 */
 		expect(after - before).toBeLessThan(10);
+	});
+});
+
+/* -------------------------------------------------------------------------- */
+
+describe('the pool', () => {
+	/**
+	 * `busy_timeout`, `foreign_keys` and `synchronous` are properties of a
+	 * connection, and since 0.18 a client is several connections. A loop of
+	 * `client.execute` configures exactly one of them, because each call hands
+	 * its connection back before the next call borrows one — so this reads the
+	 * settings through every connection, not through "the" connection.
+	 *
+	 * Holding each in a transaction is the only way to address them one at a
+	 * time, which is also how `openStore` configured them in the first place.
+	 * That the loop can open `POOL_SIZE` transactions at all is itself the test
+	 * that the pool is the size we asked for.
+	 *
+	 * The venue's own pragmas cannot carry the proof on their own: libSQL
+	 * compiles in `foreign_keys = ON` and `synchronous = FULL`, and the timeout
+	 * comes from a client option, so a pool nobody configured reads back the
+	 * same three numbers. `cache_size = -4321` is a value nobody would choose and
+	 * no build has as its default; finding it on every connection is what shows
+	 * the configuration reached every connection.
+	 */
+	it('carries the pragmas on every connection, not just the first', async () => {
+		const configured = await openStore({
+			url: `file:${join(directory, 'pool.db')}`,
+			connectionPragmas: ['PRAGMA cache_size = -4321']
+		});
+
+		const held: Transaction[] = [];
+		try {
+			for (let index = 0; index < POOL_SIZE; index += 1) {
+				held.push(await configured.transaction('deferred'));
+			}
+
+			for (const transaction of held) {
+				const settings = await transaction.batch([
+					'PRAGMA busy_timeout',
+					'PRAGMA foreign_keys',
+					'PRAGMA synchronous',
+					'PRAGMA cache_size'
+				]);
+
+				// 5000ms, on, FULL (= 2), and the marker. Every connection, the same.
+				expect(settings.map((result) => Number(result.rows[0]?.[0]))).toEqual([5000, 1, 2, -4321]);
+			}
+		} finally {
+			for (const transaction of held) await transaction.rollback();
+			configured.close();
+		}
 	});
 });

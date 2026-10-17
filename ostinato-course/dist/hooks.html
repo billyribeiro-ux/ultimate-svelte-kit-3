@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Hooks: around every request — Building Ostinato</title>
-<meta name="description" content="`handle` as a sequence — identity, then security with a font preload filter; `handleFetch` with the one same-origin case that must not be in-process; `handleError` by `kind`; `init`; and the two universal hooks, `transport` and `reroute`.">
+<meta name="description" content="`handle` as a sequence — identity, then security with a font preload filter; `handleFetch`, and why the catch-all needs nothing special from it; `handleError` by `kind`; `init`; and the two universal hooks, `transport` and `reroute`.">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -33,13 +33,13 @@
 		<article>
 			<p class="eyebrow">Chapter 26</p>
 			<h1>Hooks: around every request</h1>
-			<p class="lede"><code>handle</code> as a sequence — identity, then security with a font preload filter; <code>handleFetch</code> with the one same-origin case that must not be in-process; <code>handleError</code> by <code>kind</code>; <code>init</code>; and the two universal hooks, <code>transport</code> and <code>reroute</code>.</p>
+			<p class="lede"><code>handle</code> as a sequence — identity, then security with a font preload filter; <code>handleFetch</code>, and why the catch-all needs nothing special from it; <code>handleError</code> by <code>kind</code>; <code>init</code>; and the two universal hooks, <code>transport</code> and <code>reroute</code>.</p>
 			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Know which hook runs when, why hook types come from <code>@sveltejs/kit/hooks</code> in SvelteKit 3, how <code>transport</code> lets a class cross the wire, and what <code>reroute</code> can and cannot change.</p></aside>
 			<p>Hooks are the code that runs around every request. The server ones are in <code>src/hooks.server.ts</code>; the two that the browser also needs — what a <code>Note</code> looks like on the wire, and what <code>/@handle/slug</code> means — are in <code>src/hooks.ts</code>, which runs on both sides.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/hooks.server.ts<span class="code__lines">:1-31</span></span>
+		<span class="code__file">src/hooks.server.ts<span class="code__lines">:1-32</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -51,9 +51,9 @@
  *   1. identity — reads the artist cookie into `locals.artist`
  *   2. security — headers, and which fonts to preload
  *
- * plus `handleFetch`, `handleError`, `handleValidationError` and `init`. The
- * universal hooks — `transport` and `reroute` — live in `src/hooks.ts`
- * because the browser needs them too.
+ * plus `handleFetch`, `handleError` and `init`. The universal hooks —
+ * `transport` and `reroute` — live in `src/hooks.ts` because the browser
+ * needs them too.
  */
 
 import { building } from '$app/env';
@@ -71,39 +71,35 @@ import {
 	type HandleServerError,
 	type ServerInit
 } from '@sveltejs/kit/hooks';
+import { SECURITY_HEADERS } from '#lib/security.ts';
 import { COOKIE, verify } from '#lib/server/identity.ts';
 import { setCapacity } from '#lib/server/tracing.ts';</code></pre>
 </figure>
-<aside class="callout callout--warn"><p>The hook *types* come from <code>@sveltejs/kit/hooks</code> in SvelteKit 3. Importing <code>Handle</code> from <code>@sveltejs/kit</code> still compiles — as <code>any</code> for every destructured argument — so the file keeps working and every parameter silently loses its type. It is the kind of regression that only a <code>noImplicitAny</code> error on the next edit would reveal.</p></aside>
+<aside class="callout callout--warn"><p>The hook *types* come from <code>@sveltejs/kit/hooks</code> in SvelteKit 3; <code>@sveltejs/kit</code> no longer exports <code>Handle</code> at all. The comment above is about the build: Vite strips a type-only import without checking it, so with the old import the dev server and <code>vite build</code> carry on and every destructured argument is <code>any</code>. TypeScript does notice — <code>svelte-check</code> reports <code>Module '&quot;@sveltejs/kit&quot;' has no exported member 'Handle'</code> — which is one more reason the <code>check</code> script is the first step of <code>verify</code> (ch. 39).</p></aside>
 <h3 id="identity-and-security">Identity, then security</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/hooks.server.ts<span class="code__lines">:33-48</span></span>
+		<span class="code__file">src/hooks.server.ts<span class="code__lines">:34-44</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">const handleIdentity: Handle = async ({ event, resolve }) =&gt; {
+	<pre><code class="lang-ts">/*
+ * The artist goes into `locals` and nowhere else. In particular not onto the
+ * request's span: the spans are read back by `/diagnostics`, a page anybody
+ * can open, and a handle beside every path somebody visited is a record of
+ * what they did, published.
+ */
+const handleIdentity: Handle = async ({ event, resolve }) =&gt; {
 	const artist = await verify(event.cookies.get(COOKIE), SESSION_SECRET);
-
-	if (artist) {
-		event.locals.artist = artist;
-		/*
-		 * The root span is the one for the whole request. Tagging it with the
-		 * handle means the diagnostics page can answer &quot;what did @someone do&quot; —
-		 * and it is the handle rather than the id because the id is the secret
-		 * half of the cookie and a span store is not a place for secrets.
-		 */
-		event.tracing.root.setAttribute('artist.handle', artist.handle);
-	}
-
+	if (artist) event.locals.artist = artist;
 	return resolve(event);
 };</code></pre>
 </figure>
-<p>The cookie is read once per request into <code>locals.artist</code>, and the root span for the request is tagged with the handle — the handle, not the id, because the id is the secret half of the cookie and a span store is not a place for secrets.</p>
+<p>The cookie is read once per request into <code>locals.artist</code>, and that is all. It used to tag the request’s root span with the handle too, so that the diagnostics page could answer “what did @someone do”. But that page is public (ch. 32) — the app has no operators to check for — and a handle beside every path somebody visited is a record of what they did, published. What goes into a span is decided by who can read the spans.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/hooks.server.ts<span class="code__lines">:50-96</span></span>
+		<span class="code__file">src/hooks.server.ts<span class="code__lines">:46-90</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -121,8 +117,8 @@ const handleSecurity: Handle = async ({ event, resolve }) =&gt; {
 		/*
 		 * Preload the two fonts the first paint needs, by source filename.
 		 *
-		 * SvelteKit preloads `js` and `css` by default and never fonts. Since
-		 * 3.0.0-next.24 a `font` input carries its `filename` — the project-relative
+		 * SvelteKit preloads `js` and `css` by default and never fonts. In
+		 * SvelteKit 3 a `font` input carries its `filename` — the project-relative
 		 * source path, before hashing — so this can name the exact file rather than
 		 * guessing at a hashed URL. `endsWith`, because the path begins with a
 		 * `node_modules/` prefix that a pnpm store layout can make longer than it
@@ -135,10 +131,8 @@ const handleSecurity: Handle = async ({ event, resolve }) =&gt; {
 		}
 	});
 
-	response.headers.set('x-content-type-options', 'nosniff');
-	response.headers.set('referrer-policy', 'strict-origin-when-cross-origin');
-	// An instrument that makes sound has no business hearing any.
-	response.headers.set('permissions-policy', 'microphone=(), camera=(), geolocation=()');
+	// The same three the adapter puts on every file it serves (`lib/security.ts`).
+	for (const [name, value] of Object.entries(SECURITY_HEADERS)) response.headers.set(name, value);
 
 	/*
 	 * `Vary: Cookie` on the pages, because the header shows the artist's handle
@@ -154,12 +148,12 @@ const handleSecurity: Handle = async ({ event, resolve }) =&gt; {
 
 export const handle: Handle = sequence(handleIdentity, handleSecurity);</code></pre>
 </figure>
-<p>SvelteKit preloads scripts and styles by default and never fonts. Since 3.0.0-next.24 a <code>font</code> input to the <code>preload</code> filter carries its source <code>filename</code> — the project-relative path before hashing — so the hook can name the two latin subsets the first paint needs, rather than guessing at a hashed URL. <code>Vary: Cookie</code> goes on pages because the header shows the handle; the API and the remote functions set their own cache headers and are left alone.</p>
-<h3 id="handle-fetch"><code>handleFetch</code>, and one case that must leave the process</h3>
+<p>SvelteKit preloads scripts and styles by default and never fonts. In SvelteKit 3 a <code>font</code> input to the <code>preload</code> filter carries its source <code>filename</code> — the project-relative path before hashing — so the hook can name the two latin subsets the first paint needs, rather than guessing at a hashed URL. The three security headers come from <code>SECURITY_HEADERS</code> in <code>lib/security.ts</code>, the same object the adapter is given for the files it serves without running this hook (ch. 36). <code>Vary: Cookie</code> goes on pages because the header shows the handle; the API and the remote functions set their own cache headers and are left alone.</p>
+<h3 id="handle-fetch"><code>handleFetch</code>, and the catch-all that has no routes</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/hooks.server.ts<span class="code__lines">:98-138</span></span>
+		<span class="code__file">src/hooks.server.ts<span class="code__lines">:92-131</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -167,18 +161,18 @@ export const handle: Handle = sequence(handleIdentity, handleSecurity);</code></
  * in remote functions, and in the `reroute` hook, which is the one this app
  * actually makes.
  *
- * SAME ORIGIN, TWO CASES
- * ----------------------
- * Normally a same-origin call is left alone: SvelteKit answers it in-process,
- * without a socket, by calling its own `respond`. That is exactly wrong in one
- * place — the adapter's catch-all function. It has no routes, so &quot;answer it
- * yourself&quot; means a 404, and the `reroute` hook that asked what `/@handle/slug`
- * means never finds out. On a real multi-function platform the call would
- * leave the function and arrive at the API's URL; here that URL is the same
- * server, so the global `fetch` — a real request over the loopback — is what
- * gets it to the function that can answer. `event.platform.entry` is how the
- * hook knows which function it is running in; the emulator says `pages`, so
- * development takes the in-process path like everything else.
+ * SAME ORIGIN: LEFT TO SVELTEKIT
+ * ------------------------------
+ * A same-origin call is passed straight on. SvelteKit answers it in-process,
+ * without a socket, by calling its own `respond` — and when the server it is
+ * running in has no route for the path, it makes a real HTTP request instead
+ * (`respond.js`: &quot;we can't load the endpoint from our own manifest, so we need
+ * to make an actual HTTP request&quot;). That fallback is what carries the
+ * adapter's catch-all, which has no routes at all, to the `api` function when
+ * `reroute` asks `/api/resolve` what `/@handle/slug` means. It is also why
+ * `PUBLIC_ORIGIN` has to name the port the server is really on: the fallback
+ * request goes to the request's own origin. The vanity-address test in
+ * `e2e/pattern.e2e.ts` is the proof that nothing more is needed here.
  *
  * Anything else — there is nothing else today, and the point of writing the
  * branch is that &quot;today&quot; is a word that stops being true — gets a ten second
@@ -192,7 +186,6 @@ export const handleFetch: HandleFetch = ({ request, fetch, event }) =&gt; {
 		// annotate; the optional chain is the difference between a note in a
 		// trace and a 500 on every vanity address.
 		event.tracing?.current?.addEvent('fetch.internal', { 'url.path': url.pathname });
-		if (event.platform?.entry === 'router') return globalThis.fetch(request);
 		return fetch(request);
 	}
 
@@ -206,15 +199,15 @@ export const handleFetch: HandleFetch = ({ request, fetch, event }) =&gt; {
 </figure>
 
 <aside class="callout callout--why">
-	<h4>Why <code>globalThis.fetch</code> in the catch-all</h4>
-	<p>A same-origin <code>fetch</code> from a <code>load</code> or a hook is normally answered in-process: SvelteKit calls its own <code>respond</code> and no socket is involved. In the adapter’s catch-all function (ch. 34) that is exactly wrong — the function has no routes, so answering itself means a 404, and the <code>reroute</code> hook that asked what <code>/@handle/slug</code> means never finds out. On a real multi-function platform the call would leave the function; here the global <code>fetch</code> over the loopback is what gets it to the function that can answer. <code>event.platform.entry</code> is how the hook knows where it is running.</p>
+	<h4>Why same-origin calls are passed straight on, even from the catch-all</h4>
+	<p>A same-origin <code>fetch</code> from a <code>load</code> or a hook is normally answered in-process: SvelteKit calls its own <code>respond</code> and no socket is involved. The adapter’s catch-all function (ch. 34) looks like the exception — it has no routes, so “answer it yourself” sounds like a 404, and the <code>reroute</code> hook asking <code>/api/resolve</code> what <code>/@handle/slug</code> means would never find out. It is not, because SvelteKit already handles it. A sub-request that matches no route in the server it reached is sent out as a real HTTP request: <code>respond.js</code> says “we can’t load the endpoint from our own manifest, so we need to make an actual HTTP request”, and calls the global <code>fetch</code>. That request arrives at this process like any other and is answered by the <code>api</code> function. An earlier version of this hook switched to <code>globalThis.fetch</code> itself when <code>event.platform.entry</code> said <code>router</code>; the adapter reported the catch-all as <code>pages</code>, so the branch never ran, and the vanity-address test passed without it all along. It is gone, and the end-to-end test is the proof that nothing is needed here.</p>
 </aside>
 <aside class="callout callout--note"><p>The <code>event.tracing?.current?.addEvent(...)</code> has two optional chains, and both earned their place: during <code>reroute</code> no route is known yet and there is no current span. Without the <code>?.</code>, every vanity address was a 500. Found by the end-to-end suite, which is why it has a vanity-address test.</p></aside>
 <h3 id="errors-and-init">Errors by kind, and <code>init</code></h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/hooks.server.ts<span class="code__lines">:140-174</span></span>
+		<span class="code__file">src/hooks.server.ts<span class="code__lines">:133-167</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -257,7 +250,7 @@ export const handleError: HandleServerError = ({ error, event, kind, issues }) =
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/hooks.server.ts<span class="code__lines">:176-191</span></span>
+		<span class="code__file">src/hooks.server.ts<span class="code__lines">:169-184</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -282,7 +275,7 @@ export const init: ServerInit = async () =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/hooks.ts<span class="code__lines">:15-38</span></span>
+		<span class="code__file">src/hooks.ts<span class="code__lines">:16-39</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -315,7 +308,7 @@ export const transport: Transport = {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/hooks.ts<span class="code__lines">:40-71</span></span>
+		<span class="code__file">src/hooks.ts<span class="code__lines">:41-76</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -334,8 +327,12 @@ export const transport: Transport = {
  * fetched on every navigation would be a hook that made every navigation slow.
  *
  * A handle that does not exist returns nothing, so the URL falls through to a
- * 404 rather than to a guess.
+ * 404 rather than to a guess. So does an answer of the wrong shape: the body
+ * is checked, not cast, and a reply that does not say `{ pathname }` is no
+ * answer at all.
  */
+const Resolved = v.object({ pathname: v.nullable(v.string()) });
+
 export const reroute: Reroute = async ({ url, fetch }) =&gt; {
 	const vanity = parseVanity(url.pathname);
 	if (!vanity) return;
@@ -347,11 +344,11 @@ export const reroute: Reroute = async ({ url, fetch }) =&gt; {
 	const response = await fetch(api);
 	if (!response.ok) return;
 
-	const { pathname } = (await response.json()) as { pathname: string | null };
-	return pathname ?? undefined;
+	const resolved = v.safeParse(Resolved, await response.json());
+	return resolved.success ? (resolved.output.pathname ?? undefined) : undefined;
 };</code></pre>
 </figure>
-<p><code>/@handle/slug</code> is not a route. <code>reroute</code> asks the server which pattern it names and returns <code>/p/&lt;id&gt;</code>; SvelteKit renders that route with the vanity address still in the bar. It is <code>async</code> and uses the <code>fetch</code> it is given — in-process on the server, a real request in the browser — and the result is cached per URL, so a shared link costs one lookup per session. The early <code>return</code> for every other path is the important line: a hook that fetched on every navigation would make every navigation slow.</p>
+<p><code>/@handle/slug</code> is not a route. <code>reroute</code> asks the server which pattern it names and returns <code>/p/&lt;id&gt;</code>; SvelteKit renders that route with the vanity address still in the bar. It is <code>async</code> and uses the <code>fetch</code> it is given — in-process on the server, a real request in the browser — and the result is cached per URL, so a shared link costs one lookup per session. The early <code>return</code> for every other path is the important line: a hook that fetched on every navigation would make every navigation slow. The answer is parsed with a valibot schema rather than cast: <code>safeParse</code>, because a reply of the wrong shape should be the same as no answer — a 404 — and not a 500 from a hook every vanity address passes through.</p>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>

@@ -7,6 +7,18 @@ event-sourced log that the whole venue can be rebuilt from.
 This is project three of the course. It exists because the honest way to learn
 distributed systems is to build one whose bugs cost money.
 
+## Toolchain
+
+Node **24.21.0** (the current LTS; `.nvmrc` pins it, and `engines` refuses
+anything older), pnpm **12.10.1** (pinned by `packageManager`, so Corepack or
+pnpm's own version check picks it up), SvelteKit **3.0.1** with adapter-node
+**6**, Vitest **5**, TypeScript **6**. Everything else is at its latest
+release; `pnpm-lock.yaml` is the exact answer.
+
+The server-side code is TypeScript that Node runs directly — type stripping,
+no build step — which is why `tsconfig.base.json` is `noEmit` and why there is
+no `dist/` folder for the engine or the worker.
+
 ## Running it
 
 ```sh
@@ -117,10 +129,38 @@ a way that takes an auditor to find.
 ## The tests
 
 ```sh
-pnpm test        # 374 tests
+pnpm test        # 377 tests
 pnpm check       # types, across all six packages
-pnpm verify      # both, plus a production build
+pnpm test:e2e    # the browser tests, against the build already in apps/web/build
+pnpm verify      # all of it: check, test, a production build, then the browser tests
 ```
+
+Everything is a Vitest test in Node except six browser tests
+(`apps/web/e2e/`). Each guards a bug in how the server, the network and the
+page meet — a refusal or a failure that reached the person wrongly, or not at
+all — and each failed against the code before its fix. The reasoning is at the
+top of `apps/web/playwright.config.ts`.
+
+They need Chromium once:
+`pnpm --filter @sequent/web exec playwright install chromium`. They serve the
+build on port 4173 against their own `e2e.db`, which they seed fresh every run
+— never the database you develop against — and they refuse to start if
+something is already listening there. `test:e2e` does not build; `verify`
+builds immediately before it.
+
+The build needs `PUBLIC_ORIGIN`. It is declared `static` in `apps/web/src/env.ts`,
+so SvelteKit reads it at build time and refuses to build without it — a missing
+origin is a venue whose CSRF check compares against `undefined`, and that is
+better discovered by the build than by the first POST. `pnpm dev` supplies a
+default; for `verify`, set it inline:
+
+```sh
+PUBLIC_ORIGIN=http://localhost:4173 pnpm verify
+```
+
+It has to be that origin, not the development one in `.env.example`: the
+browser tests post to `http://localhost:4173`, and a build that expects
+`:5173` refuses every one of their commands as cross-site.
 
 Two kinds worth knowing about:
 

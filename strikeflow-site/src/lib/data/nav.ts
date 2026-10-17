@@ -22,6 +22,13 @@ import type { PageRouteId } from '$app/types';
  * without supplying a `slug`. This conditional type filters any route ID containing a
  * `[` out of the union, so the nav can only ever hold routes that are safe to link
  * to directly — and `resolve(href)` type-checks without needing a params argument.
+ *
+ * On the leading slash: SvelteKit 3's `resolve()` accepts either a route ID
+ * (`'/features'`, always with a leading slash) or a pathname (`'features'`, never
+ * with one). We store route IDs on purpose — a pathname is just a string that
+ * happens to exist today, whereas a route ID is checked against the union above.
+ * Both forms may carry a `?search` or `#hash` suffix, which is how the blog links
+ * to an author's section on `/about`.
  */
 export type StaticRoute = Exclude<PageRouteId, `${string}[${string}`>;
 
