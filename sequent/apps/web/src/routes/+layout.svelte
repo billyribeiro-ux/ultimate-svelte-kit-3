@@ -1,17 +1,15 @@
 <script lang="ts">
-	import type { Snippet } from 'svelte';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
+	import type { Role } from '@sequent/store';
 	import { signOut } from './sign-in/auth.remote.ts';
+	import type { LayoutProps } from './$types';
 	import '#lib/styles/app.css';
 
-	let {
-		children,
-		data
-	}: { children: Snippet; data: { viewer: { firmId: string; role: string } | null } } = $props();
+	let { children, data }: LayoutProps = $props();
 
 	/**
-	 * The sections this viewer can reach.
+	 * Every section, and who it is for.
 	 *
 	 * Built from the role rather than rendered-then-hidden with CSS. A link that
 	 * is `display: none` is still in the DOM, still in the accessibility tree in
@@ -21,22 +19,30 @@
 	 * The real enforcement is server-side in each route's `+page.server.ts`. This
 	 * is navigation, not security: hiding a link the user may not follow is
 	 * courtesy, and the load function is what actually refuses.
+	 *
+	 * Typed rather than inferred, and the types are the point. `href` is the union
+	 * of the three routes, so `resolve` checks each against the route table and a
+	 * typo is a compile error; `roles` is the domain's `Role`, so a role that does
+	 * not exist cannot be listed.
 	 */
+	const SECTIONS: readonly {
+		href: '/terminal' | '/risk' | '/admin';
+		label: string;
+		roles: readonly Role[];
+	}[] = [
+		{
+			href: '/terminal',
+			label: 'Terminal',
+			roles: ['trader', 'auditor', 'firm_admin', 'risk_manager', 'venue_operator']
+		},
+		{ href: '/risk', label: 'Risk', roles: ['risk_manager', 'firm_admin', 'auditor'] },
+		{ href: '/admin', label: 'Admin', roles: ['firm_admin', 'venue_operator'] }
+	];
+
+	/** The sections this viewer can reach. */
 	const sections = $derived.by(() => {
 		const role = data.viewer?.role;
-		if (!role) return [];
-
-		const all = [
-			{
-				href: '/terminal',
-				label: 'Terminal',
-				roles: ['trader', 'auditor', 'firm_admin', 'risk_manager', 'venue_operator']
-			},
-			{ href: '/risk', label: 'Risk', roles: ['risk_manager', 'firm_admin', 'auditor'] },
-			{ href: '/admin', label: 'Admin', roles: ['firm_admin', 'venue_operator'] }
-		];
-
-		return all.filter((section) => section.roles.includes(role));
+		return role ? SECTIONS.filter((section) => section.roles.includes(role)) : [];
 	});
 
 	const current = $derived(page.url.pathname);
@@ -89,7 +95,7 @@
 			<nav aria-label="Sections" class="tabs">
 				{#each sections as section (section.href)}
 					<a
-						href={resolve(section.href as '/terminal')}
+						href={resolve(section.href)}
 						aria-current={current.startsWith(section.href) ? 'page' : undefined}
 					>
 						{section.label}

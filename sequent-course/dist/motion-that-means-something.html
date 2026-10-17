@@ -131,6 +131,31 @@ export function reveal(options: RevealOptions = {}): Attachment&lt;HTMLElement&g
 	<h4>The getter pattern, for the two that react</h4>
 	<p>Attachments are fully reactive: <code>{@attach flash(directionFor(level))}</code> would read <code>level</code> while the expression is evaluated, and the docs are explicit that the attachment is then torn down and recreated on every change — killing the tween continuity the flash exists for. The documented fix is to pass the value <strong>as a function</strong> and read it inside a child <code>$effect</code>: <code>{@attach flash(() =&gt; directionFor(level))}</code>. The per-node setup runs once; only the effect re-runs when the level changes. <code>flash</code>, <code>count</code> and the ladder's <code>bar</code> all use this shape.</p>
 </aside>
+<p>The getter has one sharp edge, and the terminal's last-price counter shows it:</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">apps/web/src/routes/terminal/+page.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">{#if market?.last}
+	&lt;!-- … --&gt;
+	{const last = $derived(market.last)}
+	&lt;span
+		class=&quot;mono last&quot;
+		{@attach count(() =&gt; ({ value: last.price, format: priceLabel }))}
+		aria-live=&quot;off&quot;
+	&gt;&lt;/span&gt;
+	&lt;span class=&quot;faint mono&quot;&gt;× {last.quantity.toLocaleString('en-GB')}&lt;/span&gt;
+{:else}
+	&lt;span class=&quot;faint&quot;&gt;no trades yet&lt;/span&gt;
+{/if}</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>A declaration tag, so the narrowing survives the closure</h4>
+	<p>Inside <code>{#if market?.last}</code> TypeScript knows <code>market.last</code> exists — but the getter handed to <code>count</code> is a closure that runs later, and narrowing does not survive into a closure: by then <code>market</code> could have changed, and the checker is right to say so. <code>{const last = $derived(market.last)}</code> is a <strong>declaration tag</strong>: a declaration written in the markup, scoped to this branch, so <code>last</code> exists exactly while there is a last trade and has the narrowed type. It is <code>$derived</code> because a declaration tag is not reactive on its own — &quot;When values should be reactive, you can use <code>$state</code> and <code>$derived</code>&quot;, in the documentation's words — and the price must follow every trade. The legacy <code>{@const last = market.last}</code> was reactive implicitly; the documentation now calls that syntax &quot;considered legacy — use declaration tags instead&quot;. Writing <code>$derived</code> costs a word and makes the reactivity something you can see. Chapter 27 has the other declaration tag on this page, in a boundary's <code>failed</code> snippet.</p>
+</aside>
 <h3 id="reduced-motion">What &quot;reduce&quot; actually means</h3>
 
 <figure class="code">
@@ -144,6 +169,11 @@ export function reveal(options: RevealOptions = {}): Attachment&lt;HTMLElement&g
 }</code></pre>
 </figure>
 <p>Checked live rather than read once, because it can change while the page is open — somebody toggling it in system settings expects the page to obey without a reload. And <code>true</code> on the server, because server-rendered markup must not assume animation.</p>
+
+<aside class="callout callout--why">
+	<h4>Why not the one in svelte/motion</h4>
+	<p>Svelte ships <code>prefersReducedMotion</code> in <code>svelte/motion</code>: a reactive <code>MediaQuery</code> whose <code>.current</code> updates when the setting changes, and the right tool when *markup* should change with it. Here it would be the wrong one. Every caller of ours is an attachment or an effect, and the attachment docs are explicit that an attachment is destroyed and recreated when state it reads changes — &quot;the same thing would happen for any state read *inside* the attachment function when it first runs&quot;. <code>reveal</code> is written to read no reactive state precisely so that it runs once. Reading <code>.current</code> there would make toggling the setting tear every revealed panel down and run its entrance again, on a page that arrived long ago. What these call sites want is the answer at the moment they animate, and a plain <code>matchMedia</code> read is exactly that.</p>
+</aside>
 
 <figure class="code">
 	<figcaption>

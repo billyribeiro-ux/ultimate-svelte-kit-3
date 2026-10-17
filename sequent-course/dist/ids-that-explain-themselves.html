@@ -234,7 +234,7 @@ export function newId(now: number = Date.now()): string {
  * order.
  */
 export function clientKey(firmId: FirmId, clientOrderId: ClientOrderId): string {
-	// …
+	return `${firmId}\0${clientOrderId}`;
 }
 
 /**
@@ -246,10 +246,14 @@ export function clientKey(firmId: FirmId, clientOrderId: ClientOrderId): string 
  * listed with a dot in its symbol, which is most of them.
  */
 export function positionKey(accountId: AccountId, instrumentId: InstrumentId): string {
-	// …
+	return `${accountId}\0${instrumentId}`;
 }</code></pre>
 </figure>
-<p>Each body is one line: the two identifiers joined by a NUL character, as in <code>${firmId}\0${clientOrderId}</code>. In <code>ids.ts</code> that separator is a literal NUL byte rather than the <code>\0</code> escape, which is why the line is elided above — a NUL cannot be shown on a web page — and why <code>grep</code> calls the file binary. Writing the escape is the friendlier habit; the string it produces is identical.</p>
+
+<aside class="callout callout--why">
+	<h4>A separator that cannot occur, written so you can see it</h4>
+	<p>Joining two identifiers needs a character neither of them can contain, or <code>(&quot;A&quot;, &quot;B.C&quot;)</code> and <code>(&quot;A.B&quot;, &quot;C&quot;)</code> build the same key. Every id in the protocol is printable text, so the NUL character — code point zero — is the one separator that is guaranteed never to appear in either half. It is written as the escape <code>\0</code> inside the template literal, never as the raw byte. The two produce an identical string, but a raw NUL in a source file makes git treat the whole file as binary — no diff, no blame, no review of the very functions that decide whose order is whose — and cannot be shown on a page like this one at all.</p>
+</aside>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>

@@ -124,7 +124,7 @@ export async function submit(
 				: {})
 		});
 	} catch (thrown) {
-		if (thrown instanceof NotAllowed) error(thrown.status as 403, thrown.message);
+		if (thrown instanceof NotAllowed) error(thrown.status, thrown.message);
 		throw thrown;
 	}
 

@@ -86,6 +86,20 @@
 	/* … */
 }</code></pre>
 </figure>
+<p>On a phone the same element is a sheet that opens and closes, and the markup says which with one class:</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">apps/web/src/routes/terminal/+page.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;section class={['card stack ticket', { open: ticketOpen }]} aria-label=&quot;Order ticket&quot;&gt;</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>A class attribute that takes a list</h4>
+	<p>Since Svelte 5.16 the <code>class</code> attribute accepts an array or an object as well as a string, and turns it into a class list the way the <code>clsx</code> library does: strings are kept, and an object adds each key whose value is truthy. So <code>['card stack ticket', { open: ticketOpen }]</code> is the fixed classes plus <code>open</code> while the sheet is open. Every conditional class in Sequent is written this way — <code>{ up: position.quantity &gt; 0, down: position.quantity &lt; 0 }</code> on a number that can rise or fall, <code>{ bad: books.total !== 0 }</code> on a trial balance that must be zero. The older spelling was a directive per class, <code>class:open={ticketOpen}</code>, and before that a template string with ternaries inside it. The documentation is direct about the first: &quot;Unless you're using an older version of Svelte, consider avoiding <code>class:</code>, since the attribute is more powerful and composable.&quot; The second is worse than either — a nested ternary inside a string, where a forgotten space joins two class names into one that matches nothing, and no tool can tell.</p>
+</aside>
 <ul><li><strong><code>min-width</code>, never <code>max-width</code>.</strong> Base styles are the small screen; each query *adds* as room appears. Written the other way round, every rule needs an override and the cascade fights you.</li><li><strong><code>rem</code>, not <code>px</code>.</strong> A person who has set their browser font to 20px gets breakpoints that scale with it. In <code>px</code> they get a layout that switches at the wrong moment for their text size.</li><li><strong>Three breakpoints.</strong> Not five. Every extra one is a layout somebody has to check, and each of these three is earned by content: <code>40rem</code>, where the ladder's two sides and the admin grids go two-up; <code>48rem</code>, where tables fit and stop needing the mobile treatment; <code>64rem</code>, where the terminal gets its side-by-side desk.</li></ul>
 <h3 id="the-bug">The page that scrolled sideways</h3>
 <p>The terminal was checked at 390px in a real browser. It scrolled sideways by 220 pixels. Every panel measured correctly — <code>getBoundingClientRect</code> on every child was inside its parent — and the page still scrolled.</p>

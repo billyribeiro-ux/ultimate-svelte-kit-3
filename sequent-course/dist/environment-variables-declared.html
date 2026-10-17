@@ -68,7 +68,21 @@ export const variables = defineEnvVars({
 <p>A variable not in this file <strong>cannot be imported</strong>. Not &quot;returns undefined&quot; — the import does not typecheck. That single change moves an entire class of production incident to the moment you type the wrong name.</p>
 <h3 id="the-three-flags">The three things you declare</h3>
 <ul><li><strong><code>schema</code></strong> — a valibot schema. It runs when the app starts, and during the build, so <code>DATABASE_URL=&quot;&quot;</code> fails immediately with a clear message instead of producing an unopenable database three layers down.</li><li><strong><code>public: true</code></strong> — this value is allowed in the browser. It is absent by default, so a secret reaching the client requires somebody to *type the word public*, which is exactly the kind of mistake that survives a review and the kind that does not.</li><li><strong><code>static: true</code></strong> — inlined into the bundle at build time, rather than read from the environment when the app starts. That allows dead-code elimination, and it means changing the value needs a <strong>rebuild</strong>, not a restart. Use it for things that are fixed for the life of a build — <code>PUBLIC_ORIGIN</code> is one, since <code>paths.origin</code> is baked in at build time anyway.</li></ul>
-<p>Note what the <code>PUBLIC_ORIGIN</code> schema does beyond checking: <code>v.transform</code> strips trailing slashes. <code>https://sequent.exchange/</code> and <code>https://sequent.exchange</code> are the same origin to a person and different strings to a comparison — and this value is compared against an <code>Origin</code> header on every state-changing request. Normalising it once here is better than remembering to normalise it at every use.</p>
+<p>Note what the <code>PUBLIC_ORIGIN</code> schema does beyond checking: <code>v.transform</code> strips trailing slashes. <code>https://sequent.exchange/</code> and <code>https://sequent.exchange</code> are the same origin to a person and different strings to a comparison — and this value is compared against an <code>Origin</code> header on every state-changing request. Normalising it in the declaration means every import of <code>PUBLIC_ORIGIN</code> gets the clean value, rather than every use remembering to clean it.</p>
+<p>There is one reader this file cannot reach: <code>vite.config.ts</code>, which hands the same variable to <code>paths.origin</code> while the config is being evaluated — before <code>src/env.ts</code> has run. Kit checks that value too, and refuses an origin with anything after it, so a trailing slash would fail the build before the schema's transform ever saw it. The config therefore applies the same normalisation itself, in the <code>origin</code> constant from chapter 22:</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">apps/web/vite.config.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">const origin = (env['PUBLIC_ORIGIN'] ?? 'http://localhost:4173').replace(/\/+$/, '');</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>One variable, two readers, one rule</h4>
+	<p><code>paths.origin</code> is the authority for Kit: it is what the adapter bakes into the build and what Kit's own checks compare against. <code>PUBLIC_ORIGIN</code> from <code>$app/env/public</code> is what our CSRF hook compares against. If the two could disagree — one with a slash, one without — the hook would refuse requests Kit had accepted, or the build would refuse a value the schema would have fixed. Writing the same transform in both places is a small duplication that keeps them identical; the comment above the constant says so, because the next person to touch either line needs to know the other exists.</p>
+</aside>
 
 <aside class="callout callout--why">
 	<h4>Validate at the edge, once</h4>

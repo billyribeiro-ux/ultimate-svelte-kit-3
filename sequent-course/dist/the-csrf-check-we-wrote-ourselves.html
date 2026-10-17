@@ -104,6 +104,10 @@ Cross-site DELETE form submissions are forbidden</code></pre>
 	 * exempt because CSRF is a cookie attack — a browser attaches cookies to
 	 * a forged cross-site request automatically and never attaches an
 	 * `Authorization` header. That covers case 1 and closes case 2.
+	 *
+	 * `['*']` turns off Kit's check on form submissions and nothing else.
+	 * A call to a remote function still meets Kit's own same-origin check,
+	 * which ignores `trustedOrigins` entirely, before it reaches our hook.
 	 */
 	csrf: { trustedOrigins: ['*'] },
 
@@ -111,6 +115,7 @@ Cross-site DELETE form submissions are forbidden</code></pre>
 })</code></pre>
 </figure>
 <aside class="callout callout--warn"><p><code>trustedOrigins: ['*']</code> on its own is a serious vulnerability. It is only acceptable here because the hook below runs on every request and is strictly stronger. If you copy the config line without the hook, you have removed your CSRF protection and added nothing.</p></aside>
+<aside class="callout callout--note"><p>Be precise about what the setting switches off. Kit has two origin checks, and <code>trustedOrigins</code> reaches only one of them: the check on form submissions and other ordinary non-GET requests. What the page's JavaScript sends to a remote function — every <code>command</code> from chapter 24, and a <code>form</code> submitted with scripts running — goes to Kit's remote endpoint, which has a check of its own that refuses any non-GET call whose <code>Origin</code> is not the app's; Kit's source says outright that &quot;entries in <code>trusted_origins</code> are *not* honoured&quot; there. So placing and cancelling orders meets Kit's check first and our hook second. A form posted without JavaScript is an ordinary form submission to the page, and the public API is an ordinary endpoint: those meet our hook alone, which is exactly why the hook has to be right.</p></aside>
 
 <figure class="code">
 	<figcaption>

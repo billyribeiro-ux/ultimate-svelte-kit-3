@@ -1,8 +1,10 @@
 <script lang="ts">
+	import { messageFrom } from '#lib/errors.ts';
 	import { reveal, sweep } from '#lib/motion/motion.svelte.ts';
 	import { getExposure, getTrialBalance, setKillSwitch } from './risk.remote.ts';
+	import type { PageProps } from './$types';
 
-	let { data }: { data: { canStop: boolean; canSeeLedger: boolean } } = $props();
+	let { data }: PageProps = $props();
 
 	/*
 	 * Declared above the awaited deriveds, for the same reason as the terminal's
@@ -59,16 +61,6 @@
 			busy = false;
 		}
 	}
-
-	function messageFrom(thrown: unknown): string {
-		if (typeof thrown === 'object' && thrown !== null) {
-			const body = (thrown as { body?: { message?: unknown } }).body;
-			if (body && typeof body.message === 'string') return body.message;
-			const message = (thrown as { message?: unknown }).message;
-			if (typeof message === 'string' && message) return message;
-		}
-		return 'That did not work.';
-	}
 </script>
 
 <div class="container stack risk">
@@ -79,10 +71,10 @@
 	{/if}
 
 	{#if data.canStop}
-		<section class="card stack halt" class:armed={confirming} {@attach reveal()}>
+		<section class={['card stack halt', { armed: confirming }]} {@attach reveal()}>
 			<header class="row">
 				<h3>Trading</h3>
-				<span class="badge" class:stopped={exposure.stopped}>
+				<span class={['badge', { stopped: exposure.stopped }]}>
 					{exposure.stopped ? 'Stopped' : 'Trading'}
 				</span>
 			</header>
@@ -154,7 +146,7 @@
 						<tr>
 							<td class="mono small pin">{row.accountId}</td>
 							<td class="mono small">{row.instrumentId}</td>
-							<td class="mono {row.quantity > 0 ? 'up' : row.quantity < 0 ? 'down' : ''}">
+							<td class={['mono', { up: row.quantity > 0, down: row.quantity < 0 }]}>
 								{row.quantity.toLocaleString('en-GB')}
 							</td>
 							<td class="mono">{row.exposureLabel}</td>
@@ -189,7 +181,7 @@
 				Every ledger transaction sums to zero by construction, so this total is zero or something
 				has written to the ledger outside the one function that may.
 			</p>
-			<p class="mono total" class:bad={books.total !== 0}>
+			<p class={['mono total', { bad: books.total !== 0 }]}>
 				trial balance: {books.total}
 			</p>
 			<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
@@ -207,7 +199,7 @@
 							<tr>
 								<td class="mono small pin">{account.accountId}</td>
 								<td class="small muted">{account.kind.replace('_', ' ')}</td>
-								<td class="mono" class:down={account.negative}>
+								<td class={['mono', { down: account.negative }]}>
 									{account.negative ? '−' : ''}{account.label}
 								</td>
 							</tr>

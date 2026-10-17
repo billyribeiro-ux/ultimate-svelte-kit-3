@@ -272,15 +272,16 @@ linkWorkspacePackages: true
 # Releases younger than the global \`minimumReleaseAge\` that we have read the
 # changelogs for and want anyway. pnpm 12 appends to this list itself when an
 # install picks one, so the entries are a record of what was waved through, not
-# a wish list — remove one and the next install waits for the release to age.
+# a wish list — remove one and the next install that resolves it waits for the
+# release to age. An entry the lockfile no longer resolves records nothing, and
+# goes when the upgrade that replaced it lands.
 minimumReleaseAgeExclude:
-  - svelte@5.57.0
   - '@types/node@24.19.2'
   - eslint-plugin-svelte@3.23.1`
 			},
 			{
 				type: 'p',
-				text: 'The first two settings are the ones this chapter is about. The last block is housekeeping that pnpm 12 does for you: it records the few releases younger than the global `minimumReleaseAge` that were read and accepted anyway. pnpm appends to it itself when an install picks one, so treat it as a log of what was waved through rather than a list to edit by hand.'
+				text: 'The first two settings are the ones this chapter is about. The last block is housekeeping that pnpm 12 does for you: it records the few releases younger than the global `minimumReleaseAge` that were read and accepted anyway. pnpm appends to it itself when an install picks one, so treat it as a log of what was waved through rather than a list to edit by hand. The one hand edit it does need is pruning. Each entry names an exact version, so when an upgrade moves past it the entry matches nothing — this list once still waved through a Svelte patch release the lockfile had already replaced, recording a decision that no longer described anything installed. Removing it changed nothing an install could see: a frozen install still checks every locked version against the age policy, and still printed `Lockfile passes supply-chain policies`.'
 			},
 
 			{ type: 'h3', id: 'the-six', text: 'The six packages' },
@@ -839,7 +840,7 @@ export function newId(now: number = Date.now()): string {
  * order.
  */
 export function clientKey(firmId: FirmId, clientOrderId: ClientOrderId): string {
-	// …
+	return \`\${firmId}\\0\${clientOrderId}\`;
 }
 
 /**
@@ -851,12 +852,13 @@ export function clientKey(firmId: FirmId, clientOrderId: ClientOrderId): string 
  * listed with a dot in its symbol, which is most of them.
  */
 export function positionKey(accountId: AccountId, instrumentId: InstrumentId): string {
-	// …
+	return \`\${accountId}\\0\${instrumentId}\`;
 }`
 			},
 			{
-				type: 'p',
-				text: 'Each body is one line: the two identifiers joined by a NUL character, as in `${firmId}\\0${clientOrderId}`. In `ids.ts` that separator is a literal NUL byte rather than the `\\0` escape, which is why the line is elided above — a NUL cannot be shown on a web page — and why `grep` calls the file binary. Writing the escape is the friendlier habit; the string it produces is identical.'
+				type: 'why',
+				title: 'A separator that cannot occur, written so you can see it',
+				text: 'Joining two identifiers needs a character neither of them can contain, or `("A", "B.C")` and `("A.B", "C")` build the same key. Every id in the protocol is printable text, so the NUL character — code point zero — is the one separator that is guaranteed never to appear in either half. It is written as the escape `\\0` inside the template literal, never as the raw byte. The two produce an identical string, but a raw NUL in a source file makes git treat the whole file as binary — no diff, no blame, no review of the very functions that decide whose order is whose — and cannot be shown on a page like this one at all.'
 			},
 			{
 				type: 'checkpoint',

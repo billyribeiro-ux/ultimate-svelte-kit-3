@@ -60,7 +60,7 @@ describe('withTransaction', () => {
 
 		/*
 		 * The chain must continue past a rejection. Wiring it with a plain
-		 * `.then()` would leave every later transaction on this connection waiting
+		 * `.then()` would leave every later transaction on this client waiting
 		 * on a promise that never settles — one failed write and the process
 		 * silently stops writing, forever.
 		 */
@@ -74,10 +74,13 @@ describe('withTransaction', () => {
 
 	it('serialises concurrent callers rather than interleaving them', async () => {
 		/*
-		 * SQLite allows one write transaction per connection. Two overlapping
-		 * `withTransaction` calls would otherwise put their statements into *one*
-		 * transaction and commit them together — not a deadlock, not an error,
-		 * and completely wrong.
+		 * Two overlapping `withTransaction` calls on a pooled client each get a
+		 * connection of their own, and the second `BEGIN IMMEDIATE` waits for the
+		 * first's write lock inside a synchronous native call — blocking the event
+		 * loop the first one needs in order to finish. A deadlock with a
+		 * five-second timeout on it. (On the single connection a client used to
+		 * be, the same overlap merged both into one transaction instead.) The
+		 * chain makes the second caller wait in JavaScript.
 		 *
 		 * The engine and the projector share a client in `apps/engine`, so this is
 		 * not hypothetical.
@@ -196,26 +199,40 @@ describe('the pool', () => {
 	 * time, which is also how `openStore` configured them in the first place.
 	 * That the loop can open `POOL_SIZE` transactions at all is itself the test
 	 * that the pool is the size we asked for.
+	 *
+	 * The venue's own pragmas cannot carry the proof on their own: libSQL
+	 * compiles in `foreign_keys = ON` and `synchronous = FULL`, and the timeout
+	 * comes from a client option, so a pool nobody configured reads back the
+	 * same three numbers. `cache_size = -4321` is a value nobody would choose and
+	 * no build has as its default; finding it on every connection is what shows
+	 * the configuration reached every connection.
 	 */
 	it('carries the pragmas on every connection, not just the first', async () => {
-		const held: Transaction[] = [];
-		for (let index = 0; index < POOL_SIZE; index += 1) {
-			held.push(await client.transaction('deferred'));
-		}
+		const configured = await openStore({
+			url: `file:${join(directory, 'pool.db')}`,
+			connectionPragmas: ['PRAGMA cache_size = -4321']
+		});
 
+		const held: Transaction[] = [];
 		try {
+			for (let index = 0; index < POOL_SIZE; index += 1) {
+				held.push(await configured.transaction('deferred'));
+			}
+
 			for (const transaction of held) {
 				const settings = await transaction.batch([
 					'PRAGMA busy_timeout',
 					'PRAGMA foreign_keys',
-					'PRAGMA synchronous'
+					'PRAGMA synchronous',
+					'PRAGMA cache_size'
 				]);
 
-				// 5000ms, on, FULL (= 2). Every connection, the same answer.
-				expect(settings.map((result) => Number(result.rows[0]?.[0]))).toEqual([5000, 1, 2]);
+				// 5000ms, on, FULL (= 2), and the marker. Every connection, the same.
+				expect(settings.map((result) => Number(result.rows[0]?.[0]))).toEqual([5000, 1, 2, -4321]);
 			}
 		} finally {
 			for (const transaction of held) await transaction.rollback();
+			configured.close();
 		}
 	});
 });

@@ -11,7 +11,17 @@ const HOME = '/terminal';
 export const signIn = form(
 	v.object({
 		email: v.pipe(v.string(), v.trim(), v.email('Enter the email you signed up with')),
-		password: v.pipe(v.string(), v.minLength(1, 'Enter your password')),
+		/*
+		 * `_password`, and the underscore is the security control.
+		 *
+		 * A form submitted without JavaScript that fails — a schema issue or an
+		 * `invalid` below — is answered with the page again, and SvelteKit puts
+		 * what was typed back into the fields so nobody fills the form out twice.
+		 * It holds back exactly one kind of field: a name that starts with `_`.
+		 * Without it, every mistyped password went back to the browser in plain
+		 * text, in the input's `value` and again in the page's hydration data.
+		 */
+		_password: v.pipe(v.string(), v.minLength(1, 'Enter your password')),
 		redirectTo: v.optional(
 			v.pipe(
 				v.string(),
@@ -49,7 +59,7 @@ export const signIn = form(
 		if (!row || Number(row['is_active']) !== 1) {
 			invalid('That email and password do not match an account.');
 		}
-		if (!verifySecret(data.password, String(row['password_hash']))) {
+		if (!verifySecret(data._password, String(row['password_hash']))) {
 			invalid('That email and password do not match an account.');
 		}
 

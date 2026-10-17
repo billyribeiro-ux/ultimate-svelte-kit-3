@@ -22,6 +22,16 @@ export interface StoreOptions {
 	readonly authToken?: string;
 	/** Apply the schema on open. Off in production, where migrations run first. */
 	readonly migrate?: boolean;
+	/**
+	 * More per-connection pragmas, applied after the venue's own on every
+	 * connection in the pool.
+	 *
+	 * Nothing in the venue passes any. It is the handle the pool test holds: the
+	 * venue's own two match what libSQL compiles in, so reading them back gives
+	 * the same answer whether or not they were ever applied. A pragma whose
+	 * default differs is the only way to see that every connection was reached.
+	 */
+	readonly connectionPragmas?: readonly string[];
 }
 
 /** How long a statement waits on another connection's lock before `SQLITE_BUSY`. */
@@ -63,11 +73,18 @@ export const POOL_SIZE = 4;
  *
  * libSQL happens to compile both of these in as its defaults. Relying on that
  * would let a build flag somebody else controls decide whether the books
- * balance after a power cut, so they are set explicitly and tested.
+ * balance after a power cut, so they are set explicitly. The same coincidence
+ * means reading them back proves nothing, so the test that every connection is
+ * configured uses a pragma of its own — see `connectionPragmas`.
  */
 const CONNECTION_PRAGMAS = ['PRAGMA foreign_keys = ON', 'PRAGMA synchronous = FULL'];
 
-export async function openStore({ url, authToken, migrate = true }: StoreOptions): Promise<Client> {
+export async function openStore({
+	url,
+	authToken,
+	migrate = true,
+	connectionPragmas = []
+}: StoreOptions): Promise<Client> {
 	const client = createClient({
 		url,
 		...(authToken === undefined ? {} : { authToken }),
@@ -98,7 +115,7 @@ export async function openStore({ url, authToken, migrate = true }: StoreOptions
 	 */
 	await client.execute('PRAGMA journal_mode = WAL');
 
-	await configurePool(client, url);
+	await configurePool(client, url, [...CONNECTION_PRAGMAS, ...connectionPragmas]);
 
 	if (migrate) {
 		// The base schema first — it is idempotent, so this is a no-op on an
@@ -148,11 +165,15 @@ export async function openStore({ url, authToken, migrate = true }: StoreOptions
  * which are the values we want, so the venue stays correct, but it is the one
  * path where "set explicitly" is not literally true.
  */
-async function configurePool(client: Client, url: string): Promise<void> {
+async function configurePool(
+	client: Client,
+	url: string,
+	pragmas: readonly string[]
+): Promise<void> {
 	const pooled = url.startsWith('file:') && !url.includes(':memory:');
 
 	if (!pooled) {
-		for (const pragma of CONNECTION_PRAGMAS) await client.execute(pragma);
+		for (const pragma of pragmas) await client.execute(pragma);
 		return;
 	}
 
@@ -162,7 +183,7 @@ async function configurePool(client: Client, url: string): Promise<void> {
 	}
 
 	for (const transaction of held) {
-		await transaction.executeMultiple(['ROLLBACK', ...CONNECTION_PRAGMAS].join(';\n') + ';');
+		await transaction.executeMultiple(['ROLLBACK', ...pragmas].join(';\n') + ';');
 		transaction.close();
 	}
 }

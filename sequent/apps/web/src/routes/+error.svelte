@@ -22,23 +22,37 @@
 	 * exception.
 	 */
 	let { error }: ErrorProps = $props();
+
+	/*
+	 * Three different answers, and they should not read alike. A 5xx is the venue
+	 * failing; a 404 is a page that is not there; any other 4xx is the venue
+	 * refusing, for a reason it states.
+	 */
+	const heading = $derived(
+		error.status >= 500
+			? 'Something went wrong'
+			: error.status === 404
+				? 'There is nothing here'
+				: 'We cannot show you this'
+	);
 </script>
 
 <div class="container card stack failure" role="alert">
-	<!-- A 4xx is the venue answering, not failing: a refusal, or a page that is
-	     not there. Only a 5xx is "something went wrong". -->
-	<h1>{error.status >= 500 ? 'Something went wrong' : 'We cannot show you this'}</h1>
+	<h1>{heading}</h1>
 	<p class="muted">{error.message}</p>
 	{#if error.id}
 		<p class="small faint mono">Reference {error.id}</p>
 	{/if}
-	<!--
-		A full reload rather than a client-side navigation. A failed boundary stays
-		failed until something resets it, and a link to the page you are already on
-		only re-runs its data in SvelteKit 3; a fresh document is the retry that is
-		certain to start clean.
-	-->
-	<button type="button" onclick={() => location.reload()}>Try again</button>
+	{#if error.status >= 500}
+		<!--
+			Only a fault is worth retrying: a refusal or a missing page answers the
+			same way every time. A full reload rather than a client-side
+			navigation — a failed boundary stays failed until something resets it,
+			and a link to the page you are already on only re-runs its data in
+			SvelteKit 3; a fresh document is the retry that is certain to start clean.
+		-->
+		<button type="button" onclick={() => location.reload()}>Try again</button>
+	{/if}
 </div>
 
 <style>

@@ -129,16 +129,24 @@ a way that takes an auditor to find.
 ## The tests
 
 ```sh
-pnpm test        # 375 tests
+pnpm test        # 377 tests
 pnpm check       # types, across all six packages
-pnpm test:e2e    # the browser tests, against the production build
+pnpm test:e2e    # the browser tests, against the build already in apps/web/build
 pnpm verify      # all of it: check, test, a production build, then the browser tests
 ```
 
-The browser tests (`apps/web/e2e/`) need Chromium once:
+Everything is a Vitest test in Node except six browser tests
+(`apps/web/e2e/`). Each guards a bug in how the server, the network and the
+page meet — a refusal or a failure that reached the person wrongly, or not at
+all — and each failed against the code before its fix. The reasoning is at the
+top of `apps/web/playwright.config.ts`.
+
+They need Chromium once:
 `pnpm --filter @sequent/web exec playwright install chromium`. They serve the
 build on port 4173 against their own `e2e.db`, which they seed fresh every run
-— never the database you develop against.
+— never the database you develop against — and they refuse to start if
+something is already listening there. `test:e2e` does not build; `verify`
+builds immediately before it.
 
 The build needs `PUBLIC_ORIGIN`. It is declared `static` in `apps/web/src/env.ts`,
 so SvelteKit reads it at build time and refuses to build without it — a missing

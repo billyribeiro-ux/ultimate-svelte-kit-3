@@ -6,6 +6,31 @@ import { defineConfig, devices } from '@playwright/test';
  *
  * Against the production build, on a database of its own, seeded fresh.
  *
+ * WHY A BROWSER, IN A PROJECT THAT TESTS IN NODE
+ * ----------------------------------------------
+ * Everything else in Sequent is a Vitest test in Node, against pure functions
+ * and real SQLite files. `@playwright/test` was dropped once, when it was a
+ * dependency with no suite behind it. It came back for `e2e/errors.e2e.ts`,
+ * and it stays only while `pnpm verify` runs that suite.
+ *
+ * Those six tests need a browser because each bug they guard was in how the
+ * server, the network and the page meet, and showed only on the page: a
+ * Cancel handler that dropped its promise, a sign-in refusal that replaced
+ * the form, a query awaited where its failure took the whole terminal, a
+ * failure card SvelteKit's own boundary made unreachable, a password echoed
+ * into the page a form without JavaScript gets back, and a failed panel with
+ * no way to try again. The one piece of all that which lifts out cleanly —
+ * reading the message from a refusal — did lift out, into `#lib/errors.ts`,
+ * and is a Vitest test now. The rest is wiring, and was checked rather than
+ * assumed: with the Cancel button put back to `void cancelOrder(...)`, every
+ * Vitest test passes and the cancel test here fails, because no alert ever
+ * appears.
+ *
+ * The lighter shape was weighed and turned down: mount the terminal under
+ * jsdom with its remote functions mocked. A mock rejects with whatever its
+ * author believes a refusal looks like, and believing it was an `Error` was
+ * the bug. A test that mocks the thing it is about asserts the assumption.
+ *
  * WHY THE BUILD AND NOT THE DEV SERVER
  * ------------------------------------
  * `PUBLIC_ORIGIN` is inlined at build time and every command is checked
@@ -61,7 +86,14 @@ export default defineConfig({
 		// has already started.
 		command: 'node scripts/seed.ts && node build',
 		port: 4173,
-		reuseExistingServer: !process.env['CI'],
+		/*
+		 * Never a server that is already listening. 4173 is also where
+		 * `vite preview` goes, and a reused server skips the seed above and serves
+		 * whatever database it was started with — so the suite would run against
+		 * the venue somebody is developing on, the thing `e2e.db` exists to
+		 * prevent. A port in use fails the run, and says why.
+		 */
+		reuseExistingServer: false,
 		env: { DATABASE_URL, PORT: '4173' }
 	}
 });

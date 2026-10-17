@@ -72,6 +72,16 @@ import type { Attachment } from 'svelte/attachments';
  *
  * Treating the preference as "turn animations off" is the common mistake, and
  * it usually makes an interface worse for the people who asked for it.
+ *
+ * ## Why not `prefersReducedMotion` from `svelte/motion`
+ *
+ * That one is a reactive `MediaQuery`, the right tool when markup should change
+ * with the setting. Here it would be the wrong one. Every caller is an
+ * attachment or an effect, and reading `.current` inside an attachment makes
+ * the attachment depend on it — so toggling the setting would tear `reveal`
+ * down and run it again, replaying an entrance on a page that has long since
+ * arrived. What these call sites need is the answer at the moment they
+ * animate, which is what a plain `matchMedia` read gives them.
  */
 export function prefersReducedMotion(): boolean {
 	if (typeof window === 'undefined') return true;

@@ -50,7 +50,17 @@ const HOME = '/terminal';
 export const signIn = form(
 	v.object({
 		email: v.pipe(v.string(), v.trim(), v.email('Enter the email you signed up with')),
-		password: v.pipe(v.string(), v.minLength(1, 'Enter your password')),
+		/*
+		 * `_password`, and the underscore is the security control.
+		 *
+		 * A form submitted without JavaScript that fails — a schema issue or an
+		 * `invalid` below — is answered with the page again, and SvelteKit puts
+		 * what was typed back into the fields so nobody fills the form out twice.
+		 * It holds back exactly one kind of field: a name that starts with `_`.
+		 * Without it, every mistyped password went back to the browser in plain
+		 * text, in the input's `value` and again in the page's hydration data.
+		 */
+		_password: v.pipe(v.string(), v.minLength(1, 'Enter your password')),
 		redirectTo: v.optional(
 			v.pipe(
 				v.string(),
@@ -94,7 +104,7 @@ export const signIn = form(
 if (!row || Number(row['is_active']) !== 1) {
 	invalid('That email and password do not match an account.');
 }
-if (!verifySecret(data.password, String(row['password_hash']))) {
+if (!verifySecret(data._password, String(row['password_hash']))) {
 	invalid('That email and password do not match an account.');
 }</code></pre>
 </figure>
@@ -109,12 +119,32 @@ if (!verifySecret(data.password, String(row['password_hash']))) {
 	</figcaption>
 	<pre><code class="lang-svelte">{#if signIn.fields.allIssues()?.length}
 	&lt;p class=&quot;error&quot; role=&quot;alert&quot;&gt;{signIn.fields.allIssues()?.[0]?.message}&lt;/p&gt;
-{/if}</code></pre>
+{/if}
+
+&lt;label data-motion=&quot;field&quot;&gt;
+	Email
+	&lt;input {...signIn.fields.email.as('email')} autocomplete=&quot;username&quot; required /&gt;
+&lt;/label&gt;
+
+&lt;label data-motion=&quot;field&quot;&gt;
+	Password
+	&lt;input
+		{...signIn.fields._password.as('password')}
+		autocomplete=&quot;current-password&quot;
+		required
+	/&gt;
+&lt;/label&gt;</code></pre>
 </figure>
 
 <aside class="callout callout--why">
 	<h4>A refusal the person can fix is a validation result</h4>
-	<p>The line to draw is whether the person can do anything about it. A wrong password is fixed by retyping it, so it belongs on the form, beside &quot;Enter your password&quot;. A failure they cannot fix — the venue is down, their role may not open the page — belongs on the error page. And <code>invalid</code> is given a plain string, which attaches the message to the form as a whole rather than to <code>password</code>, on purpose: pinning it on the password field would say &quot;the email was fine&quot;, which is exactly what the single message exists not to say.</p>
+	<p>The line to draw is whether the person can do anything about it. A wrong password is fixed by retyping it, so it belongs on the form, beside &quot;Enter your password&quot;. A failure they cannot fix — the venue is down, their role may not open the page — belongs on the error page. And <code>invalid</code> is given a plain string, which attaches the message to the form as a whole rather than to the password field, on purpose: pinning it there would say &quot;the email was fine&quot;, which is exactly what the single message exists not to say.</p>
+</aside>
+<p>Keeping the form brings one more duty with it. With JavaScript the failed submission is a background request and nothing is re-rendered. Without it — a slow connection, a blocked script, a locked-down browser — the browser posts the form, and SvelteKit answers with the whole page again, the fields filled back in with what was typed so nobody starts from scratch. Everything that was typed. Called <code>password</code>, the field came back with a mistyped password in its <code>value</code> attribute and again in the data the page hydrates from, in plain text, in a response any proxy or browser cache along the way may keep.</p>
+
+<aside class="callout callout--why">
+	<h4>An underscore is how a field says &quot;never send this back&quot;</h4>
+	<p>SvelteKit's rule is in its documentation under &quot;Handling sensitive data&quot;: &quot;You can prevent sensitive data (such as passwords and credit card numbers) from being sent back to the user by using a name with a leading underscore.&quot; So the schema key is <code>_password</code>, the handler reads <code>data._password</code>, and the page spreads <code>signIn.fields._password.as('password')</code>; the email, which is worth giving back, keeps its plain name. It is a naming convention doing a security job, which is easy to undo by accident — a tidy-minded rename to <code>password</code> would compile, pass every type check and work perfectly with JavaScript on. That is why a browser test with JavaScript switched off submits a wrong password and asserts that it appears nowhere in the page that comes back (chapter 41).</p>
 </aside>
 <h3 id="the-cookie">The cookie</h3>
 
@@ -186,7 +216,7 @@ export const handle: Handle = sequence(handleCsrf, handleAuth, handleHeaders);</
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>
-	<ul><li>You can explain what an open redirect is and why <code>//evil.example</code> is not a path</li><li>You can explain why sign-in has one error message for two different failures</li><li>You can choose between <code>invalid</code> and <code>error</code> in a form handler, and say why the message is not pinned to the password field</li><li>You can name each cookie flag and what it defends against</li><li>You can explain why the session is a database row rather than a signed token</li></ul>
+	<ul><li>You can explain what an open redirect is and why <code>//evil.example</code> is not a path</li><li>You can explain why sign-in has one error message for two different failures</li><li>You can choose between <code>invalid</code> and <code>error</code> in a form handler, and say why the message is not pinned to the password field</li><li>You can explain what a form without JavaScript gets back when it fails, and why the password field is called <code>_password</code></li><li>You can name each cookie flag and what it defends against</li><li>You can explain why the session is a database row rather than a signed token</li></ul>
 </aside>
 		</article>
 

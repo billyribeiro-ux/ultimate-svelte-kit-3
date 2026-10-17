@@ -158,11 +158,27 @@ const client = createClient({
  */
 await client.execute('PRAGMA journal_mode = WAL');
 
-await configurePool(client, url);`
+await configurePool(client, url, [...CONNECTION_PRAGMAS, ...connectionPragmas]);`
 			},
 			{
 				type: 'p',
 				text: 'Three of the four settings are properties of the **connection**, not the database, and since `@libsql/client` 0.18 a client is not one connection but a small pool of them. A statement outside a transaction borrows a connection and hands it back before its promise resolves, so four `execute` calls in a row all land on the *same* connection — and the other three turn up later with whatever the library compiled in. `busy_timeout` has a client option that reaches every connection. The other two do not, so they are applied the only way that addresses each connection individually: by holding all of them at once.'
+			},
+			{
+				type: 'p',
+				text: 'How many connections that is, is a decision of its own:'
+			},
+			{
+				type: 'code',
+				file: 'packages/store/src/client.ts',
+				lang: 'ts',
+				code: `
+export const POOL_SIZE = 4;`
+			},
+			{
+				type: 'why',
+				title: 'Why four, and why not one',
+				text: 'One is the size that looks safest and is the only one that breaks. A transaction holds its connection for its whole life, and when transactions hold every connection the pool **refuses** the next borrower with `TRANSACTION_ACTIVE` rather than making it wait. With one connection, every read that arrives while a write is in flight throws — and in the web process that is a live query polling while an order is appended, which is to say constantly. Two is the floor. Four leaves room for a stray direct `client.transaction()` somewhere without starving the readers. More buys nothing: a statement outside a transaction borrows a connection, runs synchronously and returns it before anything else in the process can run, so reads never genuinely overlap inside one Node process, and each extra connection is two more file descriptors held open for nothing.'
 			},
 			{
 				type: 'code',
@@ -188,16 +204,22 @@ await configurePool(client, url);`
  *
  * libSQL happens to compile both of these in as its defaults. Relying on that
  * would let a build flag somebody else controls decide whether the books
- * balance after a power cut, so they are set explicitly and tested.
+ * balance after a power cut, so they are set explicitly. The same coincidence
+ * means reading them back proves nothing, so the test that every connection is
+ * configured uses a pragma of its own — see \`connectionPragmas\`.
  */
 const CONNECTION_PRAGMAS = ['PRAGMA foreign_keys = ON', 'PRAGMA synchronous = FULL'];
 
 // …
-async function configurePool(client: Client, url: string): Promise<void> {
+async function configurePool(
+	client: Client,
+	url: string,
+	pragmas: readonly string[]
+): Promise<void> {
 	const pooled = url.startsWith('file:') && !url.includes(':memory:');
 
 	if (!pooled) {
-		for (const pragma of CONNECTION_PRAGMAS) await client.execute(pragma);
+		for (const pragma of pragmas) await client.execute(pragma);
 		return;
 	}
 
@@ -207,7 +229,7 @@ async function configurePool(client: Client, url: string): Promise<void> {
 	}
 
 	for (const transaction of held) {
-		await transaction.executeMultiple(['ROLLBACK', ...CONNECTION_PRAGMAS].join(';\\n') + ';');
+		await transaction.executeMultiple(['ROLLBACK', ...pragmas].join(';\\n') + ';');
 		transaction.close();
 	}
 }`
@@ -219,6 +241,11 @@ async function configurePool(client: Client, url: string): Promise<void> {
 			{
 				type: 'warn',
 				text: 'The connection-level settings are the ones that fail silently. A process that forgets `busy_timeout` is the one that fails under load with `SQLITE_BUSY` while every other process is fine; a connection that misses `foreign_keys` is the one that lets an event point at a command that never happened. Both are maddening to debug precisely because the other connections are fine. That is why every process in Sequent calls one `openStore` function rather than creating clients itself, and why there is a test that reads the settings back through every connection in the pool.'
+			},
+			{
+				type: 'why',
+				title: 'A test needs a value that could have been different',
+				text: 'The first version of that test read `busy_timeout`, `foreign_keys` and `synchronous` back through every connection and expected `5000`, `1` and `2`. It passed — and it passed just as well with `configurePool` reduced to an immediate `return`, because the timeout comes from the client option and libSQL compiles in the other two as its defaults. An assertion that agrees with the defaults cannot tell configured from forgotten. So `openStore` takes `connectionPragmas`, which nothing in the venue uses, and the test opens a store with `PRAGMA cache_size = -4321` — a value nobody would choose and no build has as its default — and finds it on all `POOL_SIZE` connections. With `configurePool` stubbed out it reads `-2000`, and fails, which is the property a test is for.'
 			},
 			{
 				type: 'checkpoint',

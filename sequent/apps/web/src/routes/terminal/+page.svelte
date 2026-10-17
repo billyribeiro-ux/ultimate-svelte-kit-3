@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import DepthLadder from '#lib/components/DepthLadder.svelte';
+	import { messageFrom } from '#lib/errors.ts';
 	import { count, reveal, revealChildren, sweep } from '#lib/motion/motion.svelte.ts';
 	import {
 		cancelOrder,
@@ -12,8 +13,9 @@
 		placeOrder,
 		watchMarket
 	} from './market.remote.ts';
+	import type { PageProps } from './$types';
 
-	let { data }: { data: { accountIds: string[] } } = $props();
+	let { data }: PageProps = $props();
 
 	/*
 	 * Ticket state, declared ABOVE the awaited deriveds below.
@@ -124,12 +126,18 @@
 
 	async function send() {
 		lastError = null;
+
+		// Said here rather than thrown to the `catch` below: it is a fact about
+		// this person, known before anything is sent, not a failure of the call.
+		const accountId = data.accountIds[0];
+		if (!accountId) {
+			lastError = 'You are not assigned to a trading account.';
+			return;
+		}
+
 		sending = true;
 
 		try {
-			const accountId = data.accountIds[0];
-			if (!accountId) throw new Error('You are not assigned to a trading account.');
-
 			const clientOrderId = `T-${Date.now().toString(36)}-${Math.trunc(Math.random() * 1e6).toString(36)}`;
 
 			await placeOrder({
@@ -146,8 +154,6 @@
 			lastSent = clientOrderId;
 			ticketOpen = false;
 		} catch (thrown) {
-			// SvelteKit's HttpError does not extend Error, so `instanceof Error`
-			// takes the else branch for every deliberate error() the server threw.
 			lastError = messageFrom(thrown);
 		} finally {
 			sending = false;
@@ -164,7 +170,8 @@
 	 * believing an order is gone while it is still resting in the book.
 	 *
 	 * What arrives here is an `HttpError`, `{ status, body }`, with the server's
-	 * message at `body.message` — the same shape `send` gets, so the same reader.
+	 * message at `body.message` — the same shape `send` gets, so the same reader,
+	 * `messageFrom` in `#lib/errors.ts`.
 	 */
 	async function cancel(clientOrderId: string) {
 		cancelError = null;
@@ -174,16 +181,6 @@
 		} catch (thrown) {
 			cancelError = messageFrom(thrown);
 		}
-	}
-
-	function messageFrom(thrown: unknown): string {
-		if (typeof thrown === 'object' && thrown !== null) {
-			const body = (thrown as { body?: { message?: unknown } }).body;
-			if (body && typeof body.message === 'string') return body.message;
-			const message = (thrown as { message?: unknown }).message;
-			if (typeof message === 'string' && message) return message;
-		}
-		return 'That did not work.';
 	}
 
 	/** Scaled integer units to a price string. Never a float, anywhere. */
@@ -256,7 +253,7 @@
 			and an element that is still moving is an element you aim at wrong.
 			An entrance animation on this panel is an animation that can cost money.
 		-->
-		<section class="card stack ticket" class:open={ticketOpen} aria-label="Order ticket">
+		<section class={['card stack ticket', { open: ticketOpen }]} aria-label="Order ticket">
 			<header class="row ticket-head">
 				<h3>Order</h3>
 				<button type="button" class="link close" onclick={() => (ticketOpen = false)}>
@@ -276,15 +273,13 @@
 			<div class="sides">
 				<button
 					type="button"
-					class:active={ticket.side === 'buy'}
-					class="buy"
+					class={['buy', { active: ticket.side === 'buy' }]}
 					onclick={() => (ticket.side = 'buy')}
 					aria-pressed={ticket.side === 'buy'}>Buy</button
 				>
 				<button
 					type="button"
-					class:active={ticket.side === 'sell'}
-					class="sell"
+					class={['sell', { active: ticket.side === 'sell' }]}
 					onclick={() => (ticket.side = 'sell')}
 					aria-pressed={ticket.side === 'sell'}>Sell</button
 				>
@@ -312,8 +307,7 @@
 
 			<button
 				type="button"
-				class="send"
-				class:buying={ticket.side === 'buy'}
+				class={['send', { buying: ticket.side === 'buy' }]}
 				onclick={() => void send()}
 				disabled={sending || !ticket.price}
 			>
@@ -327,11 +321,8 @@
 				{#each market?.tape ?? [] as trade (trade.tradeId)}
 					<li class="row small">
 						<span
-							class="mono {trade.aggressor === 'buy'
-								? 'up'
-								: trade.aggressor === 'sell'
-									? 'down'
-									: ''}">{trade.label}</span
+							class={['mono', { up: trade.aggressor === 'buy', down: trade.aggressor === 'sell' }]}
+							>{trade.label}</span
 						>
 						<span class="mono faint">{trade.quantity.toLocaleString('en-GB')}</span>
 						<span class="faint">{trade.aggressor ?? 'auction'}</span>
@@ -359,14 +350,15 @@
 			column pinned so you never lose track of which row you are reading.
 		-->
 		<!--
-			svelte-ignore a11y_no_noninteractive_tabindex
-			The rule is a good heuristic and wrong here. A container that scrolls
-			must be reachable by keyboard, or a keyboard-only user cannot see the
-			columns past the edge at all — WCAG 2.1.1, and the exact pattern the
-			ARIA authoring practices recommend for a scrollable region. Removing the
-			tabindex silences a warning by introducing a real failure that nobody
-			testing with a mouse would ever notice.
+			Focusable, which the a11y_no_noninteractive_tabindex rule objects to. The
+			rule is a good heuristic and wrong here. A container that scrolls must be
+			reachable by keyboard, or a keyboard-only user cannot see the columns past
+			the edge at all — WCAG 2.1.1, and the exact pattern the ARIA authoring
+			practices recommend for a scrollable region. Removing the tabindex silences
+			a warning by introducing a real failure that nobody testing with a mouse
+			would ever notice.
 		-->
+		<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 		<div class="scroller" tabindex="0" role="region" aria-label="Your orders, scrollable">
 			<table>
 				<thead>
@@ -415,63 +407,105 @@
 	<section class="card" {@attach reveal({ delay: 0.16 })}>
 		<h3>Positions</h3>
 		<!--
-			Its own boundary, so this panel can fail without taking the terminal with
-			it. A venue operator may watch the book but holds no positions to see, and
-			the server refuses the query. Awaited in the script, that refusal rejected
-			the whole page and the operator lost the book, the tape and every Cancel
-			button with it. Awaited here, it costs one panel, which says why.
+			Whether to ask at all is decided by the load, not by a refusal.
 
-			The `failed` snippet's `error` is an `App.Error` — a plain
-			`{ status, message }` that went through `handleError`, not an `Error` — so
-			the reason is `error.message`, read as it is. Svelte types it `unknown`,
-			because a boundary in plain Svelte can catch anything at all; under
-			SvelteKit every boundary's error has been through `handleError` first, so
-			the cast states what Kit guarantees rather than guessing.
+			A venue operator may open the terminal — watching the book and the tape
+			is half the job — but belongs to the venue rather than a member firm, and
+			holds no positions to see. That is known before anything renders, so the
+			load says so and this panel never asks. Letting the query be refused and
+			catching the 403 below looked the same on screen, and was wrong: an error
+			a boundary catches becomes the page's error in SvelteKit, so the whole
+			working terminal was served as HTTP 403, with `page.status` saying the
+			same. A rule you know in advance is a branch, not an exception.
 		-->
-		<svelte:boundary>
-			<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
-			<div class="scroller" tabindex="0" role="region" aria-label="Positions, scrollable">
-				<table>
-					<thead>
-						<tr>
-							<th scope="col" class="pin">Account</th>
-							<th scope="col">Instrument</th>
-							<th scope="col">Quantity</th>
-							<th scope="col">Average</th>
-							<th scope="col">Realised</th>
-						</tr>
-					</thead>
-					<tbody>
-						{#each await getMyPositions() as position (position.accountId + position.instrumentId)}
-							<tr>
-								<td class="mono small pin">{position.accountId}</td>
-								<td class="mono small">{position.instrumentId}</td>
-								<td
-									class="mono {position.quantity > 0 ? 'up' : position.quantity < 0 ? 'down' : ''}"
-									>{position.quantity.toLocaleString('en-GB')}</td
-								>
-								<td class="mono">{position.averageLabel}</td>
-								<td
-									class="mono {position.realisedPnl > 0
-										? 'up'
-										: position.realisedPnl < 0
-											? 'down'
-											: ''}"
-								>
-									{position.realisedPnl < 0 ? '−' : ''}{position.realisedLabel}
-								</td>
-							</tr>
-						{:else}
-							<tr><td colspan="5" class="muted small">Flat.</td></tr>
-						{/each}
-					</tbody>
-				</table>
-			</div>
+		{#if data.canSeePositions}
+			<!--
+				Its own boundary, for the failures nobody can predict — a dropped
+				connection, a fault at our end — so they cost this panel and not the
+				terminal. The await is in the markup, inside it, rather than in the
+				script: a rejection in the script fails the whole server render
+				before any boundary exists to catch it.
 
-			{#snippet failed(error)}
-				<p class="muted small under-heading">{(error as App.Error).message}</p>
-			{/snippet}
-		</svelte:boundary>
+				No `pending` snippet, deliberately. During server rendering a boundary
+				with one renders the placeholder and none of its content, so every
+				first load would show "loading" where the table could have been.
+
+				The `failed` snippet's `error` is an `App.Error` — a plain
+				`{ status, message }` that went through `handleError`, not an `Error`.
+				Svelte types it `unknown`, because a boundary in plain Svelte can catch
+				anything at all; under SvelteKit every boundary's error has been
+				through `handleError` first, so the cast states what Kit guarantees
+				rather than guessing.
+			-->
+			<svelte:boundary>
+				<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+				<div class="scroller" tabindex="0" role="region" aria-label="Positions, scrollable">
+					<table>
+						<thead>
+							<tr>
+								<th scope="col" class="pin">Account</th>
+								<th scope="col">Instrument</th>
+								<th scope="col">Quantity</th>
+								<th scope="col">Average</th>
+								<th scope="col">Realised</th>
+							</tr>
+						</thead>
+						<tbody>
+							{#each await getMyPositions() as position (position.accountId + position.instrumentId)}
+								<tr>
+									<td class="mono small pin">{position.accountId}</td>
+									<td class="mono small">{position.instrumentId}</td>
+									<td class={['mono', { up: position.quantity > 0, down: position.quantity < 0 }]}>
+										{position.quantity.toLocaleString('en-GB')}
+									</td>
+									<td class="mono">{position.averageLabel}</td>
+									<td
+										class={[
+											'mono',
+											{ up: position.realisedPnl > 0, down: position.realisedPnl < 0 }
+										]}
+									>
+										{position.realisedPnl < 0 ? '−' : ''}{position.realisedLabel}
+									</td>
+								</tr>
+							{:else}
+								<tr><td colspan="5" class="muted small">Flat.</td></tr>
+							{/each}
+						</tbody>
+					</table>
+				</div>
+
+				{#snippet failed(error, reset)}
+					{const failure = $derived(error as App.Error)}
+					{#if failure.status >= 500}
+						<!--
+							A fault, not an answer: worth another go, in place. `reset`
+							alone would re-await the query that already failed, which Kit
+							keeps until it is refreshed, so the retry refreshes it first.
+						-->
+						<p class="muted small under-heading">
+							Positions did not load{failure.id ? ` (reference ${failure.id})` : ''}.
+							<button
+								type="button"
+								class="link"
+								onclick={() => {
+									void getMyPositions().refresh();
+									reset();
+								}}>Try again</button
+							>
+						</p>
+					{:else}
+						<!-- The venue answering — "Sign in to continue." — which another
+						     go would only repeat. -->
+						<p class="muted small under-heading">{failure.message}</p>
+					{/if}
+				{/snippet}
+			</svelte:boundary>
+		{:else}
+			<p class="muted small under-heading">
+				Positions belong to member firms. This role watches the market and holds none.
+			</p>
+		{/if}
 	</section>
 </div>
 
@@ -481,7 +515,7 @@
 	because on a notched phone the bottom of the viewport is behind the home
 	indicator and a button there cannot be pressed.
 -->
-<div class="ticket-bar" class:hidden={ticketOpen}>
+<div class={['ticket-bar', { hidden: ticketOpen }]}>
 	<button
 		type="button"
 		class="open-ticket buy"
