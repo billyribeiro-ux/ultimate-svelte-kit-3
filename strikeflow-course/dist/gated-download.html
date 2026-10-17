@@ -42,18 +42,27 @@
 		<span class="code__file">src/routes/guide/thank-you/+page.server.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">import { resolve } from '$app/paths';
-import type { PageServerLoad } from './$types';
+	<pre><code class="lang-ts">import type { PageServerLoad } from './$types';
 import { verifyDownloadToken } from '#lib/server/tokens.ts';
 
 // …
 export const prerender = false;
 
 export const load: PageServerLoad = ({ url, setHeaders }) =&gt; {
-	const token = url.searchParams.get('t');
+	// A missing `t` becomes '', which verifies as 'malformed' like any other bad
+	// token — and keeps `token` a plain string for the valid branch below.
+	const token = url.searchParams.get('t') ?? '';
 	const result = verifyDownloadToken(token);
 
-	// …
+	/*
+	 * Belt and braces on top of the `noindex` meta tag the page renders.
+	 *
+	 * The meta tag is in the HTML, so only a crawler that parses the HTML sees it.
+	 * An `X-Robots-Tag` header is read from the response itself, before any parsing.
+	 * Two mechanisms, because a gated page leaking into the index is embarrassing
+	 * and slow to undo. Both need the crawler to fetch the page, which is why
+	 * robots.txt deliberately does NOT disallow it — see `robots.txt/+server.ts`.
+	 */
 	setHeaders({
 		'X-Robots-Tag': 'noindex, nofollow',
 		'Cache-Control': 'private, no-store'
@@ -65,7 +74,7 @@ export const load: PageServerLoad = ({ url, setHeaders }) =&gt; {
 			// up in an analytics URL, a referrer header, or a support screenshot.
 			status: 'invalid' as const,
 			reason: result.reason,
-			downloadUrl: null,
+			token: null,
 			email: null
 		};
 	}
@@ -77,12 +86,15 @@ export const load: PageServerLoad = ({ url, setHeaders }) =&gt; {
 		// Every entry point validates independently — never trust that an earlier
 		// step in the flow did its job.
 		//
-		// `resolve()` works on the server too, and in SvelteKit 3 it takes a route ID
-		// with a `?search` suffix. The result is a `ResolvedPathname` — a plain string
-		// at runtime, so it serialises like any other load data — and the component
-		// can put it straight into an `href` without the &quot;link without resolve()&quot;
-		// lint complaint a hand-built string would earn.
-		downloadUrl: resolve(`/guide/download?t=${encodeURIComponent(token ?? '')}`),
+		// We return the token, not a finished URL, and the page builds the link with
+		// `resolve()` as it renders. On the server `resolve()` returns a path relative
+		// to the request: `../guide/download?t=…` for a full page load, but
+		// `../../guide/download?t=…` for the `__data.json` request a client-side
+		// navigation makes, which is one level deeper. Serialised from here, that
+		// second answer reaches a page that is NOT one level deeper; it only lands
+		// on the right file today because a surplus `..` stops at the site root,
+		// and under a base path it would climb out of the base.
+		token,
 		email: result.email
 	};
 };</code></pre>
@@ -92,7 +104,40 @@ export const load: PageServerLoad = ({ url, setHeaders }) =&gt; {
 	<h4>Why validation happens here, not in the component</h4>
 	<p>A component could decode the token and read its expiry, but it could never verify the <strong>signature</strong> — that requires the secret, and anything the browser can read is not a secret. So the server decides, and the page just renders the verdict.</p>
 </aside>
-<aside class="callout callout--note"><p>Three layers keep this page out of the index: a <code>noindex</code> meta tag, a <code>Disallow</code> in robots.txt, and an <code>X-Robots-Tag</code> header. The header matters because it also covers the PDF response, and it works even if a crawler never executes far enough to read the meta tag.</p></aside>
+<p>The load hands the page the verified token, and the page builds the download link itself, with <code>resolve()</code>, as it renders:</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/guide/thank-you/+page.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
+	import { resolve } from '$app/paths';
+	// …
+	import type { PageProps } from './$types';
+
+	let { data }: PageProps = $props();
+
+	// …
+&lt;/script&gt;
+
+&lt;!-- … --&gt;
+&lt;a
+	class=&quot;thanks__download&quot;
+	href={resolve(`/guide/download?t=${encodeURIComponent(data.token)}`)}
+	download
+&gt;
+	&lt;DownloadSimpleIcon size={22} aria-hidden=&quot;true&quot; /&gt;
+	&lt;span&gt;Download the PDF (8 chapters)&lt;/span&gt;
+&lt;/a&gt;</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why <code>resolve()</code> belongs in the component, not in load data</h4>
+	<p>It is tempting to finish the URL in the load function and return <code>downloadUrl</code> ready to use; an earlier version of this file did exactly that. The trouble is what <code>resolve()</code> returns on the server. The <code>$app/paths</code> docs say: &quot;During server rendering, the base path is relative and depends on the page currently being rendered.&quot; So on the server <code>resolve('/guide/download?t=…')</code> is a <em>relative</em> path, worked out from the current request — and a load function runs for two different requests. A full page load asks for <code>/guide/thank-you</code>, and gets <code>../guide/download?t=…</code>. A visitor with JavaScript arrives by client-side navigation (the form redirects here), and then the load runs for <code>/guide/thank-you/__data.json</code>, one folder deeper, and gets <code>../../guide/download?t=…</code>. That string is then serialised and dropped into a page that is <em>not</em> one folder deeper. Today it still lands on the right file, only because a surplus <code>..</code> stops at the root of the site; deploy under a base path and the link would climb out of it. Data should be data. Return the token, and let the component — which knows exactly which page it is rendering — turn it into a link.</p>
+</aside>
+<aside class="callout callout--note"><p><code>PageProps</code> from <code>./$types</code> types everything the page receives — <code>data</code> from the load above, and <code>params</code>. It is generated from your load function, so <code>data.status === 'valid'</code> narrows <code>data.token</code> to a <code>string</code> inside the <code>{#if}</code> with no cast. (Older code writes <code>{ data: PageData }</code> by hand; <code>PageProps</code> replaced that in SvelteKit 2.16.)</p></aside>
+<aside class="callout callout--note"><p>Two layers keep this page out of the index: a <code>noindex</code> meta tag in the HTML, and an <code>X-Robots-Tag</code> header on the response itself, which a crawler reads before it parses anything. robots.txt is deliberately <em>not</em> a third layer. Both of the others only work on a crawler that is allowed to fetch the page, and a <code>Disallow</code> would stop it fetching — the self-defeating combination chapter 18 warned about.</p></aside>
 <h3 id="download">The download endpoint</h3>
 
 <figure class="code">
@@ -221,6 +266,19 @@ await main();</code></pre>
 .chapter h3 { break-after: avoid; }   /* never orphan a heading at page bottom */
 .callout    { break-inside: avoid; }  /* never split a box across pages */
 p           { orphans: 2; widows: 2; } /* never leave one line alone */</code></pre>
+</figure>
+<p>Give the script a name in <code>package.json</code>, so nobody has to remember the path:</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">package.json</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-json">&quot;scripts&quot;: {
+	…
+	&quot;ebook:build&quot;: &quot;node scripts/build-ebook.js&quot;,
+	…
+},</code></pre>
 </figure>
 
 <figure class="code code--terminal">

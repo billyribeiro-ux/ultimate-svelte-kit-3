@@ -10,7 +10,6 @@
  * the server decides, and the page just renders the verdict.
  */
 
-import { resolve } from '$app/paths';
 import type { PageServerLoad } from './$types';
 import { verifyDownloadToken } from '#lib/server/tokens.ts';
 
@@ -23,16 +22,19 @@ import { verifyDownloadToken } from '#lib/server/tokens.ts';
 export const prerender = false;
 
 export const load: PageServerLoad = ({ url, setHeaders }) => {
-	const token = url.searchParams.get('t');
+	// A missing `t` becomes '', which verifies as 'malformed' like any other bad
+	// token — and keeps `token` a plain string for the valid branch below.
+	const token = url.searchParams.get('t') ?? '';
 	const result = verifyDownloadToken(token);
 
 	/*
 	 * Belt and braces on top of the `noindex` meta tag the page renders.
 	 *
-	 * The meta tag only works if a crawler executes far enough to read it. An
-	 * `X-Robots-Tag` header is read from the response itself, so it also covers the
-	 * PDF and any non-HTML response. Two mechanisms, because a gated page leaking
-	 * into the index is embarrassing and slow to undo.
+	 * The meta tag is in the HTML, so only a crawler that parses the HTML sees it.
+	 * An `X-Robots-Tag` header is read from the response itself, before any parsing.
+	 * Two mechanisms, because a gated page leaking into the index is embarrassing
+	 * and slow to undo. Both need the crawler to fetch the page, which is why
+	 * robots.txt deliberately does NOT disallow it — see `robots.txt/+server.ts`.
 	 */
 	setHeaders({
 		'X-Robots-Tag': 'noindex, nofollow',
@@ -45,7 +47,7 @@ export const load: PageServerLoad = ({ url, setHeaders }) => {
 			// up in an analytics URL, a referrer header, or a support screenshot.
 			status: 'invalid' as const,
 			reason: result.reason,
-			downloadUrl: null,
+			token: null,
 			email: null
 		};
 	}
@@ -57,12 +59,15 @@ export const load: PageServerLoad = ({ url, setHeaders }) => {
 		// Every entry point validates independently — never trust that an earlier
 		// step in the flow did its job.
 		//
-		// `resolve()` works on the server too, and in SvelteKit 3 it takes a route ID
-		// with a `?search` suffix. The result is a `ResolvedPathname` — a plain string
-		// at runtime, so it serialises like any other load data — and the component
-		// can put it straight into an `href` without the "link without resolve()"
-		// lint complaint a hand-built string would earn.
-		downloadUrl: resolve(`/guide/download?t=${encodeURIComponent(token ?? '')}`),
+		// We return the token, not a finished URL, and the page builds the link with
+		// `resolve()` as it renders. On the server `resolve()` returns a path relative
+		// to the request: `../guide/download?t=…` for a full page load, but
+		// `../../guide/download?t=…` for the `__data.json` request a client-side
+		// navigation makes, which is one level deeper. Serialised from here, that
+		// second answer reaches a page that is NOT one level deeper; it only lands
+		// on the right file today because a surplus `..` stops at the site root,
+		// and under a base path it would climb out of the base.
+		token,
 		email: result.email
 	};
 };

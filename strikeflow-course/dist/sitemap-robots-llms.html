@@ -152,7 +152,7 @@ ${urls}
 
 <aside class="callout callout--why">
 	<h4>The distinction almost everyone gets wrong</h4>
-	<p>robots.txt controls <strong>crawling</strong>, not <strong>indexing</strong>. A URL blocked there can still appear in search results — Google just shows it with no description, because you told it not to look. If you want a page kept *out of the index*, use a <code>noindex</code> meta tag and let the crawler in to read it. Blocking a page you also noindexed is self-defeating: the crawler can never see the noindex.</p>
+	<p>robots.txt controls <strong>crawling</strong>, not <strong>indexing</strong>. A URL blocked there can still appear in search results — Google just shows it with no description, because you told it not to look. If you want a page kept <em>out of the index</em>, use a <code>noindex</code> meta tag and let the crawler in to read it. Blocking a page you also noindexed is self-defeating: the crawler can never see the noindex.</p>
 </aside>
 
 <figure class="code">
@@ -170,15 +170,9 @@ export const GET: RequestHandler = () =&gt; {
 User-agent: *
 Allow: /
 
-# SvelteKit's internal asset directory. Nothing here is a page; letting crawlers
-# walk it just burns crawl budget on hashed JS chunks.
-Disallow: /_app/
-
-# Gated confirmation page. Also carries a noindex meta tag, which is what actually
-# keeps it out of the index — this line just saves the crawl.
-Disallow: /guide/thank-you
-
-# Signed, single-use download links. Never useful to a crawler.
+# Signed, expiring download links. Never useful to a crawler, so this saves the
+# crawl. It is not what keeps the PDF out of the index: the only page that links
+# to it is the thank-you page, which is noindex, nofollow.
 Disallow: /guide/download
 
 Sitemap: ${absoluteUrl('/sitemap.xml')}
@@ -192,6 +186,12 @@ Sitemap: ${absoluteUrl('/sitemap.xml')}
 	});
 };</code></pre>
 </figure>
+<p>Notice what is <em>not</em> in that file. The thank-you page (chapter 29) is kept out of the index with a <code>noindex</code> meta tag and an <code>X-Robots-Tag</code> header, so it is deliberately left crawlable — the rule from the box above, applied. The only <code>Disallow</code> is for the signed download links, and its comment says plainly that it saves crawl budget rather than keeping anything out of the index.</p>
+
+<aside class="callout callout--why">
+	<h4>Why <code>/_app/</code> is not blocked either</h4>
+	<p>It is tempting: <code>/_app/</code> holds no pages, only hashed JavaScript and CSS, and blocking it looks like tidy crawl-budget hygiene. But a crawler does not <em>walk</em> that folder — it fetches the files a page links to, because Google renders a page with its stylesheet and scripts to see what a visitor sees. Google's own robots.txt guide allows blocking a resource only &quot;if you think that pages loaded without these resources won't be significantly affected by the loss&quot;. A page without its stylesheet is significantly affected. So the folder stays open.</p>
+</aside>
 <h3 id="llms">llms.txt</h3>
 <p>An emerging convention for giving language models a clean, hand-written Markdown summary of your site at a predictable location.</p>
 <aside class="callout callout--warn"><p>Be honest about what this is. As of August 2026 it is a community convention, not a standard, and Google has publicly said it does not use it. Anyone selling <code>llms.txt</code> as a ranking factor is overselling it.</p></aside>

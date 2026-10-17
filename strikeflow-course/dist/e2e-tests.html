@@ -45,26 +45,44 @@
 	<pre><code class="lang-ts">export default defineConfig({
 	testMatch: '**/*.e2e.{ts,js}',
 
-	webServer: {
-		command: 'npm run build &amp;&amp; npm run preview',
-		port: 4173,
-		// Building takes a moment; the default 60s is tight on a cold cache.
-		timeout: 180_000,
+	webServer: [
+		{
+			command: 'pnpm run build &amp;&amp; pnpm run preview',
+			port: 4173,
+			// Building takes a moment; the default 60s is tight on a cold cache.
+			timeout: 180_000,
 
-		/*
-		 * Deliberately NOT `reuseExistingServer: !process.env.CI`, which is the
-		 * common default.
-		 *
-		 * Reusing a server you happen to have running is faster, and it means the
-		 * suite can silently test a build from twenty minutes ago. That bit me while
-		 * writing this project: a motion test failed, I spent time diagnosing the
-		 * code, and the code was fine — the server was stale.
-		 *
-		 * A test suite that can pass or fail against the wrong build is worse than a
-		 * slow one, because it makes every result untrustworthy. Always build fresh.
-		 */
-		reuseExistingServer: false
-	},
+			/*
+			 * Deliberately NOT `reuseExistingServer: !process.env.CI`, which is the
+			 * common default.
+			 *
+			 * Reusing a server you happen to have running is faster, and it means the
+			 * suite can silently test a build from twenty minutes ago. That bit me while
+			 * writing this project: a motion test failed, I spent time diagnosing the
+			 * code, and the code was fine — the server was stale.
+			 *
+			 * A test suite that can pass or fail against the wrong build is worse than a
+			 * slow one, because it makes every result untrustworthy. Always build fresh.
+			 */
+			reuseExistingServer: false
+		},
+		{
+			/*
+			 * A second server over the SAME build, with the lead store pointed at a
+			 * file where it expects a directory. Every signup then fails for real —
+			 * `ENOTDIR` from the file system, not a mock — which is the only honest
+			 * way to test what a visitor sees when the server breaks.
+			 *
+			 * Only `e2e/failure.e2e.ts` talks to this port, so the server above stays
+			 * healthy for everything else. Playwright starts web servers one after
+			 * another, so this one starts after the build above has finished.
+			 */
+			command: 'pnpm exec vite preview --port 4174 --strictPort',
+			port: 4174,
+			env: { LEADS_DIR: 'package.json' },
+			reuseExistingServer: false
+		}
+	],
 
 	use: {
 		baseURL: 'http://localhost:4173',
@@ -85,8 +103,9 @@
 	],
 
 	// A failing e2e test is almost never flaky in this project — fail fast rather
-	// than retrying and hiding a real bug.
-	retries: process.env.CI ? 1 : 0,
+	// than retrying and hiding a real bug. That holds in CI as much as locally, so
+	// there are no retries anywhere.
+	retries: 0,
 	reporter: process.env.CI ? 'github' : 'list'
 });</code></pre>
 </figure>
@@ -218,8 +237,64 @@
 });</code></pre>
 </figure>
 <p>The first of these is the test that justifies using a remote <code>form()</code> rather than a <code>command()</code>; the second confirms the marketing copy is real text in the initial HTML, which is also what a crawler sees. With JavaScript disabled the page is inert HTML — no hydration, no fetch, no client handler. If the form still works, it works for people on flaky connections, on locked-down corporate browsers, and in the window before your JavaScript has finished loading.</p>
+<h3 id="failure">Testing the failure, for real</h3>
+<p>Everything so far runs against a healthy server. But chapter 28 promised what a visitor sees when the server <em>breaks</em> — the site's own error page, inside the layout, with a way back — and a promise like that is exactly what a dependency upgrade can quietly undo. So it gets a test too. The question is how to make a production build fail on demand.</p>
+<p>Look again at the <code>webServer</code> list in the config above. The second entry starts another <code>vite preview</code> over the <em>same</em> build, on port 4174, with one environment variable changed: <code>LEADS_DIR</code> points at <code>package.json</code>, a file where the lead store expects a folder. Every signup on that server fails for real, with <code>ENOTDIR</code> from the file system. Playwright starts web servers one after another, so the build has finished by the time it starts, and only this spec talks to it:</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/failure.e2e.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">import { test, expect, type Page } from '@playwright/test';
+
+test.use({ baseURL: 'http://localhost:4174' });
+
+async function submitSignup(page: Page): Promise&lt;void&gt; {
+	await page.goto('/guide');
+	await page
+		.getByLabel('Email address')
+		.fill(`e2e-${Math.random().toString(36).slice(2, 10)}@example.com`);
+	await page.getByLabel('Which best describes you?').selectOption('some');
+	await page.getByRole('checkbox').check();
+	await page.getByRole('button', { name: /send me the guide/i }).click();
+}
+
+async function expectErrorPage(page: Page): Promise&lt;void&gt; {
+	await expect(page.getByRole('heading', { level: 1, name: 'Something went wrong' })).toBeVisible();
+	// SvelteKit's default `handleError` has replaced the real message — ENOTDIR and
+	// a file path — with a safe one before it reached the page.
+	await expect(page.getByText('Internal Error')).toBeVisible();
+	await expect(page.getByText(/ENOTDIR|package\.json/)).toHaveCount(0);
+	// Inside the site's layout, with a way forward rather than a dead end.
+	await expect(page.getByRole('banner')).toBeVisible();
+	await expect(page.getByRole('link', { name: 'Back to the home page' })).toBeVisible();
+}
+
+test.describe('a signup the server cannot save', () =&gt; {
+	test('shows the error page', async ({ page }) =&gt; {
+		await submitSignup(page);
+		await expectErrorPage(page);
+	});
+
+	test.describe('without JavaScript', () =&gt; {
+		test.use({ javaScriptEnabled: false });
+
+		test('shows the same error page', async ({ page }) =&gt; {
+			await submitSignup(page);
+			await expectErrorPage(page);
+		});
+	});
+});</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why a second server rather than a mock</h4>
+	<p>The usual shortcuts are all worse. Faking the response with <code>page.route()</code> means hand-writing SvelteKit's private wire format, and the test then proves only that your fake renders. A test-only switch in production code (&quot;if this header is set, throw&quot;) ships a way to break your site on purpose. Breaking <code>LEADS_DIR</code> for the one server breaks every happy-path test with it. A second server costs a few lines of config and fails the way production would fail — through the real store, the real <code>handleError</code>, the real error page — while the first stays healthy for everything else. Note what the spec asserts beyond the heading: that <code>ENOTDIR</code> and the file path appear <em>nowhere</em> on the page. That is the security property from chapter 28, held by a test.</p>
+</aside>
+<p>Three smaller specs guard promises made in earlier chapters. <code>e2e/header.e2e.ts</code> loads <code>/features</code> with JavaScript off and checks the Features link carries <code>aria-current=&quot;page&quot;</code> in the HTML the server sent (chapter 20), then opens the drawer on a phone-sized screen and closes it with a click on the backdrop. <code>e2e/pricing.e2e.ts</code> presses the right arrow on the billing toggle and expects Annual to be chosen (chapter 23). And <code>e2e/seo.e2e.ts</code> gained a test that an unknown address answers with a real 404 status, a <code>noindex</code>, and the site's error page. Each was run against the code <em>before</em> its fix and watched fail first: a test you have never seen fail has not yet proved it can.</p>
 <h3 id="bug1">Bug one: 181 pixels</h3>
-<p>The mobile no-JS test failed with a strange message: Playwright timed out with *&quot;element is not stable&quot;*. The checkbox was moving.</p>
+<p>The mobile no-JS test failed with a strange message: Playwright timed out with <em>&quot;element is not stable&quot;</em>. The checkbox was moving.</p>
 <p>Measuring it, the checkbox was jumping <strong>181 pixels</strong> shortly after page load — on mobile only. The cause: the font-fallback metrics from chapter 11. I had estimated them. Sofia Sans is 96.7% of Arial's width; I had guessed 92%. When the real font loaded, every line of body copy re-flowed, and on mobile — where the copy sits above the form — that shoved the whole form down the page.</p>
 
 <aside class="callout callout--why">
@@ -264,6 +339,18 @@ const results = await page.evaluate(
 );</code></pre>
 </figure>
 <p>The <code>// …</code> stands for two small helpers that run inside the page: <code>width()</code> renders a sample string in a hidden <code>&lt;span&gt;</code> and measures it, and <code>vertical()</code> reads the ascent and descent from a canvas. Everything is compared against Arial — the fallback the <code>@font-face</code> rules re-describe.</p>
+<p>Add it to <code>package.json</code> beside the other scripts, then run it with the dev server up, since it measures the fonts in a real page:</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">package.json</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-json">&quot;scripts&quot;: {
+	…
+	&quot;fonts:measure&quot;: &quot;node scripts/measure-font-metrics.js&quot;
+},</code></pre>
+</figure>
 
 <figure class="code code--terminal">
 	<figcaption>

@@ -720,7 +720,7 @@ mkdir new-thing  # make a directory`
 			{ type: 'h3', id: 'package-json', text: 'package.json' },
 			{
 				type: 'p',
-				text: "Every project has one. It is the project's identity card and instruction manual. Here is ours, trimmed to the parts that matter right now — each `…` line stands for entries left out, and you will see the whole file as the course goes on."
+				text: "Every project has one. It is the project's identity card and instruction manual. Here is ours, trimmed to the parts that matter right now — each `…` line stands for entries left out. You will not see the whole file in one go: each of the other entries appears in the chapter that needs it, from the toolchain pins in chapter 8 to the PDF script in chapter 29."
 			},
 			{
 				type: 'code',
@@ -786,7 +786,7 @@ mkdir new-thing  # make a directory`
 			},
 			{
 				type: 'checkpoint',
-				text: '`node -v` shows 24.21.0+, `pnpm -v` shows 12+, and you can explain what the `^` in a version number means.'
+				text: '`node -v` shows 24.21.0 or newer, `pnpm -v` shows 12 or newer, and you can explain what the `^` in a version number means.'
 			}
 		]
 	},

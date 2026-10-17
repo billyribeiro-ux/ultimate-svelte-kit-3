@@ -45,7 +45,7 @@
 </figure>
 <aside class="callout callout--note"><p>GSAP became fully free in 2024, including every plugin — ScrollTrigger, SplitText, MorphSVG, the lot. Older tutorials describe a paid &quot;Club GreenSock&quot; tier for these. That is out of date.</p></aside>
 <h3 id="problem">The problem nobody warns you about</h3>
-<p>A scroll reveal works by starting an element invisible and fading it in. Simple enough — until you ask *when* it becomes invisible.</p>
+<p>A scroll reveal works by starting an element invisible and fading it in. Simple enough — until you ask <em>when</em> it becomes invisible.</p>
 <p>GSAP is a large library, loaded asynchronously. There is a window — 200ms on a good connection, several seconds on a bad one — where your page has rendered but the animation library has not arrived. Two obvious approaches both fail badly:</p>
 <ul><li><strong>Hide it in CSS, reveal with JavaScript.</strong> If the JavaScript never arrives — blocked request, failed chunk after a bad deploy, browser extension — the content is gone <strong>forever</strong>. A blank page. This is the worst bug in the category and it is shockingly common.</li><li><strong>Hide it in JavaScript once GSAP loads.</strong> The element renders visible, then jumps to hidden, then animates in. A visible flicker on every single page load.</li></ul>
 <h3 id="solution">The solution: three mechanisms, one effect</h3>
@@ -155,7 +155,10 @@ gsap.to(targets, {
 		<span class="code__file">src/lib/motion/gsap.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">export function loadMotion(): Promise&lt;MotionApi | null&gt; {
+	<pre><code class="lang-ts">import { browser } from '$app/env';
+
+// …
+export function loadMotion(): Promise&lt;MotionApi | null&gt; {
 	if (!browser || prefersReducedMotion()) {
 		// …
 		releaseMotionGate();
@@ -178,12 +181,13 @@ gsap.to(targets, {
 	return motionPromise;
 }</code></pre>
 </figure>
+<p><code>browser</code> comes from <code>$app/env</code> — the module SvelteKit 2 called <code>$app/environment</code> (chapter 9). It is <code>true</code> in the browser and <code>false</code> during server rendering and prerendering, so on the server <code>loadMotion</code> returns <code>null</code> before anything can touch <code>window</code> or <code>document</code>.</p>
 
 <aside class="callout callout--why">
 	<h4>Note where the check happens</h4>
 	<p>It returns <code>null</code> <strong>before</strong> the dynamic imports. So a reduced-motion user does not merely see no animation — they never download the ~90kB animation library at all. Respecting the setting should mean not making that person pay for something they explicitly asked not to see.</p>
 </aside>
-<aside class="callout callout--note"><p>Returning <code>null</code> rather than a no-op object is deliberate: every caller is forced to handle it, which makes the reduced-motion path impossible to forget. The first <code>// …</code> in the listing is a comment on that <code>releaseMotionGate()</code> call: the inline script already skips the class for these users, but the two checks can disagree (someone toggles the OS setting after load), and releasing the gate at once beats leaving content hidden until the 2.5-second failsafe. The second stands for our named eases, the project-wide GSAP defaults and two ScrollTrigger settings, each explained in the file.</p></aside>
+<aside class="callout callout--note"><p>Returning <code>null</code> rather than a no-op object is deliberate: every caller is forced to handle it, which makes the reduced-motion path impossible to forget. The <code>// …</code> under the import stands for the module's other import, the <code>MotionApi</code> type, the shared promise and the <code>prefersReducedMotion()</code> helper. The next is a comment on that <code>releaseMotionGate()</code> call: the inline script already skips the class for these users, but the two checks can disagree (someone toggles the OS setting after load), and releasing the gate at once beats leaving content hidden until the 2.5-second failsafe. The last stands for our named eases, the project-wide GSAP defaults and two ScrollTrigger settings, each explained in the file.</p></aside>
 <h3 id="attachment">The reveal, as a Svelte attachment</h3>
 
 <figure class="code">

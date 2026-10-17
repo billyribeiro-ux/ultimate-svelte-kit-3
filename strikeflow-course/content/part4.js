@@ -292,7 +292,10 @@ gsap.to(targets, {
 				type: 'code',
 				file: 'src/lib/motion/gsap.ts',
 				lang: 'ts',
-				code: `export function loadMotion(): Promise<MotionApi | null> {
+				code: `import { browser } from '$app/env';
+
+// …
+export function loadMotion(): Promise<MotionApi | null> {
 	if (!browser || prefersReducedMotion()) {
 		// …
 		releaseMotionGate();
@@ -316,13 +319,17 @@ gsap.to(targets, {
 }`
 			},
 			{
+				type: 'p',
+				text: "`browser` comes from `$app/env` — the module SvelteKit 2 called `$app/environment` (chapter 9). It is `true` in the browser and `false` during server rendering and prerendering, so on the server `loadMotion` returns `null` before anything can touch `window` or `document`."
+			},
+			{
 				type: 'why',
 				title: 'Note where the check happens',
 				text: 'It returns `null` **before** the dynamic imports. So a reduced-motion user does not merely see no animation — they never download the ~90kB animation library at all. Respecting the setting should mean not making that person pay for something they explicitly asked not to see.'
 			},
 			{
 				type: 'note',
-				text: 'Returning `null` rather than a no-op object is deliberate: every caller is forced to handle it, which makes the reduced-motion path impossible to forget. The first `// …` in the listing is a comment on that `releaseMotionGate()` call: the inline script already skips the class for these users, but the two checks can disagree (someone toggles the OS setting after load), and releasing the gate at once beats leaving content hidden until the 2.5-second failsafe. The second stands for our named eases, the project-wide GSAP defaults and two ScrollTrigger settings, each explained in the file.'
+				text: 'Returning `null` rather than a no-op object is deliberate: every caller is forced to handle it, which makes the reduced-motion path impossible to forget. The `// …` under the import stands for the module\'s other import, the `MotionApi` type, the shared promise and the `prefersReducedMotion()` helper. The next is a comment on that `releaseMotionGate()` call: the inline script already skips the class for these users, but the two checks can disagree (someone toggles the OS setting after load), and releasing the gate at once beats leaving content hidden until the 2.5-second failsafe. The last stands for our named eases, the project-wide GSAP defaults and two ScrollTrigger settings, each explained in the file.'
 			},
 			{ type: 'h3', id: 'attachment', text: 'The reveal, as a Svelte attachment' },
 			{

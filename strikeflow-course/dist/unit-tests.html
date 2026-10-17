@@ -52,7 +52,7 @@ describe('addTax', () =&gt; {
 	});
 });</code></pre>
 </figure>
-<ul><li><code>describe</code> groups related tests. Purely organisational — it makes failures readable.</li><li><code>it</code> is one test. Read it as a sentence: *it* adds 20 percent. If the name does not read as a sentence, the test is probably doing too much.</li><li><code>expect(...)</code> takes the actual value; <code>.toBe(...)</code> says what it should be. If they differ, the test fails and prints both.</li></ul>
+<ul><li><code>describe</code> groups related tests. Purely organisational — it makes failures readable.</li><li><code>it</code> is one test. Read it as a sentence: <em>it</em> adds 20 percent. If the name does not read as a sentence, the test is probably doing too much.</li><li><code>expect(...)</code> takes the actual value; <code>.toBe(...)</code> says what it should be. If they differ, the test fails and prints both.</li></ul>
 
 <aside class="callout callout--why">
 	<h4>Why bother, honestly</h4>
@@ -94,7 +94,7 @@ export default defineConfig({
 
 <aside class="callout callout--why">
 	<h4>One config, one transform pipeline</h4>
-	<p>The <code>test</code> block lives in the *same file* as your build config, and Vitest reuses the exact same plugins. So your tests see your code transformed identically to how the browser will see it. Older test runners needed a separate config that duplicated all of this — and drifted, producing the notorious &quot;passes in tests, breaks in the build&quot; failure. Sharing one pipeline removes that entire category of problem.</p>
+	<p>The <code>test</code> block lives in the <em>same file</em> as your build config, and Vitest reuses the exact same plugins. So your tests see your code transformed identically to how the browser will see it. Older test runners needed a separate config that duplicated all of this — and drifted, producing the notorious &quot;passes in tests, breaks in the build&quot; failure. Sharing one pipeline removes that entire category of problem.</p>
 </aside>
 <aside class="callout callout--note"><p><code>requireAssertions: true</code> fails any test that runs without asserting anything. It sounds pedantic and it catches a genuinely common mistake: an async test that forgets <code>await</code>, finishes early, asserts nothing, and reports a confident green tick forever.</p></aside>
 <h3 id="projects">Two projects: Node and browser</h3>
@@ -144,7 +144,7 @@ export default defineConfig({
 <h3 id="what-to-test">What to test — and what not to</h3>
 <p>Beginners are usually told to test everything, which produces a suite so slow and brittle that the team deletes it. Test where being wrong is expensive:</p>
 <ul><li><strong>Security-critical code.</strong> Our token signing. If it breaks, anyone can forge a download link.</li><li><strong>Anything with edge cases.</strong> Expiry boundaries, empty arrays, zero, negative numbers.</li><li><strong>Invariants other code depends on.</strong> Our chart data must have strictly increasing timestamps, because the charting library silently misbehaves otherwise.</li><li><strong>Bugs you have already fixed.</strong> Write the test that would have caught it, so it cannot come back.</li></ul>
-<aside class="callout callout--warn"><p>Do not test that a framework works. A test asserting that Svelte renders a prop is testing Svelte, not your code, and it will break when Svelte changes something irrelevant. Test *your* logic.</p></aside>
+<aside class="callout callout--warn"><p>Do not test that a framework works. A test asserting that Svelte renders a prop is testing Svelte, not your code, and it will break when Svelte changes something irrelevant. Test <em>your</em> logic.</p></aside>
 <h3 id="tokens-test">The test that matters most here</h3>
 
 <figure class="code">
@@ -234,7 +234,7 @@ it('never produces a non-positive price', () =&gt; {
 
 <aside class="callout callout--why">
 	<h4>None of these assert a specific number</h4>
-	<p>They assert *properties*: determinism, ordering, positivity. That means they survive a change to the generation algorithm — they only fail if the guarantee is actually broken. A test asserting <code>price[3] === 428.91</code> would fail on every harmless tweak, and a test that cries wolf gets deleted.</p>
+	<p>They assert <em>properties</em>: determinism, ordering, positivity. That means they survive a change to the generation algorithm — they only fail if the guarantee is actually broken. A test asserting <code>price[3] === 428.91</code> would fail on every harmless tweak, and a test that cries wolf gets deleted.</p>
 </aside>
 <h3 id="wrong-test">When the test is wrong</h3>
 <p>While writing this project I asserted <code>formatCompactUsd(5_600)</code> returns exactly <code>&quot;$5.60K&quot;</code> — and the assertion broke when the project moved from Node 22 to Node 24. <code>Intl</code> is implemented by ICU, the Unicode library Node bundles, and its output is a moving target: compact <strong>currency</strong> formatting used to keep the currency's minimum fraction digits (<code>$5.60K</code> on Node 22's ICU 78.2), and ICU 78.3, which Node 24 ships, trims them to <code>$5.6K</code>. Same code, different text, depending on which Node is installed.</p>

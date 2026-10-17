@@ -89,6 +89,7 @@ export const leadStore: LeadStore = new FileLeadStore();</code></pre>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
+import * as v from 'valibot';
 import { EBOOK_TOKEN_SECRET } from '$app/env/private';
 
 // …
@@ -105,12 +106,19 @@ if (!EBOOK_TOKEN_SECRET) {
 /** How long a download link stays valid. Long enough to be useful; short enough to matter. */
 const TTL_MS = 1000 * 60 * 60 * 24; // 24 hours
 
-interface TokenPayload {
+/**
+ * What a token carries, as a schema rather than a bare interface — because on the
+ * way back in, the payload is parsed from a string and has to be CHECKED, not
+ * assumed. The type is inferred from the schema, so the two cannot drift.
+ */
+const TokenPayloadSchema = v.object({
 	/** Who it was issued to. Lets us attribute a download without a database lookup. */
-	email: string;
+	email: v.string(),
 	/** Expiry, as epoch milliseconds. */
-	exp: number;
-}
+	exp: v.number()
+});
+
+type TokenPayload = v.InferOutput&lt;typeof TokenPayloadSchema&gt;;
 
 // …
 function encode(value: string): string {
@@ -156,6 +164,7 @@ export function createDownloadToken(email: string): string {
 
 	const expected = sign(encoded);
 
+
 	// …
 	const expectedBuffer = Buffer.from(expected);
 	const providedBuffer = Buffer.from(signature);
@@ -168,17 +177,20 @@ export function createDownloadToken(email: string): string {
 		return { valid: false, reason: 'bad-signature' };
 	}
 
-	// Only now, with the signature proven, do we trust the payload's contents.
-	let payload: TokenPayload;
+	// Only now, with the signature proven, do we trust the payload's contents — and
+	// even then we check its shape rather than assert it. `JSON.parse` returns `any`,
+	// and `as TokenPayload` would wave a wrong shape (a token from an older format,
+	// say) straight through to the code below.
+	let json: unknown;
 	try {
-		payload = JSON.parse(decode(encoded)) as TokenPayload;
+		json = JSON.parse(decode(encoded));
 	} catch {
 		return { valid: false, reason: 'malformed' };
 	}
 
-	if (typeof payload.exp !== 'number' || typeof payload.email !== 'string') {
-		return { valid: false, reason: 'malformed' };
-	}
+	const parsed = v.safeParse(TokenPayloadSchema, json);
+	if (!parsed.success) return { valid: false, reason: 'malformed' };
+	const payload = parsed.output;
 
 	if (Date.now() &gt; payload.exp) {
 		return { valid: false, reason: 'expired' };
@@ -189,6 +201,11 @@ export function createDownloadToken(email: string): string {
 </figure>
 <aside class="callout callout--warn"><p><strong><code>timingSafeEqual</code>, not <code>===</code>.</strong> A normal string comparison returns as soon as it finds a differing character. That means comparing <code>&quot;aaaa&quot;</code> takes fractionally longer than <code>&quot;zaaa&quot;</code> when the real signature starts with <code>&quot;a&quot;</code> — and an attacker who can measure that difference can recover the signature one character at a time. It is called a timing attack and it is practical over a local network. <code>timingSafeEqual</code> always compares the full length. It needs two buffers of equal length, so we check the lengths first — safe to short-circuit, because the length of a signature is not a secret. (The <code>// …</code> in the listing is the comment in the real file that says all of this.)</p></aside>
 <aside class="callout callout--note"><p>The function returns a <strong>discriminated union</strong> rather than throwing. That forces the caller to handle failure, and lets them tell &quot;expired&quot; (offer a re-send) apart from &quot;bad signature&quot; (someone is poking at it).</p></aside>
+
+<aside class="callout callout--why">
+	<h4>Why the payload is checked with a schema, not a cast</h4>
+	<p><code>JSON.parse</code> returns <code>any</code>, and the tempting next line is <code>JSON.parse(…) as TokenPayload</code>. A cast checks nothing: it tells the compiler to believe you, so if the shape were ever wrong, the code below would read <code>payload.exp</code> as <code>undefined</code> and compare dates with it, and nothing would complain. A valid signature only proves <em>our server</em> wrote the payload — and &quot;our server&quot; includes last year's version of it, with last year's payload format. So the payload's shape is a valibot schema, <code>TokenPayloadSchema</code>, and <code>v.safeParse</code> checks the parsed value against it; anything that does not fit is <code>malformed</code>. The <code>TokenPayload</code> type is inferred from the schema with <code>v.InferOutput</code>, so the type and the check can never drift apart. It is the same valibot that validates the signup form, used for the same reason: data from outside the type system gets checked at the border.</p>
+</aside>
 <h3 id="ratelimit">Rate limiting</h3>
 <p>A public form with no rate limit is an open invitation. Within a week of going live you will have thousands of junk signups, and if the form ever triggers an email you are now a spam relay with your domain reputation attached.</p>
 
@@ -246,6 +263,7 @@ export function rateLimit(key: string, options: RateLimitOptions = {}): RateLimi
 </figure>
 <aside class="callout callout--warn"><p><strong>Be honest about what this is.</strong> The state lives in one process's memory. It resets on deploy, it does not work across multiple instances (four containers behind a load balancer gives an attacker 4× the limit), and it does nothing against a distributed attack. For a single-instance marketing site it is genuinely adequate. The moment you scale horizontally, move it to Redis — <code>INCR</code> plus <code>EXPIRE</code> is the same algorithm — or use your CDN's rate limiting, which sees the traffic before it reaches you and is the better answer anyway.</p></aside>
 <aside class="callout callout--note"><p>The <code>sweep()</code> function is not optional. Without it the Map grows forever, one entry per unique IP, never removed. On a long-running server that is a slow memory leak — and a slow memory leak is how you get paged at 4am six months from now.</p></aside>
+<aside class="callout callout--note"><p>The key is only as good as the address in it. In the next chapter the form keys on <code>event.getClientAddress()</code>, which is the address of whatever connected to the server — and behind a hosting platform's proxy, that is the proxy, for every visitor alike. Chapter 37 shows the two environment variables that fix it before you deploy.</p></aside>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>

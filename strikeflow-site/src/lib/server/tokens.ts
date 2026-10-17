@@ -25,6 +25,7 @@
  */
 
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
+import * as v from 'valibot';
 import { EBOOK_TOKEN_SECRET } from '$app/env/private';
 
 /**
@@ -48,12 +49,19 @@ if (!EBOOK_TOKEN_SECRET) {
 /** How long a download link stays valid. Long enough to be useful; short enough to matter. */
 const TTL_MS = 1000 * 60 * 60 * 24; // 24 hours
 
-interface TokenPayload {
+/**
+ * What a token carries, as a schema rather than a bare interface — because on the
+ * way back in, the payload is parsed from a string and has to be CHECKED, not
+ * assumed. The type is inferred from the schema, so the two cannot drift.
+ */
+const TokenPayloadSchema = v.object({
 	/** Who it was issued to. Lets us attribute a download without a database lookup. */
-	email: string;
+	email: v.string(),
 	/** Expiry, as epoch milliseconds. */
-	exp: number;
-}
+	exp: v.number()
+});
+
+type TokenPayload = v.InferOutput<typeof TokenPayloadSchema>;
 
 /**
  * base64url — the URL-safe variant of base64.
@@ -130,17 +138,20 @@ export function verifyDownloadToken(token: string | null): TokenResult {
 		return { valid: false, reason: 'bad-signature' };
 	}
 
-	// Only now, with the signature proven, do we trust the payload's contents.
-	let payload: TokenPayload;
+	// Only now, with the signature proven, do we trust the payload's contents — and
+	// even then we check its shape rather than assert it. `JSON.parse` returns `any`,
+	// and `as TokenPayload` would wave a wrong shape (a token from an older format,
+	// say) straight through to the code below.
+	let json: unknown;
 	try {
-		payload = JSON.parse(decode(encoded)) as TokenPayload;
+		json = JSON.parse(decode(encoded));
 	} catch {
 		return { valid: false, reason: 'malformed' };
 	}
 
-	if (typeof payload.exp !== 'number' || typeof payload.email !== 'string') {
-		return { valid: false, reason: 'malformed' };
-	}
+	const parsed = v.safeParse(TokenPayloadSchema, json);
+	if (!parsed.success) return { valid: false, reason: 'malformed' };
+	const payload = parsed.output;
 
 	if (Date.now() > payload.exp) {
 		return { valid: false, reason: 'expired' };

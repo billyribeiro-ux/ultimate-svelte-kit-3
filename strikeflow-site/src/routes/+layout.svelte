@@ -16,8 +16,9 @@
 	import SiteHeader from '#lib/components/layout/SiteHeader.svelte';
 	import SiteFooter from '#lib/components/layout/SiteFooter.svelte';
 	import { prefersReducedMotion } from '#lib/motion/index.ts';
+	import type { LayoutProps } from './$types';
 
-	let { children } = $props();
+	let { children }: LayoutProps = $props();
 
 	/**
 	 * CROSS-PAGE TRANSITIONS

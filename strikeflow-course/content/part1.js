@@ -67,7 +67,7 @@ export const part1 = [
 				text: "If it's older, install the current LTS from [nodejs.org](https://nodejs.org) or use a version manager like `nvm` or `fnm`."
 			},
 			{ type: 'p', text: "We'll use **pnpm**. If you don't have it:" },
-			{ type: 'terminal', code: 'npm install -g pnpm\npnpm -v   # the project pins 12.10.1 in package.json; recent pnpm releases switch to it by themselves' },
+			{ type: 'terminal', code: 'npm install -g pnpm\npnpm -v   # should print 12 or newer' },
 			{
 				type: 'note',
 				text: "You can use npm or yarn instead — nothing here depends on pnpm specifically. Just translate `pnpm run x` to `npm run x` as you go. I use pnpm because it's fast and its strict `node_modules` layout catches a class of dependency bug the others hide."
@@ -91,7 +91,7 @@ export const part1 = [
 			},
 			{
 				type: 'checkpoint',
-				text: '`node -v` prints 24.21.0 or newer, and `pnpm -v` prints 12.10.1 (or any 10+ that will switch to it). That is all you need. Next we scaffold the project.'
+				text: '`node -v` prints 24.21.0 or newer, and `pnpm -v` prints 12 or newer. That is all you need. Next we scaffold the project.'
 			}
 		]
 	},
@@ -168,6 +168,31 @@ export const part1 = [
 				type: 'why',
 				title: "There's no svelte.config.js",
 				text: 'If you have used SvelteKit before, this is the first thing you will notice missing. In SvelteKit 3 all configuration moved into the `sveltekit()` plugin inside `vite.config.ts`. Vite can now hand the config straight to the plugin instead of loading a separate file asynchronously, which removes a whole category of setup-ordering bug.'
+			},
+			{ type: 'h3', id: 'pin', text: 'Pin the toolchain' },
+			{
+				type: 'p',
+				text: "Now that the project has a `package.json`, record which Node and which pnpm it is built with. Add two fields:"
+			},
+			{
+				type: 'code',
+				file: 'package.json',
+				lang: 'json',
+				code: `{
+	…
+	"engines": {
+		"node": ">=24.21.0"
+	},
+	"packageManager": "pnpm@12.10.1",
+	…
+}`
+			},
+			{
+				type: 'ul',
+				items: [
+					"`engines` states the oldest Node the project supports, so tools — pnpm included — can tell you when yours is too old, instead of failing later with a confusing error.",
+					"`packageManager` pins the exact pnpm. Any recent pnpm that finds it switches to that version for this project by itself, so everyone who clones it installs with the same tool and gets the same lockfile. That is why chapter 7 only asked for pnpm 12 or newer: from here on, the project chooses."
+				]
 			},
 			{ type: 'h3', id: 'cleanup', text: 'A little cleanup' },
 			{
@@ -318,6 +343,23 @@ await refreshAll();`
 			{
 				type: 'p',
 				text: 'In 3, `pushState`, `replaceState` and `invalidateAll` are deprecated rather than removed, so older code still runs — but write new code the 3 way, because `refreshAll` differs in one useful respect: unlike `invalidateAll`, it does not reset `page.state`. Shallow navigations now run `beforeNavigate`, `onNavigate` and `afterNavigate` too. A hook that should ignore them — the header drawer, which closes on navigation — checks `navigation.shallow` first.'
+			},
+			{ type: 'h3', id: 'modules', text: '6. $app/stores is gone, and $app/environment is now $app/env' },
+			{
+				type: 'code',
+				lang: 'ts',
+				file: 'the difference',
+				code: `// SvelteKit 2
+import { page } from '$app/stores'; // a store, read as $page
+import { browser } from '$app/environment';
+
+// SvelteKit 3
+import { page } from '$app/state'; // Svelte 5 state, read as page
+import { browser } from '$app/env';`
+			},
+			{
+				type: 'p',
+				text: "Both are removals, not deprecations: paste either SvelteKit 2 line and you get a module-not-found error, not a warning. `$app/state` gives you `page`, `navigating` and `updated` as Svelte 5 state, so you write `page.url.pathname` where older code wrote `$page.url.pathname`, and only the parts you read cause updates. `$app/env` is the old module under a new name — `browser`, `dev`, `building` and `version` — and it can now be imported inside a service worker too. We use `page` in the header (chapter 20) and `browser` in the motion loader (chapter 32)."
 			},
 			{
 				type: 'p',

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The capture page — Building StrikeFlow with SvelteKit 3</title>
-<meta name="description" content="Wiring the form into markup, showing validation errors accessibly, hiding a honeypot properly — and the one page that cannot be prerendered.">
+<meta name="description" content="Wiring the form into markup, showing validation errors accessibly, hiding a honeypot properly, the one page that cannot be prerendered — and what a visitor sees when the server fails.">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -33,7 +33,7 @@
 		<article>
 			<p class="eyebrow">Chapter 28</p>
 			<h1>The capture page</h1>
-			<p class="lede">Wiring the form into markup, showing validation errors accessibly, hiding a honeypot properly — and the one page that cannot be prerendered.</p>
+			<p class="lede">Wiring the form into markup, showing validation errors accessibly, hiding a honeypot properly, the one page that cannot be prerendered — and what a visitor sees when the server fails.</p>
 			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>A working, accessible signup form.</p></aside>
 			
 <figure class="code">
@@ -184,10 +184,145 @@
 	<pre><code class="lang-ts">export const prerender = false;</code></pre>
 </figure>
 <aside class="callout callout--note"><p>The cost is small. This page renders per request instead of being a static file, adding a few milliseconds of server time. Everything expensive about it — CSS, fonts, JavaScript — is still static and still cached at the edge. Only the HTML shell is dynamic.</p></aside>
+<h3 id="when-it-fails">When the server fails</h3>
+<p>Every failure so far has an answer the visitor can act on. A field the schema rejects comes back as an issue beside that input, and too many attempts comes back as an issue on the email field. What is left is the failure nobody planned: the disk the leads are written to is full, or there is a bug, and <code>leadStore.has()</code> or <code>save()</code> throws before the handler reaches its <code>redirect()</code>.</p>
+<p>When code on the server throws, SvelteKit does not send the exception to the browser. It reduces every error to a small object of type <code>App.Error</code>, which always has two fields: a <code>status</code> (an HTTP status code such as 404 or 500) and a <code>message</code>. The reducing is done by a <strong>hook</strong> called <code>handleError</code> — a function SvelteKit calls for every error, which you may export from a file named <code>src/hooks.server.ts</code>. StrikeFlow has no such file, so SvelteKit's built-in default applies, and it does two things. An error the code threw on purpose, like the <code>error(404, 'No article found at …')</code> in the blog route, keeps the status and the sentence it was given. Anything else — an exception nobody planned — is printed to the server's console with its full stack, and reaches the browser as <code>{ status: 500, message: 'Internal Error' }</code>.</p>
+
+<aside class="callout callout--why">
+	<h4>Why the real message never reaches the browser</h4>
+	<p>Because an unplanned error is, by definition, one nobody has checked is safe to show. Ours would read something like <code>ENOTDIR: not a directory, open '/srv/app/package.json/leads.jsonl'</code> — a file path on the server, handed to anyone who submits the form. Database errors can carry worse: table names, fragments of queries, sometimes credentials. SvelteKit's errors documentation puts it plainly: unknown errors &quot;can contain sensitive information&quot;, so &quot;unknown error messages and stack traces are not exposed to users&quot;. The full error goes to the server's log, where you can read it; the visitor gets a safe sentence. If you want a friendlier one than <code>'Internal Error'</code>, that is what your own <code>handleError</code> is for:</p>
+</aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">a handleError of your own</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">import type { HandleServerError } from '@sveltejs/kit/hooks';
+
+export const handleError: HandleServerError = ({ kind, error }) =&gt; {
+	// error(…) bodies, SvelteKit's own errors and validation errors are already
+	// safe to show: returning nothing keeps them exactly as they are.
+	if (kind !== 'unknown') return;
+
+	// Anything else may carry a file path or a secret. Log it where only you can
+	// read it, and give the visitor a sentence instead of 'Internal Error'.
+	console.error(error);
+	return { message: 'Something went wrong on our side. Please try again shortly.' };
+};</code></pre>
+</figure>
+<aside class="callout callout--note"><p>That is an option, not part of StrikeFlow. Once you supply the hook, logging is your job — SvelteKit only logs unknown errors itself when you have not. The <a href="https://svelte.dev/docs/kit/errors" target="_blank" rel="noopener">errors documentation</a> covers the rest, including adding fields such as a support reference to <code>App.Error</code>.</p></aside>
+<p>Where does the visitor see that <code>App.Error</code>? The documentation for remote forms answers: &quot;If an error occurs during submission, the nearest <code>+error.svelte</code> page will be rendered.&quot; <code>+error.svelte</code> is a route file, like <code>+page.svelte</code>, and SvelteKit walks up the folders from the failing route looking for one. With none anywhere, it falls back to a page of its own, which is this short:</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">SvelteKit's built-in error page</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;svelte:options runes={true} /&gt;
+
+&lt;script&gt;
+	import { page } from '$app/state';
+&lt;/script&gt;
+
+&lt;h1&gt;{page.status}&lt;/h1&gt;
+&lt;p&gt;{page.error?.message}&lt;/p&gt;</code></pre>
+</figure>
+<p>A status code and a message, and nothing else: no heading a person would write, no way back to the form, not even a title. It is a safety net, not a page you ship. So StrikeFlow has its own, at the root of <code>src/routes</code>, where it catches every route on the site:</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/+error.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
+	import { resolve } from '$app/paths';
+	import { site } from '#lib/data/site.ts';
+	import Button from '#lib/components/ui/Button.svelte';
+	import type { ErrorProps } from './$types';
+
+	let { error }: ErrorProps = $props();
+
+	const notFound = $derived(error.status === 404);
+	const heading = $derived(notFound ? 'We can’t find that page' : 'Something went wrong');
+&lt;/script&gt;
+
+&lt;!--
+	No &lt;Seo&gt; here: an error page has no canonical URL to claim and nothing to say
+	to a social card. It only needs a title, and to stay out of the index.
+--&gt;
+&lt;svelte:head&gt;
+	&lt;title&gt;{heading} | {site.titleSuffix}&lt;/title&gt;
+	&lt;meta name=&quot;robots&quot; content=&quot;noindex&quot; /&gt;
+&lt;/svelte:head&gt;
+
+&lt;section class=&quot;error-page&quot;&gt;
+	&lt;div class=&quot;container container--narrow&quot;&gt;
+		&lt;p class=&quot;eyebrow&quot;&gt;Error {error.status}&lt;/p&gt;
+		&lt;h1 class=&quot;error-page__title&quot;&gt;{heading}&lt;/h1&gt;
+		&lt;p class=&quot;lede&quot;&gt;{error.message}&lt;/p&gt;
+
+		&lt;div class=&quot;error-page__actions&quot;&gt;
+			&lt;Button href={resolve('/')}&gt;Back to the home page&lt;/Button&gt;
+			&lt;Button href={resolve('/guide')} variant=&quot;secondary&quot;&gt;Get the free guide&lt;/Button&gt;
+		&lt;/div&gt;
+	&lt;/div&gt;
+&lt;/section&gt;</code></pre>
+</figure>
+<ul><li><strong><code>error</code> arrives as a prop</strong>, typed as <code>ErrorProps</code> from <code>./$types</code> — the same way a page receives <code>data</code>. Older code reads <code>page.error</code> from <code>$app/state</code>, as the built-in page does, and that still works; the prop is the SvelteKit 3 idiom, because the component then depends on its inputs rather than on global state.</li><li><strong>It renders inside the root layout</strong>, so the header, footer and skip link stay, and the two buttons give the visitor somewhere to go.</li><li><strong><code>error.message</code> is shown as it stands</strong>, because <code>handleError</code> has already made it safe: either the sentence the code wrote, or <code>'Not Found'</code> / <code>'Internal Error'</code>. The heading carries the human words, by status.</li><li><strong>No <code>&lt;Seo&gt;</code></strong>: an error page has no canonical URL to claim. It gets a title and <code>noindex</code>, and SvelteKit sends it with the real status code — a 404 is a 404, not a 200 page that <em>says</em> not found.</li></ul>
+
+<aside class="callout callout--why">
+	<h4>Why the capture page catches nothing itself</h4>
+	<p>Because it has nothing better to say. The failures that reach this point are ones the visitor cannot fix by changing what they typed, and the only safe sentence about them is the one <code>handleError</code> has already written. A <code>catch</code> in the page would be code for the one case with no better message to show, so we let the error page take it. The cost is real and worth naming: the error page replaces the form, and a visitor who wants another go has to come back to it — which is why our error page offers the way back. For three fields that is a fair trade. For a long form it is not: take control of the submission with <code>enhance</code>, and read the next warning before you do.</p>
+</aside>
+<aside class="callout callout--warn"><p><strong>A <code>catch</code> around a remote call receives a different shape.</strong> Await <code>form.submit()</code> inside <code>enhance</code> — or a <code>command()</code> in a click handler — and a failure rejects with SvelteKit's <code>HttpError</code>: <code>{ status, body }</code>, where <code>body</code> is that same <code>App.Error</code>. It is not an <code>Error</code>, and it has no <code>message</code> of its own. So <code>(error as Error).message</code> is <code>undefined</code>, and <code>error instanceof Error ? error.message : 'Something went wrong'</code> throws the server's sentence away every time — while a plausible sentence sits on screen and nothing looks broken. Read <code>body.message</code>, behind <code>isHttpError()</code>. A <code>&lt;svelte:boundary&gt;</code>'s <code>failed</code> snippet and <code>+error.svelte</code> are the other way round: they receive the <code>App.Error</code> itself, so they read <code>error.message</code>.</p></aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">if you take control</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
+	import { isHttpError } from '@sveltejs/kit';
+	import { requestGuide } from './guide.remote.ts';
+
+	let failure = $state&lt;string | null&gt;(null);
+&lt;/script&gt;
+
+&lt;form
+	{...requestGuide.enhance(async (form) =&gt; {
+		failure = null;
+		try {
+			// A success redirects to the thank-you page; there is nothing else to do.
+			await form.submit();
+		} catch (error) {
+			// An HttpError carries the server's App.Error in `body`. Its message is a
+			// sentence written for the visitor whenever code chose the status —
+			// error(503, 'Signups are paused…'). A 500 is the status every UNPLANNED
+			// error gets, with the bare 'Internal Error', which is no help under a
+			// form; and a dropped connection is not an HttpError at all.
+			failure =
+				isHttpError(error) &amp;&amp; error.status !== 500
+					? error.body.message
+					: 'Something went wrong on our side. Please try again.';
+		}
+	})}
+	class=&quot;signup&quot;
+	aria-labelledby=&quot;signup-heading&quot;
+&gt;
+	&lt;h2 id=&quot;signup-heading&quot; class=&quot;signup__title&quot;&gt;Get the guide&lt;/h2&gt;
+	&lt;!-- … --&gt;
+	{#if failure}
+		&lt;p class=&quot;field__error&quot; role=&quot;alert&quot;&gt;{failure}&lt;/p&gt;
+	{/if}
+&lt;/form&gt;</code></pre>
+</figure>
+<p>Look at the condition. <code>isHttpError(error)</code> narrows the type, so <code>error.status</code> and <code>error.body.message</code> need no cast. Then <code>error.status !== 500</code> separates the two kinds of message: any other status was chosen by code — a 503 because signups are paused, a 429 from a rate limiter — and came with a sentence meant for a person, while 500 is what every unplanned error becomes, and its <code>'Internal Error'</code> would sit under the form like a shrug. Those, and anything that is not an <code>HttpError</code> at all, get one sentence of our own.</p>
+<aside class="callout callout--note"><p>We checked both shapes in a real browser before writing them down, against a lead store that could not be read and an <code>error(503, …)</code> added for the experiment. Left to the error page, the 503's own sentence — <strong>Signups are paused while we move the list.</strong> — reached the visitor, and the store failure arrived as <strong>Internal Error</strong>. The same two failures caught in <code>enhance</code> arrived with <code>error instanceof Error</code> false, <code>error.message</code> undefined, and the server's words in <code>error.body.message</code>. The store failure is pinned by <code>e2e/failure.e2e.ts</code>, with JavaScript and without (chapter 36 shows how).</p></aside>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>
-	<p>Submit the form with a bad email and see an inline error. Submit a good one and land on <code>/guide/thank-you?t=…</code>. Then disable JavaScript in devtools and do it again — it should still work.</p>
+	<p>Submit the form with a bad email and see an inline error. Submit a good one and land on <code>/guide/thank-you?t=…</code>. Then disable JavaScript in devtools and do it again — it should still work. Last, watch it fail: set <code>LEADS_DIR</code> in your <code>.env</code> to <code>package.json</code> — a file where the store expects a folder — restart <code>pnpm dev</code> and submit. You get the site's error page, <strong>Something went wrong</strong> over <strong>Internal Error</strong>, inside the header and footer, and the <code>ENOTDIR</code> error with its stack in the terminal. Put <code>LEADS_DIR</code> back afterwards. While you are there, visit <code>/no-such-page</code>: the same component, saying it can't find the page, with a real 404 status in the network tab.</p>
 </aside>
 		</article>
 

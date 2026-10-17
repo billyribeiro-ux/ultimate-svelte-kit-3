@@ -39,7 +39,7 @@
 <h3 id="why">Why a build step exists at all</h3>
 <p>Browsers understand HTML, CSS and JavaScript. They do not understand:</p>
 <ul><li><strong>Svelte components</strong> (<code>.svelte</code> files) — these must be compiled into JavaScript.</li><li><strong>TypeScript</strong> (<code>.ts</code>) — the type annotations have to be stripped out.</li><li><strong>Importing CSS from JavaScript</strong> — <code>import &quot;./styles.css&quot;</code> is not a thing a browser does.</li><li><strong>Package imports</strong> — <code>import { gsap } from &quot;gsap&quot;</code> means nothing to a browser; it needs a real file path.</li></ul>
-<p>A build tool resolves all of that. It also does things that are merely *desirable*: bundling many files into few, removing code nobody uses, minifying, and adding a content hash to filenames so browsers cache aggressively but still get updates instantly.</p>
+<p>A build tool resolves all of that. It also does things that are merely <em>desirable</em>: bundling many files into few, removing code nobody uses, minifying, and adding a content hash to filenames so browsers cache aggressively but still get updates instantly.</p>
 <h3 id="dev-vs-prod">Vite works completely differently in dev and production</h3>
 <p>This surprises people, and it is the key insight about Vite.</p>
 
@@ -95,7 +95,7 @@ export default defineConfig({
 	// …
 });</code></pre>
 </figure>
-<ul><li><code>defineConfig</code> is a helper that does nothing at runtime — it exists purely so your editor can autocomplete the options.</li><li><code>plugins</code> is an array of things that transform your code. <strong>Order matters</strong> — they run in sequence.</li><li><code>sveltekit()</code> is the big one: it compiles <code>.svelte</code> files, sets up routing, and handles the server build. In SvelteKit 3, *all* framework configuration lives inside this call.</li></ul>
+<ul><li><code>defineConfig</code> is a helper that does nothing at runtime — it exists purely so your editor can autocomplete the options.</li><li><code>plugins</code> is an array of things that transform your code. <strong>Order matters</strong> — they run in sequence.</li><li><code>sveltekit()</code> is the big one: it compiles <code>.svelte</code> files, sets up routing, and handles the server build. In SvelteKit 3, <em>all</em> framework configuration lives inside this call.</li></ul>
 <aside class="callout callout--warn"><p>Plugin order is a real source of bugs. <code>sveltePhosphorOptimize()</code> <strong>must</strong> come after <code>sveltekit()</code>, because it parses its input as JavaScript. Put it first and it receives raw <code>.svelte</code> files — markup and all — and dies on the first <code>&lt;h1&gt;</code> with &quot;Unexpected JSX expression&quot;. We hit exactly this while building the project.</p></aside>
 <h3 id="imports">What Vite lets you import</h3>
 
@@ -128,7 +128,7 @@ const { gsap } = await import('gsap');</code></pre>
 pnpm run build    # production build into .svelte-kit/ and build/
 pnpm run preview  # serve the production build locally, on localhost:4173</code></pre>
 </figure>
-<aside class="callout callout--note"><p><code>preview</code> is the one people skip and should not. It serves the *real* build, so it is the only way to catch problems that exist only in production — which, as above, is a genuine category.</p></aside>
+<aside class="callout callout--note"><p><code>preview</code> is the one people skip and should not. It serves the <em>real</em> build, so it is the only way to catch problems that exist only in production — which, as above, is a genuine category.</p></aside>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>

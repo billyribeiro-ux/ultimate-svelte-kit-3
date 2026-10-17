@@ -4,8 +4,8 @@
  *
  * GSAP core plus ScrollTrigger, SplitText and CustomEase is roughly 90kB gzipped.
  * That is a lot of JavaScript for a marketing site, and shipping it in the initial
- * bundle would directly harm the Largest Contentful Paint score we spent chapter 5
- * protecting.
+ * bundle would directly harm the Largest Contentful Paint score we spent the fonts
+ * chapter (11) protecting.
  *
  * So it is loaded lazily, exactly once, only in the browser, and only when something
  * actually needs it. Three mechanisms do that:
@@ -122,7 +122,7 @@ export function loadMotion(): Promise<MotionApi | null> {
 		 * page, or an image finally arrives, every one of those positions is stale
 		 * and animations fire at the wrong scroll offset.
 		 *
-		 * Our metric-matched fallbacks (chapter 5) mean the font swap barely moves
+		 * Our metric-matched fallbacks (chapter 11) mean the font swap barely moves
 		 * anything — but "barely" is not "not at all", and this is one line.
 		 */
 		void document.fonts?.ready.then(() => ScrollTrigger.refresh());

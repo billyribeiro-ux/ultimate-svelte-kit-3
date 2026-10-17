@@ -87,9 +87,9 @@ export function mulberry32(seed: number): () =&gt; number {
 
 	value = Math.max(1, value + shock + reversion + drift);</code></pre>
 </figure>
-<aside class="callout callout--note"><p>Import <code>UTCTimestamp</code> from the chart library as a <strong>type-only</strong> import. It is a *branded* type — <code>number &amp; { … }</code> — which exists so you cannot hand the library a millisecond timestamp where it wants seconds. That mix-up renders your chart in 1970 and is the most common Lightweight Charts bug. <code>import type</code> is erased at build time, so you get the safety without pulling 48kB into a utility module.</p></aside>
+<aside class="callout callout--note"><p>Import <code>UTCTimestamp</code> from the chart library as a <strong>type-only</strong> import. It is a <em>branded</em> type — <code>number &amp; { … }</code> — which exists so you cannot hand the library a millisecond timestamp where it wants seconds. That mix-up renders your chart in 1970 and is the most common Lightweight Charts bug. <code>import type</code> is erased at build time, so you get the safety without pulling 48kB into a utility module.</p></aside>
 <h3 id="attach">The component: {@attach}</h3>
-<p>An <strong>attachment</strong> is a function that runs when an element is added to the DOM and returns a cleanup function. It replaces both the old <code>onMount</code> + <code>bind:this</code> dance and <code>use:</code> actions. The listing below is most of <code>FlowChart.svelte</code>; each <code>// …</code> or <code>&lt;!-- … --&gt;</code> stands for something left out — the long explanatory comments, the grid, price-scale, time-scale and crosshair options, the header strip with the price readout, and, inside <code>if (animate)</code>, the timer that appends a new bar every 1.6 seconds.</p>
+<p>An <strong>attachment</strong> is a function that runs when an element is added to the DOM and returns a cleanup function. It replaces both the old <code>onMount</code> + <code>bind:this</code> dance and <code>use:</code> actions. The listing below is most of <code>FlowChart.svelte</code>; each <code>// …</code> or <code>&lt;!-- … --&gt;</code> stands for something left out — two long explanatory comments, the grid, price-scale, time-scale and crosshair options, and the header strip with the price readout.</p>
 
 <figure class="code">
 	<figcaption>
@@ -147,8 +147,16 @@ export function mulberry32(seed: number): () =&gt; number {
 	/**
 	 * The chart attachment.
 	 *
-	 * It reads `shouldAnimate` and `height`, so Svelte re-runs it (tearing down the
-	 * old chart first, via the returned cleanup) whenever either changes.
+	 * An attachment runs inside an effect, and an effect depends on exactly the
+	 * reactive values it reads SYNCHRONOUSLY — before its first `await`. Reads after
+	 * the `await import(…)` below, or inside the timer's callback, are not tracked
+	 * at all. So the three reads at the top are the whole dependency list: change
+	 * `seed` (through `initial`), `live`, or the reduced-motion setting, and Svelte
+	 * tears the old chart down via the returned cleanup and builds a new one.
+	 *
+	 * `height` is deliberately not on that list. It reaches the chart through CSS —
+	 * the container's `min-height` — and `autoSize` follows the container, so a
+	 * height change resizes the chart in place instead of rebuilding it.
 	 */
 	const chart: Attachment&lt;HTMLDivElement&gt; = (node) =&gt; {
 		// Guards the async gap: if the component unmounts while the dynamic import is
@@ -156,10 +164,15 @@ export function mulberry32(seed: number): () =&gt; number {
 		let disposed = false;
 		let teardown: (() =&gt; void) | undefined;
 
-		// Snapshot the derived data ONCE, at attachment time. Reading `initial` again
-		// inside the timer would make the effect depend on it and re-run in a loop.
+		// Read everything this chart is built from NOW, before the await. These reads
+		// are what make the attachment re-run when they change; the same reads after
+		// the await would be silently ignored, and would see a later moment's values
+		// than the ones this chart was built for.
 		const data = initial;
 		const animate = shouldAnimate;
+		// Seeded separately (seed + 1) so the live tail is deterministic too, but
+		// doesn't simply repeat the initial series.
+		const tailSeed = seed + 1;
 
 		// A fresh chart means a fresh tail.
 		tick = null;
@@ -171,9 +184,12 @@ export function mulberry32(seed: number): () =&gt; number {
 			if (disposed) return;
 
 			const api = createChart(node, {
-				// …
+				// ResizeObserver-backed. Saves writing one ourselves, and it correctly
+				// handles the container changing size without the window resizing —
+				// which a `window.onresize` handler would miss entirely. With autoSize
+				// on, the library ignores `width` and `height` options, so we pass
+				// neither: the container's CSS size is the one source of truth.
 				autoSize: true,
-				height,
 				layout: {
 					background: { type: ColorType.Solid, color: 'transparent' },
 					textColor: '#7f8ba3',
@@ -184,6 +200,18 @@ export function mulberry32(seed: number): () =&gt; number {
 				handleScroll: false,
 				handleScale: false
 			});
+
+			let timer: ReturnType&lt;typeof setInterval&gt; | undefined;
+
+			// Assigned the moment the chart exists, so every path below — the early
+			// return included — still disposes of it.
+			teardown = () =&gt; {
+				clearInterval(timer);
+				// `remove()` disposes the canvas, the ResizeObserver and every internal
+				// listener. Skip it and you leak a full chart instance on every
+				// navigation — which on a SPA compounds until the tab dies.
+				api.remove();
+			};
 
 			/*
 			 * v5 API note: series are created with `addSeries(Definition, options)`.
@@ -217,19 +245,40 @@ export function mulberry32(seed: number): () =&gt; number {
 			volumeSeries.setData(data.volume.slice());
 			api.timeScale().fitContent();
 
-			let timer: ReturnType&lt;typeof setInterval&gt; | undefined;
-
 			if (animate) {
-				// …
-			}
+				const random = mulberry32(tailSeed);
 
-			teardown = () =&gt; {
-				if (timer) clearInterval(timer);
-				// `remove()` disposes the canvas, the ResizeObserver and every internal
-				// listener. Skip it and you leak a full chart instance on every
-				// navigation — which on a SPA compounds until the tab dies.
-				api.remove();
-			};
+				const lastPoint = data.price[data.price.length - 1];
+				const firstValue = data.price[0]?.value ?? data.last;
+				if (!lastPoint) return;
+
+				let cursor: PricePoint = lastPoint;
+				// Kept locally: this callback is the only thing that moves the tail, so
+				// it already knows the previous value. Reading the `last` derived here
+				// would not be tracked — a timer callback never is — but it would tie
+				// the callback to the readout it is about to overwrite.
+				let previousValue = cursor.value;
+
+				timer = setInterval(() =&gt; {
+					cursor = nextPoint(cursor, random);
+
+					priceSeries.update({ time: cursor.time, value: cursor.value });
+					volumeSeries.update({
+						time: cursor.time,
+						value: Math.round(180 + random() * 500),
+						color:
+							cursor.value &gt;= previousValue ? 'rgba(22, 199, 132, 0.5)' : 'rgba(234, 57, 67, 0.5)'
+					});
+
+					previousValue = cursor.value;
+
+					tick = {
+						last: cursor.value,
+						changeAbs: Number((cursor.value - firstValue).toFixed(2)),
+						changePct: Number((((cursor.value - firstValue) / firstValue) * 100).toFixed(2))
+					};
+				}, 1600);
+			}
 		})();
 
 		return () =&gt; {
@@ -249,7 +298,7 @@ export function mulberry32(seed: number): () =&gt; number {
 
 &lt;!-- … --&gt;</code></pre>
 </figure>
-<h3 id="three-things">Three things worth understanding</h3>
+<h3 id="three-things">Four things worth understanding</h3>
 
 <aside class="callout callout--why">
 	<h4>1. Why the dynamic import</h4>
@@ -258,12 +307,17 @@ export function mulberry32(seed: number): () =&gt; number {
 
 <aside class="callout callout--why">
 	<h4>2. Why the <code>disposed</code> flag</h4>
-	<p>There is an <code>await</code> between the attachment starting and the chart being created. If the component unmounts in that gap — a fast navigation — you would create a chart inside a detached node that nothing will ever clean up. The flag closes that window.</p>
+	<p>There is an <code>await</code> between the attachment starting and the chart being created. If the component unmounts in that gap — a fast navigation — you would create a chart inside a detached node that nothing will ever clean up. The flag closes that window. The same care puts <code>teardown</code> straight after <code>createChart</code>, before anything else can <code>return</code>: the <code>if (!lastPoint) return;</code> further down can never strand a live chart, because by then the cleanup already knows about it.</p>
 </aside>
 
 <aside class="callout callout--why">
 	<h4>3. Why a chart is not accessible on its own</h4>
 	<p>It renders to <code>&lt;canvas&gt;</code>, which to a screen reader is a blank rectangle. Every number the chart conveys is therefore <strong>also</strong> available as real text — in the stat row beside it, and in a visually-hidden summary in the <code>&lt;figcaption&gt;</code>. If your chart is the only place some information exists, that information does not exist for a chunk of your users.</p>
+</aside>
+
+<aside class="callout callout--why">
+	<h4>4. Why every read comes before the <code>await</code></h4>
+	<p>An attachment runs inside an effect, and an effect re-runs when the reactive values it read change. But only the values it read <em>synchronously</em>. The Svelte docs are exact about it: &quot;Values that are read asynchronously — after an <code>await</code> or inside a <code>setTimeout</code>, for example — will not be tracked.&quot; So the first lines of <code>chart</code> are its dependency list: <code>initial</code> (which follows <code>seed</code>), <code>shouldAnimate</code> (which follows <code>live</code> and the reduced-motion setting) and <code>seed</code> itself. Change any of them and Svelte runs the cleanup and builds a fresh chart. Had we read <code>seed</code> after <code>await import(…)</code>, a new seed would be silently ignored — the bug would be a chart that stops responding to a prop, not an error. The timer is the other half of the rule. Its callback writes <code>tick</code> every 1.6 seconds, and the attachment never <em>reads</em> <code>tick</code> (it only resets it), so each write updates the readout and leaves the chart alone; and whatever the callback reads is untracked anyway, so it cannot start a loop either. And <code>height</code> is deliberately absent: it reaches the chart through the container's CSS <code>min-height</code>, and <code>autoSize</code> follows the container, so a new height resizes the chart in place instead of rebuilding it.</p>
 </aside>
 <aside class="callout callout--warn"><p>v5 changed the series API. It is <code>chart.addSeries(AreaSeries, options)</code> now — the v4 style <code>chart.addAreaSeries(options)</code> was removed. Most tutorials you find are still v4, and this is the exact line that breaks.</p></aside>
 <aside class="callout callout--note"><p>Also note <code>autoSize: true</code>, which uses a ResizeObserver internally. It correctly handles the container changing size without the window resizing — which a <code>window.onresize</code> handler misses entirely.</p></aside>

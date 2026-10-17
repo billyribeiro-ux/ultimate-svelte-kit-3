@@ -85,7 +85,7 @@ array of content blocks:
 	summary: 'One line for the index page and the meta description.',
 	goal: 'What the reader will have by the end.',
 	blocks: [
-		{ type: 'p', text: 'Prose. Supports `code`, **bold** and [links](https://example.com).' },
+		{ type: 'p', text: 'Prose. Supports `code`, **bold**, *italic* and [links](https://example.com).' },
 		{ type: 'h3', id: 'anchor', text: 'A subheading' },
 		{ type: 'ul', items: ['One', 'Two'] },
 		{ type: 'ol', items: ['First', 'Second'] },

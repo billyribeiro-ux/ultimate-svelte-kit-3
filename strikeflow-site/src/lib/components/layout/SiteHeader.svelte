@@ -14,9 +14,10 @@
 	  - restoring focus to the trigger button on close
 	  - a backdrop that isn't in the normal stacking context
 
-	Every one of those is a bug people ship. `showModal()` gives you all six from the
-	browser, correctly, in about four lines. The only thing we add is closing on
-	navigation, because the browser has no way to know a client-side route changed.
+	Every one of those is a bug people ship. `showModal()` gives you all five from the
+	browser, correctly, in about four lines. We add two things: `closedby="any"`, so a
+	tap on the backdrop closes it too, and closing on navigation, because the browser
+	has no way to know a client-side route changed.
 -->
 
 <script lang="ts">
@@ -31,11 +32,20 @@
 	import Button from '#lib/components/ui/Button.svelte';
 
 	/**
-	 * `$state` on a DOM node lets `bind:this` write to it reactively. Starts null
-	 * because the element doesn't exist until after the first render — on the server
-	 * it stays null forever, which is why every use below is optional-chained.
+	 * The dialog element, filled in by `bind:this`. Undefined until after the first
+	 * render — on the server it stays undefined forever, which is why every use
+	 * below is optional-chained.
+	 *
+	 * A plain `let`, not `$state`: nothing in the markup or in a `$derived` reads
+	 * it, only event handlers and a navigation hook, which run long after it is set.
+	 * `$state` is for values the page has to re-render when they change.
+	 *
+	 * And `bind:this` rather than an attachment, deliberately. An attachment is for
+	 * work that starts when the element mounts and stops when it goes. Here nothing
+	 * does: we need the node LATER, and an attachment would only store the same node
+	 * in the same variable.
 	 */
-	let drawer = $state<HTMLDialogElement | null>(null);
+	let drawer: HTMLDialogElement | undefined;
 	let isOpen = $state(false);
 
 	/**
@@ -58,8 +68,9 @@
 
 	/**
 	 * The dialog fires `close` however it was closed — our button, the Escape key,
-	 * or a backdrop click. Syncing state here rather than in `closeDrawer` means we
-	 * can't get out of sync when the browser closes it behind our back.
+	 * or a backdrop click (`closedby="any"`, below). Syncing state here rather than
+	 * in `closeDrawer` means we can't get out of sync when the browser closes it
+	 * behind our back.
 	 */
 	function handleClose() {
 		isOpen = false;
@@ -85,22 +96,28 @@
 	/**
 	 * Is this link the page we're on?
 	 *
-	 * The `startsWith` branch handles section highlighting: /blog stays marked as
-	 * current while you're reading /blog/some-post.
+	 * Compared by ROUTE ID, not by URL. Our nav already stores route IDs, and
+	 * `page.route.id` is the route being rendered — the same value on the server, in
+	 * the prerendered HTML, and in the browser, and untouched by any base path.
 	 *
-	 * `resolve()` rather than the raw string, because it applies the configured base
-	 * path. Hardcoding "/features" breaks the moment the site is deployed under a
-	 * subdirectory.
+	 * Comparing `resolve(href)` with `page.url.pathname` looks equivalent and is
+	 * not: during server rendering `resolve()` returns a path relative to the page
+	 * (`./features`), which never equals `/features`. The prerendered HTML would
+	 * mark nothing as current, and only hydration would fix it — too late for
+	 * anyone without JavaScript, and for a screen reader that read the page first.
+	 *
+	 * The `startsWith` branch handles section highlighting: /blog stays marked as
+	 * current while you're reading /blog/[slug]. `null` (no route matched — the 404
+	 * page) marks nothing.
 	 */
 	function isCurrent(href: StaticRoute): boolean {
-		const target = resolve(href);
-		const here = page.url.pathname;
-		if (target === resolve('/')) return here === target;
-		return here === target || here.startsWith(`${target}/`);
+		const here = page.route.id;
+		if (href === '/') return here === '/';
+		return here === href || (here?.startsWith(`${href}/`) ?? false);
 	}
 </script>
 
-<header class="header" class:header--scrolled={isScrolled}>
+<header class={['header', { 'header--scrolled': isScrolled }]}>
 	<div class="header__inner container container--wide">
 		<a class="header__brand" href={resolve('/')} aria-label="StrikeFlow — home">
 			<Logo size={1.5} />
@@ -114,9 +131,12 @@
 			<ul class="header__nav-list" role="list">
 				{#each primaryNav as link (link.href)}
 					<li>
+						<!--
+							The active look is styled off `aria-current` itself (see the CSS),
+							so what is announced and what is shown cannot disagree.
+						-->
 						<a
 							class="header__nav-link"
-							class:is-current={isCurrent(link.href)}
 							href={resolve(link.href)}
 							aria-current={isCurrent(link.href) ? 'page' : undefined}
 						>
@@ -154,8 +174,18 @@
 
 	It lives outside <header> because a modal dialog is conceptually top-level, not
 	part of the header's document structure.
+
+	`closedby="any"` lets a click or tap on the backdrop close it, as well as Escape
+	and our button. A browser that doesn't support the attribute yet ignores it, and
+	the drawer still closes the other two ways.
 -->
-<dialog bind:this={drawer} class="drawer" onclose={handleClose} aria-label="Navigation menu">
+<dialog
+	bind:this={drawer}
+	class="drawer"
+	closedby="any"
+	onclose={handleClose}
+	aria-label="Navigation menu"
+>
 	<div class="drawer__panel">
 		<div class="drawer__head">
 			<Logo size={1.375} />
@@ -312,7 +342,7 @@
 			color: var(--text-primary);
 		}
 
-		.header__nav-link.is-current {
+		.header__nav-link[aria-current='page'] {
 			color: var(--text-primary);
 			background-color: var(--surface-raised);
 		}

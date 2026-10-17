@@ -48,7 +48,7 @@
 	}: Props = $props();
 </script>
 
-<div class="section-header section-header--{align}" {id}>
+<div class={['section-header', `section-header--${align}`]} {id}>
 	{#if eyebrow}
 		<p class="eyebrow" data-reveal {@attach animate ? reveal({ distance: 14 }) : undefined}>
 			{eyebrow}

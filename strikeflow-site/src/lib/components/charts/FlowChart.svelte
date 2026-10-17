@@ -9,8 +9,8 @@
 	   An attachment is a function that runs when the element is added to the DOM and
 	   returns a cleanup function. Unlike `onMount`, it receives the element directly
 	   (no `bind:this` and no null check), and it re-runs automatically if any state
-	   it reads changes. It's the modern replacement for both `onMount`-plus-`bind:this`
-	   and `use:` actions.
+	   it reads SYNCHRONOUSLY changes. It's the modern replacement for both
+	   `onMount`-plus-`bind:this` and `use:` actions.
 
 	2. THE LIBRARY IS DYNAMICALLY IMPORTED.
 	   `lightweight-charts` is ~48kB gzipped and touches the DOM, so it can't run
@@ -97,8 +97,16 @@
 	/**
 	 * The chart attachment.
 	 *
-	 * It reads `shouldAnimate` and `height`, so Svelte re-runs it (tearing down the
-	 * old chart first, via the returned cleanup) whenever either changes.
+	 * An attachment runs inside an effect, and an effect depends on exactly the
+	 * reactive values it reads SYNCHRONOUSLY — before its first `await`. Reads after
+	 * the `await import(…)` below, or inside the timer's callback, are not tracked
+	 * at all. So the three reads at the top are the whole dependency list: change
+	 * `seed` (through `initial`), `live`, or the reduced-motion setting, and Svelte
+	 * tears the old chart down via the returned cleanup and builds a new one.
+	 *
+	 * `height` is deliberately not on that list. It reaches the chart through CSS —
+	 * the container's `min-height` — and `autoSize` follows the container, so a
+	 * height change resizes the chart in place instead of rebuilding it.
 	 */
 	const chart: Attachment<HTMLDivElement> = (node) => {
 		// Guards the async gap: if the component unmounts while the dynamic import is
@@ -106,10 +114,15 @@
 		let disposed = false;
 		let teardown: (() => void) | undefined;
 
-		// Snapshot the derived data ONCE, at attachment time. Reading `initial` again
-		// inside the timer would make the effect depend on it and re-run in a loop.
+		// Read everything this chart is built from NOW, before the await. These reads
+		// are what make the attachment re-run when they change; the same reads after
+		// the await would be silently ignored, and would see a later moment's values
+		// than the ones this chart was built for.
 		const data = initial;
 		const animate = shouldAnimate;
+		// Seeded separately (seed + 1) so the live tail is deterministic too, but
+		// doesn't simply repeat the initial series.
+		const tailSeed = seed + 1;
 
 		// A fresh chart means a fresh tail.
 		tick = null;
@@ -123,9 +136,10 @@
 			const api = createChart(node, {
 				// ResizeObserver-backed. Saves writing one ourselves, and it correctly
 				// handles the container changing size without the window resizing —
-				// which a `window.onresize` handler would miss entirely.
+				// which a `window.onresize` handler would miss entirely. With autoSize
+				// on, the library ignores `width` and `height` options, so we pass
+				// neither: the container's CSS size is the one source of truth.
 				autoSize: true,
-				height,
 				layout: {
 					background: { type: ColorType.Solid, color: 'transparent' },
 					textColor: '#7f8ba3',
@@ -159,6 +173,18 @@
 				handleScale: false
 			});
 
+			let timer: ReturnType<typeof setInterval> | undefined;
+
+			// Assigned the moment the chart exists, so every path below — the early
+			// return included — still disposes of it.
+			teardown = () => {
+				clearInterval(timer);
+				// `remove()` disposes the canvas, the ResizeObserver and every internal
+				// listener. Skip it and you leak a full chart instance on every
+				// navigation — which on a SPA compounds until the tab dies.
+				api.remove();
+			};
+
 			/*
 			 * v5 API note: series are created with `addSeries(Definition, options)`.
 			 * The v4 style — `chart.addAreaSeries(options)` — was removed. Most
@@ -191,21 +217,18 @@
 			volumeSeries.setData(data.volume.slice());
 			api.timeScale().fitContent();
 
-			let timer: ReturnType<typeof setInterval> | undefined;
-
 			if (animate) {
-				// Seeded separately (seed + 1) so the live tail is deterministic too,
-				// but doesn't simply repeat the initial series.
-				const seedForTail = seed + 1;
-				const random = mulberry32(seedForTail);
+				const random = mulberry32(tailSeed);
 
 				const lastPoint = data.price[data.price.length - 1];
 				const firstValue = data.price[0]?.value ?? data.last;
 				if (!lastPoint) return;
 
 				let cursor: PricePoint = lastPoint;
-				// Tracked locally rather than read from the `last` derived — reading
-				// reactive state inside this callback would re-trigger the effect.
+				// Kept locally: this callback is the only thing that moves the tail, so
+				// it already knows the previous value. Reading the `last` derived here
+				// would not be tracked — a timer callback never is — but it would tie
+				// the callback to the readout it is about to overwrite.
 				let previousValue = cursor.value;
 
 				timer = setInterval(() => {
@@ -228,14 +251,6 @@
 					};
 				}, 1600);
 			}
-
-			teardown = () => {
-				if (timer) clearInterval(timer);
-				// `remove()` disposes the canvas, the ResizeObserver and every internal
-				// listener. Skip it and you leak a full chart instance on every
-				// navigation — which on a SPA compounds until the tab dies.
-				api.remove();
-			};
 		})();
 
 		return () => {
@@ -254,7 +269,7 @@
 
 		<div class="chart__readout tabular">
 			<span class="chart__price">{formatUsd(last)}</span>
-			<span class="chart__change" class:is-up={isUp} class:is-down={!isUp}>
+			<span class={['chart__change', isUp ? 'is-up' : 'is-down']}>
 				{isUp ? '+' : ''}{changeAbs.toFixed(2)} ({isUp ? '+' : ''}{changePct.toFixed(2)}%)
 			</span>
 		</div>

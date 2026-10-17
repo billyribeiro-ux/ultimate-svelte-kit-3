@@ -96,6 +96,22 @@ test.describe('gated pages stay out of the index', () => {
 	});
 });
 
+test.describe('an unknown address', () => {
+	test('is a real 404, kept out of the index, with a way back', async ({ page }) => {
+		// A real 404 status, not a 200 page that says "not found" — the soft 404
+		// that teaches a crawler to distrust which of your URLs are real.
+		const response = await page.goto('/no-such-page');
+		expect(response?.status()).toBe(404);
+
+		await expect(page.locator('head meta[name="robots"]')).toHaveAttribute('content', /noindex/);
+
+		await expect(
+			page.getByRole('heading', { level: 1, name: /can’t find that page/ })
+		).toBeVisible();
+		await expect(page.getByRole('link', { name: 'Back to the home page' })).toBeVisible();
+	});
+});
+
 test.describe('crawl infrastructure', () => {
 	test('robots.txt is served and points at the sitemap', async ({ request }) => {
 		const response = await request.get('/robots.txt');
@@ -105,8 +121,13 @@ test.describe('crawl infrastructure', () => {
 		const body = await response.text();
 		expect(body).toContain('User-agent: *');
 		expect(body).toMatch(/Sitemap: https?:\/\/.+\/sitemap\.xml/);
-		// The gated page should not be worth crawl budget.
-		expect(body).toContain('Disallow: /guide/thank-you');
+		// Signed download links are not worth crawl budget.
+		expect(body).toContain('Disallow: /guide/download');
+		// The thank-you page must stay crawlable: its noindex meta tag and
+		// X-Robots-Tag header only work on a crawler that is allowed to fetch it.
+		expect(body).not.toContain('Disallow: /guide/thank-you');
+		// Nor may the CSS and JavaScript every page needs to render be blocked.
+		expect(body).not.toContain('Disallow: /_app/');
 	});
 
 	test('sitemap is valid XML with the correct namespace', async ({ request }) => {

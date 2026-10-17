@@ -52,7 +52,7 @@ mkdir new-thing  # make a directory</code></pre>
 </figure>
 <aside class="callout callout--note"><p>Anything after <code>#</code> is a comment for your benefit, not part of the command. When you see a terminal block in this course, type the command without the comment.</p></aside>
 <h3 id="node">Node.js</h3>
-<p>JavaScript was invented to run inside browsers. <strong>Node.js</strong> is a program that runs JavaScript *outside* a browser, directly on your machine.</p>
+<p>JavaScript was invented to run inside browsers. <strong>Node.js</strong> is a program that runs JavaScript <em>outside</em> a browser, directly on your machine.</p>
 <p>That is what makes everything else possible: your build tools, your test runner and your development server are all JavaScript programs run by Node.</p>
 
 <figure class="code code--terminal">
@@ -82,7 +82,7 @@ pnpm -v</code></pre>
 	<p>npm gives every project its own full copy of every package — on a machine with ten projects you have ten copies of the same library on disk. pnpm stores one copy globally and links to it, which is faster and dramatically smaller. It is also stricter: it only lets you import packages you actually declared, which catches a real class of bug where your code works locally by accident and breaks in production. Everything here works with npm too — just translate <code>pnpm run x</code> to <code>npm run x</code>.</p>
 </aside>
 <h3 id="package-json">package.json</h3>
-<p>Every project has one. It is the project's identity card and instruction manual. Here is ours, trimmed to the parts that matter right now — each <code>…</code> line stands for entries left out, and you will see the whole file as the course goes on.</p>
+<p>Every project has one. It is the project's identity card and instruction manual. Here is ours, trimmed to the parts that matter right now — each <code>…</code> line stands for entries left out. You will not see the whole file in one go: each of the other entries appears in the chapter that needs it, from the toolchain pins in chapter 8 to the PDF script in chapter 29.</p>
 
 <figure class="code">
 	<figcaption>
@@ -112,18 +112,18 @@ pnpm -v</code></pre>
 	}
 }</code></pre>
 </figure>
-<ul><li><code>scripts</code> — named shortcuts. <code>pnpm run dev</code> runs whatever <code>dev</code> says. This is how you avoid memorising long commands.</li><li><code>dependencies</code> — packages your *running site* needs.</li><li><code>devDependencies</code> — packages only needed while *building and testing*. They are not shipped to visitors.</li><li><code>&quot;type&quot;: &quot;module&quot;</code> — use modern <code>import</code>/<code>export</code> syntax rather than the older <code>require()</code>.</li></ul>
+<ul><li><code>scripts</code> — named shortcuts. <code>pnpm run dev</code> runs whatever <code>dev</code> says. This is how you avoid memorising long commands.</li><li><code>dependencies</code> — packages your <em>running site</em> needs.</li><li><code>devDependencies</code> — packages only needed while <em>building and testing</em>. They are not shipped to visitors.</li><li><code>&quot;type&quot;: &quot;module&quot;</code> — use modern <code>import</code>/<code>export</code> syntax rather than the older <code>require()</code>.</li></ul>
 <h3 id="versions">Version numbers</h3>
 <p>Packages use <strong>semantic versioning</strong>: <code>MAJOR.MINOR.PATCH</code>, for example <code>3.15.0</code>.</p>
 <ul><li><strong>PATCH</strong> (3.15.<strong>0</strong> → 3.15.1) — a bug fix. Safe.</li><li><strong>MINOR</strong> (3.<strong>15</strong> → 3.16) — a new feature, nothing broken. Safe.</li><li><strong>MAJOR</strong> (<strong>3</strong> → 4) — something changed that will break your code. Read the migration guide.</li></ul>
-<aside class="callout callout--note"><p>The <code>^</code> in <code>^3.15.0</code> means &quot;3.15.0 or newer, but stay below 4.0.0&quot; — accept fixes and features, never a breaking change. That is why the lockfile matters: <code>pnpm-lock.yaml</code> records the *exact* versions installed, so every machine and your production server get byte-identical code. <strong>Always commit the lockfile.</strong></p></aside>
+<aside class="callout callout--note"><p>The <code>^</code> in <code>^3.15.0</code> means &quot;3.15.0 or newer, but stay below 4.0.0&quot; — accept fixes and features, never a breaking change. That is why the lockfile matters: <code>pnpm-lock.yaml</code> records the <em>exact</em> versions installed, so every machine and your production server get byte-identical code. <strong>Always commit the lockfile.</strong></p></aside>
 <h3 id="node-modules">node_modules</h3>
 <p><code>pnpm install</code> reads <code>package.json</code> and downloads everything into a folder called <code>node_modules</code>. It gets large — often hundreds of megabytes.</p>
 <aside class="callout callout--warn"><p><strong>Never commit <code>node_modules</code> to version control.</strong> It is generated, it is enormous, and anyone can recreate it exactly from <code>package.json</code> plus the lockfile by running <code>pnpm install</code>. Every project template puts it in <code>.gitignore</code> for this reason. If you ever see a repository with <code>node_modules</code> committed, that is a red flag.</p></aside>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>
-	<p><code>node -v</code> shows 24.21.0+, <code>pnpm -v</code> shows 12+, and you can explain what the <code>^</code> in a version number means.</p>
+	<p><code>node -v</code> shows 24.21.0 or newer, <code>pnpm -v</code> shows 12 or newer, and you can explain what the <code>^</code> in a version number means.</p>
 </aside>
 		</article>
 

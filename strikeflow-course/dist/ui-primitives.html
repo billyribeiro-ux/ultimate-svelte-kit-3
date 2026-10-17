@@ -114,9 +114,12 @@
 
 &lt;svelte:element
 	this={tag}
-	class=&quot;btn btn--{variant} btn--{size}&quot;
-	class:btn--full={fullWidth}
-	class:btn--disabled={disabled}
+	class={[
+		'btn',
+		`btn--${variant}`,
+		`btn--${size}`,
+		{ 'btn--full': fullWidth, 'btn--disabled': disabled }
+	]}
 	{href}
 	{onclick}
 	aria-label={ariaLabel}
@@ -138,6 +141,12 @@
 	{/if}
 &lt;/svelte:element&gt;</code></pre>
 </figure>
+<p>Look at the <code>class</code> attribute. It is an <strong>array</strong>: the fixed <code>'btn'</code>, two modifiers built from props, and an <strong>object</strong> whose keys are added only when their values are truthy. Since Svelte 5.16 the <code>class</code> attribute accepts arrays and objects and flattens them into an ordinary string for you (the same rules as the popular <code>clsx</code> library), so <code>variant=&quot;secondary&quot;</code> and <code>fullWidth</code> produce <code>class=&quot;btn btn--secondary btn--md btn--full&quot;</code>.</p>
+
+<aside class="callout callout--why">
+	<h4>Why one class attribute rather than class: directives</h4>
+	<p>Older Svelte code writes this as <code>class=&quot;btn btn--{variant}&quot;</code> plus a <code>class:btn--full={fullWidth}</code> directive per modifier. That was the convenient way before Svelte 5.16, and you will meet it in plenty of tutorials. The Svelte documentation now says: &quot;Unless you're using an older version of Svelte, consider avoiding <code>class:</code>, since the attribute is more powerful and composable.&quot; Composable is the important word. One attribute holds every class decision in one place; an array can hold another array, so a component can accept a <code>class</code> prop and drop it straight in; and one condition can switch several classes at once. We use the attribute everywhere in StrikeFlow — and in two places, the pricing toggle in chapter 23 and the header links in chapter 20, we need no class at all, because the state is already on the element for CSS to read.</p>
+</aside>
 <aside class="callout callout--note"><p><code>Snippet</code> is the Svelte 5 replacement for slots. A snippet prop is a chunk of markup the parent passes in, rendered with <code>{@render …}</code>. Unlike slots, snippets are ordinary values: typed, passable, and usable in <code>{#if}</code>.</p></aside>
 <aside class="callout callout--note"><p>The <code>magnetic</code> import and the <code>pull</code> prop reach forward to the motion system we build in part 4 — a magnetic button leans slightly toward the cursor on approach. This is the finished file; if you are building strictly chapter by chapter, leave those two pieces out until part 4. Either way <code>{@attach undefined}</code> is a no-op, so a button without <code>pull</code> behaves as though the attachment were never there.</p></aside>
 <h3 id="touch">Two CSS details that matter on phones</h3>
@@ -215,20 +224,22 @@
 	BellRingingIcon,
 	RewindIcon
 } from 'phosphor-svelte';
+import type { IconComponentProps } from 'phosphor-svelte';
 import type { Component } from 'svelte';
 import type { IconName } from '#lib/data/features.ts';
 
 // …
-export const featureIcons: Record&lt;IconName, Component&lt;Record&lt;string, unknown&gt;&gt;&gt; = {
+export const featureIcons: Record&lt;IconName, Component&lt;IconComponentProps&gt;&gt; = {
 	PulseIcon,
 	CrosshairIcon,
 	FunctionIcon,
 	EyeIcon,
 	BellRingingIcon,
 	RewindIcon
-} as Record&lt;IconName, Component&lt;Record&lt;string, unknown&gt;&gt;&gt;;</code></pre>
+};</code></pre>
 </figure>
-<aside class="callout callout--note"><p>Typing it as a full <code>Record&lt;IconName, …&gt;</code> is the point: add a name to the <code>IconName</code> union and forget to register it here, and TypeScript fails the build. A plain object with a runtime lookup would fail silently with an invisible icon in production.</p></aside>
+<aside class="callout callout--note"><p>Typing it as a full <code>Record&lt;IconName, …&gt;</code> is the point: add a name to the <code>IconName</code> union and forget to register it here, and TypeScript fails the build. A plain object with a runtime lookup would fail silently with an invisible icon in production. <code>IconComponentProps</code> is Phosphor's own props type, so the call site is checked too: <code>weight=&quot;duotne&quot;</code> is a build error, not a quietly regular-weight icon.</p></aside>
+<aside class="callout callout--warn"><p><strong>The annotation is the whole check, so never add <code>as</code> to the object.</strong> An earlier version of this file ended <code>} as Record&lt;IconName, …&gt;</code>, and it looked like extra safety. It was the opposite. A cast tells TypeScript to believe you, and TypeScript accepts <code>{ A, B } as Record&lt;'A' | 'B' | 'C', …&gt;</code> without a word, so with the cast in place the missing-icon build error never fires. Take an icon out of the object above and <code>pnpm run check</code> fails with &quot;Property 'RewindIcon' is missing&quot;; put the cast back and it passes. Reach for <code>as</code> only when you know something the compiler cannot — never to make an error go away.</p></aside>
 <p>In Svelte 5 you render a component held in a variable by just using it as a tag. The Svelte 4 way, <code>&lt;svelte:component this={Icon} /&gt;</code>, is now legacy and not needed:</p>
 
 <figure class="code">
@@ -264,7 +275,7 @@ export default defineConfig({
 	// …
 });</code></pre>
 </figure>
-<aside class="callout callout--warn"><p>The ordering matters and the failure is loud. Vite runs <code>transform</code> hooks in array order, and this plugin parses its input as JavaScript. Put it <strong>before</strong> <code>sveltekit()</code> and it receives raw <code>.svelte</code> source — markup and all — and dies on the first <code>&lt;h1&gt;</code> with *&quot;Unexpected JSX expression&quot;*. I lost ten minutes to this. The <code>// …</code> just above <code>sveltePhosphorOptimize()</code> stands for the comment in the real file that records all of this — it opens with *MUST come AFTER <code>sveltekit()</code>*.</p></aside>
+<aside class="callout callout--warn"><p>The ordering matters and the failure is loud. Vite runs <code>transform</code> hooks in array order, and this plugin parses its input as JavaScript. Put it <strong>before</strong> <code>sveltekit()</code> and it receives raw <code>.svelte</code> source — markup and all — and dies on the first <code>&lt;h1&gt;</code> with <em>&quot;Unexpected JSX expression&quot;</em>. I lost ten minutes to this. The <code>// …</code> just above <code>sveltePhosphorOptimize()</code> stands for the comment in the real file that records all of this — it opens with <em>MUST come AFTER <code>sveltekit()</code></em>.</p></aside>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>

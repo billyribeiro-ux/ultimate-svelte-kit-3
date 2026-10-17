@@ -9,9 +9,9 @@
 	import Badge from '#lib/components/ui/Badge.svelte';
 	import PostBody from '#lib/components/blog/PostBody.svelte';
 	import CtaBand from '#lib/components/marketing/CtaBand.svelte';
-	import type { PageData } from './$types';
+	import type { PageProps } from './$types';
 
-	let { data }: { data: PageData } = $props();
+	let { data }: PageProps = $props();
 
 	const post = $derived(data.post);
 	const author = $derived(data.author);

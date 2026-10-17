@@ -51,8 +51,9 @@
 	import SiteHeader from '#lib/components/layout/SiteHeader.svelte';
 	import SiteFooter from '#lib/components/layout/SiteFooter.svelte';
 	import { prefersReducedMotion } from '#lib/motion/index.ts';
+	import type { LayoutProps } from './$types';
 
-	let { children } = $props();
+	let { children }: LayoutProps = $props();
 
 	// …
 	onNavigate((navigation) =&gt; {
@@ -95,6 +96,7 @@
 &lt;/div&gt;</code></pre>
 </figure>
 <p>That first import is the moment the whole design system switches on. Save the file and watch Times New Roman disappear.</p>
+<aside class="callout callout--note"><p><code>LayoutProps</code> comes from <code>./$types</code>, a module SvelteKit generates for every route folder. It types everything a layout receives: <code>children</code>, the snippet holding the page, and <code>data</code> if the layout has a load function. Pages use its sibling, <code>PageProps</code>. Writing the props type by hand — <code>{ children: Snippet }</code> — works until the route changes, and then quietly lies; the generated type changes with it.</p></aside>
 <aside class="callout callout--note"><p>The <code>onNavigate</code> block wires up the View Transitions API: the browser snapshots the outgoing page and cross-fades to the new one, with the animation itself defined in CSS. It ships inert until part 4, where we build <code>#lib/motion/</code> (including this <code>prefersReducedMotion</code> helper) and the <code>::view-transition-*</code> rules in <code>motion.css</code> — building chapter by chapter, add it when you get there. The promise dance is exactly what the API requires: resolving inside the callback is what tells SvelteKit to complete the navigation. The <code>navigation.shallow</code> guard is the same one the header drawer uses in chapter 20: since Kit 3, <code>onNavigate</code> also fires for <code>goto(url, { shallow: true })</code>, and a change that only touches <code>page.state</code> should not cross-fade the whole page.</p></aside>
 
 <aside class="callout callout--why">
