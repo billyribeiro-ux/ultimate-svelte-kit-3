@@ -130,9 +130,12 @@ export class AudioEngine {
 	 *
 	 * `getOrInsertComputed` (Svelte 5.57) is exactly this operation: look it up,
 	 * and if it is not there, build it *once* and keep it. The old spelling was
-	 * `get`, an `if`, a `new` and a `set`, and the old bug was building a second
-	 * strip because two callers raced through the `if` — a track with two
-	 * outputs plays at double volume, which is a good bug to never write again.
+	 * four statements — `get`, an `if`, a `new` and a `set` — and two lookups,
+	 * and the one that matters is the `set`, which is also the one an edit can
+	 * lose without anything failing to compile. Without it every call builds a
+	 * fresh strip and connects it to the master, and the scheduler calls this
+	 * once per hit: a track would end up with as many outputs as it has played
+	 * notes. One call cannot be half-written.
 	 */
 	channel(track: Pick<Track, 'id' | 'gain' | 'pan'>): Channel {
 		const ctx = this.context;

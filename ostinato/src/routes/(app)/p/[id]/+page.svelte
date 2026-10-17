@@ -1,20 +1,24 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
-	import type { RouteParams } from '$app/types';
 	import type { PageProps } from './$types.js';
 	import PatternView from '#lib/components/PatternView.svelte';
 
-	let { data }: PageProps = $props();
-
 	/**
-	 * `$app/types` knows every route. `RouteParams<'/(app)/p/[id]'>` is
-	 * `{ id: string }`, derived from the folder name — layout group included,
-	 * because the group is part of the route's id even though it is not part
-	 * of its URL — and it would stop compiling if the folder were renamed,
-	 * which is what a type for a URL should do.
+	 * `params` arrives as a prop, typed by the generated `PageProps` from the
+	 * folder name: `{ id: string }`, with no cast, and it would stop compiling
+	 * if the folder were renamed — which is what a type for a URL should do.
 	 */
-	const params = $derived(page.params as RouteParams<'/(app)/p/[id]'>);
-	const card = $derived(`${page.url.origin}/p/${params.id}/card.svg`);
+	let { data, params }: PageProps = $props();
+
+	/*
+	 * The card's address from its route id — layout group included, because
+	 * the group is part of the route's id even though it is not part of its
+	 * URL. Absolute, because `og:image` is read by a crawler on another site.
+	 */
+	const card = $derived(
+		new URL(resolve('/(app)/p/[id]/card.svg', { id: params.id }), page.url.origin).href
+	);
 </script>
 
 <svelte:head>

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The security posture — Building Ostinato</title>
-<meta name="description" content="One place for the decisions spread across six files: a CSP in `auto` mode with the three directives an instrument needs, CSRF with an empty trusted list, the signed cookie’s flags, the headers `handleSecurity` adds, CORS on exactly one endpoint, two tests that prove the policy covers every inline script, and one that proves it blocks nothing else.">
+<meta name="description" content="One place for the decisions spread across seven files: a CSP in `auto` mode with the three directives this app needs, CSRF with an empty trusted list, the signed cookie’s flags, one set of security headers for what SvelteKit renders and what the adapter serves as files, CORS on exactly one endpoint, a test that proves the policy covers every inline script, one that proves it blocks nothing else, and one that proves the prerendered page is not left out.">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -33,12 +33,12 @@
 		<article>
 			<p class="eyebrow">Chapter 36</p>
 			<h1>The security posture</h1>
-			<p class="lede">One place for the decisions spread across six files: a CSP in <code>auto</code> mode with the three directives an instrument needs, CSRF with an empty trusted list, the signed cookie’s flags, the headers <code>handleSecurity</code> adds, CORS on exactly one endpoint, two tests that prove the policy covers every inline script, and one that proves it blocks nothing else.</p>
+			<p class="lede">One place for the decisions spread across seven files: a CSP in <code>auto</code> mode with the three directives this app needs, CSRF with an empty trusted list, the signed cookie’s flags, one set of security headers for what SvelteKit renders and what the adapter serves as files, CORS on exactly one endpoint, a test that proves the policy covers every inline script, one that proves it blocks nothing else, and one that proves the prerendered page is not left out.</p>
 			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Read the whole posture as one decision, and know which trade each line makes.</p></aside>
 			
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:146-177</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:162-205</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/*
@@ -49,13 +49,25 @@
  * is known at build time, and nonces for dynamically rendered ones,
  * which stream `resolve(…)` scripts after the header has gone.
  *
- * The directives that are specific to an instrument:
+ * The directives that are specific to this app:
  *   `media-src blob:`  the exported WAV is played back from a Blob URL
- *   `img-src data:`    the share card is an SVG data URL in the studio
+ *   `font-src data:`   Vite inlines any asset under 4 KB as a data URL
+ *                      (`build.assetsInlineLimit`), and one of fontsource's
+ *                      subset files is that small — so the stylesheet
+ *                      carries a `url(data:font/woff2;…)`.
  *   `style-src 'unsafe-inline'` — a deliberate trade. Knobs and the
  *                      playhead set `style:--angle` per frame; attributes
  *                      cannot be hashed and a nonce does not apply to them.
  *                      The exposure is CSS injection, not script execution.
+ *
+ * Images are `'self'` only. The share card in the studio and on the
+ * pattern page is a URL on this origin, `/p/&lt;id&gt;/card.svg`, not a data
+ * URL, and nothing else draws one. The end-to-end test that visits both
+ * and listens for violations is what keeps that true.
+ *
+ * `frame-ancestors` only works in a header. A prerendered page gets its
+ * policy as a `&lt;meta&gt;` tag, where browsers ignore it, which is why the
+ * adapter adds `X-Frame-Options` to the files it serves (`lib/security.ts`).
  */
 csp: {
 	mode: 'auto',
@@ -63,7 +75,7 @@ csp: {
 		'default-src': ['self'],
 		'script-src': ['self'],
 		'style-src': ['self', 'unsafe-inline'],
-		'img-src': ['self', 'data:'],
+		'img-src': ['self'],
 		'media-src': ['self', 'blob:'],
 		'font-src': ['self', 'data:'],
 		'connect-src': ['self'],
@@ -74,7 +86,8 @@ csp: {
 	}
 },</code></pre>
 </figure>
-<p><code>mode: &quot;auto&quot;</code>: hashes for prerendered pages, where the whole document is known at build time and a file cannot carry a header, and nonces for dynamically rendered ones, which stream scripts after the header has gone. Three directives are specific to an instrument. <code>media-src blob:</code> because the exported WAV is played from a Blob URL. <code>img-src data:</code> for the share card preview. And <code>style-src &quot;unsafe-inline&quot;</code> — a deliberate trade: knobs and the playhead set custom properties per frame through <code>style:</code> attributes, which cannot be hashed and to which a nonce does not apply. The exposure is CSS injection, not script execution, and <code>script-src</code> never gets the same allowance.</p>
+<p><code>mode: &quot;auto&quot;</code>: hashes for prerendered pages, where the whole document is known at build time and a file cannot carry a header, and nonces for dynamically rendered ones, which stream scripts after the header has gone. Three directives go past <code>self</code>, and each has a reason that can be checked. <code>media-src blob:</code> because the exported WAV is played from a Blob URL. <code>font-src data:</code> because Vite inlines any asset under four kilobytes as a data URL (<code>build.assetsInlineLimit</code>), and one of fontsource’s subset files is that small, so the built stylesheet carries a <code>url(data:font/woff2;…)</code>. And <code>style-src &quot;unsafe-inline&quot;</code> — a deliberate trade: knobs and the playhead set custom properties per frame through <code>style:</code> attributes, which cannot be hashed and to which a nonce does not apply. The exposure is CSS injection, not script execution, and <code>script-src</code> never gets the same allowance.</p>
+<aside class="callout callout--note"><p><code>img-src</code> is <code>self</code> alone, and it used to allow <code>data:</code> too, “for the share card preview”. The reason was never true: the card in the studio and on the pattern page has always been a URL on this origin, <code>/p/&lt;id&gt;/card.svg</code>, and nothing in the app draws a data-URL image. An allowance with a false reason is worse than none — it teaches the next person that the list is folklore — so it went, and the test below that visits both pages and fails on any violation is what keeps it gone.</p></aside>
 
 <figure class="code">
 	<figcaption>
@@ -165,7 +178,7 @@ test('nothing a page needs is blocked, scripts aside', async ({ page }) =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:179-185</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:207-213</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/*
@@ -227,15 +240,94 @@ event.cookies.set(COOKIE, await sign(artist, SESSION_SECRET), {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/hooks.server.ts<span class="code__lines">:79-82</span></span>
+		<span class="code__file">src/hooks.server.ts<span class="code__lines">:75-76</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">response.headers.set('x-content-type-options', 'nosniff');
-response.headers.set('referrer-policy', 'strict-origin-when-cross-origin');
-// An instrument that makes sound has no business hearing any.
-response.headers.set('permissions-policy', 'microphone=(), camera=(), geolocation=()');</code></pre>
+	<pre><code class="lang-ts">// The same three the adapter puts on every file it serves (`lib/security.ts`).
+for (const [name, value] of Object.entries(SECURITY_HEADERS)) response.headers.set(name, value);</code></pre>
 </figure>
-<p><code>nosniff</code>, a referrer policy, and a permissions policy that turns off the microphone, the camera and geolocation: an instrument that makes sound has no business hearing any. <code>frame-ancestors &quot;none&quot;</code> in the CSP is the modern <code>X-Frame-Options</code>.</p>
+<p><code>nosniff</code>, a referrer policy, and a permissions policy that turns off the microphone, the camera and geolocation: an instrument that makes sound has no business hearing any. They come from one object in one module, and <code>handleSecurity</code> sets them on everything SvelteKit renders. <code>frame-ancestors &quot;none&quot;</code> in the CSP is the modern <code>X-Frame-Options</code>, and on a rendered page it is enough.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/security.ts<span class="code__lines">:1-26</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * THE HEADERS EVERY RESPONSE CARRIES
+ * ==================================
+ *
+ * Two things send responses. `handleSecurity` in `hooks.server.ts` decorates
+ * everything SvelteKit renders. The adapter serves the rest itself, without
+ * running SvelteKit or its hooks at all: the built assets, and the one
+ * prerendered page — the landing page, which is the page most people see
+ * first. Both read this module, so the two cannot drift apart.
+ */
+export const SECURITY_HEADERS = {
+	'x-content-type-options': 'nosniff',
+	'referrer-policy': 'strict-origin-when-cross-origin',
+	// An instrument that makes sound has no business hearing any.
+	'permissions-policy': 'microphone=(), camera=(), geolocation=()'
+} as const;
+
+/**
+ * What a file needs on top. A prerendered page carries its content security
+ * policy in a `&lt;meta http-equiv&gt;` tag, because a file has no response of its
+ * own to put a header on, and browsers ignore `frame-ancestors` in a meta tag.
+ * So the directive that stops another site framing the landing page has to
+ * travel as a header the adapter sends — and for that, the older
+ * `X-Frame-Options: DENY` says the same thing and needs no second policy.
+ */
+export const FILE_HEADERS = { ...SECURITY_HEADERS, 'x-frame-options': 'DENY' } as const;</code></pre>
+</figure>
+<p>The landing page is not a rendered page. It is prerendered, and the adapter serves it — like every built asset — straight from disk with <code>sirv</code>, without calling SvelteKit, so no hook runs and nothing <code>handleSecurity</code> sets ever reaches it. Its CSP survives, because SvelteKit writes that into the file as a <code>&lt;meta http-equiv&gt;</code> tag. But browsers ignore <code>frame-ancestors</code> in a meta tag — the SvelteKit docs say so in as many words: “<code>frame-ancestors</code>, <code>report-uri</code> and <code>sandbox</code> directives will be ignored” — which left the first page most people see free to be framed by any site, and missing the other three headers as well. The fix is in the place that serves files: the adapter takes a <code>headers</code> option, <code>vite.config.ts</code> hands it <code>FILE_HEADERS</code> — the same three, plus <code>X-Frame-Options: DENY</code>, which does <code>frame-ancestors</code>’ job from a header and needs no second policy — and <code>serve()</code> sets them on every file.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">adapters/ostinato/files/handler.js<span class="code__lines">:94-116</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * A file is answered here, by sirv, and never reaches SvelteKit — so none of
+ * the app's hooks run for it, and whatever headers `handleSecurity` sets on a
+ * rendered page are missing unless they are set here too. `headers` is the
+ * adapter's `headers` option, baked in at build time.
+ *
+ * @param {string} path
+ * @param {boolean} client
+ */
+function serve(path, client) {
+	return sirv(path, {
+		etag: true,
+		gzip: precompress,
+		brotli: precompress,
+		setHeaders: (res, pathname) =&gt; {
+			for (const [name, value] of Object.entries(headers)) res.setHeader(name, value);
+			// Hashed filenames never change, so a browser may keep them forever.
+			if (client &amp;&amp; pathname.startsWith(`/${appDir}/immutable/`) &amp;&amp; res.statusCode === 200) {
+				res.setHeader('cache-control', 'public,max-age=31536000,immutable');
+			}
+		}
+	});
+}</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/landing.e2e.ts<span class="code__lines">:30-39</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">test('a prerendered page still carries the security headers', async ({ request }) =&gt; {
+	// No hook runs for a file, so these come from the adapter — and the frame
+	// header most of all, because `frame-ancestors` in the meta policy above
+	// is ignored by every browser.
+	const headers = (await request.get('/')).headers();
+	expect(headers['x-frame-options']).toBe('DENY');
+	expect(headers['x-content-type-options']).toBe('nosniff');
+	expect(headers['referrer-policy']).toBe('strict-origin-when-cross-origin');
+	expect(headers['permissions-policy']).toContain('microphone=()');
+});</code></pre>
+</figure>
 
 <figure class="code">
 	<figcaption>
@@ -283,7 +375,7 @@ return new Response(`&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>
-	<ul><li>You can say why prerendered and dynamic pages carry the policy differently.</li><li>You can defend <code>style-src &quot;unsafe-inline&quot;</code> in one sentence and say what you would need to remove it.</li><li>You can explain what <code>PUBLIC_ORIGIN</code> being <code>static</code> has to do with CSRF.</li></ul>
+	<ul><li>You can say why prerendered and dynamic pages carry the policy differently.</li><li>You can defend <code>style-src &quot;unsafe-inline&quot;</code> in one sentence and say what you would need to remove it.</li><li>You can explain what <code>PUBLIC_ORIGIN</code> being <code>static</code> has to do with CSRF.</li><li>You can say which responses <code>handleSecurity</code> never sees, and where their headers come from instead.</li></ul>
 </aside>
 		</article>
 

@@ -24,8 +24,11 @@
  *   5. wires `instrumentation.server.js` in front of the entrypoint, so tracing
  *      is set up before any application code runs.
  *
- * Everything after step 2 is about *this* adapter. Everything up to it is
- * every adapter.
+ * Steps 1 to 4 are what every adapter does, in the order SvelteKit's guide
+ * to writing one gives them: clear, write, generate a server, bundle. What is
+ * *this* adapter is the plural in 3 and 4 — a server and a bundle for each
+ * function — and step 5, which only an adapter that runs
+ * `instrumentation.server.js` needs.
  */
 
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -48,13 +51,15 @@ function escapeRegex(str) {
  * @typedef {object} Options
  * @property {string} [out] where the deployable program is written. Default `build`.
  * @property {boolean} [precompress] write `.gz` and `.br` beside every asset. Default `true`.
+ * @property {Record<string, string>} [headers] response headers for every file the runtime
+ *   serves itself — assets and prerendered pages, which no hook ever sees. Default none.
  */
 
 /**
  * @param {Options} [options]
  * @returns {import('@sveltejs/kit').Adapter}
  */
-export default function ostinato({ out = 'build', precompress = true } = {}) {
+export default function ostinato({ out = 'build', precompress = true, headers = {} } = {}) {
 	const startedAt = Date.now();
 
 	return {
@@ -90,9 +95,11 @@ export default function ostinato({ out = 'build', precompress = true } = {}) {
 			 * import of the runtime, and `export const server`, already constructed.
 			 * SvelteKit 3.0 replaced `generateManifest` with it, and the difference is
 			 * what the adapter gets to see: a manifest string to pair with a `Server`
-			 * class before, nothing now. The shape of a manifest is SvelteKit's
-			 * business, and an adapter that read it would break on the next change to
-			 * it; `routes` is still the hook for a subset.
+			 * class before, and no server manifest at all now. The shape of one is
+			 * SvelteKit's business, and an adapter that read it would break on the
+			 * next change to it; `routes` is still the hook for a subset, and
+			 * `builder.manifest` is there for an adapter that wants `$app/manifest`'s
+			 * list of the app's files.
 			 *
 			 * The third server has no routes at all. It can still run the hooks — and
 			 * when `reroute` changes the path of a request it received, SvelteKit sets
@@ -112,9 +119,10 @@ export default function ostinato({ out = 'build', precompress = true } = {}) {
 
 			/*
 			 * What the runtime needs to know that only the build knows: the origin
-			 * baked in for CSRF, which paths are prerendered files, and the route
+			 * baked in for CSRF, which paths are prerendered files, the route
 			 * patterns each function answers to — as regex sources, because a RegExp
-			 * does not survive `JSON.stringify` and a string does.
+			 * does not survive `JSON.stringify` and a string does — and the headers
+			 * the files it serves itself must carry.
 			 */
 			writeFileSync(
 				`${server}/entries.js`,
@@ -128,7 +136,8 @@ export default function ostinato({ out = 'build', precompress = true } = {}) {
 						pages: split.pages.map((route) => route.pattern.source),
 						api: split.api.map((route) => route.pattern.source)
 					})};`,
-					`export const precompress = ${JSON.stringify(precompress)};`
+					`export const precompress = ${JSON.stringify(precompress)};`,
+					`export const headers = ${JSON.stringify(headers)};`
 				].join('\n')
 			);
 

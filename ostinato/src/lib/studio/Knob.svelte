@@ -79,10 +79,10 @@
 	 * it returns the function that removes them, which is what makes the
 	 * cleanup three lines instead of a `removeEventListener` for each.
 	 */
-	function pointerdown(event: PointerEvent) {
+	function pointerdown(event: PointerEvent & { currentTarget: HTMLElement }) {
 		if (disabled || event.button !== 0) return;
 		event.preventDefault();
-		(event.currentTarget as HTMLElement).focus();
+		event.currentTarget.focus();
 		onstart?.();
 
 		const startY = event.clientY;

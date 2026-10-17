@@ -90,7 +90,37 @@ const ring = spans.ring;</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/server/tracing.ts<span class="code__lines">:87-95</span></span>
+		<span class="code__file">src/lib/server/tracing.ts<span class="code__lines">:64-86</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * Where a request went, without what it carried. A query string is where a
+ * remote query's argument travels, and where a share link keeps its pattern;
+ * the diagnostics page is public, so the ring keeps the path and drops the
+ * rest.
+ */
+function pathOnly(value: string): string {
+	try {
+		const url = new URL(value);
+		return url.origin + url.pathname;
+	} catch {
+		return value;
+	}
+}
+
+export function record(span: ReadableSpan): void {
+	const attributes: SpanRecord['attributes'] = {};
+	for (const [key, value] of Object.entries(span.attributes)) {
+		if (key === 'http.url' &amp;&amp; typeof value === 'string') attributes[key] = pathOnly(value);
+		else if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+			attributes[key] = value;
+		}
+	}</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/server/tracing.ts<span class="code__lines">:103-111</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/** Newest first. A copy, so a reader cannot reach into the ring. */
@@ -103,7 +133,7 @@ export function trace(traceId: string): SpanRecord[] {
 	return ring.filter((span) =&gt; span.traceId === traceId);
 }</code></pre>
 </figure>
-<p>SvelteKit emits an OpenTelemetry span for every <code>handle</code>, <code>load</code>, form action and remote function when <code>tracing: { server: true }</code> is set. OpenTelemetry hands finished spans to an *exporter*; this one keeps the last few hundred in a ring, bounded by <code>TRACE_BUFFER</code>. Module-level state on the server is usually the bug; here it is the point — the ring *is* the cross-request memory, holds nothing private, and is read only by the diagnostics page. It hangs off <code>globalThis</code> rather than off the module, and that is the adapter’s doing (ch. 34): each function is bundled on its own, and the instrumentation file separately again, so this module exists four times in one process — once per function and once in the instrumentation bundle; <code>grep -rl __ostinato_spans build/</code> lists them — one copy records spans, another reads them, and the process is the only scope they share.</p>
+<p>SvelteKit emits an OpenTelemetry span for every <code>handle</code>, <code>load</code>, form action and remote function when <code>tracing: { server: true }</code> is set. OpenTelemetry hands finished spans to an *exporter*; this one keeps the last few hundred in a ring, bounded by <code>TRACE_BUFFER</code>. Module-level state on the server is usually the bug; here it is the point — the ring *is* the cross-request memory, holds nothing private, and is read only by the diagnostics page. It hangs off <code>globalThis</code> rather than off the module, and that is the adapter’s doing (ch. 34): each function is bundled on its own, and the instrumentation file separately again, so this module exists four times in one process — once per function and once in the instrumentation bundle; <code>grep -rl __ostinato_spans build/</code> lists them — one copy records spans, another reads them, and the process is the only scope they share. Before a span goes in, its <code>http.url</code> loses its query string: that is where a remote query’s argument travels and where a share link keeps its pattern, and the page that reads the ring is public. <code>tracing.spec.ts</code> records a span through a real tracer provider and checks what comes out.</p>
 
 <figure class="code">
 	<figcaption>
@@ -147,10 +177,30 @@ provider.register();</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/remote/diagnostics.remote.ts<span class="code__lines">:16-39</span></span>
+		<span class="code__file">src/lib/remote/diagnostics.remote.ts<span class="code__lines">:1-44</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">export const getSpans = query(
+	<pre><code class="lang-ts">/**
+ * WHAT THE SERVER KNOWS ABOUT ITSELF
+ * ==================================
+ *
+ * Read by `/diagnostics`, and deliberately public: there is no check inside
+ * these three because there is nobody to check for. The app has no accounts
+ * and no operators — a handle is a name a browser chose, not a permission —
+ * so the decision is made on the other side, about what goes *in*. The spans
+ * carry route names, paths and durations; not bodies, not query strings
+ * (`lib/server/tracing.ts` drops them), and not who made the request
+ * (`hooks.server.ts` no longer tags it). A deployment that wanted more in its
+ * spans would want an operator secret checked here first.
+ */
+
+import * as v from 'valibot';
+import { getRequestEvent, query } from '$app/server';
+import { openConnections } from '#lib/server/rooms.ts';
+import { stats } from '#lib/server/patterns.ts';
+import { recentSpans, trace } from '#lib/server/tracing.ts';
+
+export const getSpans = query(
 	v.object({
 		limit: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(500)), 120)
 	}),
@@ -176,9 +226,14 @@ export const getRuntime = query(async () =&gt; {
 });</code></pre>
 </figure>
 
+<aside class="callout callout--why">
+	<h4>Why these three queries check nothing</h4>
+	<p>The rule in this project is that every remote function decides, inside itself, who may call it — <code>requireArtist()</code> in <code>remove</code>, the <code>artist_id</code> in the delete’s <code>WHERE</code>. These three decide too, and the answer is “anyone”, so the work is in what they are allowed to return. There is nobody to check for: the app has no accounts and no operators, and a handle is a name a browser chose, not a permission. So nothing private goes into the spans. They used to: the identity hook tagged every request’s span with the artist’s handle (ch. 26), and anybody could read which paths each handle had visited. That tag is gone, and the ring drops query strings. A deployment that wanted richer spans — bodies, users — would need an operator secret checked here first, and the comment at the top of the file says so.</p>
+</aside>
+
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/diagnostics/+page.svelte<span class="code__lines">:1-27</span></span>
+		<span class="code__file">src/routes/(app)/diagnostics/+page.svelte<span class="code__lines">:1-29</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
@@ -193,8 +248,10 @@ export const getRuntime = query(async () =&gt; {
 	 * ==================================
 	 *
 	 * Spans from the in-memory ring, the adapter's platform object, and the
-	 * version check. Nothing here is secret and none of it needs a second
-	 * service — it exists to make &quot;why was that slow&quot; answerable from the app.
+	 * version check. A public page, so nothing in it names a person or carries
+	 * a request's arguments (`diagnostics.remote.ts` says how), and none of it
+	 * needs a second service — it exists to make &quot;why was that slow&quot;
+	 * answerable from the app.
 	 */
 	let filters = $state({ limit: 120 });
 	let selected = $state&lt;string | null&gt;(null);
@@ -212,7 +269,7 @@ export const getRuntime = query(async () =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/diagnostics/+page.svelte<span class="code__lines">:35-96</span></span>
+		<span class="code__file">src/routes/(app)/diagnostics/+page.svelte<span class="code__lines">:37-98</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">	&lt;svelte:boundary&gt;
@@ -282,7 +339,7 @@ export const getRuntime = query(async () =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/diagnostics/+page.svelte<span class="code__lines">:99-106</span></span>
+		<span class="code__file">src/routes/(app)/diagnostics/+page.svelte<span class="code__lines">:101-108</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;label class=&quot;field limit&quot;&gt;
@@ -309,8 +366,8 @@ export const getRuntime = query(async () =&gt; {
 			{const total = $derived(Math.max(1, ...spans.map((s) =&gt; s.start + s.duration - start)))}
 			&lt;ol class=&quot;waterfall&quot;&gt;
 				{#each spans as span (span.spanId)}
-					{const left = ((span.start - start) / total) * 100}
-					{const width = Math.max(0.5, (span.duration / total) * 100)}
+					{const left = $derived(((span.start - start) / total) * 100)}
+					{const width = $derived(Math.max(0.5, (span.duration / total) * 100))}
 					&lt;li class=&quot;waterfall__row&quot;&gt;
 						&lt;span class=&quot;waterfall__name&quot;&gt;{span.name}&lt;/span&gt;
 						&lt;span class=&quot;waterfall__track&quot;&gt;
@@ -331,7 +388,7 @@ export const getRuntime = query(async () =&gt; {
 	&lt;/Section&gt;
 {/if}</code></pre>
 </figure>
-<p>One request as a waterfall: the spans of one trace, oldest first, each bar positioned by its start and sized by its duration. Every value is a <code>{const}</code> in markup; there is no script-side state for the drawing at all.</p>
+<p>One request as a waterfall: the spans of one trace, oldest first, each bar positioned by its start and sized by its duration. Every value is a declaration in markup, and every one is <code>$derived</code>: the rows are keyed by span id, so a row is reused when the trace is fetched again with a new span in it, and its <code>left</code> and <code>width</code> must follow the new <code>start</code> and <code>total</code> rather than keep the ones it was created with (ch. 16). There is no script-side state for the drawing at all.</p>
 <h3 id="the-endpoints">Three endpoints</h3>
 
 <figure class="code">

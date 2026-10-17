@@ -23,7 +23,8 @@
 >
 	{#each pattern.tracks as track, row (track.id)}
 		{#each track.steps as step, column (column)}
-			{const on = step.velocity > 0}
+			<!-- `$derived`: the embed swaps patterns under a grid that stays mounted. -->
+			{const on = $derived(step.velocity > 0)}
 			<rect
 				x={column * (cell + gap)}
 				y={row * (cell + gap)}

@@ -15,6 +15,7 @@
 
 import * as v from 'valibot';
 import { error, invalid, isHttpError, redirect } from '@sveltejs/kit';
+import { resolve } from '$app/paths';
 import { command, form, prerender, query, requested } from '$app/server';
 import { fromDto, PatternDtoSchema } from '#lib/pattern/dto.ts';
 import { HandleSchema } from '#lib/handle.ts';
@@ -151,7 +152,7 @@ export const publish = form(
 		void getMine().refresh();
 		await requested(getPatterns, 3).refreshAll();
 
-		if (action === 'open') redirect(303, `/p/${published.id}`);
+		if (action === 'open') redirect(303, resolve('/(app)/p/[id]', { id: published.id }));
 
 		return {
 			id: published.id,

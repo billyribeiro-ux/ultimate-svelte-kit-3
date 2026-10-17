@@ -18,11 +18,13 @@
  *
  * WHERE THE MANIFEST COMES FROM
  * -----------------------------
- * SvelteKit 3 split the old `$service-worker` module apart: the build's files
- * are `$app/manifest` (`immutable`, `assets`, `prerendered`), the build id is
- * `version` from `$app/env`, the path helpers are `$app/paths`, and
- * `$app/service-worker` exports one thing — a correctly typed `self`, so the
- * worker's global is a `ServiceWorkerGlobalScope` without a cast.
+ * SvelteKit 3 removed the old `$service-worker` module, and three modules
+ * replace it: the build's files are `$app/manifest` (`immutable`, `assets`,
+ * `prerendered`), the build id is `version` from `$app/env`, and the path
+ * helpers are `$app/paths`. A fourth, `$app/service-worker`, is new rather
+ * than a replacement — `$service-worker` never had it — and exports one
+ * thing: a correctly typed `self`, so the worker's global is a
+ * `ServiceWorkerGlobalScope` without a cast.
  *
  * WHY IT HAS A FOLDER
  * -------------------

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { SvelteURL } from 'svelte/reactivity';
+	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import Section from '#lib/components/Section.svelte';
 
@@ -74,7 +75,8 @@
 		<p class="prose">
 			Call <code>player.play()</code> or <code>player.stop()</code> on the element — the methods
 			exist before the player has even loaded. Or set the <code>playing</code> attribute. See it on
-			a page with none of this site around it: <a href="/embed/demo#{id}">the bare demo</a>.
+			a page with none of this site around it:
+			<a href={resolve(`/(app)/embed/demo#${id}`)}>the bare demo</a>.
 		</p>
 	</Section>
 </div>

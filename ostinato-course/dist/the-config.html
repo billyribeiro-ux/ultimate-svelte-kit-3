@@ -39,7 +39,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:1-37</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:1-48</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">// `defineConfig` comes from `vitest/config` so the `test` block below type-checks;
@@ -51,6 +51,7 @@ import { playwright } from '@vitest/browser-playwright';
 import { sveltekit } from '@sveltejs/kit/vite';
 import { sveltePhosphorOptimize } from 'phosphor-svelte/vite';
 import ostinato from './adapters/ostinato/index.js';
+import { FILE_HEADERS } from './src/lib/security.ts';
 /*
  * A default import rather than `{ version }`: a JSON module has only a default
  * export per spec, and Vite 8's native config loader — the default in the next
@@ -78,14 +79,24 @@ export default defineConfig(({ mode }) =&gt; {
 				 * reconstruct `https://…` from headers and reject every POST as
 				 * cross-site.
 				 */
-				paths: { origin: env.PUBLIC_ORIGIN },</code></pre>
+				/*
+				 * `relative: false`: links are root-relative — `/studio` — on the server
+				 * as well as in the browser. The default writes them relative to the page
+				 * being rendered (`./studio`, `../studio`), which is for a build that
+				 * must work from any folder or from `file://`. This one is served at the
+				 * root of one origin by its own adapter, and a link should read the same
+				 * whichever side of hydration drew it — the navigation's `aria-current`
+				 * compares `resolve()` against `page.url.pathname`, and a relative href
+				 * never matches a pathname.
+				 */
+				paths: { origin: env.PUBLIC_ORIGIN, relative: false },</code></pre>
 </figure>
-<p>Two things to notice. <code>defineConfig</code> comes from <code>vitest/config</code> rather than <code>vite</code>, so the <code>test</code> block at the bottom type-checks. And <code>paths.origin</code> is a build-time value: the adapter bakes it into the server so that CSRF checks compare the origin you declared, not one reconstructed from headers.</p>
+<p>Three things to notice. <code>defineConfig</code> comes from <code>vitest/config</code> rather than <code>vite</code>, so the <code>test</code> block at the bottom type-checks. <code>paths.origin</code> is a build-time value: the adapter bakes it into the server so that CSRF checks compare the origin you declared, not one reconstructed from headers. And <code>paths.relative</code> is <code>false</code>, so a link the server writes is <code>/studio</code> rather than <code>./studio</code> or <code>../studio</code>. The relative default is for a build that has to work from any folder; this one is served at the root of one origin, and every internal link goes through <code>resolve()</code> (ch. 27), which on the server would otherwise answer relative to the page being rendered.</p>
 <h3 id="compiler">The compiler options</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:39-57</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:50-68</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">compilerOptions: {
@@ -112,7 +123,7 @@ export default defineConfig(({ mode }) =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:59-92</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:70-108</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -147,15 +158,20 @@ dynamicCompileOptions({ filename, environment }) {
  * request from one to the other when the `reroute` hook says so. It
  * exists to show what an adapter *is*; the end-to-end suite runs against
  * its output, which is the only proof of an adapter that counts.
+ *
+ * `headers` go on every file the adapter serves itself, prerendered
+ * pages included. No hook runs for those, so without this the landing
+ * page — the first page most people see — would go out with none of
+ * the headers `handleSecurity` puts on everything else.
  */
-adapter: ostinato(),</code></pre>
+adapter: ostinato({ headers: FILE_HEADERS }),</code></pre>
 </figure>
-<p><code>dynamicCompileOptions</code> is called per file and, since vite-plugin-svelte 7.3.0, per *environment*. That second argument is what lets one folder be compiled as a custom element *for the client only* — a server render of a custom element is a thing that cannot exist, and the guard says so instead of relying on the compiler to quietly decline.</p>
+<p><code>dynamicCompileOptions</code> is called per file and, since vite-plugin-svelte 7.3.0, per *environment*. That second argument is what lets one folder be compiled as a custom element *for the client only* — a server render of a custom element is a thing that cannot exist, and the guard says so instead of relying on the compiler to quietly decline. The adapter is handed one option, <code>headers</code>: the files it serves itself never pass through a hook, so the security headers have to be given to it directly (ch. 36).</p>
 <h3 id="experimental">Experimental, with evidence</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:94-122</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:110-138</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">experimental: {
@@ -198,7 +214,7 @@ adapter: ostinato(),</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:124-144</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:140-160</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/*
@@ -228,7 +244,7 @@ prerender: {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:146-227</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:162-255</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/*
@@ -239,13 +255,25 @@ prerender: {
  * is known at build time, and nonces for dynamically rendered ones,
  * which stream `resolve(…)` scripts after the header has gone.
  *
- * The directives that are specific to an instrument:
+ * The directives that are specific to this app:
  *   `media-src blob:`  the exported WAV is played back from a Blob URL
- *   `img-src data:`    the share card is an SVG data URL in the studio
+ *   `font-src data:`   Vite inlines any asset under 4 KB as a data URL
+ *                      (`build.assetsInlineLimit`), and one of fontsource's
+ *                      subset files is that small — so the stylesheet
+ *                      carries a `url(data:font/woff2;…)`.
  *   `style-src 'unsafe-inline'` — a deliberate trade. Knobs and the
  *                      playhead set `style:--angle` per frame; attributes
  *                      cannot be hashed and a nonce does not apply to them.
  *                      The exposure is CSS injection, not script execution.
+ *
+ * Images are `'self'` only. The share card in the studio and on the
+ * pattern page is a URL on this origin, `/p/&lt;id&gt;/card.svg`, not a data
+ * URL, and nothing else draws one. The end-to-end test that visits both
+ * and listens for violations is what keeps that true.
+ *
+ * `frame-ancestors` only works in a header. A prerendered page gets its
+ * policy as a `&lt;meta&gt;` tag, where browsers ignore it, which is why the
+ * adapter adds `X-Frame-Options` to the files it serves (`lib/security.ts`).
  */
 csp: {
 	mode: 'auto',
@@ -253,7 +281,7 @@ csp: {
 		'default-src': ['self'],
 		'script-src': ['self'],
 		'style-src': ['self', 'unsafe-inline'],
-		'img-src': ['self', 'data:'],
+		'img-src': ['self'],
 		'media-src': ['self', 'blob:'],
 		'font-src': ['self', 'data:'],
 		'connect-src': ['self'],
@@ -309,7 +337,7 @@ output: { bundleStrategy: 'split' },
  * Route resolution on the client, which is the default and worth stating
  * because the alternative was considered. `'server'` keeps the route
  * manifest off the wire and lets a middleware intercept navigations, at
- * the cost of a round trip for every unvisited path. This app has nine
+ * the cost of a round trip for every unvisited path. This app has a dozen
  * routes; its manifest is smaller than the round trip.
  */
 router: { type: 'pathname', resolution: 'client' }</code></pre>
@@ -319,7 +347,7 @@ router: { type: 'pathname', resolution: 'client' }</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:254-307</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:282-335</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">test: {

@@ -34,7 +34,7 @@
 
 	/** Move focus in when the sheet opens, and back to where it was when it closes. */
 	const focusIn: Attachment<HTMLElement> = (node) => {
-		const previous = document.activeElement as HTMLElement | null;
+		const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
 		node.querySelector<HTMLElement>('[data-close]')?.focus();
 		return () => previous?.focus();
 	};

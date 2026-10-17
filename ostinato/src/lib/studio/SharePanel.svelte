@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { fork, type Fork } from 'svelte';
+	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import * as v from 'valibot';
 	import { CopyIcon, DownloadSimpleIcon, PauseIcon, PlayIcon } from 'phosphor-svelte';
@@ -229,6 +230,7 @@
 							/>{/if}
 					</button>
 					<span class="mono">{clock(currentTime)} / {clock(duration)}</span>
+					<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- a `blob:` download, not a page -->
 					<a class="btn btn--primary" href={rendered.url} download="{session.pattern.title}.wav">
 						<DownloadSimpleIcon size={16} /> Download ({rendered.kilobytes} KB)
 					</a>
@@ -332,6 +334,8 @@
 		{#if publish.result}
 			<div class="stack published">
 				<p>
+					<!-- A vanity address: not a route, so nothing for `resolve()` to check (ch. 26). -->
+					<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
 					Live at <a href={publish.result.url}>{publish.result.url}</a>
 					<button
 						type="button"
@@ -343,7 +347,7 @@
 				</p>
 				<img
 					class="card-preview"
-					src="/p/{publish.result.id}/card.svg"
+					src={resolve('/(app)/p/[id]/card.svg', { id: publish.result.id })}
 					alt="Share card for {session.pattern.title}"
 				/>
 			</div>

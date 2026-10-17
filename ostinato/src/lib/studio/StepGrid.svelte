@@ -54,7 +54,10 @@
 		{ value: 'erase', label: 'Erase', key: '4' }
 	];
 
+	// Svelte plays transitions with the Web Animations API, which the stylesheet's
+	// reduced-motion rule cannot reach, so each duration asks for itself.
 	const flipDuration = $derived(prefersReducedMotion.current ? 0 : 220);
+	const fadeDuration = $derived(prefersReducedMotion.current ? 0 : 120);
 </script>
 
 <div class="grid" role="group" aria-label="Step sequencer">
@@ -87,17 +90,23 @@
 				class={['track', { 'track--selected': track.id === selected, 'track--muted': track.muted }]}
 				style:--hue={`var(--hue-${track.kind})`}
 				animate:flip={{ duration: flipDuration }}
-				out:fade={{ duration: 120 }}
+				out:fade={{ duration: fadeDuration }}
 			>
 				<!--
 					Declaration tags inside the `<li>`, not before it: an element with
 					`animate:` must be the *only* child of its keyed `{#each}` block, and
 					a declaration is a child too. They are visible to everything below.
+
+					Every one is `$derived`. A plain `{const x = …}` is worked out once,
+					when the row is created, and never again — and this row outlives
+					every step painted in it and every change of instrument. Written
+					plainly, the "all steps" box would describe the row as it was when
+					the pattern loaded.
 				-->
-				{const count = track.steps.filter((s) => s.velocity > 0).length}
-				{const all = count === STEPS}
-				{const some = count > 0 && !all}
-				{const melodic = MELODIC.has(track.kind)}
+				{const count = $derived(track.steps.filter((s) => s.velocity > 0).length)}
+				{const all = $derived(count === STEPS)}
+				{const some = $derived(count > 0 && !all)}
+				{const melodic = $derived(MELODIC.has(track.kind))}
 				<header class="track__head">
 					<!--
 						Function bindings: `bind:checked={get, set}`. The box is *derived*

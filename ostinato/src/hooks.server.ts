@@ -27,23 +27,19 @@ import {
 	type HandleServerError,
 	type ServerInit
 } from '@sveltejs/kit/hooks';
+import { SECURITY_HEADERS } from '#lib/security.ts';
 import { COOKIE, verify } from '#lib/server/identity.ts';
 import { setCapacity } from '#lib/server/tracing.ts';
 
+/*
+ * The artist goes into `locals` and nowhere else. In particular not onto the
+ * request's span: the spans are read back by `/diagnostics`, a page anybody
+ * can open, and a handle beside every path somebody visited is a record of
+ * what they did, published.
+ */
 const handleIdentity: Handle = async ({ event, resolve }) => {
 	const artist = await verify(event.cookies.get(COOKIE), SESSION_SECRET);
-
-	if (artist) {
-		event.locals.artist = artist;
-		/*
-		 * The root span is the one for the whole request. Tagging it with the
-		 * handle means the diagnostics page can answer "what did @someone do" —
-		 * and it is the handle rather than the id because the id is the secret
-		 * half of the cookie and a span store is not a place for secrets.
-		 */
-		event.tracing.root.setAttribute('artist.handle', artist.handle);
-	}
-
+	if (artist) event.locals.artist = artist;
 	return resolve(event);
 };
 
@@ -76,10 +72,8 @@ const handleSecurity: Handle = async ({ event, resolve }) => {
 		}
 	});
 
-	response.headers.set('x-content-type-options', 'nosniff');
-	response.headers.set('referrer-policy', 'strict-origin-when-cross-origin');
-	// An instrument that makes sound has no business hearing any.
-	response.headers.set('permissions-policy', 'microphone=(), camera=(), geolocation=()');
+	// The same three the adapter puts on every file it serves (`lib/security.ts`).
+	for (const [name, value] of Object.entries(SECURITY_HEADERS)) response.headers.set(name, value);
 
 	/*
 	 * `Vary: Cookie` on the pages, because the header shows the artist's handle
@@ -100,18 +94,18 @@ export const handle: Handle = sequence(handleIdentity, handleSecurity);
  * in remote functions, and in the `reroute` hook, which is the one this app
  * actually makes.
  *
- * SAME ORIGIN, TWO CASES
- * ----------------------
- * Normally a same-origin call is left alone: SvelteKit answers it in-process,
- * without a socket, by calling its own `respond`. That is exactly wrong in one
- * place — the adapter's catch-all function. It has no routes, so "answer it
- * yourself" means a 404, and the `reroute` hook that asked what `/@handle/slug`
- * means never finds out. On a real multi-function platform the call would
- * leave the function and arrive at the API's URL; here that URL is the same
- * server, so the global `fetch` — a real request over the loopback — is what
- * gets it to the function that can answer. `event.platform.entry` is how the
- * hook knows which function it is running in; the emulator says `pages`, so
- * development takes the in-process path like everything else.
+ * SAME ORIGIN: LEFT TO SVELTEKIT
+ * ------------------------------
+ * A same-origin call is passed straight on. SvelteKit answers it in-process,
+ * without a socket, by calling its own `respond` — and when the server it is
+ * running in has no route for the path, it makes a real HTTP request instead
+ * (`respond.js`: "we can't load the endpoint from our own manifest, so we need
+ * to make an actual HTTP request"). That fallback is what carries the
+ * adapter's catch-all, which has no routes at all, to the `api` function when
+ * `reroute` asks `/api/resolve` what `/@handle/slug` means. It is also why
+ * `PUBLIC_ORIGIN` has to name the port the server is really on: the fallback
+ * request goes to the request's own origin. The vanity-address test in
+ * `e2e/pattern.e2e.ts` is the proof that nothing more is needed here.
  *
  * Anything else — there is nothing else today, and the point of writing the
  * branch is that "today" is a word that stops being true — gets a ten second
@@ -125,7 +119,6 @@ export const handleFetch: HandleFetch = ({ request, fetch, event }) => {
 		// annotate; the optional chain is the difference between a note in a
 		// trace and a 500 on every vanity address.
 		event.tracing?.current?.addEvent('fetch.internal', { 'url.path': url.pathname });
-		if (event.platform?.entry === 'router') return globalThis.fetch(request);
 		return fetch(request);
 	}
 

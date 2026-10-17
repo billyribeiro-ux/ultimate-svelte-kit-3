@@ -129,12 +129,12 @@ export const part2 = [
 			},
 
 			{ type: 'h3', id: 'getorinsertcomputed', text: 'getOrInsertComputed (Svelte 5.57)' },
-			code('src/lib/audio/engine.svelte.ts', 128, 165),
+			code('src/lib/audio/engine.svelte.ts', 128, 168),
 			{
 				type: 'p',
-				text: 'The old spelling was `get`, an `if`, a `new` and a `set` — and the old bug was building a second strip because two callers raced through the `if`. A track with two outputs plays at double volume, which is a good bug to never write again. `getOrInsertComputed` is exactly “look it up, and if it is not there, build it once and keep it”. `channels` is a `SvelteMap` because the mixer reads `has(track.id)` to decide whether to draw a meter, and a meter that appears on its own the first time a track sounds is nicer than one that waits for a re-render.'
+				text: 'The old spelling was four statements — `get`, an `if`, a `new` and a `set` — and two lookups, and the statement that matters is the `set`, which is also the one an edit can lose without anything failing to compile. Lose it and every call builds a fresh strip and connects it to the master; the scheduler calls `channel()` once per hit, so a track would end up with as many outputs as it has played notes. (It is not a race: JavaScript runs that `if` to the end before anything else runs, and the factory is synchronous. The danger is the half-written version, not a concurrent one.) `getOrInsertComputed` is exactly “look it up, and if it is not there, build it once and keep it”, and one call cannot be half-written. `channels` is a `SvelteMap` because the mixer reads `has(track.id)` to decide whether to draw a meter, and a meter that appears on its own the first time a track sounds is nicer than one that waits for a re-render.'
 			},
-			code('src/lib/audio/engine.svelte.ts', 167, 190, { partial: true }),
+			code('src/lib/audio/engine.svelte.ts', 170, 193, { partial: true }),
 			{
 				type: 'note',
 				text: '`level()` is static and not reactive on purpose. The meter that draws it runs on `requestAnimationFrame` — the right clock for something that changes sixty times a second — and routing that through the reactivity system would be a signal write per frame to notify nobody.'
@@ -162,14 +162,14 @@ export const part2 = [
 				type: 'p',
 				text: 'Read the header slowly; it is the most important idea in the engine. A JavaScript timer fires *at least* as late as you asked, and later when the tab is busy. Web Audio has its own clock, accurate to a sample, and every sound can be told *when* to start on it. So the timer is used only to look ahead: every 25ms it schedules whatever falls in the next 100ms, exactly. The timer can be 50ms late and nothing is heard, because everything it needed to schedule was already scheduled last time.'
 			},
-			code('src/lib/audio/scheduler.svelte.ts', 44, 79, { partial: true }),
+			code('src/lib/audio/scheduler.svelte.ts', 44, 81, { partial: true }),
 			{
 				type: 'why',
 				title: 'Why the pattern is a getter',
-				text: 'The scheduler is built with `() => session.pattern`, not `session.pattern`. The timer calls the getter on every tick, so a step toggled while playing is heard the next time the playhead reaches it. Reading `$state` inside a timer is *untracked* — nothing re-runs because the pattern changed — which is exactly what we want here: the next tick simply sees the new one. This is the difference between “reactive” and “current”, and a scheduler wants the second.'
+				text: 'The scheduler is built with `() => session.pattern`, not `session.pattern`. The timer calls the getter on every tick, so a step toggled while playing is heard the next time the playhead reaches it. Reading `$state` inside a timer is *untracked* — nothing re-runs because the pattern changed — which is exactly what we want here: the next tick simply sees the new one. This is the difference between “reactive” and “current”, and a scheduler wants the second. The getter is allowed to answer `null` — the embeddable player has nothing to play while a pattern is on its way (ch. 33) — and a tick that finds nothing stops the transport rather than reading `null.bpm` forty times a second.'
 			},
-			code('src/lib/audio/scheduler.svelte.ts', 81, 109),
-			code('src/lib/audio/scheduler.svelte.ts', 111, 141, { partial: true }),
+			code('src/lib/audio/scheduler.svelte.ts', 83, 111),
+			code('src/lib/audio/scheduler.svelte.ts', 113, 144, { partial: true }),
 			{
 				type: 'p',
 				text: 'The tick loop schedules steps until it is 100ms ahead; tempo is read per step, so a BPM change lands on the next sixteenth rather than the next bar. Each scheduled step is pushed onto a queue with its audio time, and a `requestAnimationFrame` loop pops the ones whose time has come and sets `step` — which *is* `$state`, so the grid highlights the right column on the frame it starts. The queue itself is a plain array: nothing renders from it, and a proxy around something touched a hundred times a second would be a hundred signal writes to notify nobody.'

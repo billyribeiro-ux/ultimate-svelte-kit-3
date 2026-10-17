@@ -128,8 +128,8 @@
 	 * and does not exist in an IIFE.)
 	 */
 	const scriptSource =
-		typeof document !== 'undefined'
-			? (document.currentScript as HTMLScriptElement | null)?.src
+		typeof document !== 'undefined' &amp;&amp; document.currentScript instanceof HTMLScriptElement
+			? document.currentScript.src
 			: undefined;
 	const scriptOrigin = scriptSource
 		? new URL(scriptSource).origin
@@ -142,7 +142,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/embed/OstinatoPlayer.svelte<span class="code__lines">:109-123</span></span>
+		<span class="code__file">src/lib/embed/OstinatoPlayer.svelte<span class="code__lines">:123-137</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/**
@@ -165,7 +165,38 @@ function announce(type: 'ready' | 'play' | 'stop' | 'error', detail?: unknown) {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/embed/OstinatoPlayer.svelte<span class="code__lines">:125-168</span></span>
+		<span class="code__file">src/lib/embed/OstinatoPlayer.svelte<span class="code__lines">:98-121</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">const engine = new AudioEngine();
+let loaded = $state&lt;Pattern | null&gt;(null);
+let title = $state('');
+let artist = $state('');
+let error = $state&lt;string | null&gt;(null);
+
+// `loaded` is `null` while a pattern is on its way, and the scheduler is
+// told so rather than promised otherwise with a `!`.
+const scheduler = new Scheduler(engine, () =&gt; loaded, {
+	output: (track) =&gt; engine.channel(track).input,
+	sample: () =&gt; undefined
+});
+
+/**
+ * What `/api/patterns/&lt;id&gt;` answers, checked on arrival. This element runs
+ * on other people's pages against whatever `src` they gave it, so the body
+ * is as untrusted as any request — and the pattern inside it gets the same
+ * schema the server stores it with.
+ */
+const PatternResponse = v.object({
+	title: v.string(),
+	artist: v.string(),
+	pattern: PatternDtoSchema
+});</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/embed/OstinatoPlayer.svelte<span class="code__lines">:139-190</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">// Fetch whenever the id or origin changes. An effect, because a network
@@ -182,17 +213,19 @@ $effect(() =&gt; {
 	fetch(new URL(`/api/patterns/${id}`, base))
 		.then(async (response) =&gt; {
 			if (!response.ok) throw new Error(`No pattern ${id} (${response.status})`);
-			const body = await response.json();
+			const body = v.parse(PatternResponse, await response.json());
 			if (cancelled) return;
 			title = body.title;
 			artist = body.artist;
-			loaded = fromDto(v.parse(PatternDtoSchema, body.pattern));
+			loaded = fromDto(body.pattern);
 			announce('ready', { id, title: body.title });
 		})
-		.catch((e: Error) =&gt; {
+		.catch((e: unknown) =&gt; {
 			if (cancelled) return;
-			error = e.message;
-			announce('error', e.message);
+			// A rejected `fetch` and a failed schema are both `Error`s; anything
+			// else thrown at this point is not, and gets a sentence of its own.
+			error = e instanceof Error ? e.message : `Pattern ${id} could not be read`;
+			announce('error', error);
 		});
 
 	return () =&gt; {
@@ -201,8 +234,14 @@ $effect(() =&gt; {
 });
 
 // The `playing` prop drives the transport; the transport reports back.
+// No pattern — the host page has just swapped `pattern` and the new one is
+// still on its way — means no sound until it arrives; `playing` is left as
+// the host set it, so the new pattern starts by itself.
 $effect(() =&gt; {
-	if (!loaded) return;
+	if (!loaded) {
+		scheduler.stop();
+		return;
+	}
 	if (playing &amp;&amp; !scheduler.playing) {
 		void scheduler.start().then(() =&gt; announce('play'));
 	} else if (!playing &amp;&amp; scheduler.playing) {
@@ -213,12 +252,17 @@ $effect(() =&gt; {
 
 $effect(() =&gt; () =&gt; scheduler.stop());</code></pre>
 </figure>
-<p>Two effects. The first fetches whenever the id or origin changes — a network request in response to a prop is an interaction with the outside world, which is what <code>$effect</code> is for — with a <code>cancelled</code> flag so a response for an old id is dropped. The second drives the transport from the <code>playing</code> prop and reports back, so setting the attribute, calling the method and pressing the button all do the same thing.</p>
+<p>Two effects. The first fetches whenever the id or origin changes — a network request in response to a prop is an interaction with the outside world, which is what <code>$effect</code> is for — with a <code>cancelled</code> flag so a response for an old id is dropped. The body is parsed with a valibot schema, not read as <code>any</code>: this element runs on other people’s pages against whatever <code>src</code> they gave it, so the response is as untrusted as a request body, and the pattern inside it gets the same <code>PatternDtoSchema</code> the server stores patterns with. The <code>catch</code> takes an <code>unknown</code> — a rejected promise can carry anything — and reads <code>message</code> only after <code>instanceof Error</code>. The second effect drives the transport from the <code>playing</code> prop and reports back, so setting the attribute, calling the method and pressing the button all do the same thing.</p>
+
+<aside class="callout callout--why">
+	<h4>Why the transport stops when the pattern goes</h4>
+	<p>When the host page changes the <code>pattern</code> attribute, the fetch effect sets <code>loaded = null</code> until the new one arrives. The scheduler was built with <code>() =&gt; loaded!</code> — a getter promising, with a <code>!</code>, that there would always be a pattern. There was not: a player swapped mid-play kept ticking every 25 ms against <code>null</code>, and threw <code>Cannot read properties of null (reading &quot;bpm&quot;)</code> forty times a second until the fetch came back. A non-null assertion that can be false is a crash with the type checker’s blessing. Now the getter returns <code>Pattern | null</code>, the scheduler’s tick stops the transport when it finds nothing (ch. 12), and the transport effect stops it the moment <code>loaded</code> empties, leaving <code>playing</code> as the host set it — so the new pattern starts by itself when it lands. The embed suite swaps the attribute while playing, holds the new pattern back, and fails on any uncaught error.</p>
+</aside>
 <h3 id="built-twice">Built twice</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:59-79</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:70-90</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -312,7 +356,7 @@ export default defineConfig({
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/embed/+page.svelte<span class="code__lines">:7-36</span></span>
+		<span class="code__file">src/routes/(app)/embed/+page.svelte<span class="code__lines">:8-37</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">	/**
@@ -350,7 +394,7 @@ export default defineConfig({
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/embed/demo/+page@.svelte<span class="code__lines">:4-23</span></span>
+		<span class="code__file">src/routes/(app)/embed/demo/+page@.svelte<span class="code__lines">:5-24</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">	/**

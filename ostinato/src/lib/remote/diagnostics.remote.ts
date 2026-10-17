@@ -2,9 +2,14 @@
  * WHAT THE SERVER KNOWS ABOUT ITSELF
  * ==================================
  *
- * Read by `/diagnostics`. Nothing here is secret — the spans carry route
- * names and durations, not bodies — and the page exists so that "what did
- * that request do" can be answered without a second service.
+ * Read by `/diagnostics`, and deliberately public: there is no check inside
+ * these three because there is nobody to check for. The app has no accounts
+ * and no operators — a handle is a name a browser chose, not a permission —
+ * so the decision is made on the other side, about what goes *in*. The spans
+ * carry route names, paths and durations; not bodies, not query strings
+ * (`lib/server/tracing.ts` drops them), and not who made the request
+ * (`hooks.server.ts` no longer tags it). A deployment that wanted more in its
+ * spans would want an operator secret checked here first.
  */
 
 import * as v from 'valibot';

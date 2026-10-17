@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { hydratable } from 'svelte';
+	import { resolve } from '$app/paths';
 	import { cinematic } from '#lib/motion/cinematic.ts';
 	import { getFeatured } from '#lib/remote/patterns.remote.ts';
 	import { preset } from '#lib/pattern/presets.ts';
@@ -69,8 +70,12 @@
 	</p>
 
 	<div class="hero__actions cluster" data-rise>
-		<a class="btn btn--primary btn--lg" href="/studio?preset=four-on-the-floor">Open the studio</a>
-		<a class="btn btn--lg" href="/jam/lobby">Join the lobby jam</a>
+		<a class="btn btn--primary btn--lg" href={resolve('/(app)/studio?preset=four-on-the-floor')}
+			>Open the studio</a
+		>
+		<a class="btn btn--lg" href={resolve('/(app)/jam/[room]', { room: 'lobby' })}
+			>Join the lobby jam</a
+		>
 	</div>
 
 	<div class="demo" aria-hidden="true">

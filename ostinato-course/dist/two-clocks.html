@@ -88,12 +88,12 @@ const LOOKAHEAD_S = 0.1;</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/audio/scheduler.svelte.ts<span class="code__lines">:44-79</span></span>
+		<span class="code__file">src/lib/audio/scheduler.svelte.ts<span class="code__lines">:44-81</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">export class Scheduler {
 	#engine: AudioEngine;
-	#pattern: () =&gt; Pattern;
+	#pattern: () =&gt; Pattern | null;
 	#outputs: Outputs;
 
 	#timer: ReturnType&lt;typeof setInterval&gt; | null = null;
@@ -120,9 +120,11 @@ const LOOKAHEAD_S = 0.1;</code></pre>
 	 * every tick, so a step toggled while playing is heard the next time the
 	 * playhead reaches it. Reading `$state` inside a timer is untracked, which
 	 * is what we want: nothing should re-run because the pattern changed —
-	 * the next tick simply sees the new one.
+	 * the next tick simply sees the new one. It may answer `null` — the
+	 * embeddable player has nothing to play while it fetches — and a tick that
+	 * finds nothing stops the transport rather than reading `null.bpm`.
 	 */
-	constructor(engine: AudioEngine, pattern: () =&gt; Pattern, outputs: Outputs) {
+	constructor(engine: AudioEngine, pattern: () =&gt; Pattern | null, outputs: Outputs) {
 		this.#engine = engine;
 		this.#pattern = pattern;
 		this.#outputs = outputs;
@@ -131,12 +133,12 @@ const LOOKAHEAD_S = 0.1;</code></pre>
 
 <aside class="callout callout--why">
 	<h4>Why the pattern is a getter</h4>
-	<p>The scheduler is built with <code>() =&gt; session.pattern</code>, not <code>session.pattern</code>. The timer calls the getter on every tick, so a step toggled while playing is heard the next time the playhead reaches it. Reading <code>$state</code> inside a timer is *untracked* — nothing re-runs because the pattern changed — which is exactly what we want here: the next tick simply sees the new one. This is the difference between “reactive” and “current”, and a scheduler wants the second.</p>
+	<p>The scheduler is built with <code>() =&gt; session.pattern</code>, not <code>session.pattern</code>. The timer calls the getter on every tick, so a step toggled while playing is heard the next time the playhead reaches it. Reading <code>$state</code> inside a timer is *untracked* — nothing re-runs because the pattern changed — which is exactly what we want here: the next tick simply sees the new one. This is the difference between “reactive” and “current”, and a scheduler wants the second. The getter is allowed to answer <code>null</code> — the embeddable player has nothing to play while a pattern is on its way (ch. 33) — and a tick that finds nothing stops the transport rather than reading <code>null.bpm</code> forty times a second.</p>
 </aside>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/audio/scheduler.svelte.ts<span class="code__lines">:81-109</span></span>
+		<span class="code__file">src/lib/audio/scheduler.svelte.ts<span class="code__lines">:83-111</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">async start(): Promise&lt;void&gt; {
@@ -172,13 +174,14 @@ toggle(): Promise&lt;void&gt; | void {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/audio/scheduler.svelte.ts<span class="code__lines">:111-141</span></span>
+		<span class="code__file">src/lib/audio/scheduler.svelte.ts<span class="code__lines">:113-144</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">	/** Schedule everything due in the lookahead window. */
 	#tick(): void {
 		const ctx = this.#engine.context;
 		const pattern = this.#pattern();
+		if (!pattern) return this.stop();
 
 		while (this.#nextTime &lt; ctx.currentTime + LOOKAHEAD_S) {
 			const at = scheduleStep(ctx, this.#outputs, pattern, this.#nextStep, this.#nextTime);

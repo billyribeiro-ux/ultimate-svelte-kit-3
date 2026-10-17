@@ -39,7 +39,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/studio/+page.ts<span class="code__lines">:7-62</span></span>
+		<span class="code__file">src/routes/(app)/studio/+page.ts<span class="code__lines">:6-61</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -90,7 +90,7 @@ export const load: PageLoad = async ({ url }) =&gt; {
 	if (name &amp;&amp; name in PRESETS) {
 		return {
 			source: 'preset' as const,
-			pattern: preset(name) as Pattern,
+			pattern: preset(name),
 			remixOf: null,
 			title: 'Studio'
 		};
@@ -155,21 +155,42 @@ onMount(() =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/studio/+page.svelte<span class="code__lines">:61-91</span></span>
+		<span class="code__file">src/routes/(app)/studio/+page.svelte<span class="code__lines">:61-112</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/**
  * SNAPSHOT
  * ========
  * Navigating away and back — to the gallery to steal an idea, say — must
- * not lose the pattern. `capture` runs before the page is left, `restore`
- * when it comes back, and the value is kept with the history entry. It is
- * the encoded string: small, serialisable, and exactly what a link holds.
+ * not lose the pattern. `snapshot()` from `$app/navigation` registers a
+ * `capture` that runs before the page is left and a `restore` that runs
+ * when its history entry comes back; the value is kept with that entry, and
+ * in `sessionStorage`, so a reload brings it back too. The code is the
+ * encoded pattern: small, and exactly what a link holds. The `id` keeps
+ * the stored value readable by the next deployment, whose stack traces —
+ * the default id — would differ.
+ *
+ * The helper also captures on *shallow* navigations, which the old
+ * `export const snapshot` never did, and this page makes one every time a
+ * panel opens. So closing the sound panel restores what was captured when
+ * it opened — and, taken at its word, would throw away every change made
+ * in the panel, and the undo history with them. `lineage` tells the two
+ * cases apart. It names the studio that wrote a value: a value from this
+ * same studio is a panel closing over a pattern that is already newer, and
+ * is left alone; a value from another one is a studio rebuilt — after the
+ * gallery, or a reload — and is loaded. The studio that loads it takes the
+ * lineage on, so stepping further back through its old panels stays a no-op.
  */
-export const snapshot: Snapshot&lt;string&gt; = {
-	capture: () =&gt; session.encoded,
-	restore: (code) =&gt; session.load(decodePattern(code), { remixOf: session.remixOf })
-};
+let lineage = Math.random().toString(36).slice(2);
+snapshot&lt;{ code: string; lineage: string }&gt;({
+	id: 'studio',
+	capture: () =&gt; ({ code: session.encoded, lineage }),
+	restore: (value) =&gt; {
+		if (value.lineage === lineage) return;
+		lineage = value.lineage;
+		session.load(decodePattern(value.code), { remixOf: session.remixOf });
+	}
+});
 
 // Autosave to localStorage after every change; the root effect's teardown is this effect's cleanup.
 $effect(() =&gt; session.autosave());
@@ -190,13 +211,19 @@ $inspect(session.pattern.bpm, session.pattern.swing).with((type, bpm, swing) =&g
 	if (type === 'update') console.debug(`tempo → ${bpm} bpm, swing ${Math.round(swing * 100)}%`);
 });</code></pre>
 </figure>
-<p>Four things, each in the place Svelte or SvelteKit provides for it. <code>snapshot</code> is SvelteKit’s: <code>capture</code> runs before the page is left and <code>restore</code> when the back button brings it back, and the value — the encoded pattern, a few hundred characters — is stored with the history entry. Go to the gallery, come back, and the pattern is where you left it.</p>
+<p>Four things, each in the place Svelte or SvelteKit provides for it. <code>snapshot()</code> from <code>$app/navigation</code> registers a <code>capture</code> that runs before the page is left and a <code>restore</code> that runs when the back button brings its history entry back. The value — the encoded pattern, a few hundred characters — is stored with that entry and in <code>sessionStorage</code>, so a reload brings it back too. Go to the gallery, come back, and the pattern is where you left it. The explicit <code>id</code> keeps the stored value readable by the next deployment: the default id is worked out from the stack trace at the call, and a stack trace changes whenever the code above it does.</p>
+<aside class="callout callout--note"><p>SvelteKit 2 spelled this <code>export const snapshot: Snapshot&lt;string&gt; = { capture, restore }</code> from the page component, and this project did, until SvelteKit 3 deprecated it. The helper can be called from any component, not only a page or layout; it serialises with devalue (and the <code>transport</code> hook) rather than JSON; and it captures *shallow* navigations too, which the old export never did. That last difference is the one this page has to think about.</p></aside>
+
+<aside class="callout callout--why">
+	<h4>Why the snapshot carries a <code>lineage</code></h4>
+	<p>This page makes a shallow navigation every time a panel opens (ch. 18). The helper captures on it, so the studio’s own history entry now holds the pattern as it was *when the panel opened*. Close the sound panel — <code>history.back()</code> — and the helper restores that value. Taken at its word, <code>restore</code> would load it: every change made in the panel would vanish, and <code>session.load</code> would empty the undo history too. Nothing about the value says whether the studio that receives it is the one that wrote it, so the value carries that itself. <code>lineage</code> is a random name given to each studio when it is created. A value with this studio’s lineage is a panel closing over a pattern that is already newer, and is ignored; a value with another lineage means the studio was rebuilt — after the gallery, or a reload — and is loaded. The studio that loads it takes the lineage on, so that stepping further back through the old studio’s panel entries stays a no-op rather than an undo. It is a random string and not a counter because it has to differ across reloads, and <code>Math.random</code> and not <code>crypto.randomUUID</code> because the second exists only in a secure context. The end-to-end suite changes the instrument in the sound panel, closes it, and checks that the change and the undo history both survived (ch. 38).</p>
+</aside>
 <p><code>$effect(() =&gt; session.autosave())</code> is the root effect from chapter 14, wired in one line: the disposer it returns is this effect’s cleanup. <code>engine.prune</code> runs whenever the track list changes — a sync with an external system, the audio graph, which is what <code>$effect</code> is for. And <code>$inspect(...).with(...)</code> logs the tempo in development with a custom formatter that says *which* of the two values changed, which the default <code>console.log</code> does not.</p>
 <h3 id="settled">Presets and <code>settled()</code></h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/studio/+page.svelte<span class="code__lines">:126-142</span></span>
+		<span class="code__file">src/routes/(app)/studio/+page.svelte<span class="code__lines">:149-165</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/**
@@ -222,12 +249,30 @@ function addTrack(kind: Kind) {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/studio/+page.svelte<span class="code__lines">:148-181</span></span>
+		<span class="code__file">src/routes/(app)/studio/+page.svelte<span class="code__lines">:171-220</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">function keydown(event: KeyboardEvent) {
-	const target = event.target as HTMLElement | null;
-	if (target?.closest('input, textarea, select, [contenteditable]')) return;
+	<pre><code class="lang-svelte">/** The four brushes, by the number key that picks each. */
+const BRUSH_KEYS: Partial&lt;Record&lt;string, Brush&gt;&gt; = {
+	'1': 'cycle',
+	'2': 'accent',
+	'3': 'soft',
+	'4': 'erase'
+};
+
+/*
+ * Escape is not handled here. An open sheet listens for it itself and
+ * closes with `history.back()`; a second listener on the same window made
+ * one key press two steps back — out of the studio altogether.
+ */
+function keydown(event: KeyboardEvent) {
+	if (
+		event.target instanceof Element &amp;&amp;
+		event.target.closest('input, textarea, select, [contenteditable]')
+	)
+		return;
+
+	const brush = BRUSH_KEYS[event.key];
 
 	if (event.key === ' ') {
 		event.preventDefault();
@@ -239,10 +284,8 @@ function addTrack(kind: Kind) {
 	} else if ((event.metaKey || event.ctrlKey) &amp;&amp; event.key.toLowerCase() === 'y') {
 		event.preventDefault();
 		session.redo();
-	} else if (event.key &gt;= '1' &amp;&amp; event.key &lt;= '4' &amp;&amp; !event.metaKey &amp;&amp; !event.ctrlKey) {
-		session.brush = (['cycle', 'accent', 'soft', 'erase'] as const)[Number(event.key) - 1]!;
-	} else if (event.key === 'Escape') {
-		close();
+	} else if (brush &amp;&amp; !event.metaKey &amp;&amp; !event.ctrlKey) {
+		session.brush = brush;
 	}
 }
 
@@ -263,7 +306,7 @@ function visibility() {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/studio/+page.svelte<span class="code__lines">:196-203</span></span>
+		<span class="code__file">src/routes/(app)/studio/+page.svelte<span class="code__lines">:235-242</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;svelte:head&gt;
@@ -280,7 +323,7 @@ function visibility() {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/studio/+page.svelte<span class="code__lines">:288-320</span></span>
+		<span class="code__file">src/routes/(app)/studio/+page.svelte<span class="code__lines">:327-359</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;!--
@@ -319,9 +362,14 @@ function visibility() {
 </figure>
 <p><code>{#key session.generation}</code> destroys and recreates its contents when the number changes: a whole new grid for a whole new pattern. Inside it, <code>&lt;svelte:boundary&gt;</code> catches a rendering error in the grid — a damaged pattern with a step missing, say — and shows the <code>failed</code> snippet with a “Try again” button instead of taking the page down. <code>onerror</code> sends the message to a toast as well. Both are handed the same thing — the <code>App.Error</code> that <code>handleError</code> made, <code>{ status, message }</code>, not the value that was thrown — which is why they read <code>error.message</code> and cast to <code>App.Error</code> rather than to <code>Error</code>.</p>
 
+<aside class="callout callout--why">
+	<h4>Why a cast here, when the documentation writes a type</h4>
+	<p>SvelteKit’s documentation annotates the snippet’s parameter once — <code>{#snippet failed(error: App.Error)}</code>, with the comment that the error “went through the <code>handleError</code> hook and is of type <code>App.Error</code>”. Copy that into this project and <code>svelte-check</code> refuses it: <code>failed</code> is typed <code>Snippet&lt;[error: unknown, reset: () =&gt; void]&gt;</code>, and a snippet that demands an <code>App.Error</code> is not assignable to one that may be handed anything. (<code>onerror={(error: App.Error) =&gt; …}</code> fails the same way.) So every <code>failed</code> snippet and <code>onerror</code> handler here takes the <code>unknown</code> it is given and says <code>(error as App.Error)</code> where it reads it. The cast is not covering for a wrong shape: SvelteKit mounts the app with a <code>transformError</code> that sends every boundary error through <code>handleError</code> before any boundary sees it — <code>client.js</code> passes <code>transformError: (e) =&gt; handle_error(e, …)</code> to <code>hydrate</code>, and the server renderer does the same — so the value really is an <code>App.Error</code>. The day the typings carry that guarantee, the cast becomes the annotation and nothing else changes.</p>
+</aside>
+
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/studio/+page.svelte<span class="code__lines">:183-193</span></span>
+		<span class="code__file">src/routes/(app)/studio/+page.svelte<span class="code__lines">:222-232</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/* &quot;Saved 3s ago&quot; — a `SvelteDate` for now, ticking, against the session's `savedAt`. */
@@ -339,7 +387,7 @@ const savedAgo = $derived.by(() =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/studio/+page.svelte<span class="code__lines">:265-273</span></span>
+		<span class="code__file">src/routes/(app)/studio/+page.svelte<span class="code__lines">:304-312</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;p class=&quot;status hint&quot; aria-live=&quot;polite&quot;&gt;
@@ -356,7 +404,7 @@ const savedAgo = $derived.by(() =&gt; {
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>
-	<ul><li>You can list the four places a pattern comes from and say which one restores in <code>onMount</code> and why.</li><li>You can say what <code>settled()</code> waits for and what would go wrong without it.</li><li>You can explain what <code>{#key}</code> and <code>&lt;svelte:boundary&gt;</code> each protect against here.</li></ul>
+	<ul><li>You can list the four places a pattern comes from and say which one restores in <code>onMount</code> and why.</li><li>You can say what <code>settled()</code> waits for and what would go wrong without it.</li><li>You can explain what <code>{#key}</code> and <code>&lt;svelte:boundary&gt;</code> each protect against here.</li><li>You can say what would happen to an edit made in the sound panel if <code>restore</code> loaded every value it was handed.</li></ul>
 </aside>
 		</article>
 

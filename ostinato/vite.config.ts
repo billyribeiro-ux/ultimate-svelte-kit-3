@@ -7,6 +7,7 @@ import { playwright } from '@vitest/browser-playwright';
 import { sveltekit } from '@sveltejs/kit/vite';
 import { sveltePhosphorOptimize } from 'phosphor-svelte/vite';
 import ostinato from './adapters/ostinato/index.js';
+import { FILE_HEADERS } from './src/lib/security.ts';
 /*
  * A default import rather than `{ version }`: a JSON module has only a default
  * export per spec, and Vite 8's native config loader — the default in the next
@@ -34,7 +35,17 @@ export default defineConfig(({ mode }) => {
 				 * reconstruct `https://…` from headers and reject every POST as
 				 * cross-site.
 				 */
-				paths: { origin: env.PUBLIC_ORIGIN },
+				/*
+				 * `relative: false`: links are root-relative — `/studio` — on the server
+				 * as well as in the browser. The default writes them relative to the page
+				 * being rendered (`./studio`, `../studio`), which is for a build that
+				 * must work from any folder or from `file://`. This one is served at the
+				 * root of one origin by its own adapter, and a link should read the same
+				 * whichever side of hydration drew it — the navigation's `aria-current`
+				 * compares `resolve()` against `page.url.pathname`, and a relative href
+				 * never matches a pathname.
+				 */
+				paths: { origin: env.PUBLIC_ORIGIN, relative: false },
 
 				compilerOptions: {
 					// Runes everywhere except node_modules, where a dependency may still be
@@ -88,8 +99,13 @@ export default defineConfig(({ mode }) => {
 				 * request from one to the other when the `reroute` hook says so. It
 				 * exists to show what an adapter *is*; the end-to-end suite runs against
 				 * its output, which is the only proof of an adapter that counts.
+				 *
+				 * `headers` go on every file the adapter serves itself, prerendered
+				 * pages included. No hook runs for those, so without this the landing
+				 * page — the first page most people see — would go out with none of
+				 * the headers `handleSecurity` puts on everything else.
 				 */
-				adapter: ostinato(),
+				adapter: ostinato({ headers: FILE_HEADERS }),
 
 				experimental: {
 					// `query()`, `query.batch()`, `query.live()`, `prerender()`, `command()`
@@ -151,13 +167,25 @@ export default defineConfig(({ mode }) => {
 				 * is known at build time, and nonces for dynamically rendered ones,
 				 * which stream `resolve(…)` scripts after the header has gone.
 				 *
-				 * The directives that are specific to an instrument:
+				 * The directives that are specific to this app:
 				 *   `media-src blob:`  the exported WAV is played back from a Blob URL
-				 *   `img-src data:`    the share card is an SVG data URL in the studio
+				 *   `font-src data:`   Vite inlines any asset under 4 KB as a data URL
+				 *                      (`build.assetsInlineLimit`), and one of fontsource's
+				 *                      subset files is that small — so the stylesheet
+				 *                      carries a `url(data:font/woff2;…)`.
 				 *   `style-src 'unsafe-inline'` — a deliberate trade. Knobs and the
 				 *                      playhead set `style:--angle` per frame; attributes
 				 *                      cannot be hashed and a nonce does not apply to them.
 				 *                      The exposure is CSS injection, not script execution.
+				 *
+				 * Images are `'self'` only. The share card in the studio and on the
+				 * pattern page is a URL on this origin, `/p/<id>/card.svg`, not a data
+				 * URL, and nothing else draws one. The end-to-end test that visits both
+				 * and listens for violations is what keeps that true.
+				 *
+				 * `frame-ancestors` only works in a header. A prerendered page gets its
+				 * policy as a `<meta>` tag, where browsers ignore it, which is why the
+				 * adapter adds `X-Frame-Options` to the files it serves (`lib/security.ts`).
 				 */
 				csp: {
 					mode: 'auto',
@@ -165,7 +193,7 @@ export default defineConfig(({ mode }) => {
 						'default-src': ['self'],
 						'script-src': ['self'],
 						'style-src': ['self', 'unsafe-inline'],
-						'img-src': ['self', 'data:'],
+						'img-src': ['self'],
 						'media-src': ['self', 'blob:'],
 						'font-src': ['self', 'data:'],
 						'connect-src': ['self'],
@@ -221,7 +249,7 @@ export default defineConfig(({ mode }) => {
 				 * Route resolution on the client, which is the default and worth stating
 				 * because the alternative was considered. `'server'` keeps the route
 				 * manifest off the wire and lets a middleware intercept navigations, at
-				 * the cost of a round trip for every unvisited path. This app has nine
+				 * the cost of a round trip for every unvisited path. This app has a dozen
 				 * routes; its manifest is smaller than the round trip.
 				 */
 				router: { type: 'pathname', resolution: 'client' }

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>End to end, and what it found — Building Ostinato</title>
-<meta name="description" content="Thirty-six scenarios on a desktop and a Pixel 7, against `node build/index.js` on a fresh database — the five real bugs the suite found: a back navigation that never rendered, an `await` that ran once, an autosave that overwrote the save, a crash in headless Chromium, and a 500 on every vanity address — and two a probe found that the suite now pins: a refused edit that said nothing, and delete forms that were never enhanced.">
+<meta name="description" content="Forty-two scenarios on a desktop and a Pixel 7, against `node build/index.js` on a fresh database — the five real bugs the suite found: a back navigation that never rendered, an `await` that ran once, an autosave that overwrote the save, a crash in headless Chromium, and a 500 on every vanity address; two a probe found that the suite now pins: a refused edit that said nothing, and delete forms that were never enhanced; and the ones a review found, each with the test that now fails without its fix.">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -33,7 +33,7 @@
 		<article>
 			<p class="eyebrow">Chapter 38</p>
 			<h1>End to end, and what it found</h1>
-			<p class="lede">Thirty-six scenarios on a desktop and a Pixel 7, against <code>node build/index.js</code> on a fresh database — the five real bugs the suite found: a back navigation that never rendered, an <code>await</code> that ran once, an autosave that overwrote the save, a crash in headless Chromium, and a 500 on every vanity address — and two a probe found that the suite now pins: a refused edit that said nothing, and delete forms that were never enhanced.</p>
+			<p class="lede">Forty-two scenarios on a desktop and a Pixel 7, against <code>node build/index.js</code> on a fresh database — the five real bugs the suite found: a back navigation that never rendered, an <code>await</code> that ran once, an autosave that overwrote the save, a crash in headless Chromium, and a 500 on every vanity address; two a probe found that the suite now pins: a refused edit that said nothing, and delete forms that were never enhanced; and the ones a review found, each with the test that now fails without its fix.</p>
 			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Run a suite against the adapter’s output rather than a dev server, and treat every flake as a bug until proven otherwise.</p></aside>
 			
 <figure class="code">
@@ -79,7 +79,7 @@
 	 * origin at run time. A mismatch is a 403 on every form submission and a
 	 * confusing hour.
 	 */
-	command: 'node scripts/prepare-e2e-db.js &amp;&amp; npm run build &amp;&amp; node build/index.js',
+	command: 'node scripts/prepare-e2e-db.js &amp;&amp; pnpm run build &amp;&amp; node build/index.js',
 	port: 4173,
 	reuseExistingServer: !process.env.CI,
 	timeout: 240_000,
@@ -115,7 +115,7 @@ for (const suffix of ['', '-shm', '-wal']) {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">e2e/jam.e2e.ts<span class="code__lines">:8-41</span></span>
+		<span class="code__file">e2e/jam.e2e.ts<span class="code__lines">:11-44</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">test('a toggle in one browser is heard in another', async ({ page, browser }) =&gt; {
@@ -206,7 +206,7 @@ test('an unknown vanity address is a 404 from the catch-all', async ({ page }) =
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">e2e/gallery.e2e.ts<span class="code__lines">:41-73</span></span>
+		<span class="code__file">e2e/gallery.e2e.ts<span class="code__lines">:102-134</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">test('publish from the studio, find it in the gallery, delete it', async ({ page }, info) =&gt; {
@@ -247,7 +247,7 @@ test('an unknown vanity address is a 404 from the catch-all', async ({ page }) =
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:100-121</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:116-137</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/*
@@ -276,7 +276,7 @@ forkPreloads: false</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">e2e/studio.e2e.ts<span class="code__lines">:110-133</span></span>
+		<span class="code__file">e2e/studio.e2e.ts<span class="code__lines">:155-178</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">test('survives a navigation away and back, and a reload', async ({ page }) =&gt; {
@@ -344,7 +344,7 @@ forkPreloads: false</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">e2e/jam.e2e.ts<span class="code__lines">:109-135</span></span>
+		<span class="code__file">e2e/jam.e2e.ts<span class="code__lines">:134-163</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">test('an edit the room refuses says why', async ({ page }) =&gt; {
@@ -354,6 +354,9 @@ forkPreloads: false</code></pre>
 	// Freeze this browser's view of the room: drop the stream, and fail every
 	// attempt to reopen it. SvelteKit keeps the last snapshot on screen and
 	// retries, so what is drawn stops following the server.
+	// The address is SvelteKit's, not this app's: remote calls go to
+	// `/_app/remote/&lt;hash&gt;/&lt;name&gt;`, an internal shape that may change. It is
+	// matched by the function's name, the one part this project chose.
 	await page.route(/\/_app\/remote\/[^/]+\/watchRoom/, (route) =&gt; route.abort());
 	await page.getByRole('button', { name: 'Reconnect' }).click();
 	await expect(page.getByText('reconnecting…')).toBeVisible();
@@ -375,11 +378,11 @@ forkPreloads: false</code></pre>
 	expect((await restored).ok()).toBe(true);
 });</code></pre>
 </figure>
-<p>A refused command, made to happen for real rather than faked. The test cuts this browser off from the room’s live stream — every attempt to reopen it is aborted, and SvelteKit keeps the last snapshot on screen while it retries — then loads a preset, which gives every track a new id. The browser still shows the old tracks, so a click on one sends a mute for a track the room no longer has, and the server answers <code>error(404, &quot;No such track in this room&quot;)</code>. Before the fix the toast was there and empty: <code>(e as Error).message</code> on an <code>HttpError</code> is <code>undefined</code>. The scenario before it in the same file is the boundary’s half — <code>/jam/nowhere</code> says “No such room”, served and navigated to — and it passed before the fix as well, which is the point of keeping it: it fails if somebody “fixes” a <code>failed</code> snippet to read <code>body.message</code>.</p>
+<p>A refused command, made to happen for real rather than faked. The test cuts this browser off from the room’s live stream — every attempt to reopen it is aborted, and SvelteKit keeps the last snapshot on screen while it retries — then loads a preset, which gives every track a new id. The browser still shows the old tracks, so a click on one sends a mute for a track the room no longer has, and the server answers <code>error(404, &quot;No such track in this room&quot;)</code>. Before the fix the toast was there and empty: <code>(e as Error).message</code> on an <code>HttpError</code> is <code>undefined</code>. The scenario before it in the same file is the other half — <code>/jam/nowhere</code>, served and navigated to — and since the room’s <code>load</code> (ch. 31) it is also a status check: the server must answer <code>404</code>, and the error page, handed the <code>App.Error</code> as its <code>error</code> prop, must show “No such room”. It fails if somebody “fixes” that page to read <code>body.message</code>, and it failed against the old page, which answered a missing room with <code>200</code>.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">e2e/gallery.e2e.ts<span class="code__lines">:75-117</span></span>
+		<span class="code__file">e2e/gallery.e2e.ts<span class="code__lines">:136-182</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">test('a delete the server refuses says why, and the card comes back', async ({ page }, info) =&gt; {
@@ -407,9 +410,13 @@ forkPreloads: false</code></pre>
 	await other.goto('/gallery');
 	await expect(card(other)).toHaveCount(1);
 
-	// Each tab is brought to the front before it is used. A background tab is
-	// not painted, and on the phone profile a click aimed at one lands on
-	// stale layout — the card's title, not its Delete button.
+	// Each tab is brought to the front before it is used, as a person would.
+	// (On the phone profile a click here used to land on the card's title
+	// instead of its button, and the tab switch took the blame. The cause was
+	// the handle: seventeen characters of `twice_phone_…` in the header pushed
+	// the page wider than the screen, and the browser's idea of where the
+	// button was drifted from the page's. The header is fixed, and a test in
+	// `jam.e2e.ts` holds it there.)
 	await page.bringToFront();
 	await page.goto('/gallery');
 	await card(page).getByRole('button', { name: 'Delete' }).click();
@@ -419,14 +426,226 @@ forkPreloads: false</code></pre>
 	// optimistic removal is undone, and the toast is the server's sentence
 	// from `body.message` rather than a guess of the page's own.
 	await other.bringToFront();
-	await other.waitForLoadState('networkidle');
+	await hydrated(other);
 	await card(other).getByRole('button', { name: 'Delete' }).click();
 	await expect(other.locator('.toast')).toHaveText('Not yours, or not there');
 	await expect(card(other)).toHaveCount(1);
 	await other.close();
 });</code></pre>
 </figure>
-<aside class="callout callout--warn"><p><strong>The delete forms were never enhanced.</strong> The probe found a second fault behind the first: in a tab loaded from the server, Delete did not run its <code>enhance</code> callback at all. It fell back to the plain POST that works with JavaScript off — which still deletes, so the older gallery test passed — and a refusal became an error page. Against the old code this test fails on that, before the shape of the error matters: there is no toast to read. The cause was a boundary inside a boundary around the “Yours” list (ch. 30); the fix was to remove the inner one. And the test itself needed <code>bringToFront()</code>: with two tabs open, a click on the phone profile aimed at the one in the background landed on the card’s title instead of its button, four times in five.</p></aside>
+<aside class="callout callout--warn"><p><strong>The delete forms were never enhanced.</strong> The probe found a second fault behind the first: in a tab loaded from the server, Delete did not run its <code>enhance</code> callback at all. It fell back to the plain POST that works with JavaScript off — which still deletes, so the older gallery test passed — and a refusal became an error page. Against the old code this test fails on that, before the shape of the error matters: there is no toast to read. The cause was a boundary inside a boundary around the “Yours” list (ch. 30); the fix was to remove the inner one. And the test itself needed <code>bringToFront()</code>: on the phone profile, a click aimed at the tab in the background landed on the card’s title instead of its Delete button, four times in five. That was the explanation for a long time, and it was wrong. The real cause turned up when the failure came back in full runs only: the handle. <code>twice_phone_</code> and five random characters is seventeen characters, and in the header that chip pushed the page wider than the phone’s screen. With the layout viewport wider than the visual one, the browser’s idea of where the button was drifted from the page’s, and the click landed one row up. How often depended on which five characters the clock produced. The header was fixed (ch. 27), the test brings each tab forward as a person would, and before the last click it waits for hydration — the header’s handle chip, which the server sends as <code>…</code> and only a hydrated page replaces — rather than for the network to go quiet.</p></aside>
+<h3 id="what-a-review-found">What a review found</h3>
+<p>The suite passed, and a careful read of the code against the documentation still found things it could not see — each because no test asked. Every one now has a test, and every test was proved the same way: put the old code back, watch the test fail, restore the fix byte for byte.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/studio.e2e.ts<span class="code__lines">:69-95</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">test('the row checkbox follows the steps, however they change', async ({ page }) =&gt; {
+	await page.goto('/studio?preset=four-on-the-floor');
+	const all = page
+		.locator('.track')
+		.first()
+		.getByRole('checkbox', { name: /All steps/ });
+
+	// Four kicks of sixteen: partly on.
+	await expect(all).toHaveJSProperty('indeterminate', true);
+	await expect(all).not.toBeChecked();
+
+	// Every step painted from the pads, the box never touched: all on. A click
+	// on the box would clear `indeterminate` by itself, so the box is left
+	// alone — what it shows has to come from the steps.
+	for (let n = 1; n &lt;= 16; n += 1) {
+		const pad = kickStep(page, n);
+		if ((await pad.getAttribute('aria-pressed')) === 'false') await pad.click();
+	}
+	await expect(all).toBeChecked();
+	await expect(all).toHaveJSProperty('indeterminate', false);
+
+	// And every step erased: off, and not partly.
+	await page.locator('label.chip', { hasText: 'Erase' }).click();
+	for (let n = 1; n &lt;= 16; n += 1) await kickStep(page, n).click();
+	await expect(all).not.toBeChecked();
+	await expect(all).toHaveJSProperty('indeterminate', false);
+});</code></pre>
+</figure>
+<p><strong>A checkbox that never moved.</strong> The grid’s “all steps” box was bound to <code>{const all = count === STEPS}</code> — a plain declaration tag, worked out once when the row was created (ch. 16). The older brush test passed because it *clicked* the box, and a click clears <code>indeterminate</code> by itself. This one paints and erases a whole row from the pads, never touching the box, and asks it what it says.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/studio.e2e.ts<span class="code__lines">:132-147</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">test('closing a panel keeps what was changed in it', async ({ page }) =&gt; {
+	await page.goto('/studio?preset=four-on-the-floor');
+	await page.getByRole('button', { name: 'Sound settings for Kick' }).click();
+	const dialog = page.getByRole('dialog', { name: 'Sound: Kick' });
+	await dialog.getByLabel('Instrument').selectOption('snare');
+
+	// Closing is `history.back()` to the studio's own entry, and the snapshot
+	// helper restores what that entry captured — the pattern as it was when
+	// the panel opened. The studio must know it already holds something newer.
+	await page.keyboard.press('Escape');
+	await expect(dialog).not.toBeVisible();
+	await expect(page.getByRole('button', { name: 'Undo' })).toBeEnabled();
+
+	await page.getByRole('button', { name: 'Sound settings for Kick' }).click();
+	await expect(dialog.getByLabel('Instrument')).toHaveValue('snare');
+});</code></pre>
+</figure>
+<p><strong>A panel that closed over its own changes — and Escape that left the studio.</strong> Moving to the <code>snapshot()</code> helper meant shallow panel entries were captured too, so closing the sound panel restored the pattern from before it opened; the <code>lineage</code> in the studio page is the fix (ch. 19). Writing the test found an older bug underneath: the sheet and the studio page both listened for Escape on the window, both called <code>history.back()</code>, and one key press went back two entries — out of the studio. The earlier sheet test passed because the dialog had indeed gone. Now only the sheet listens.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/embed.e2e.ts<span class="code__lines">:54-94</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">test('swapping the pattern while it plays throws nothing', async ({ page }) =&gt; {
+	const errors: string[] = [];
+	page.on('pageerror', (error) =&gt; errors.push(error.message));
+
+	await page.goto('/embed/demo#seedfour');
+	const player = page.locator('ostinato-player');
+	await expect(player).toContainText('Four on the floor');
+
+	// Hold the next pattern back until the test lets it go, so the player
+	// spends that time playing with nothing loaded.
+	let release = () =&gt; {};
+	const held = new Promise&lt;void&gt;((resolve) =&gt; (release = resolve));
+	await page.route('**/api/patterns/seedboom', async (route) =&gt; {
+		await held;
+		await route.continue();
+	});
+
+	await page.evaluate(() =&gt;
+		(document.querySelector('ostinato-player') as unknown as { play(): void }).play()
+	);
+	await expect(player.getByRole('button', { name: '■' })).toBeEnabled();
+
+	await page.evaluate(() =&gt;
+		document.querySelector('ostinato-player')?.setAttribute('pattern', 'seedboom')
+	);
+	await expect(player.getByRole('button', { name: '■' })).toBeDisabled();
+	// Ten frames — well over the scheduler's 25 ms tick — with nothing loaded.
+	await page.evaluate(async () =&gt; {
+		for (let i = 0; i &lt; 10; i += 1) await new Promise(requestAnimationFrame);
+	});
+	release();
+
+	await expect(player).toContainText('Boom bap');
+	await expect(player.getByRole('button', { name: '■' })).toBeEnabled();
+	expect(errors).toEqual([]);
+
+	await page.evaluate(() =&gt;
+		(document.querySelector('ostinato-player') as unknown as { stop(): void }).stop()
+	);
+	await expect(player).not.toHaveAttribute('playing', '');
+});</code></pre>
+</figure>
+<p><strong>A player that threw forty times a second.</strong> Swapping <code>pattern</code> on a playing <code>&lt;ostinato-player&gt;</code> left the scheduler ticking against <code>null</code> until the new pattern arrived (ch. 33). The test holds the next pattern back with <code>page.route</code>, waits ten animation frames — several of the scheduler’s 25 ms ticks — and lets it go, and any <code>pageerror</code> fails it.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/gallery.e2e.ts<span class="code__lines">:67-100</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">test('the preview is a modal: focus goes in, stays in, and comes back', async ({ page }, info) =&gt; {
+	await page.goto('/gallery');
+	await hydrated(page);
+	const link = page
+		.locator('.pattern-card', { has: page.getByRole('heading', { name: 'Boom bap', exact: true }) })
+		.locator('.pattern-card__link');
+
+	await link.focus();
+	await page.keyboard.press('Enter');
+
+	if (info.project.name === 'phone') {
+		// No preview on a phone: Enter follows the link, like a click.
+		await expect(page.getByRole('heading', { name: 'Share card' })).toBeVisible();
+		return;
+	}
+
+	const dialog = page.getByRole('dialog', { name: 'Pattern preview' });
+	await expect(dialog.getByRole('heading', { level: 1 })).toHaveText('Boom bap');
+	const focusInside = () =&gt; dialog.evaluate((node) =&gt; node.contains(document.activeElement));
+
+	// `showModal()`: focus moves in, and the page behind is inert, so Tab
+	// cannot leave for the gallery underneath.
+	await expect.poll(focusInside).toBe(true);
+	for (let i = 0; i &lt; 6; i += 1) {
+		await page.keyboard.press('Tab');
+		await expect.poll(focusInside).toBe(true);
+	}
+
+	// Escape closes it, closing is going back, and focus returns to the card.
+	await page.keyboard.press('Escape');
+	await expect(dialog).not.toBeVisible();
+	await expect(page).toHaveURL(/\/gallery$/);
+	await expect(link).toBeFocused();
+});</code></pre>
+</figure>
+<p><strong>A dialog that was not one.</strong> The gallery preview was a <code>&lt;div role=&quot;dialog&quot;&gt;</code> over a backdrop: open it with Enter and focus stayed on the card behind it, Tab walked on into the gallery, Escape did nothing. Now it is a <code>&lt;dialog&gt;</code> opened with <code>showModal()</code> (ch. 30), and the test opens it from the keyboard, tabs inside it, and closes it with Escape — back to the gallery’s address, with focus back on the card. The preview test above it also clicks “Open the full page” now, and checks that the navigation was client-side and replaced the preview’s entry.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/jam.e2e.ts<span class="code__lines">:108-132</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">test('a room that does not exist is a 404, served or navigated to', async ({ page }) =&gt; {
+	// Served: the page's `load` asks whether the room exists before anything
+	// renders, so the server can answer with the status. (The live room is
+	// inside a boundary with a `pending` snippet, which the server never
+	// renders past — it could not have known.)
+	const response = await page.goto('/jam/nowhere');
+	expect(response?.status()).toBe(404);
+	await expect(page.locator('.error__message')).toHaveText('No such room');
+
+	// Navigated to: the same `load` runs in the browser, and its query is
+	// refused there. The marker on `window` survives only a client-side
+	// navigation, so it proves which path this was.
+	await page.goto('/gallery');
+	await hydrated(page);
+	await page.evaluate(() =&gt; {
+		(window as { stayed?: boolean }).stayed = true;
+		const link = document.createElement('a');
+		link.href = '/jam/nowhere';
+		link.textContent = 'a room that is not there';
+		document.body.append(link);
+	});
+	await page.getByRole('link', { name: 'a room that is not there' }).click();
+	await expect(page.locator('.error__message')).toHaveText('No such room');
+	expect(await page.evaluate(() =&gt; (window as { stayed?: boolean }).stayed)).toBe(true);
+});</code></pre>
+</figure>
+<p><strong>A 404 that answered 200, and a comment that said otherwise.</strong> The old version of this test claimed its first half proved the live query failing during server rendering. It could not have: the room is awaited inside a boundary with a <code>pending</code> snippet, which is all the server renders. Both halves tested the browser. Now the room’s <code>load</code> decides on the server (ch. 31), and the test asserts the status.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/jam.e2e.ts<span class="code__lines">:63-80</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">test('the longest handle does not push the page sideways', async ({ page }, info) =&gt; {
+	// Twenty characters, the most a handle may have, and wide ones.
+	const handle = `${info.project.name}_${Date.now().toString(36)}_`.padEnd(20, 'm');
+
+	await page.goto('/jam/lobby');
+	await page.getByLabel('Play as').fill(handle);
+	await page.getByRole('button', { name: /Join as/ }).click();
+	await expect(page.getByRole('link', { name: `@${handle}` })).toBeVisible();
+
+	// The header shows the handle on every page; on a phone it must fit.
+	await page.goto('/gallery');
+	await expect(page.getByRole('link', { name: `@${handle}` })).toBeVisible();
+	const { scroll, client } = await page.evaluate(() =&gt; ({
+		scroll: document.documentElement.scrollWidth,
+		client: document.documentElement.clientWidth
+	}));
+	expect(scroll, 'the page is wider than the screen').toBeLessThanOrEqual(client);
+});</code></pre>
+</figure>
+<p><strong>A header that was wider than a phone.</strong> Found while chasing the two-tab test above, and the reason it failed: a long handle in the header’s chip — seventeen characters were enough — made the whole page scroll sideways on a 412-pixel screen. This test chooses the longest handle the schema allows, in wide letters, and asserts that the page is no wider than the screen. It fails on the old header on the phone profile.</p>
+<p>And one more in the landing suite, quoted in chapter 36: the prerendered page must carry the security headers, because the adapter serves it as a file and no hook ever sees it.</p>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>

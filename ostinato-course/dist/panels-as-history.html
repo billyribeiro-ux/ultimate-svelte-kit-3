@@ -94,7 +94,7 @@ const duration = $derived(prefersReducedMotion.current ? 0 : 260);</code></pre>
 	</figcaption>
 	<pre><code class="lang-svelte">/** Move focus in when the sheet opens, and back to where it was when it closes. */
 const focusIn: Attachment&lt;HTMLElement&gt; = (node) =&gt; {
-	const previous = document.activeElement as HTMLElement | null;
+	const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
 	node.querySelector&lt;HTMLElement&gt;('[data-close]')?.focus();
 	return () =&gt; previous?.focus();
 };
@@ -103,11 +103,11 @@ function keydown(event: KeyboardEvent) {
 	if (event.key === 'Escape') onclose();
 }</code></pre>
 </figure>
-<p>Focus goes to the close button when the sheet opens, and back to wherever it was when the sheet closes. An attachment is the right tool: it runs on mount with the element, and its return value runs on unmount. Escape closes it, through <code>&lt;svelte:window onkeydown&gt;</code>.</p>
+<p>Focus goes to the close button when the sheet opens, and back to wherever it was when the sheet closes. An attachment is the right tool: it runs on mount with the element, and its return value runs on unmount. The previous element is kept only if it is an <code>HTMLElement</code> — an <code>instanceof</code> check rather than a cast, because <code>document.activeElement</code> can be an SVG element, or <code>null</code>, and only one of those three has a <code>focus()</code> worth calling. Escape closes it, through <code>&lt;svelte:window onkeydown&gt;</code>.</p>
 
 <aside class="callout callout--why">
 	<h4>Why the sheet is not modal</h4>
-	<p>A sound panel you have to close before you can hear the change is a panel nobody leaves open. The grid stays usable behind the sheet, the transport keeps playing, and turning the tone knob while a loop runs is the whole point. <code>role=&quot;dialog&quot;</code> without <code>aria-modal</code> says exactly this to assistive technology: a dialog, and the page behind it is still there.</p>
+	<p>A sound panel you have to close before you can hear the change is a panel nobody leaves open. The grid stays usable behind the sheet, the transport keeps playing, and turning the tone knob while a loop runs is the whole point. <code>role=&quot;dialog&quot;</code> without <code>aria-modal</code> says exactly this to assistive technology: a dialog, and the page behind it is still there. The gallery’s preview is the opposite case, and is a real modal <code>&lt;dialog&gt;</code> opened with <code>showModal()</code> (ch. 30): nothing behind it is any use while it is open.</p>
 </aside>
 <h3 id="shallow-routing">Opening a panel is a history entry</h3>
 
@@ -124,7 +124,7 @@ function keydown(event: KeyboardEvent) {
 	 * swipe, on a phone) closes the panel instead of leaving the studio and
 	 * losing the pattern being worked on.
 	 */
-	panel?: 'sound' | 'share' | 'samples';
+	panel?: 'sound' | 'share';
 	/** The pattern a gallery card has expanded into, without leaving the gallery. */
 	preview?: string;
 }</code></pre>
@@ -132,7 +132,7 @@ function keydown(event: KeyboardEvent) {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/studio/+page.svelte<span class="code__lines">:97-118</span></span>
+		<span class="code__file">src/routes/(app)/studio/+page.svelte<span class="code__lines">:118-141</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/**
@@ -151,6 +151,8 @@ function keydown(event: KeyboardEvent) {
  */
 function open(panel: NonNullable&lt;App.PageState['panel']&gt;) {
 	if (page.state.panel === panel) return;
+	// `''` is &quot;this page&quot;: there is no route to resolve, only an entry to add.
+	// eslint-disable-next-line svelte/no-navigation-without-resolve
 	void goto('', { shallow: true, state: { panel } });
 }
 
@@ -158,11 +160,12 @@ function close() {
 	if (page.state.panel) history.back();
 }</code></pre>
 </figure>
-<p>Opening the sound panel pushes a history entry with <code>{ panel: &quot;sound&quot; }</code> in its state and *no change to the URL*: <code>goto(&quot;&quot;)</code> is “stay here”, <code>shallow: true</code> is “but add an entry”. SvelteKit 2 spelled this <code>pushState(&quot;&quot;, state)</code>; 3.0 folded shallow routing into <code>goto</code>, so there is one function for going somewhere and the options say how deep — and a shallow navigation now runs <code>beforeNavigate</code> and <code>onNavigate</code> like any other, which is why both layouts check <code>navigation.shallow</code> (ch. 27). The back button — or a swipe on a phone — closes it, which is what a person expects of something that covers the screen. <code>page.state</code> is typed by <code>App.PageState</code> in <code>app.d.ts</code>, so <code>page.state.panel</code> is one of the names declared there — <code>&quot;sound&quot; | &quot;share&quot; | &quot;samples&quot;</code> — or <code>undefined</code>, and a misspelt panel is a type error rather than a sheet that never opens.</p>
+<p>Opening the sound panel pushes a history entry with <code>{ panel: &quot;sound&quot; }</code> in its state and *no change to the URL*: <code>goto(&quot;&quot;)</code> is “stay here”, <code>shallow: true</code> is “but add an entry”. SvelteKit 2 spelled this <code>pushState(&quot;&quot;, state)</code>; 3.0 folded shallow routing into <code>goto</code>, so there is one function for going somewhere and the options say how deep — and a shallow navigation now runs <code>beforeNavigate</code> and <code>onNavigate</code> like any other, which is why both layouts check <code>navigation.shallow</code> (ch. 27). The back button — or a swipe on a phone — closes it, which is what a person expects of something that covers the screen. <code>page.state</code> is typed by <code>App.PageState</code> in <code>app.d.ts</code>, so <code>page.state.panel</code> is one of the names declared there — <code>&quot;sound&quot; | &quot;share&quot;</code> — or <code>undefined</code>, and a misspelt panel is a type error rather than a sheet that never opens. That promise holds only while the union lists the panels that exist: it once carried a third name, <code>&quot;samples&quot;</code>, for a panel that was never built, and <code>open(&quot;samples&quot;)</code> type-checked and showed nothing — exactly the failure the type was there to prevent. A name goes into the union with the sheet that renders it.</p>
+<aside class="callout callout--note"><p><code>goto(&quot;&quot;)</code> is the one <code>goto</code> in the project that is not wrapped in <code>resolve()</code>, and the line above it says so to the linter: <code>svelte/no-navigation-without-resolve</code> wants every navigation to name a route (ch. 27), and “this page, one entry deeper” has no route to name.</p></aside>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/studio/+page.svelte<span class="code__lines">:335-343</span></span>
+		<span class="code__file">src/routes/(app)/studio/+page.svelte<span class="code__lines">:374-382</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">{#if page.state.panel === 'sound' &amp;&amp; selectedTrack}

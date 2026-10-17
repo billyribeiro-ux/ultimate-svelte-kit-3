@@ -8,8 +8,11 @@
  * browser closes it, SvelteKit stops iterating — which runs the `finally`
  * below, which leaves the room. There is no connection to manage by hand.
  *
- * During server rendering the generator is run for its *first* value only, so
- * the page arrives with the room already drawn and takes over from there.
+ * The jam page awaits it inside a boundary with a `pending` snippet, and a
+ * boundary like that renders only its `pending` snippet on the server. So the
+ * stream is opened by the browser, after hydration, and never during server
+ * rendering — which is why the page's `load` asks `getRoomName` first: that is
+ * the one question the server has to answer before it can send a status.
  */
 
 import * as v from 'valibot';
@@ -54,6 +57,18 @@ class Latest<T> {
 	}
 }
 
+/**
+ * A room's name, or a 404. The jam page's universal `load` awaits this, so a
+ * room that does not exist is a real `404` from the server — the error page,
+ * with the status a link checker or a crawler reads — rather than a `200` that
+ * says "No such room" once the browser has opened the stream.
+ */
+export const getRoomName = query(v.string(), async (id) => {
+	const room = await getRoom(id);
+	if (!room) error(404, 'No such room');
+	return room.name;
+});
+
 export const watchRoom = query.live(v.string(), async function* (id) {
 	const exists = await getRoom(id);
 	if (!exists) error(404, 'No such room');
@@ -65,7 +80,9 @@ export const watchRoom = query.live(v.string(), async function* (id) {
 	const leave = join(id, currentArtist(), (snapshot) => mailbox.push(snapshot));
 
 	try {
-		yield (await getRoom(id))!;
+		// Read again after joining, so the first snapshot already counts this
+		// browser among those present.
+		yield (await getRoom(id)) ?? error(404, 'No such room');
 		while (true) yield await mailbox.next();
 	} finally {
 		leave();

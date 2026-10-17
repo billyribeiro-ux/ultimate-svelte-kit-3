@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The jam room — Building Ostinato</title>
-<meta name="description" content="The live query on screen: `$derived(await room)` so the page follows every yield, overridable `{let}` deriveds for knobs in mid-gesture, `room.connected` and `reconnect()`, `online` from the window, presence with `animate:flip`, a handle form that carries the room id, and every edit as a command — with the server’s reason when one is refused.">
+<meta name="description" content="A `load` that makes a missing room a real 404, `params` as a typed prop, and the live query on screen: `$derived(await room)` so the page follows every yield, overridable `{let}` deriveds for knobs in mid-gesture, `room.connected` and `reconnect()`, `online` from the window, presence with `animate:flip`, a handle form that carries the room id, and every edit as a command — with the server’s reason when one is refused.">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -33,15 +33,41 @@
 		<article>
 			<p class="eyebrow">Chapter 31</p>
 			<h1>The jam room</h1>
-			<p class="lede">The live query on screen: <code>$derived(await room)</code> so the page follows every yield, overridable <code>{let}</code> deriveds for knobs in mid-gesture, <code>room.connected</code> and <code>reconnect()</code>, <code>online</code> from the window, presence with <code>animate:flip</code>, a handle form that carries the room id, and every edit as a command — with the server’s reason when one is refused.</p>
+			<p class="lede">A <code>load</code> that makes a missing room a real 404, <code>params</code> as a typed prop, and the live query on screen: <code>$derived(await room)</code> so the page follows every yield, overridable <code>{let}</code> deriveds for knobs in mid-gesture, <code>room.connected</code> and <code>reconnect()</code>, <code>online</code> from the window, presence with <code>animate:flip</code>, a handle form that carries the room id, and every edit as a command — with the server’s reason when one is refused.</p>
 			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Consume a <code>query.live</code> correctly — including the mistake that shows the first snapshot forever — and let a person edit a value that the server also updates, without the two fighting.</p></aside>
 			
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/jam/[room]/+page.svelte<span class="code__lines">:23-48</span></span>
+		<span class="code__file">src/routes/(app)/jam/[room]/+page.ts<span class="code__lines">:1-12</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">const params = $derived(page.params as RouteParams&lt;'/(app)/jam/[room]'&gt;);
+	<pre><code class="lang-ts">import type { PageLoad } from './$types.js';
+import { getRoomName } from '#lib/remote/rooms.remote.ts';
+
+/**
+ * Whether the room exists, asked before the page renders. The live room
+ * itself is awaited in the page, inside a boundary that streams it in after
+ * hydration; this is what lets the server answer `/jam/nowhere` with a `404`
+ * instead of a page that says so a moment later.
+ */
+export const load: PageLoad = async ({ params }) =&gt; {
+	return { name: await getRoomName(params.room) };
+};</code></pre>
+</figure>
+<p>Before the room, one question: does it exist? The live room is awaited further down inside a boundary with a <code>pending</code> snippet, and on the server a boundary like that renders only its <code>pending</code> snippet — so the server never opens the stream, and could not know that <code>/jam/nowhere</code> names nothing. It used to answer <code>200</code> with “Joining the room…”, and the browser found out after hydration. A *soft 404* like that is wrong for anything that reads statuses: a link checker, a crawler, a chat app drawing a preview. So a universal <code>load</code> awaits <code>getRoomName(params.room)</code>, a plain <code>query</code> that throws <code>error(404, &quot;No such room&quot;)</code> (ch. 25). On the server it runs before anything renders, so the response is a real <code>404</code> with the error page; on a client-side navigation it runs in the browser, and the same error page is drawn without a document load. The name it returns is the page’s <code>&lt;title&gt;</code>.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(app)/jam/[room]/+page.svelte<span class="code__lines">:23-59</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/*
+ * `params` is a prop, typed from the folder name by the generated
+ * `PageProps`: `{ room: string }`, no cast, and a compile error if the
+ * folder is renamed. `data.name` is what the `load` beside this file found
+ * out — that the room exists, and what it is called.
+ */
+let { data, params }: PageProps = $props();
 
 /**
  * THE LIVE QUERY
@@ -66,13 +92,18 @@ async function run(action: Promise&lt;unknown&gt;) {
 	} catch (e) {
 		toast(messageOf(e, 'That change did not reach the room'), 'error');
 	}
-}</code></pre>
+}
+
+// Transitions run on the Web Animations API, out of reach of the
+// stylesheet's reduced-motion rule, so they ask for themselves.
+const flipDuration = $derived(prefersReducedMotion.current ? 0 : 200);
+const scaleDuration = $derived(prefersReducedMotion.current ? 0 : 160);</code></pre>
 </figure>
-<p><code>watchRoom(id)</code> is the live query from chapter 25. Awaiting it gives the current room; after that, its value updates every time the server yields. <code>room.connected</code> says whether the stream is up, and <code>room.reconnect()</code> restarts it by hand — SvelteKit reconnects on its own with backoff, and eagerly when the browser comes back online.</p>
+<p><code>params</code> comes in as a prop, typed by the generated <code>PageProps</code> as <code>{ room: string }</code>, beside the <code>data</code> the <code>load</code> returned. <code>watchRoom(id)</code> is the live query from chapter 25. Awaiting it gives the current room; after that, its value updates every time the server yields. <code>room.connected</code> says whether the stream is up, and <code>room.reconnect()</code> restarts it by hand — SvelteKit reconnects on its own with backoff, and eagerly when the browser comes back online.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/jam/[room]/+page.svelte<span class="code__lines">:56-73</span></span>
+		<span class="code__file">src/routes/(app)/jam/[room]/+page.svelte<span class="code__lines">:67-84</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;svelte:boundary&gt;
@@ -103,7 +134,7 @@ async function run(action: Promise&lt;unknown&gt;) {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/jam/[room]/+page.svelte<span class="code__lines">:75-105</span></span>
+		<span class="code__file">src/routes/(app)/jam/[room]/+page.svelte<span class="code__lines">:86-116</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;header class=&quot;jam__head&quot;&gt;
@@ -130,19 +161,19 @@ async function run(action: Promise&lt;unknown&gt;) {
 	{#each snapshot.present as who (who.id)}
 		&lt;span
 			class=&quot;chip chip--on&quot;
-			animate:flip={{ duration: 200 }}
-			transition:scale={{ duration: 160 }}
+			animate:flip={{ duration: flipDuration }}
+			transition:scale={{ duration: scaleDuration }}
 		&gt;
 			@{who.handle}
 		&lt;/span&gt;
 	{/each}
 &lt;/section&gt;</code></pre>
 </figure>
-<p>Presence is the <code>present</code> array from the snapshot: every open stream, by handle. Keyed by id with <code>animate:flip</code> and a <code>scale</code> transition, so a person joining slides into place and a person leaving shrinks away. <code>online</code> from <code>svelte/reactivity/window</code> is <code>navigator.onLine</code> as a reactive value, and the chip says so before the stream has noticed.</p>
+<p>Presence is the <code>present</code> array from the snapshot: every open stream, by handle. Keyed by id with <code>animate:flip</code> and a <code>scale</code> transition, so a person joining slides into place and a person leaving shrinks away — unless they asked for reduced motion, which is what the two durations at the top of the script ask for each time (ch. 30 says why a Svelte transition has to ask). <code>online</code> from <code>svelte/reactivity/window</code> is <code>navigator.onLine</code> as a reactive value, and the chip says so before the stream has noticed.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/jam/[room]/+page.svelte<span class="code__lines">:107-126</span></span>
+		<span class="code__file">src/routes/(app)/jam/[room]/+page.svelte<span class="code__lines">:118-137</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;!-- Who this browser is, from the same query the header uses; refreshed by the form below. --&gt;
@@ -170,7 +201,7 @@ async function run(action: Promise&lt;unknown&gt;) {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/jam/[room]/+page.svelte<span class="code__lines">:128-167</span></span>
+		<span class="code__file">src/routes/(app)/jam/[room]/+page.svelte<span class="code__lines">:139-178</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;Player
@@ -218,7 +249,7 @@ async function run(action: Promise&lt;unknown&gt;) {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/jam/[room]/+page.svelte<span class="code__lines">:169-193</span></span>
+		<span class="code__file">src/routes/(app)/jam/[room]/+page.svelte<span class="code__lines">:180-204</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;section class=&quot;cluster&quot;&gt;
@@ -251,7 +282,7 @@ async function run(action: Promise&lt;unknown&gt;) {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/jam/[room]/+page.svelte<span class="code__lines">:195-207</span></span>
+		<span class="code__file">src/routes/(app)/jam/[room]/+page.svelte<span class="code__lines">:206-221</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">{#snippet pending()}
@@ -260,8 +291,11 @@ async function run(action: Promise&lt;unknown&gt;) {
 
 &lt;!--
 	The other shape: a boundary is handed the `App.Error` that `handleError`
-	made — `{ status, message }` — so the server's &quot;No such room&quot; is
-	`error.message`, with no `body` in between.
+	made — `{ status, message }` — so whatever the stream failed with is
+	`error.message`, with no `body` in between. (A room that does not exist
+	never gets this far: the `load` answers it with the error page.) The
+	cast is the type the documentation writes on the parameter, which
+	today's `Snippet&lt;[unknown, …]&gt;` typing refuses there.
 --&gt;
 {#snippet failed(error, reset)}
 	&lt;p class=&quot;issue&quot;&gt;{(error as App.Error).message}&lt;/p&gt;
@@ -271,12 +305,12 @@ async function run(action: Promise&lt;unknown&gt;) {
 
 <aside class="callout callout--why">
 	<h4>Why the <code>failed</code> snippet reads <code>error.message</code> and <code>run</code> does not</h4>
-	<p>They are handed different things. A room that does not exist makes <code>watchRoom</code> throw <code>error(404, &quot;No such room&quot;)</code>; the boundary catches it, and SvelteKit runs it through <code>handleError</code> before the snippet sees it. The documentation puts it in a comment on its own example: the error “went through the <code>handleError</code> hook and is of type <code>App.Error</code>” — <code>{ status, message }</code>, so <code>error.message</code> is the server’s sentence. An awaited command is not inside a boundary at all: its promise rejects with the <code>HttpError</code> itself, <code>{ status, body }</code>, and the sentence is one level down. Same server, same <code>error(…)</code> call, two shapes — and a probe that threw both in a browser is how this project found out which code read which.</p>
+	<p>They are handed different things. Whatever the stream fails with — a server that has stopped answering, say — the boundary catches it, and SvelteKit runs it through <code>handleError</code> before the snippet sees it. The documentation puts it in a comment on its own example: the error “went through the <code>handleError</code> hook and is of type <code>App.Error</code>” — <code>{ status, message }</code>, so <code>error.message</code> is the server’s sentence. The error page that a missing room now lands on is handed the same shape, as its <code>error</code> prop. An awaited command is not inside a boundary at all: its promise rejects with the <code>HttpError</code> itself, <code>{ status, body }</code>, and the sentence is one level down. Same server, same <code>error(…)</code> call, two shapes — and a probe that threw both in a browser is how this project found out which code read which. The <code>(error as App.Error)</code> is the documented type in the only place today’s typings let it go (ch. 19).</p>
 </aside>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>
-	<ul><li>You can say what would be on screen if line 64 lost its <code>$derived</code>.</li><li>You can explain what happens to a knob override when the next snapshot arrives.</li><li>You can trace one pad click from this page to every other browser in the room.</li><li>You can say what a refused command hands <code>run</code>, and what a failed room hands the <code>failed</code> snippet.</li></ul>
+	<ul><li>You can say what would be on screen if <code>{const snapshot = $derived(await room)}</code> lost its <code>$derived</code>.</li><li>You can explain what happens to a knob override when the next snapshot arrives.</li><li>You can trace one pad click from this page to every other browser in the room.</li><li>You can say what a refused command hands <code>run</code>, and what a failed stream hands the <code>failed</code> snippet.</li><li>You can say why <code>/jam/nowhere</code> needed a <code>load</code> to be a 404, when the live query already threw one.</li></ul>
 </aside>
 		</article>
 

@@ -20,7 +20,16 @@ import { pathToFileURL } from 'node:url';
 import sirv from 'sirv';
 import { createReadableStream, getRequest, setResponse } from '@sveltejs/kit/node';
 import { applyReroute } from '@sveltejs/kit/adapter';
-import { appDir, base, functions, origin, patterns, precompress, prerendered } from 'ENTRIES';
+import {
+	appDir,
+	base,
+	functions,
+	headers,
+	origin,
+	patterns,
+	precompress,
+	prerendered
+} from 'ENTRIES';
 import { dir } from './dir.js';
 import { pick } from 'PARTITION';
 
@@ -83,6 +92,11 @@ const ready = Promise.all(
 /* ------------------------------------------------------------------ */
 
 /**
+ * A file is answered here, by sirv, and never reaches SvelteKit — so none of
+ * the app's hooks run for it, and whatever headers `handleSecurity` sets on a
+ * rendered page are missing unless they are set here too. `headers` is the
+ * adapter's `headers` option, baked in at build time.
+ *
  * @param {string} path
  * @param {boolean} client
  */
@@ -91,14 +105,13 @@ function serve(path, client) {
 		etag: true,
 		gzip: precompress,
 		brotli: precompress,
-		setHeaders: client
-			? (res, pathname) => {
-					// Hashed filenames never change, so a browser may keep them forever.
-					if (pathname.startsWith(`/${appDir}/immutable/`) && res.statusCode === 200) {
-						res.setHeader('cache-control', 'public,max-age=31536000,immutable');
-					}
-				}
-			: undefined
+		setHeaders: (res, pathname) => {
+			for (const [name, value] of Object.entries(headers)) res.setHeader(name, value);
+			// Hashed filenames never change, so a browser may keep them forever.
+			if (client && pathname.startsWith(`/${appDir}/immutable/`) && res.statusCode === 200) {
+				res.setHeader('cache-control', 'public,max-age=31536000,immutable');
+			}
+		}
 	});
 }
 
@@ -178,11 +191,9 @@ function respond(entry, request, req) {
 		},
 		// `event.platform` in the app. `emulate()` in `../index.js` produces the
 		// same shape during development, so nothing has to guard against `undefined`.
-		platform: {
-			adapter: 'adapter-ostinato',
-			entry: entry === 'router' ? 'pages' : entry,
-			startedAt
-		}
+		// `entry` is the truth, catch-all included: nothing in the app branches on
+		// it, and a diagnostics page that said `pages` for a 404 would be lying.
+		platform: { adapter: 'adapter-ostinato', entry, startedAt }
 	});
 }
 

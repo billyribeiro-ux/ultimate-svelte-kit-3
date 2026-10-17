@@ -22,6 +22,8 @@ declare module 'ENTRIES' {
 	export const prerendered: Set<string>;
 	export const patterns: { pages: string[]; api: string[] };
 	export const precompress: boolean;
+	/** Set on every static file and prerendered page — responses no hook ever sees. */
+	export const headers: Record<string, string>;
 }
 
 declare module 'PARTITION' {

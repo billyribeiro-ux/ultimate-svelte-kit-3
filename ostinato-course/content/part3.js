@@ -188,13 +188,13 @@ export const part3 = [
 				type: 'p',
 				text: 'The grid does not own the pattern either. It renders one and reports edits through callbacks — `onpaint`, `onfill`, `onmove` — so the same component draws the studio (where the callbacks edit the session), the published page (read-only, no callbacks) and the jam room (where every callback is a command sent to the server, ch. 31). `brush` is the one `$bindable`, because two things write it: this toolbar, and the keyboard shortcuts on the page.'
 			},
-			code('src/lib/studio/StepGrid.svelte', 61, 77),
+			code('src/lib/studio/StepGrid.svelte', 64, 80),
 			{
 				type: 'p',
 				text: '`bind:group` on four radio inputs: one variable, whichever is checked. The inputs are visually hidden and the `<label>` is the chip, which is why the end-to-end tests click the label — a hidden radio has no size to click.'
 			},
 			{ type: 'h3', id: 'flip', text: 'Moving a row' },
-			code('src/lib/studio/StepGrid.svelte', 79, 100),
+			code('src/lib/studio/StepGrid.svelte', 82, 109),
 			{
 				type: 'p',
 				text: 'The rows are keyed by `track.id`. When `moveTrack` splices the array, Svelte moves the `<li>` rather than rewriting the rows between, and `animate:flip` draws the move — FLIP: measure where it was, apply the change, invert the difference with a transform, play it back to zero. The duration is zero when the person prefers reduced motion.'
@@ -203,23 +203,28 @@ export const part3 = [
 				type: 'warn',
 				text: 'The four `{const}` declarations are *inside* the `<li>`, and the comment says why: an element with `animate:` must be the only child of its keyed `{#each}` block, and a declaration tag counts as a child. Written before the `<li>`, the compiler refuses. This was found by the Svelte MCP server’s autofixer while writing this file, which is what that tool is for.'
 			},
+			{
+				type: 'why',
+				title: 'Why every one of them is `$derived`',
+				text: 'A plain declaration tag — `{const count = track.steps.filter(…).length}` — is worked out *once*, when its block is created, and never again. Compile one and look: it becomes an ordinary `const` at the top of the row’s render function, with nothing subscribed to it. That is right for a value that cannot change while the block exists. A row of this grid is the opposite case: it is keyed by `track.id`, so the same `<li>` outlives every step painted in it and every change of instrument. Written plainly, the “all steps” box below would describe the row as it was when the pattern loaded, whatever happened after. `{const count = $derived(…)}` is the declaration-tag spelling of a derived: it is recomputed when the steps it reads change, and `all`, `some` and `melodic` follow it. The documentation puts the rule in one line — “when values should be reactive, you can use `$state` and `$derived`” — and the end-to-end suite pins it with a test that paints and erases a whole row from the pads, never touching the box, and then asks the box what it says (ch. 38).'
+			},
 			{ type: 'h3', id: 'three-states', text: 'A checkbox with three states' },
-			code('src/lib/studio/StepGrid.svelte', 101, 117),
+			code('src/lib/studio/StepGrid.svelte', 110, 126),
 			{
 				type: 'p',
-				text: 'The box at the start of each row means “every step on”. It is *derived* from the steps — so `bind:checked` gets a function binding: a getter that computes it and a setter that, instead of assigning, calls `onfill`. Ticking the box is a command, not an assignment, and the box shows whatever the steps say once the command has run.'
+				text: 'The box at the start of each row means “every step on”. It is *derived* from the steps — `all` and `some` above are `$derived` — so `bind:checked` gets a function binding: a getter that reads the derived and a setter that, instead of assigning, calls `onfill`. Ticking the box is a command, not an assignment, and the box shows whatever the steps say once the command has run.'
 			},
 			{
 				type: 'p',
-				text: '`bind:indeterminate` is the third state a checkbox has and most interfaces never use. When some steps are on and some off, the honest answer to “is this row on?” is “partly”, and the browser has a way to draw that. Its setter is a no-op: the browser clears `indeterminate` on click, and the getter decides what it should be again on the next render.'
+				text: '`bind:indeterminate` is the third state a checkbox has and most interfaces never use. When some steps are on and some off, the honest answer to “is this row on?” is “partly”, and the browser has a way to draw that. Its setter is a no-op: the browser clears `indeterminate` on click, and the getter puts back whatever the steps say the next time `some` changes. That is only true because `some` is a derived; with a plain declaration the click would be the one thing that ever moved it.'
 			},
-			code('src/lib/studio/StepGrid.svelte', 121, 135),
+			code('src/lib/studio/StepGrid.svelte', 130, 144),
 			{
 				type: 'p',
 				text: 'The track name is a `contenteditable` span with `bind:textContent` — another function binding, reading the name and writing it back trimmed, with the old name kept if the new one is empty. `plaintext-only` stops a paste from bringing formatting with it.'
 			},
-			code('src/lib/studio/StepGrid.svelte', 137, 176),
-			code('src/lib/studio/StepGrid.svelte', 179, 193),
+			code('src/lib/studio/StepGrid.svelte', 146, 185),
+			code('src/lib/studio/StepGrid.svelte', 188, 202),
 			{
 				type: 'p',
 				text: 'The pads are the second `{#each}`, keyed by column. `{melodic}` and `{column}` are the shorthand for `melodic={melodic}` — the four declarations from the top of the `<li>` are in scope all the way down here. `playing={column === step}` is the whole playhead: the scheduler’s `step` comes in as a prop, and the one pad whose column matches lights up.'
@@ -228,7 +233,7 @@ export const part3 = [
 				type: 'checkpoint',
 				items: [
 					'You can say what a function binding is and when to use it instead of a variable.',
-					'You can explain why the `{const}` tags are inside the `<li>`.',
+					'You can explain why the `{const}` tags are inside the `<li>`, and why each one is `$derived`.',
 					'You can name the three things `bind:group`, `bind:checked` and `bind:indeterminate` bind to in this file.'
 				]
 			}
@@ -325,21 +330,25 @@ export const part3 = [
 			code('src/lib/studio/Sheet.svelte', 35, 44),
 			{
 				type: 'p',
-				text: 'Focus goes to the close button when the sheet opens, and back to wherever it was when the sheet closes. An attachment is the right tool: it runs on mount with the element, and its return value runs on unmount. Escape closes it, through `<svelte:window onkeydown>`.'
+				text: 'Focus goes to the close button when the sheet opens, and back to wherever it was when the sheet closes. An attachment is the right tool: it runs on mount with the element, and its return value runs on unmount. The previous element is kept only if it is an `HTMLElement` — an `instanceof` check rather than a cast, because `document.activeElement` can be an SVG element, or `null`, and only one of those three has a `focus()` worth calling. Escape closes it, through `<svelte:window onkeydown>`.'
 			},
 			{
 				type: 'why',
 				title: 'Why the sheet is not modal',
-				text: 'A sound panel you have to close before you can hear the change is a panel nobody leaves open. The grid stays usable behind the sheet, the transport keeps playing, and turning the tone knob while a loop runs is the whole point. `role="dialog"` without `aria-modal` says exactly this to assistive technology: a dialog, and the page behind it is still there.'
+				text: 'A sound panel you have to close before you can hear the change is a panel nobody leaves open. The grid stays usable behind the sheet, the transport keeps playing, and turning the tone knob while a loop runs is the whole point. `role="dialog"` without `aria-modal` says exactly this to assistive technology: a dialog, and the page behind it is still there. The gallery’s preview is the opposite case, and is a real modal `<dialog>` opened with `showModal()` (ch. 30): nothing behind it is any use while it is open.'
 			},
 			{ type: 'h3', id: 'shallow-routing', text: 'Opening a panel is a history entry' },
 			code('src/app.d.ts', 28, 39),
-			code('src/routes/(app)/studio/+page.svelte', 97, 118),
+			code('src/routes/(app)/studio/+page.svelte', 118, 141),
 			{
 				type: 'p',
-				text: 'Opening the sound panel pushes a history entry with `{ panel: "sound" }` in its state and *no change to the URL*: `goto("")` is “stay here”, `shallow: true` is “but add an entry”. SvelteKit 2 spelled this `pushState("", state)`; 3.0 folded shallow routing into `goto`, so there is one function for going somewhere and the options say how deep — and a shallow navigation now runs `beforeNavigate` and `onNavigate` like any other, which is why both layouts check `navigation.shallow` (ch. 27). The back button — or a swipe on a phone — closes it, which is what a person expects of something that covers the screen. `page.state` is typed by `App.PageState` in `app.d.ts`, so `page.state.panel` is one of the names declared there — `"sound" | "share" | "samples"` — or `undefined`, and a misspelt panel is a type error rather than a sheet that never opens.'
+				text: 'Opening the sound panel pushes a history entry with `{ panel: "sound" }` in its state and *no change to the URL*: `goto("")` is “stay here”, `shallow: true` is “but add an entry”. SvelteKit 2 spelled this `pushState("", state)`; 3.0 folded shallow routing into `goto`, so there is one function for going somewhere and the options say how deep — and a shallow navigation now runs `beforeNavigate` and `onNavigate` like any other, which is why both layouts check `navigation.shallow` (ch. 27). The back button — or a swipe on a phone — closes it, which is what a person expects of something that covers the screen. `page.state` is typed by `App.PageState` in `app.d.ts`, so `page.state.panel` is one of the names declared there — `"sound" | "share"` — or `undefined`, and a misspelt panel is a type error rather than a sheet that never opens. That promise holds only while the union lists the panels that exist: it once carried a third name, `"samples"`, for a panel that was never built, and `open("samples")` type-checked and showed nothing — exactly the failure the type was there to prevent. A name goes into the union with the sheet that renders it.'
 			},
-			code('src/routes/(app)/studio/+page.svelte', 335, 343),
+			{
+				type: 'note',
+				text: '`goto("")` is the one `goto` in the project that is not wrapped in `resolve()`, and the line above it says so to the linter: `svelte/no-navigation-without-resolve` wants every navigation to name a route (ch. 27), and “this page, one entry deeper” has no route to name.'
+			},
+			code('src/routes/(app)/studio/+page.svelte', 374, 382),
 			{
 				type: 'p',
 				text: 'The template reads `page.state.panel` and shows the matching sheet. `close()` calls `history.back()` rather than clearing the state itself, so that closing with the button and closing with the back gesture are the same operation and leave the history the same shape.'
@@ -366,7 +375,7 @@ export const part3 = [
 				type: 'p',
 				text: 'A pattern arrives at the studio four ways, and the `load` function is the list. A universal `load` — `+page.ts`, not `+page.server.ts` — runs on the server for the first visit and in the browser for every navigation after, and the remote query it calls behaves the same in both.'
 			},
-			code('src/routes/(app)/studio/+page.ts', 7, 62),
+			code('src/routes/(app)/studio/+page.ts', 6, 61),
 			{
 				type: 'p',
 				text: 'The fourth case is the interesting one. A fresh visit should show whatever this browser was working on last, and that lives in `localStorage`, which the server cannot read. A `load` that returned one thing on the server and another in the browser would hydrate to a mismatch. So `load` returns `null`, the server renders a preset, and the page swaps the saved session in *after* hydration.'
@@ -387,36 +396,50 @@ export const part3 = [
 				text: '`data` is a prop, and props are reactive: when a navigation changes the URL, `data` changes with it. The *first* pattern must be read exactly once, at creation, and never again — a later `data` change should not reload the session and throw away edits. `untrack` reads without subscribing. The `onMount` after it runs once the DOM exists, which is when `localStorage` can be read without the server disagreeing.'
 			},
 			{ type: 'h3', id: 'snapshot-and-effects', text: 'Snapshot, autosave, prune, inspect' },
-			code('src/routes/(app)/studio/+page.svelte', 61, 91),
+			code('src/routes/(app)/studio/+page.svelte', 61, 112),
 			{
 				type: 'p',
-				text: 'Four things, each in the place Svelte or SvelteKit provides for it. `snapshot` is SvelteKit’s: `capture` runs before the page is left and `restore` when the back button brings it back, and the value — the encoded pattern, a few hundred characters — is stored with the history entry. Go to the gallery, come back, and the pattern is where you left it.'
+				text: 'Four things, each in the place Svelte or SvelteKit provides for it. `snapshot()` from `$app/navigation` registers a `capture` that runs before the page is left and a `restore` that runs when the back button brings its history entry back. The value — the encoded pattern, a few hundred characters — is stored with that entry and in `sessionStorage`, so a reload brings it back too. Go to the gallery, come back, and the pattern is where you left it. The explicit `id` keeps the stored value readable by the next deployment: the default id is worked out from the stack trace at the call, and a stack trace changes whenever the code above it does.'
+			},
+			{
+				type: 'note',
+				text: 'SvelteKit 2 spelled this `export const snapshot: Snapshot<string> = { capture, restore }` from the page component, and this project did, until SvelteKit 3 deprecated it. The helper can be called from any component, not only a page or layout; it serialises with devalue (and the `transport` hook) rather than JSON; and it captures *shallow* navigations too, which the old export never did. That last difference is the one this page has to think about.'
+			},
+			{
+				type: 'why',
+				title: 'Why the snapshot carries a `lineage`',
+				text: 'This page makes a shallow navigation every time a panel opens (ch. 18). The helper captures on it, so the studio’s own history entry now holds the pattern as it was *when the panel opened*. Close the sound panel — `history.back()` — and the helper restores that value. Taken at its word, `restore` would load it: every change made in the panel would vanish, and `session.load` would empty the undo history too. Nothing about the value says whether the studio that receives it is the one that wrote it, so the value carries that itself. `lineage` is a random name given to each studio when it is created. A value with this studio’s lineage is a panel closing over a pattern that is already newer, and is ignored; a value with another lineage means the studio was rebuilt — after the gallery, or a reload — and is loaded. The studio that loads it takes the lineage on, so that stepping further back through the old studio’s panel entries stays a no-op rather than an undo. It is a random string and not a counter because it has to differ across reloads, and `Math.random` and not `crypto.randomUUID` because the second exists only in a secure context. The end-to-end suite changes the instrument in the sound panel, closes it, and checks that the change and the undo history both survived (ch. 38).'
 			},
 			{
                                 type: 'p',
 				text: '`$effect(() => session.autosave())` is the root effect from chapter 14, wired in one line: the disposer it returns is this effect’s cleanup. `engine.prune` runs whenever the track list changes — a sync with an external system, the audio graph, which is what `$effect` is for. And `$inspect(...).with(...)` logs the tempo in development with a custom formatter that says *which* of the two values changed, which the default `console.log` does not.'
 			},
 			{ type: 'h3', id: 'settled', text: 'Presets and `settled()`' },
-			code('src/routes/(app)/studio/+page.svelte', 126, 142),
+			code('src/routes/(app)/studio/+page.svelte', 149, 165),
 			{
 				type: 'p',
 				text: 'Loading a preset replaces the pattern, which replaces the grid (the `{#key}` below), which creates a hundred new pads. Focusing the first pad *before* that has finished would focus a pad about to be removed. `settled()` resolves when the state change and everything it caused — the new rows, their transitions started — has reached the DOM. It is `await tick()` for a world with async in it.'
 			},
 			{ type: 'h3', id: 'the-keyboard', text: 'The keyboard, the window, the body' },
-			code('src/routes/(app)/studio/+page.svelte', 148, 181),
-			code('src/routes/(app)/studio/+page.svelte', 196, 203),
+			code('src/routes/(app)/studio/+page.svelte', 171, 220),
+			code('src/routes/(app)/studio/+page.svelte', 235, 242),
 			{
 				type: 'p',
 				text: 'Three special elements, each for what it is the right listener for. `<svelte:window>` for the shortcuts, because a key press goes to the window when nothing is focused. `<svelte:document>` for `visibilitychange`, which is a document event. `<svelte:body>` for the pointer press that wakes the audio engine — browsers will not start audio without a gesture, and any press anywhere on the page counts, after which the space bar (not a gesture in every browser) works too.'
 			},
 			{ type: 'h3', id: 'the-grid-in-place', text: 'The grid, keyed and bounded' },
-			code('src/routes/(app)/studio/+page.svelte', 288, 320),
+			code('src/routes/(app)/studio/+page.svelte', 327, 359),
 			{
 				type: 'p',
 				text: '`{#key session.generation}` destroys and recreates its contents when the number changes: a whole new grid for a whole new pattern. Inside it, `<svelte:boundary>` catches a rendering error in the grid — a damaged pattern with a step missing, say — and shows the `failed` snippet with a “Try again” button instead of taking the page down. `onerror` sends the message to a toast as well. Both are handed the same thing — the `App.Error` that `handleError` made, `{ status, message }`, not the value that was thrown — which is why they read `error.message` and cast to `App.Error` rather than to `Error`.'
 			},
-			code('src/routes/(app)/studio/+page.svelte', 183, 193),
-			code('src/routes/(app)/studio/+page.svelte', 265, 273),
+			{
+				type: 'why',
+				title: 'Why a cast here, when the documentation writes a type',
+				text: 'SvelteKit’s documentation annotates the snippet’s parameter once — `{#snippet failed(error: App.Error)}`, with the comment that the error “went through the `handleError` hook and is of type `App.Error`”. Copy that into this project and `svelte-check` refuses it: `failed` is typed `Snippet<[error: unknown, reset: () => void]>`, and a snippet that demands an `App.Error` is not assignable to one that may be handed anything. (`onerror={(error: App.Error) => …}` fails the same way.) So every `failed` snippet and `onerror` handler here takes the `unknown` it is given and says `(error as App.Error)` where it reads it. The cast is not covering for a wrong shape: SvelteKit mounts the app with a `transformError` that sends every boundary error through `handleError` before any boundary sees it — `client.js` passes `transformError: (e) => handle_error(e, …)` to `hydrate`, and the server renderer does the same — so the value really is an `App.Error`. The day the typings carry that guarantee, the cast becomes the annotation and nothing else changes.'
+			},
+			code('src/routes/(app)/studio/+page.svelte', 222, 232),
+			code('src/routes/(app)/studio/+page.svelte', 304, 312),
 			{
 				type: 'p',
 				text: '“Published 3s ago” needs a clock that ticks. `now` is a `SvelteDate`, updated by an interval; `session.savedAt` is another. Subtract one from the other in a `$derived.by` and the label re-renders every second, because reading a `SvelteDate` is tracked. A plain `Date` would show “0s ago” forever.'
@@ -426,7 +449,8 @@ export const part3 = [
 				items: [
 					'You can list the four places a pattern comes from and say which one restores in `onMount` and why.',
 					'You can say what `settled()` waits for and what would go wrong without it.',
-					'You can explain what `{#key}` and `<svelte:boundary>` each protect against here.'
+					'You can explain what `{#key}` and `<svelte:boundary>` each protect against here.',
+					'You can say what would happen to an edit made in the sound panel if `restore` loaded every value it was handed.'
 				]
 			}
 		]
@@ -444,42 +468,42 @@ export const part3 = [
 				text: 'Two panels, both opened as history entries (ch. 18). The sound panel edits one track: its instrument, its two knobs, and — for a sample track — the file it plays. The share panel is three ways out of the studio: a link, a file, and the gallery.'
 			},
 			{ type: 'h3', id: 'files', text: 'A file, in' },
-			code('src/lib/studio/SoundPanel.svelte', 33, 61),
-			code('src/lib/studio/SoundPanel.svelte', 131, 158),
+			code('src/lib/studio/SoundPanel.svelte', 33, 63),
+			code('src/lib/studio/SoundPanel.svelte', 133, 160),
 			{
 				type: 'p',
-				text: '`bind:files` on `<input type="file">` gives a `FileList`. A `FileList` cannot be constructed, so clearing the input means assigning the `files` of an empty `DataTransfer` — the one way to make an empty one. The variable starts `undefined` rather than as an empty list because `DataTransfer` does not exist on the server, and this component is server-rendered with the rest of the page.'
+				text: '`bind:files` on `<input type="file">` gives a `FileList`. A `FileList` cannot be constructed, so clearing the input means assigning the `files` of an empty `DataTransfer` — the one way to make an empty one. The variable starts `undefined` rather than as an empty list because `DataTransfer` does not exist on the server, and this component is server-rendered with the rest of the page. A file that will not decode rejects with a `DOMException`, and one that is too long with a `RangeError`; both are `Error`s with a sentence worth a toast, so the `catch` checks `instanceof Error` before it reads `message` rather than assuming it with a cast.'
 			},
 			code('src/lib/studio/waveform.ts', 16, 59),
 			{
 				type: 'p',
 				text: '`{@attach waveform(samples.get(track.id), hue)}` — an attachment factory again (ch. 17). It draws the loudest sample per pixel column, sized from the canvas’s CSS box at draw time, and re-draws through a `ResizeObserver` when the sheet becomes a sidebar. When the buffer prop changes, Svelte re-runs the factory and the new attachment draws the new file.'
 			},
-			code('src/lib/studio/SoundPanel.svelte', 63, 97),
+			code('src/lib/studio/SoundPanel.svelte', 65, 99),
 			{
 				type: 'p',
 				text: '“Audition” plays the sound once with the current knobs, without pressing play. It is the same `switch` as the scheduler’s (ch. 10), `satisfies never` and all, which is what guarantees that adding a kind to the model breaks this file at compile time until it is handled.'
 			},
 			{ type: 'h3', id: 'the-link', text: 'The link' },
-			code('src/lib/studio/SharePanel.svelte', 32, 36),
+			code('src/lib/studio/SharePanel.svelte', 33, 37),
 			{
 				type: 'p',
 				text: '`session.encoded` is a getter over the whole pattern, so the link is a `$derived.by` that recomputes on every edit. Copy it, paste it into a chat, and the other person opens your groove — the studio’s `load` (ch. 19) decodes `?p=` on arrival.'
 			},
 			{ type: 'h3', id: 'fork', text: 'A WAV, rendered before the click' },
-			code('src/lib/studio/SharePanel.svelte', 172, 203),
+			code('src/lib/studio/SharePanel.svelte', 173, 204),
 			{
 				type: 'p',
 				text: 'Two small things first. `<select defaultValue="2">` is the element *uncontrolled* with a starting value — new in Svelte 5.57 — and only the change handler reads it. And the render button has five handlers: pointer enter and focus start something; pointer leave and focus out cancel it; click commits it.'
 			},
-			code('src/lib/studio/SharePanel.svelte', 51, 81),
+			code('src/lib/studio/SharePanel.svelte', 52, 82),
 			{
 				type: 'why',
 				title: 'Why `fork`',
 				text: 'Rendering two bars through an `OfflineAudioContext` (ch. 13) takes a few hundred milliseconds. `fork` runs a state change *speculatively*: `wanted = true` happens in a fork, the `await render(bars)` it unlocks in the markup below starts immediately, but nothing is shown until the fork is committed. Hover the button and the render begins; click and it is already half done; leave and `discard()` throws the work away — which it must, or the fork leaks. This is the same primitive SvelteKit uses to preload pages on hover, exposed for your own state.'
 			},
-			code('src/lib/studio/SharePanel.svelte', 83, 106),
-			code('src/lib/studio/SharePanel.svelte', 205, 251),
+			code('src/lib/studio/SharePanel.svelte', 84, 107),
+			code('src/lib/studio/SharePanel.svelte', 206, 253),
 			{
 				type: 'warn',
 				text: '`{const rendered = $derived(await render(bars))}` — with the `$derived`. A bare `{const x = await …}` in markup runs *once*; wrapped in `$derived` it re-runs when `bars` changes, which is the whole feature. This distinction cost an afternoon during the jam room (ch. 38), and it appears here first: when an `await` in a template should follow its inputs, it needs `$derived` around it.'
@@ -489,20 +513,20 @@ export const part3 = [
 				text: '`$effect.pending()` counts the `await`s in flight in this boundary after the first render — changing the bar count re-renders, and the “Re-rendering 4 bars…” line is what says so while it happens. The `pending` snippet covers the *first* render, the `failed` snippet a thrown error, with `reset` to try again. What `failed` is handed is not the thrown value but the `App.Error` that `handleError` made from it — and a WAV render that fails throws a plain `Error` in the browser, which is not safe to show as it is, so the line reads “Rendering failed: Internal Error” while the console has the real one. And `bind:paused`, `bind:currentTime` and `bind:duration` on the `<audio>` make a play button and a clock with no event handlers at all.'
 			},
 			{ type: 'h3', id: 'publishing', text: 'Publishing: a form with preflight' },
-			code('src/lib/studio/SharePanel.svelte', 112, 149),
+			code('src/lib/studio/SharePanel.svelte', 113, 150),
 			{
 				type: 'p',
 				text: '`publish` is a remote form function (ch. 24). `.preflight(schema)` checks the fields in the browser before anything is sent — which is what makes “three to twenty characters” appear on the keystroke rather than after a round trip — and the schema must describe the *whole* input, including the fields the server alone judges, which is why `_pattern`, `remixOf` and `action` are typed here but barely checked. `.enhance()` takes over the submission: `submit()` resolves `true` on success, the handler’s return value is on `publish.result`, and the page never reloads. A schema failure resolves `false` and appears under the fields; a refusal *rejects*, and the `catch` shows the server’s reason through `messageOf` (ch. 24), keeping “Publishing failed — try again in a moment” for a request that never arrived.'
 			},
-			code('src/lib/studio/SharePanel.svelte', 262, 292),
+			code('src/lib/studio/SharePanel.svelte', 264, 294),
 			{
 				type: 'p',
 				text: 'Validate on every keystroke *and* on blur. SvelteKit only reports issues for fields a person has finished with — it marks a field touched on `focusout` — so the blur is what turns a rule into a message under the field. The handle input sits in its own `<svelte:boundary>` with `{const me = $derived(await whoAmI())}` so that a browser that already has a handle sees it filled in, and one that does not sees a placeholder while the query is in flight.'
 			},
-			code('src/lib/studio/SharePanel.svelte', 314, 329),
+			code('src/lib/studio/SharePanel.svelte', 316, 331),
 			{
 				type: 'p',
-				text: 'Two submit buttons, one field: `publish.fields.action.as("submit", "stay")` and `as("submit", "open")`. Whichever is pressed sends its value as `action`, and the server either returns the result or redirects to the new page — a redirect from inside an enhanced submission navigates, in SvelteKit 3. With JavaScript off, the form posts, the hidden `_pattern` field carries the JSON, and everything still works.'
+				text: 'Two submit buttons, one field: `publish.fields.action.as("submit", "stay")` and `as("submit", "open")`. Whichever is pressed sends its value as `action`, and the server either returns the result or throws `redirect(303, …)` to the new page, and the enhanced submission follows it. That is remote forms doing what they have done since they arrived, not a SvelteKit 3 change — 3.0’s change of the same flavour is about `use:enhance` form *actions* posting to another page, and this project has none. With JavaScript off, the form posts, the hidden `_pattern` field carries the JSON, and everything still works.'
 			},
 			{
 				type: 'checkpoint',

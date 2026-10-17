@@ -1,7 +1,10 @@
 <script lang="ts">
+	import type { Attachment } from 'svelte/attachments';
+	import { prefersReducedMotion } from 'svelte/motion';
 	import { crossfade, fade } from 'svelte/transition';
 	import { innerWidth } from 'svelte/reactivity/window';
 	import { goto, preloadData } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { messageOf } from '#lib/errors.ts';
 	import { whoAmI } from '#lib/remote/artist.remote.ts';
@@ -26,10 +29,9 @@
 	];
 
 	/** The sort lives in the URL, so a sorted gallery is a link. */
-	const sort = $derived.by((): Sort => {
-		const wanted = page.url.searchParams.get('sort');
-		return sorts.some((s) => s.value === wanted) ? (wanted as Sort) : 'new';
-	});
+	const sort = $derived(
+		sorts.find((s) => s.value === page.url.searchParams.get('sort'))?.value ?? 'new'
+	);
 
 	/**
 	 * CROSSFADE
@@ -39,11 +41,16 @@
 	 * animated as one thing moving between two places — here, a card's picture
 	 * travelling into the preview dialog. When there is no partner (the dialog
 	 * closed by the back button before the card re-rendered), `fallback` runs.
+	 *
+	 * The durations are functions, asked when a transition starts. Svelte plays
+	 * its transitions with the Web Animations API, which the stylesheet's
+	 * reduced-motion rule cannot reach, so each one has to ask for itself.
 	 */
 	const [send, receive] = crossfade({
-		duration: 320,
-		fallback: (node) => fade(node, { duration: 160 })
+		duration: () => (prefersReducedMotion.current ? 0 : 320),
+		fallback: (node) => fade(node, { duration: prefersReducedMotion.current ? 0 : 160 })
 	});
+	const fadeDuration = $derived(prefersReducedMotion.current ? 0 : 160);
 
 	/**
 	 * PREVIEW WITHOUT LEAVING
@@ -67,7 +74,7 @@
 		if (event.metaKey || event.ctrlKey || event.shiftKey || (innerWidth.current ?? 0) < 640) return;
 		event.preventDefault();
 
-		const href = `/p/${id}`;
+		const href = resolve('/(app)/p/[id]', { id });
 		const result = await preloadData(href);
 		if (result.type === 'loaded' && result.status === 200) {
 			await goto(href, { shallow: true, state: { preview: id } });
@@ -76,9 +83,28 @@
 		}
 	}
 
+	/** Closing is going back: the preview is a history entry, and back removes it. */
 	function close() {
-		history.back();
+		if (page.state.preview) history.back();
 	}
+
+	/**
+	 * A REAL MODAL
+	 * ============
+	 * `showModal()` is what makes a `<dialog>` modal: the browser puts it in the
+	 * top layer, makes everything behind it inert — so Tab cannot wander onto
+	 * the gallery underneath — moves focus inside, closes it on Escape, and
+	 * gives focus back to the card that opened it when it closes. A `<div
+	 * role="dialog">` has to fake each of those, and this one used to fake none.
+	 *
+	 * An attachment, because "call a method on the element once it exists, and
+	 * undo it when it goes" is exactly what one is. The teardown runs after the
+	 * fade-out, so the dialog stays modal until it has gone.
+	 */
+	const modal: Attachment<HTMLDialogElement> = (dialog) => {
+		dialog.showModal();
+		return () => dialog.close();
+	};
 </script>
 
 <svelte:head>
@@ -92,7 +118,7 @@
 			{#each sorts as option (option.value)}
 				<a
 					class="chip"
-					href="?sort={option.value}"
+					href={resolve(`/(app)/gallery?sort=${option.value}`)}
 					aria-current={sort === option.value ? 'true' : undefined}
 				>
 					{option.label}
@@ -142,8 +168,11 @@
 		back to a plain POST. That still deletes, which is why nothing noticed;
 		a refusal became an error page instead of a toast. Removing either the
 		inner boundary or the batched `await getCounts` inside it was enough, so
-		the inner boundary went — this one already waits for everything in it,
-		and the end-to-end suite checks that a refused delete is a toast.
+		the inner boundary went — this one already waits for everything in it.
+		There is no upstream issue yet: it needs reducing to a page without this
+		app around it first. Until then the condition for putting the inner
+		boundary back is the two-tab test in `e2e/gallery.e2e.ts` passing with
+		it in place.
 	-->
 	<svelte:boundary>
 		{const me = $derived(await whoAmI())}
@@ -151,6 +180,11 @@
 			<Section eyebrow="@{me.handle}" title="Yours">
 				<ul class="cards" id="yours">
 					{#each await getMine() as mine (mine.id)}
+						<!--
+							A plain declaration, worked out once per row, and that is right
+							here: the row is keyed by `mine.id`, so its id never changes, and
+							`remove.for(id)` hands back the same form instance every time.
+						-->
 						{const del = remove.for(mine.id)}
 						<li>
 							<PatternCard published={mine} counts={await getCounts(mine.id)}>
@@ -193,34 +227,50 @@
 </div>
 
 {#if page.state.preview}
-	{const id = page.state.preview}
-	<div
-		class="backdrop"
-		role="presentation"
-		onclick={close}
-		transition:fade={{ duration: 160 }}
-	></div>
-	<div
+	<!--
+		`$derived`. The `{#if}` asks only whether there is a preview, so
+		nothing ties this block's life to which one: a plain declaration would
+		be right only as long as nothing ever changed the id without closing
+		the dialog first, and a derived makes that a question nobody has to ask.
+	-->
+	{const id = $derived(page.state.preview)}
+	<!--
+		Escape closes a modal dialog by itself; `onclose` turns that into the
+		history step the preview is. A click whose target is the dialog element
+		itself landed on the backdrop — everything inside is in `.preview__body`.
+	-->
+	<dialog
 		class="preview"
-		role="dialog"
 		aria-label="Pattern preview"
-		transition:fade={{ duration: 160 }}
+		{@attach modal}
+		onclose={close}
+		onclick={(event) => {
+			if (event.target === event.currentTarget) close();
+		}}
+		transition:fade={{ duration: fadeDuration }}
 	>
-		<svelte:boundary>
-			{const published = $derived(await getPattern(id))}
-			<div class="preview__picture" in:receive={{ key: id }} out:send={{ key: id }}>
-				<MiniGrid pattern={published.pattern} />
-			</div>
-			<PatternView {published} compact />
-			<p class="cluster">
-				<a class="btn btn--ghost" href="/p/{id}" data-sveltekit-reload>Open the full page</a>
-				<button type="button" class="btn btn--ghost" onclick={close}>Close</button>
-			</p>
-			{#snippet pending()}
-				<p class="hint">Opening…</p>
-			{/snippet}
-		</svelte:boundary>
-	</div>
+		<div class="preview__body">
+			<svelte:boundary>
+				{const published = $derived(await getPattern(id))}
+				<div class="preview__picture" in:receive={{ key: id }} out:send={{ key: id }}>
+					<MiniGrid pattern={published.pattern} />
+				</div>
+				<PatternView {published} compact />
+				<p class="cluster">
+					<!--
+						A plain link to the address already in the bar. Since SvelteKit 3
+						that is a real navigation, not a no-op: it leaves shallow routing,
+						replaces the preview's history entry with the page, and refreshes.
+					-->
+					<a class="btn btn--ghost" href={resolve('/(app)/p/[id]', { id })}>Open the full page</a>
+					<button type="button" class="btn btn--ghost" onclick={close}>Close</button>
+				</p>
+				{#snippet pending()}
+					<p class="hint">Opening…</p>
+				{/snippet}
+			</svelte:boundary>
+		</div>
+	</dialog>
 {/if}
 
 <style>
@@ -231,29 +281,30 @@
 		padding: 0;
 	}
 
-	.backdrop {
-		position: fixed;
-		inset: 0;
-		z-index: var(--z-dialog);
-		background: rgb(0 0 0 / 0.5);
-	}
-
+	/* The top layer needs no z-index; the browser draws `::backdrop` under it. */
 	.preview {
-		position: fixed;
-		inset: 5vh 0 auto;
-		z-index: var(--z-dialog);
-		display: flex;
-		flex-direction: column;
-		gap: var(--space-4);
 		width: min(56rem, 100% - 2 * var(--gutter));
+		max-width: none;
 		max-height: 90vh;
-		margin-inline: auto;
-		padding: var(--space-5);
+		margin: 5vh auto auto;
+		padding: 0;
 		overflow-y: auto;
 		border: 1px solid var(--border-strong);
 		border-radius: var(--radius-lg);
 		background: var(--surface-raised);
+		color: inherit;
 		box-shadow: var(--shadow-lg);
+	}
+
+	.preview::backdrop {
+		background: rgb(0 0 0 / 0.5);
+	}
+
+	.preview__body {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-4);
+		padding: var(--space-5);
 	}
 
 	.preview__picture {

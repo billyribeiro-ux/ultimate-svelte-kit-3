@@ -117,26 +117,26 @@ export const part0 = [
 				type: 'p',
 				text: 'There is no `svelte.config.js`. In SvelteKit 2 that file held the framework options; SvelteKit 3 moved every one of them into the `sveltekit()` plugin call in `vite.config.ts`, and the config is a *function* because it needs to read the environment before the build starts.'
 			},
-			code('vite.config.ts', 1, 37, { partial: true }),
+			code('vite.config.ts', 1, 48, { partial: true }),
 			{
 				type: 'p',
-				text: 'Two things to notice. `defineConfig` comes from `vitest/config` rather than `vite`, so the `test` block at the bottom type-checks. And `paths.origin` is a build-time value: the adapter bakes it into the server so that CSRF checks compare the origin you declared, not one reconstructed from headers.'
+				text: 'Three things to notice. `defineConfig` comes from `vitest/config` rather than `vite`, so the `test` block at the bottom type-checks. `paths.origin` is a build-time value: the adapter bakes it into the server so that CSRF checks compare the origin you declared, not one reconstructed from headers. And `paths.relative` is `false`, so a link the server writes is `/studio` rather than `./studio` or `../studio`. The relative default is for a build that has to work from any folder; this one is served at the root of one origin, and every internal link goes through `resolve()` (ch. 27), which on the server would otherwise answer relative to the page being rendered.'
 			},
 
 			{ type: 'h3', id: 'compiler', text: 'The compiler options' },
-			code('vite.config.ts', 39, 57),
+			code('vite.config.ts', 50, 68),
 			{
 				type: 'p',
 				text: '`runes` is a function so that a dependency written in Svelte 4 style keeps compiling. `experimental.async` is the one that changes how you write components: `await` at the top of a `<script>`, inside `$derived`, and directly in markup — and with it `pending` snippets, `$effect.pending()`, `settled()` and `fork()`. An instrument is full of “wait, then draw”, and this is the honest way to write that.'
 			},
-			code('vite.config.ts', 59, 92),
+			code('vite.config.ts', 70, 108),
 			{
 				type: 'p',
-				text: '`dynamicCompileOptions` is called per file and, since vite-plugin-svelte 7.3.0, per *environment*. That second argument is what lets one folder be compiled as a custom element *for the client only* — a server render of a custom element is a thing that cannot exist, and the guard says so instead of relying on the compiler to quietly decline.'
+				text: '`dynamicCompileOptions` is called per file and, since vite-plugin-svelte 7.3.0, per *environment*. That second argument is what lets one folder be compiled as a custom element *for the client only* — a server render of a custom element is a thing that cannot exist, and the guard says so instead of relying on the compiler to quietly decline. The adapter is handed one option, `headers`: the files it serves itself never pass through a hook, so the security headers have to be given to it directly (ch. 36).'
 			},
 
 			{ type: 'h3', id: 'experimental', text: 'Experimental, with evidence' },
-			code('vite.config.ts', 94, 122),
+			code('vite.config.ts', 110, 138),
 			{
 				type: 'why',
 				title: 'Why the comment is longer than the option',
@@ -148,21 +148,21 @@ export const part0 = [
 				type: 'p',
 				text: 'Three options that this file *tried* to set no longer exist, and SvelteKit says so at startup rather than ignoring them. `experimental.tracing` is now top-level `tracing`; `experimental.instrumentation` is gone because `src/instrumentation.server.ts` is picked up whenever the adapter says it can; and `output.preloadStrategy` is gone because `modulepreload` is the only strategy modern browsers need.'
 			},
-			code('vite.config.ts', 124, 144),
+			code('vite.config.ts', 140, 160),
 			{
 				type: 'note',
 				text: 'The removal list lives in SvelteKit’s own `src/core/config/options.js`, where each removed key names its replacement. When an upgrade fails on “has been removed”, that file is the changelog.'
 			},
 
 			{ type: 'h3', id: 'security-and-versioning', text: 'Policy, origin, version' },
-			code('vite.config.ts', 146, 227),
+			code('vite.config.ts', 162, 255),
 			{
 				type: 'p',
 				text: 'The CSP directives are each a decision, and chapter 36 takes them one at a time. `version.pollInterval` is worth a sentence now: it makes SvelteKit poll for a new deployment every minute and set `updated.current`, so the layout can offer a reload *before* a navigation asks for a JavaScript file that no longer exists.'
 			},
 
 			{ type: 'h3', id: 'tests', text: 'Two test projects' },
-			code('vite.config.ts', 254, 307),
+			code('vite.config.ts', 282, 335),
 			{
 				type: 'p',
 				text: 'The `client` project runs in a real Chromium, because jsdom has no `AudioContext` and no layout: a scheduler test under jsdom would pass while doing nothing. The `server` project is plain Node for the pure logic — the codec, the cookie, the adapter’s route partition — and runs one file at a time because SQLite has one writer.'
@@ -271,6 +271,7 @@ ostinato/
 │  │  │  ├─ identity.ts
 │  │  │  ├─ patterns.ts
 │  │  │  ├─ rooms.ts
+│  │  │  ├─ tracing.spec.ts
 │  │  │  └─ tracing.ts
 │  │  ├─ share/
 │  │  │  └─ Card.svelte
@@ -295,8 +296,10 @@ ostinato/
 │  │  ├─ toast/
 │  │  │  ├─ Toast.svelte
 │  │  │  └─ toast.ts
+│  │  ├─ errors.spec.ts
 │  │  ├─ errors.ts
 │  │  ├─ handle.ts
+│  │  ├─ security.ts
 │  │  ├─ vanity.spec.ts
 │  │  └─ vanity.ts
 │  ├─ routes/
@@ -408,7 +411,7 @@ ostinato/
 				items: [
 					'Remote functions: `query`, `query.batch`, `query.live`, `prerender`, `command`, `form` with `preflight`, `validate`, `issues`, `allIssues`, `invalid`, `.for(id)`, multiple submits, the `_` prefix; single-flight mutations with `refresh`, `requested().refreshAll()`, `.updates()`, `withOverride`, `reconnect`; a refused call’s `HttpError` read by `isHttpError` and `body.message` — `src/lib/remote/*`, `src/lib/errors.ts` (ch. 23–25)',
 					'Hooks: `transport`, async `reroute` with `fetch`, `handle` with the `preload` filter (`filename`), `handleFetch`, `handleError` with `kind` (including `validation`), `init` — `src/hooks*.ts` (ch. 26)',
-					'`load` with `RouteParams`, `$app/types`, `resolve` from `$app/paths`, snapshots, shallow routing with `goto(…, { shallow: true })`, `preloadData`, `page.state` — the studio, the pattern page, the gallery (ch. 19, 29, 30)',
+					'`load`, `params` typed by the generated `PageProps`, `ErrorProps` for the error page, `resolve` from `$app/paths` for every internal link, the `snapshot()` helper, shallow routing with `goto(…, { shallow: true })`, `preloadData`, `page.state` — the studio, the pattern page, the gallery, the jam room (ch. 19, 27, 29, 30, 31)',
 					'`$app/state`: `page`, `navigating`, `updated` with `check()`; `version.pollInterval` — the layouts, diagnostics (ch. 27, 32)',
 					'Layout groups and `+page@.svelte` — `(app)`, the embed demo (ch. 27, 33)',
 					'`+server.ts` with `QUERY`, `Response.json(...)` and a co-located `+server.test.ts` — the read API (ch. 32)',
@@ -424,11 +427,11 @@ ostinato/
 				type: 'ul',
 				items: [
 					'**Svelte 5.57** — `SvelteMap.getOrInsertComputed` (the engine’s channel strips, ch. 11); `createContext` returning `has` (`Player.svelte`, ch. 29); `<select defaultValue>` (the WAV bar count, ch. 20); `Csp`/`Sha256Source` types from `svelte/server` (the share card, ch. 29).',
-					'**SvelteKit 3.0: what it adds** — enhanced form submissions navigate on success/failure: the publish form’s “Publish and open” redirects from inside `enhance` (ch. 24); adapters contribute Vite plugins, `pre` and `post`: the adapter provides `virtual:adapter` (ch. 34); `+` files with `.test.` in the name are not routes: `api/patterns/+server.test.ts` (ch. 32); `QUERY` handlers in `+server.ts`, and the `preload` filter gets `filename` for fonts (ch. 32, 26); `applyReroute` for adapters, and a catch-all that uses it (ch. 34).',
-					'**SvelteKit 3.0 and 3.0.1: what they replace** — `builder.generateServerInstance` replaces `generateManifest`, and the `Server` class gives way to a generated `server` object (ch. 34); `builder.createInstrumentationInitializer` fills in the environment before `instrumentation.server.js` runs (ch. 34); a single-flight refresh the client asked for and the server did not handle now fails that query, so every command behind `.updates(…)` calls `requested(…).refreshAll()` or `ignore()` on purpose (ch. 24); `json()` and `text()` are deprecated for `Response.json()` and `new Response()` (ch. 32); `pushState` and `replaceState` are deprecated for `goto(…, { shallow: true })`, and a shallow navigation now runs the navigation hooks (ch. 18, 27, 30); the service worker lives in `src/service-worker/` with a tsconfig of its own (ch. 35); adapter-node 6 drops the `ORIGIN` variable in favour of `paths.origin`, and so does this adapter (ch. 34).',
+					'**SvelteKit 3.0: what it adds** — a `use:enhance` form whose `action` is on another page now navigates there on success and failure (this project has no form actions — its forms are remote `form()`s, whose `redirect` worked before 3.0 — so nothing here exercises it); a click on a link to the current address refreshes instead of doing nothing: the gallery’s “Open the full page” (ch. 30); adapters contribute Vite plugins, `pre` and `post`: the adapter provides `virtual:adapter` (ch. 34); `+` files with `.test.` in the name are not routes: `api/patterns/+server.test.ts` (ch. 32); `QUERY` handlers in `+server.ts`, and the `preload` filter gets `filename` for fonts (ch. 32, 26); `applyReroute` for adapters, and a catch-all that uses it (ch. 34).',
+					'**SvelteKit 3.0 and 3.0.1: what they replace** — `builder.generateServerInstance` replaces `generateManifest`, and the `Server` class gives way to a generated `server` object (ch. 34); `builder.createInstrumentationInitializer` fills in the environment before `instrumentation.server.js` runs (ch. 34); a single-flight refresh the client asked for and the server did not handle now fails that query, so every command behind `.updates(…)` calls `requested(…).refreshAll()` or `ignore()` on purpose (ch. 24); `json()` and `text()` are deprecated for `Response.json()` and `new Response()` (ch. 32); `pushState` and `replaceState` are deprecated for `goto(…, { shallow: true })`, and a shallow navigation now runs the navigation hooks (ch. 18, 27, 30); `export const snapshot` is deprecated for the `snapshot()` helper from `$app/navigation`, which captures shallow navigations too (ch. 19); the service worker lives in `src/service-worker/` with a tsconfig of its own (ch. 35); adapter-node 6 drops the `ORIGIN` variable in favour of `paths.origin`, and so does this adapter (ch. 34).',
 					'**sv 1.0** — `sv create` with `#lib` imports and the `ai-tools` add-on, which wrote `AGENTS.md` and `.claude/settings.json` (ch. 39); `sv migrate sveltekit-3` for the mechanical half of an upgrade.',
 					'**vite-plugin-svelte 7.3** — `dynamicCompileOptions({ filename, environment })` (ch. 2, 33).',
-					'**Vitest 5** — inline projects inherit the root config without an `extends` line, `clearMocks` on by default, locators exact by default (ch. 37).'
+					'**Vitest 5** — inline projects inherit the root config without an `extends` line (ch. 37). Its other two new defaults, `clearMocks` on and locators exact, change nothing here: no test mocks anything, and the browser tests drive a class, not a page.'
 				]
 			},
 			{

@@ -33,7 +33,7 @@ declare global {
 			 * swipe, on a phone) closes the panel instead of leaving the studio and
 			 * losing the pattern being worked on.
 			 */
-			panel?: 'sound' | 'share' | 'samples';
+			panel?: 'sound' | 'share';
 			/** The pattern a gallery card has expanded into, without leaving the gallery. */
 			preview?: string;
 		}
@@ -43,8 +43,9 @@ declare global {
 			 * What the adapter knows that the framework does not.
 			 *
 			 * `adapters/ostinato` fills this in from its runtime, and `emulate()` in
-			 * the same file fills it in during `vite dev` and `vite preview`, so code
-			 * reading `event.platform` sees the same shape everywhere.
+			 * the same file fills it in during `vite dev`, `vite build` and
+			 * `vite preview`, so code reading `event.platform` sees the same shape
+			 * everywhere.
 			 */
 			adapter: string;
 			/** Which of the adapter's functions answered — the two real ones, or the catch-all. */

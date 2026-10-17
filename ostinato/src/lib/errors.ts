@@ -21,10 +21,17 @@
  * Anything that is not an `HttpError` — the network dropped, the tab went
  * offline — carries no message meant for a person, and gets the caller's
  * `fallback`, which says what was being attempted.
+ *
+ * An unexpected failure also carries the `id` that `handleError` logged it
+ * under. The error page prints it; a toast is the only thing somebody sees
+ * when a command fails, so it carries the reference too — otherwise there is
+ * nothing to quote when they report it.
  */
 
 import { isHttpError } from '@sveltejs/kit';
 
 export function messageOf(error: unknown, fallback: string): string {
-	return isHttpError(error) ? error.body.message : fallback;
+	if (!isHttpError(error)) return fallback;
+	const { message, id } = error.body;
+	return id ? `${message} (ref ${id})` : message;
 }

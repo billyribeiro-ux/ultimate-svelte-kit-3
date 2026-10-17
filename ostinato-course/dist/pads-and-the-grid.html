@@ -157,7 +157,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/studio/StepGrid.svelte<span class="code__lines">:61-77</span></span>
+		<span class="code__file">src/lib/studio/StepGrid.svelte<span class="code__lines">:64-80</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">{#if !readonly}
@@ -183,7 +183,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/studio/StepGrid.svelte<span class="code__lines">:79-100</span></span>
+		<span class="code__file">src/lib/studio/StepGrid.svelte<span class="code__lines">:82-109</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;ol class=&quot;tracks&quot;&gt;
@@ -197,25 +197,36 @@
 			class={['track', { 'track--selected': track.id === selected, 'track--muted': track.muted }]}
 			style:--hue={`var(--hue-${track.kind})`}
 			animate:flip={{ duration: flipDuration }}
-			out:fade={{ duration: 120 }}
+			out:fade={{ duration: fadeDuration }}
 		&gt;
 			&lt;!--
 				Declaration tags inside the `&lt;li&gt;`, not before it: an element with
 				`animate:` must be the *only* child of its keyed `{#each}` block, and
 				a declaration is a child too. They are visible to everything below.
+
+				Every one is `$derived`. A plain `{const x = …}` is worked out once,
+				when the row is created, and never again — and this row outlives
+				every step painted in it and every change of instrument. Written
+				plainly, the &quot;all steps&quot; box would describe the row as it was when
+				the pattern loaded.
 			--&gt;
-			{const count = track.steps.filter((s) =&gt; s.velocity &gt; 0).length}
-			{const all = count === STEPS}
-			{const some = count &gt; 0 &amp;&amp; !all}
-			{const melodic = MELODIC.has(track.kind)}</code></pre>
+			{const count = $derived(track.steps.filter((s) =&gt; s.velocity &gt; 0).length)}
+			{const all = $derived(count === STEPS)}
+			{const some = $derived(count &gt; 0 &amp;&amp; !all)}
+			{const melodic = $derived(MELODIC.has(track.kind))}</code></pre>
 </figure>
 <p>The rows are keyed by <code>track.id</code>. When <code>moveTrack</code> splices the array, Svelte moves the <code>&lt;li&gt;</code> rather than rewriting the rows between, and <code>animate:flip</code> draws the move — FLIP: measure where it was, apply the change, invert the difference with a transform, play it back to zero. The duration is zero when the person prefers reduced motion.</p>
 <aside class="callout callout--warn"><p>The four <code>{const}</code> declarations are *inside* the <code>&lt;li&gt;</code>, and the comment says why: an element with <code>animate:</code> must be the only child of its keyed <code>{#each}</code> block, and a declaration tag counts as a child. Written before the <code>&lt;li&gt;</code>, the compiler refuses. This was found by the Svelte MCP server’s autofixer while writing this file, which is what that tool is for.</p></aside>
+
+<aside class="callout callout--why">
+	<h4>Why every one of them is <code>$derived</code></h4>
+	<p>A plain declaration tag — <code>{const count = track.steps.filter(…).length}</code> — is worked out *once*, when its block is created, and never again. Compile one and look: it becomes an ordinary <code>const</code> at the top of the row’s render function, with nothing subscribed to it. That is right for a value that cannot change while the block exists. A row of this grid is the opposite case: it is keyed by <code>track.id</code>, so the same <code>&lt;li&gt;</code> outlives every step painted in it and every change of instrument. Written plainly, the “all steps” box below would describe the row as it was when the pattern loaded, whatever happened after. <code>{const count = $derived(…)}</code> is the declaration-tag spelling of a derived: it is recomputed when the steps it reads change, and <code>all</code>, <code>some</code> and <code>melodic</code> follow it. The documentation puts the rule in one line — “when values should be reactive, you can use <code>$state</code> and <code>$derived</code>” — and the end-to-end suite pins it with a test that paints and erases a whole row from the pads, never touching the box, and then asks the box what it says (ch. 38).</p>
+</aside>
 <h3 id="three-states">A checkbox with three states</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/studio/StepGrid.svelte<span class="code__lines">:101-117</span></span>
+		<span class="code__file">src/lib/studio/StepGrid.svelte<span class="code__lines">:110-126</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;header class=&quot;track__head&quot;&gt;
@@ -236,12 +247,12 @@
 		bind:indeterminate={() =&gt; some, () =&gt; {}}
 	/&gt;</code></pre>
 </figure>
-<p>The box at the start of each row means “every step on”. It is *derived* from the steps — so <code>bind:checked</code> gets a function binding: a getter that computes it and a setter that, instead of assigning, calls <code>onfill</code>. Ticking the box is a command, not an assignment, and the box shows whatever the steps say once the command has run.</p>
-<p><code>bind:indeterminate</code> is the third state a checkbox has and most interfaces never use. When some steps are on and some off, the honest answer to “is this row on?” is “partly”, and the browser has a way to draw that. Its setter is a no-op: the browser clears <code>indeterminate</code> on click, and the getter decides what it should be again on the next render.</p>
+<p>The box at the start of each row means “every step on”. It is *derived* from the steps — <code>all</code> and <code>some</code> above are <code>$derived</code> — so <code>bind:checked</code> gets a function binding: a getter that reads the derived and a setter that, instead of assigning, calls <code>onfill</code>. Ticking the box is a command, not an assignment, and the box shows whatever the steps say once the command has run.</p>
+<p><code>bind:indeterminate</code> is the third state a checkbox has and most interfaces never use. When some steps are on and some off, the honest answer to “is this row on?” is “partly”, and the browser has a way to draw that. Its setter is a no-op: the browser clears <code>indeterminate</code> on click, and the getter puts back whatever the steps say the next time <code>some</code> changes. That is only true because <code>some</code> is a derived; with a plain declaration the click would be the one thing that ever moved it.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/studio/StepGrid.svelte<span class="code__lines">:121-135</span></span>
+		<span class="code__file">src/lib/studio/StepGrid.svelte<span class="code__lines">:130-144</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">{#if readonly || !onrename}
@@ -264,7 +275,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/studio/StepGrid.svelte<span class="code__lines">:137-176</span></span>
+		<span class="code__file">src/lib/studio/StepGrid.svelte<span class="code__lines">:146-185</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">{#if !readonly &amp;&amp; tools}
@@ -311,7 +322,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/studio/StepGrid.svelte<span class="code__lines">:179-193</span></span>
+		<span class="code__file">src/lib/studio/StepGrid.svelte<span class="code__lines">:188-202</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;div class=&quot;track__steps&quot;&gt;
@@ -334,7 +345,7 @@
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>
-	<ul><li>You can say what a function binding is and when to use it instead of a variable.</li><li>You can explain why the <code>{const}</code> tags are inside the <code>&lt;li&gt;</code>.</li><li>You can name the three things <code>bind:group</code>, <code>bind:checked</code> and <code>bind:indeterminate</code> bind to in this file.</li></ul>
+	<ul><li>You can say what a function binding is and when to use it instead of a variable.</li><li>You can explain why the <code>{const}</code> tags are inside the <code>&lt;li&gt;</code>, and why each one is <code>$derived</code>.</li><li>You can name the three things <code>bind:group</code>, <code>bind:checked</code> and <code>bind:indeterminate</code> bind to in this file.</li></ul>
 </aside>
 		</article>
 

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The pattern page and its share card — Building Ostinato</title>
-<meta name="description" content="`RouteParams` from `$app/types` with the layout group in the id, an optimistic love count with `withOverride`, a `Player` that provides a studio only if none exists, and a share card rendered by `svelte/server` with a CSP built from the hashes it returns.">
+<meta name="description" content="`params` as a typed prop from `PageProps`, a card address from `resolve()` with the layout group in the route id, an optimistic love count with `withOverride`, a `Player` that provides a studio only if none exists, and a share card rendered by `svelte/server` with a CSP built from the hashes it returns.">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -33,8 +33,8 @@
 		<article>
 			<p class="eyebrow">Chapter 29</p>
 			<h1>The pattern page and its share card</h1>
-			<p class="lede"><code>RouteParams</code> from <code>$app/types</code> with the layout group in the id, an optimistic love count with <code>withOverride</code>, a <code>Player</code> that provides a studio only if none exists, and a share card rendered by <code>svelte/server</code> with a CSP built from the hashes it returns.</p>
-			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Type a route’s params from the route table, do an optimistic update that corrects itself, use the third function <code>createContext</code> returns, and render a component to a string on the server for something that is not a page.</p></aside>
+			<p class="lede"><code>params</code> as a typed prop from <code>PageProps</code>, a card address from <code>resolve()</code> with the layout group in the route id, an optimistic love count with <code>withOverride</code>, a <code>Player</code> that provides a studio only if none exists, and a share card rendered by <code>svelte/server</code> with a CSP built from the hashes it returns.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Take a route’s params from the page’s own props, do an optimistic update that corrects itself, use the third function <code>createContext</code> returns, and render a component to a string on the server for something that is not a page.</p></aside>
 			
 <figure class="code">
 	<figcaption>
@@ -53,24 +53,31 @@ export const load: PageLoad = async ({ params }) =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/p/[id]/+page.svelte<span class="code__lines">:9-17</span></span>
+		<span class="code__file">src/routes/(app)/p/[id]/+page.svelte<span class="code__lines">:7-21</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/**
- * `$app/types` knows every route. `RouteParams&lt;'/(app)/p/[id]'&gt;` is
- * `{ id: string }`, derived from the folder name — layout group included,
- * because the group is part of the route's id even though it is not part
- * of its URL — and it would stop compiling if the folder were renamed,
- * which is what a type for a URL should do.
+ * `params` arrives as a prop, typed by the generated `PageProps` from the
+ * folder name: `{ id: string }`, with no cast, and it would stop compiling
+ * if the folder were renamed — which is what a type for a URL should do.
  */
-const params = $derived(page.params as RouteParams&lt;'/(app)/p/[id]'&gt;);
-const card = $derived(`${page.url.origin}/p/${params.id}/card.svg`);</code></pre>
+let { data, params }: PageProps = $props();
+
+/*
+ * The card's address from its route id — layout group included, because
+ * the group is part of the route's id even though it is not part of its
+ * URL. Absolute, because `og:image` is read by a crawler on another site.
+ */
+const card = $derived(
+	new URL(resolve('/(app)/p/[id]/card.svg', { id: params.id }), page.url.origin).href
+);</code></pre>
 </figure>
-<p><code>$app/types</code> knows every route. <code>RouteParams&lt;&quot;/(app)/p/[id]&quot;&gt;</code> is <code>{ id: string }</code>, derived from the folder name — layout group included, because the group is part of the route’s *id* even though it is not part of its URL — and it stops compiling if the folder is renamed, which is what a type for a URL should do.</p>
+<p>A page is handed its route’s <code>params</code> as a prop, and the <code>PageProps</code> that <code>svelte-kit sync</code> generates beside it types them from the folder name: here <code>{ id: string }</code>. Rename the folder and this stops compiling, which is what a type for a URL should do — and there is no cast anywhere, because the prop already has the type. The card’s address comes from <code>resolve()</code> with the route id <code>&quot;/(app)/p/[id]/card.svg&quot;</code>: layout group included, because the group is part of the route’s *id* even though it is not part of its URL. It is made absolute with <code>page.url.origin</code>, because <code>og:image</code> is fetched by a crawler on another site.</p>
+<aside class="callout callout--note"><p>Before the <code>params</code> prop, the way to type them was a cast — <code>page.params as RouteParams&lt;&quot;/(app)/p/[id]&quot;&gt;</code>, with <code>RouteParams</code> from <code>$app/types</code> — and this page did that. It is the same type, with the cast standing where a mistake could hide: nothing checks that the route id in the cast is this page’s. The prop is checked by construction. <code>$app/types</code> still earns its keep where there is no page to hand you props, such as a helper that builds a link for any route.</p></aside>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/p/[id]/+page.svelte<span class="code__lines">:20-31</span></span>
+		<span class="code__file">src/routes/(app)/p/[id]/+page.svelte<span class="code__lines">:24-35</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;svelte:head&gt;
@@ -139,7 +146,7 @@ function played() {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/components/PatternView.svelte<span class="code__lines">:68-86</span></span>
+		<span class="code__file">src/lib/components/PatternView.svelte<span class="code__lines">:73-91</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;!--
@@ -166,7 +173,7 @@ function played() {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/components/PatternView.svelte<span class="code__lines">:89-93</span></span>
+		<span class="code__file">src/lib/components/PatternView.svelte<span class="code__lines">:94-98</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;Player pattern={published.pattern} onfirstplay={played}&gt;
@@ -294,7 +301,7 @@ const { engine, scheduler } = studio;</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/share/Card.svelte<span class="code__lines">:65-78</span></span>
+		<span class="code__file">src/lib/share/Card.svelte<span class="code__lines">:70-83</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">{#each published.pattern.tracks as track, row (track.id)}
@@ -315,7 +322,7 @@ const { engine, scheduler } = studio;</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/share/Card.svelte<span class="code__lines">:94-109</span></span>
+		<span class="code__file">src/lib/share/Card.svelte<span class="code__lines">:99-114</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">	{#snippet failed(error)}
@@ -449,7 +456,7 @@ export function slugify(title: string): string {
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>
-	<ul><li>You can write the <code>RouteParams</code> type for the jam room and say why the group is in it.</li><li>You can explain what happens to an overridden value when the command fails.</li><li>You can say what <code>hashes.script</code> contains for this card, and what would change it.</li></ul>
+	<ul><li>You can take the jam room’s <code>params</code> from its props, and say why its route id has the group in it.</li><li>You can explain what happens to an overridden value when the command fails.</li><li>You can say what <code>hashes.script</code> contains for this card, and what would change it.</li></ul>
 </aside>
 		</article>
 

@@ -74,7 +74,7 @@ export default defineConfig({
 		 * origin at run time. A mismatch is a 403 on every form submission and a
 		 * confusing hour.
 		 */
-		command: 'node scripts/prepare-e2e-db.js && npm run build && node build/index.js',
+		command: 'node scripts/prepare-e2e-db.js && pnpm run build && node build/index.js',
 		port: 4173,
 		reuseExistingServer: !process.env.CI,
 		timeout: 240_000,

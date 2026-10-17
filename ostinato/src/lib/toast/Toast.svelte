@@ -1,14 +1,19 @@
 <script lang="ts">
+	import { prefersReducedMotion } from 'svelte/motion';
 	import { fly } from 'svelte/transition';
 
 	let { message, tone = 'info' }: { message: string; tone?: 'info' | 'error' } = $props();
+
+	// Svelte transitions run on the Web Animations API, which the stylesheet's
+	// reduced-motion rule cannot reach; this one asks for itself.
+	const duration = $derived(prefersReducedMotion.current ? 0 : 240);
 </script>
 
 <!--
 	`role="status"` is announced by a screen reader without stealing focus,
 	which is what a toast is: news, not a question.
 -->
-<div class={['toast', `toast--${tone}`]} role="status" transition:fly={{ y: 24, duration: 240 }}>
+<div class={['toast', `toast--${tone}`]} role="status" transition:fly={{ y: 24, duration }}>
 	{message}
 </div>
 

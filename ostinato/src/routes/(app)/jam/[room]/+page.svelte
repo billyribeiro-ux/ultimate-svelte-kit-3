@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { scale } from 'svelte/transition';
 	import { flip } from 'svelte/animate';
+	import { prefersReducedMotion } from 'svelte/motion';
 	import { online } from 'svelte/reactivity/window';
-	import { page } from '$app/state';
-	import type { RouteParams } from '$app/types';
+	import type { PageProps } from './$types.js';
 	import { becomeArtist, whoAmI } from '#lib/remote/artist.remote.ts';
 	import {
 		fillRoomTrack,
@@ -20,7 +20,13 @@
 	import StepGrid from '#lib/studio/StepGrid.svelte';
 	import { toast } from '#lib/toast/toast.ts';
 
-	const params = $derived(page.params as RouteParams<'/(app)/jam/[room]'>);
+	/*
+	 * `params` is a prop, typed from the folder name by the generated
+	 * `PageProps`: `{ room: string }`, no cast, and a compile error if the
+	 * folder is renamed. `data.name` is what the `load` beside this file found
+	 * out — that the room exists, and what it is called.
+	 */
+	let { data, params }: PageProps = $props();
 
 	/**
 	 * THE LIVE QUERY
@@ -46,10 +52,15 @@
 			toast(messageOf(e, 'That change did not reach the room'), 'error');
 		}
 	}
+
+	// Transitions run on the Web Animations API, out of reach of the
+	// stylesheet's reduced-motion rule, so they ask for themselves.
+	const flipDuration = $derived(prefersReducedMotion.current ? 0 : 200);
+	const scaleDuration = $derived(prefersReducedMotion.current ? 0 : 160);
 </script>
 
 <svelte:head>
-	<title>Jam: {params.room} — Ostinato</title>
+	<title>Jam: {data.name} — Ostinato</title>
 </svelte:head>
 
 <div class="page jam">
@@ -96,8 +107,8 @@
 			{#each snapshot.present as who (who.id)}
 				<span
 					class="chip chip--on"
-					animate:flip={{ duration: 200 }}
-					transition:scale={{ duration: 160 }}
+					animate:flip={{ duration: flipDuration }}
+					transition:scale={{ duration: scaleDuration }}
 				>
 					@{who.handle}
 				</span>
@@ -198,8 +209,11 @@
 
 		<!--
 			The other shape: a boundary is handed the `App.Error` that `handleError`
-			made — `{ status, message }` — so the server's "No such room" is
-			`error.message`, with no `body` in between.
+			made — `{ status, message }` — so whatever the stream failed with is
+			`error.message`, with no `body` in between. (A room that does not exist
+			never gets this far: the `load` answers it with the error page.) The
+			cast is the type the documentation writes on the parameter, which
+			today's `Snippet<[unknown, …]>` typing refuses there.
 		-->
 		{#snippet failed(error, reset)}
 			<p class="issue">{(error as App.Error).message}</p>

@@ -48,7 +48,9 @@
 			await samples.load(track.id, file);
 			toast(`Loaded ${file.name}`);
 		} catch (e) {
-			toast((e as Error).message, 'error');
+			// `decodeAudioData` rejects with a `DOMException` and the length cap with
+			// a `RangeError`; both are `Error`s with a sentence worth showing.
+			toast(e instanceof Error ? e.message : `${file.name} could not be loaded`, 'error');
 			clear();
 		} finally {
 			loading = false;

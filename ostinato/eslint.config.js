@@ -57,27 +57,26 @@ export default defineConfig(
 	},
 	{
 		/*
-		 * `no-navigation-without-resolve` has been in eslint-plugin-svelte's
-		 * `recommended` set since 3.23.0, but the rule declares which SvelteKit
-		 * majors it applies to, and until 3.23.1 that list stopped at 2 — so on a
-		 * Kit 3 project it sat dormant, and lint was green because the rule was
-		 * asleep, not absent. 3.23.1 added `3`, and the rule woke up to 22 sites
-		 * here (19 `href`s and 3 `goto`s). It wants every `href` and every `goto()`
-		 * wrapped in `resolve()` from `$app/paths`, so that a deployment under a
-		 * base path — `/groovebox/` — rewrites every link. Right in general; off
-		 * here, for reasons the rule cannot know.
+		 * `no-navigation-without-resolve` is on — it is in the recommended set —
+		 * and every internal `href` and `goto()` goes through `resolve()` from
+		 * `$app/paths`. The base path is the reason the rule gives, and the
+		 * smaller one here: this app is served at the root of its origin. The
+		 * bigger one is that `resolve('/(app)/p/[id]', { id })` names a route *id*,
+		 * checked against the route table, so renaming a folder is a type error
+		 * rather than a link that 404s in production.
 		 *
-		 * The app is served at the root of its origin by its own adapter, and
-		 * `resolve()` is used where it earns its place: the one link to a route
-		 * with a parameter (`PatternView.svelte`). Two navigations have no
-		 * `resolve` spelling at all — `goto('', { shallow: true })`, which is the
-		 * documented way to add a history entry without going anywhere, and
-		 * `href={page.url.href}`, which reloads the address already in the bar.
-		 * And `OstinatoPlayer.svelte` is a custom element that runs on *other
-		 * people's* pages, where there is no SvelteKit and `$app/paths` has
-		 * nothing to say. Turning the rule back on is a one-line change the day
-		 * `paths.base` stops being empty.
+		 * The few links with nothing to resolve say so on the line, with an
+		 * `eslint-disable-next-line` and the reason: `goto('', { shallow: true })`,
+		 * which adds a history entry without going anywhere; the reload banner's
+		 * `href={page.url.href}`; a `blob:` download; and vanity addresses, which
+		 * are not routes until the `reroute` hook makes them one.
+		 *
+		 * The one folder it is off for is `src/lib/embed/`: a custom element that
+		 * runs on *other people's* pages, where there is no SvelteKit and
+		 * `$app/paths` has nothing to say. Its link is to this app's origin,
+		 * spelled out, which is exactly what it should be.
 		 */
+		files: ['src/lib/embed/**'],
 		rules: { 'svelte/no-navigation-without-resolve': 'off' }
 	}
 );

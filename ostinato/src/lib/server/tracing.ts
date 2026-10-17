@@ -61,10 +61,26 @@ export function setCapacity(size: number): void {
 /** `[seconds, nanoseconds]` → milliseconds. */
 const ms = ([s, ns]: readonly [number, number]) => s * 1000 + ns / 1e6;
 
+/**
+ * Where a request went, without what it carried. A query string is where a
+ * remote query's argument travels, and where a share link keeps its pattern;
+ * the diagnostics page is public, so the ring keeps the path and drops the
+ * rest.
+ */
+function pathOnly(value: string): string {
+	try {
+		const url = new URL(value);
+		return url.origin + url.pathname;
+	} catch {
+		return value;
+	}
+}
+
 export function record(span: ReadableSpan): void {
 	const attributes: SpanRecord['attributes'] = {};
 	for (const [key, value] of Object.entries(span.attributes)) {
-		if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+		if (key === 'http.url' && typeof value === 'string') attributes[key] = pathOnly(value);
+		else if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
 			attributes[key] = value;
 		}
 	}
