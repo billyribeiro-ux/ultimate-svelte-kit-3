@@ -134,7 +134,7 @@ export async function finishRegistration(
 			requireUserVerification: false
 		});
 	} catch (e) {
-		error(400, `That passkey could not be verified: ${(e as Error).message}`);
+		error(400, `That passkey could not be verified: ${e instanceof Error ? e.message : String(e)}`);
 	}
 	if (!verification.verified) error(400, 'That passkey could not be verified');
 
@@ -217,7 +217,7 @@ export async function finishAuthentication(
 			}
 		});
 	} catch (e) {
-		error(400, `That passkey could not be verified: ${(e as Error).message}`);
+		error(400, `That passkey could not be verified: ${e instanceof Error ? e.message : String(e)}`);
 	}
 	if (!verification.verified) error(400, 'That passkey could not be verified');
 

@@ -290,7 +290,7 @@ let {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/grid/Workbench.svelte<span class="code__lines">:14-45</span></span>
+		<span class="code__file">src/lib/grid/Workbench.svelte<span class="code__lines">:14-50</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/**
@@ -321,6 +321,11 @@ let {
 	status?: Snippet;
 } = $props();
 
+/*
+ * The hidden file input, so the toolbar's Import button can open the
+ * browser's file picker with `click()` — an imperative call from a handler,
+ * which is what `bind:this` is for, rather than work done on mount.
+ */
 let fileInput = $state&lt;HTMLInputElement&gt;();
 let files = $state&lt;FileList&gt;();
 let progress = $state&lt;Progress | null&gt;(null);
@@ -329,7 +334,7 @@ let finding = $state(false);</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/grid/Workbench.svelte<span class="code__lines">:47-95</span></span>
+		<span class="code__file">src/lib/grid/Workbench.svelte<span class="code__lines">:52-102</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/**
@@ -360,7 +365,9 @@ async function imported() {
 			`Imported ${rows.length.toLocaleString()} rows (${delimiter === '\t' ? 'tab' : delimiter}-separated)`
 		);
 	} catch (e) {
-		toast((e as Error).message, 'error');
+		// The worker's failures are `Error`s with a sentence for a person; a
+		// cancelled import is a `DOMException`, which is one too.
+		toast(e instanceof Error ? e.message : 'Could not import that file', 'error');
 	} finally {
 		progress = null;
 		files = new DataTransfer().files;
@@ -390,7 +397,7 @@ function keydown(event: KeyboardEvent) {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/grid/Workbench.svelte<span class="code__lines">:98-138</span></span>
+		<span class="code__file">src/lib/grid/Workbench.svelte<span class="code__lines">:105-145</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;svelte:window onkeydown={keydown} /&gt;

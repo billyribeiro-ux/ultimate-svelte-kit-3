@@ -92,11 +92,21 @@ const live = new LiveSheet(initial.sheet.id, sheet, initial.sheet.version);</cod
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/sheet/[id]/+page.svelte<span class="code__lines">:57-69</span></span>
+		<span class="code__file">src/routes/(app)/sheet/[id]/+page.svelte<span class="code__lines">:70-92</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">const shareUrl = $derived(`${page.url.origin}/sheet/${initial.sheet.id}`);
-const publishedUrl = $derived(`${page.url.origin}/s/${initial.sheet.id}`);
+	<pre><code class="lang-svelte">/*
+ * Absolute addresses to copy, still built by `resolve()`. On the server it
+ * renders a path relative to the page (so the build works under any base
+ * path), which is why the result is resolved against `page.url` rather than
+ * glued to an origin.
+ */
+const shareUrl = $derived(
+	new URL(resolve('/(app)/sheet/[id]', { id: initial.sheet.id }), page.url.href).href
+);
+const publishedUrl = $derived(
+	new URL(resolve('/(app)/s/[id]', { id: initial.sheet.id }), page.url.href).href
+);
 
 /**
  * The sheet's record — access, published or not — read from the query
@@ -112,12 +122,17 @@ const owner = $derived(record.ownerId === data.me.id);</code></pre>
 
 <aside class="callout callout--why">
 	<h4>Why the record comes from the query and not from data</h4>
-	<p>The page shows whether the sheet is published and who may open it. Those change when the person clicks Publish or picks a sharing option — commands and forms that call <code>getSheet(id).refresh()</code>. A query awaited in the component updates in place when it is refreshed; <code>data</code> is a snapshot of what the load returned. The first version read <code>data.sheet</code> and the Unpublish button never appeared, because the load did not re-run. <code>await</code> inside <code>$derived</code> resolves at once from the cache the load already filled, so there is no second request and no flash.</p>
+	<p>The page shows whether the sheet is published and who may open it. Those change when the person clicks Publish or picks a sharing option — commands and forms that call <code>getSheet(id).refresh()</code>. A query awaited in the component updates in place when it is refreshed; <code>data</code> is a snapshot of what the load returned. The first version read <code>data.sheet</code> and the Unpublish button never appeared, because the load did not re-run. <code>await</code> inside <code>$derived</code> resolves at once from the cache the load already filled, so there is no second request and no flash. It has no boundary of its own, on purpose: without the sheet’s record there is no page to show, and <code>+error.svelte</code> is the right answer.</p>
+</aside>
+
+<aside class="callout callout--why">
+	<h4>Why the share links go through resolve() as well</h4>
+	<p>The links to copy are absolute — they leave this page in a clipboard — and the first version glued them together: <code>${page.url.origin}/sheet/${id}</code>. That is the one kind of internal address the lint rule cannot see, because it is a string handed to an input, not an <code>href</code>; rename the route and it would have gone on copying a 404. So it is built by <code>resolve()</code> like every other link, with the route id, and made absolute with <code>new URL(…, page.url.href)</code>. Not by prefixing the origin: during server rendering <code>resolve()</code> returns a path <em>relative to the page</em>, so that a build works under any base path, and <code>new URL</code> is what turns a relative path into the right absolute one. The export link on the toolbar is a <code>resolve()</code> of the CSV route for the same reason.</p>
 </aside>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/sheet/[id]/+page.svelte<span class="code__lines">:80-108</span></span>
+		<span class="code__file">src/routes/(app)/sheet/[id]/+page.svelte<span class="code__lines">:103-140</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">async function togglePublish() {
@@ -141,19 +156,28 @@ const owner = $derived(record.ownerId === data.me.id);</code></pre>
  * moment on every load would shift the grid under a finger on a phone.
  */
 const everConnected = $derived(stream.current !== undefined);
-const statusLabel = $derived(
-	{
-		live: stream.connected ? 'Saved' : everConnected ? 'Reconnecting…' : 'Connecting…',
-		saving: 'Saving…',
-		offline: 'Offline — changes are kept and will be sent',
-		conflict: live.problem ?? 'Could not save — reload to continue'
-	}[live.status]
-);</code></pre>
+const statusLabel = $derived.by((): string =&gt; {
+	switch (live.status.kind) {
+		case 'live':
+			return stream.connected ? 'Saved' : everConnected ? 'Reconnecting…' : 'Connecting…';
+		case 'saving':
+			return 'Saving…';
+		case 'offline':
+			return 'Offline — changes are kept and will be sent';
+		case 'refused':
+			return 'Not saved';
+	}
+});
+
+/** A failed reconnect leaves `connected` false, and the chip and the button say so. */
+function reconnect() {
+	stream.reconnect().catch(() =&gt; {});
+}</code></pre>
 </figure>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/sheet/[id]/+page.svelte<span class="code__lines">:115-120</span></span>
+		<span class="code__file">src/routes/(app)/sheet/[id]/+page.svelte<span class="code__lines">:147-152</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;!-- Leaving with unsent changes: the browser asks, because we asked it to. --&gt;
@@ -167,7 +191,7 @@ const statusLabel = $derived(
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/sheet/[id]/+page.svelte<span class="code__lines">:123-158</span></span>
+		<span class="code__file">src/routes/(app)/sheet/[id]/+page.svelte<span class="code__lines">:155-209</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;header class=&quot;sheetpage__head no-print&quot;&gt;
@@ -181,22 +205,35 @@ const statusLabel = $derived(
 		onkeydown={(event) =&gt; {
 			if (event.key === 'Enter') {
 				event.preventDefault();
-				(event.currentTarget as HTMLElement).blur();
+				event.currentTarget.blur();
 			}
 		}}
 	&gt;&lt;/h1&gt;
 
 	&lt;div class=&quot;cluster&quot;&gt;
 		&lt;span
-			class={['chip', { 'chip--on': live.status === 'live' &amp;&amp; stream.connected }]}
+			class={[
+				'chip',
+				{
+					'chip--on': live.status.kind === 'live' &amp;&amp; stream.connected,
+					'chip--refused': live.status.kind === 'refused'
+				}
+			]}
 			role=&quot;status&quot;
 		&gt;
 			{statusLabel}
 		&lt;/span&gt;
-		{#if !stream.connected &amp;&amp; everConnected}
-			&lt;button type=&quot;button&quot; class=&quot;btn btn--sm btn--ghost&quot; onclick={() =&gt; stream.reconnect()}
-				&gt;Reconnect&lt;/button
+		{#if live.status.kind === 'refused'}
+			&lt;!--
+				A full reload, not a refresh of the queries: the sheet model was built
+				once from `data` and holds edits the server turned down, so the honest
+				way back is to build it again from what the server kept.
+			--&gt;
+			&lt;button type=&quot;button&quot; class=&quot;btn btn--sm btn--primary&quot; onclick={() =&gt; location.reload()}
+				&gt;Reload&lt;/button
 			&gt;
+		{:else if !stream.connected &amp;&amp; everConnected}
+			&lt;button type=&quot;button&quot; class=&quot;btn btn--sm btn--ghost&quot; onclick={reconnect}&gt;Reconnect&lt;/button&gt;
 		{/if}
 		{#each live.present as who (who.client)}
 			&lt;span class=&quot;chip chip--on&quot; title={who.cell ? `at ${who.cell}` : 'here'}&gt;
@@ -205,19 +242,26 @@ const statusLabel = $derived(
 			&lt;/span&gt;
 		{/each}
 	&lt;/div&gt;
+	{#if live.status.kind === 'refused'}
+		&lt;p class=&quot;issue refused&quot; role=&quot;alert&quot;&gt;
+			{live.status.message} — your last changes were not saved. Reload to carry on from what the server
+			kept.
+		&lt;/p&gt;
+	{/if}
 &lt;/header&gt;</code></pre>
 </figure>
-<p>The header shows the connection state — “Saved”, “Saving…”, “Connecting…”, “Reconnecting…” with a button, “Offline”, and when the server refuses a batch, its own reason from <code>live.problem</code> — and a chip for everybody else in the room. <code>stream.current</code> being still empty tells “not connected yet” from “lost the connection”, and only the second deserves a Reconnect button; one that appeared for a moment on every load shifted the grid under a finger on a phone, and the end-to-end suite noticed.</p>
+<p>When the server refuses a batch, three things change at once: the chip says “Not saved”, a line under the header gives the server’s own sentence and what it means — “A sheet may hold at most 200,000 cells — your last changes were not saved. Reload to carry on from what the server kept.” — and a Reload button takes the place of Reconnect. The line is <code>role=&quot;alert&quot;</code>, so it is announced as it appears. The button is a full <code>location.reload()</code>, not a refresh of the queries, because the sheet model was built once from <code>data</code> and holds edits the server turned down; the honest way back is to build it again.</p>
+<p>The header shows the connection state — “Saved”, “Saving…”, “Connecting…”, “Reconnecting…” with a button, “Offline” — and a chip for everybody else in the room. <code>statusLabel</code> is a <code>switch</code> over <code>live.status.kind</code>, and TypeScript checks that it covers every shape. <code>stream.current</code> being still empty tells “not connected yet” from “lost the connection”, and only the second deserves a Reconnect button; one that appeared for a moment on every load shifted the grid under a finger on a phone, and the end-to-end suite noticed. A failed reconnect is not an error to throw at the console: <code>connected</code> stays false, and the chip and the button already say so.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/sheet/[id]/+page.svelte<span class="code__lines">:160-239</span></span>
+		<span class="code__file">src/routes/(app)/sheet/[id]/+page.svelte<span class="code__lines">:211-296</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;Workbench
 	{sheet}
 	cursors={live.present}
-	exportHref=&quot;/api/sheets/{initial.sheet.id}/export.csv&quot;
+	exportHref={resolve('/api/sheets/[id]/export.csv', { id: initial.sheet.id })}
 	onactivate={(cell) =&gt; live.cursor(cell)}
 &gt;
 	{#snippet extra()}
@@ -229,7 +273,10 @@ const statusLabel = $derived(
 			{#if owner}
 				&lt;!--
 					A form for the access setting, because a setting that survives a
-					page with no JavaScript is a setting that survives anything.
+					page with no JavaScript is a setting that survives anything. With
+					JavaScript a choice submits itself; without it, the button inside
+					&lt;noscript&gt; is the way to send it — Svelte renders that content on
+					the server and leaves the element empty in the browser.
 				--&gt;
 				&lt;form {...setAccess} class=&quot;stack&quot;&gt;
 					&lt;input {...setAccess.fields.id.as('hidden', initial.sheet.id)} /&gt;
@@ -249,6 +296,9 @@ const statusLabel = $derived(
 						/&gt;
 						Anyone signed in with the link can edit
 					&lt;/label&gt;
+					&lt;noscript&gt;
+						&lt;button class=&quot;btn btn--sm&quot;&gt;Save sharing&lt;/button&gt;
+					&lt;/noscript&gt;
 				&lt;/form&gt;
 			{:else}
 				&lt;p class=&quot;hint&quot;&gt;Shared with you by its owner.&lt;/p&gt;
@@ -295,7 +345,12 @@ const statusLabel = $derived(
 	{/snippet}
 &lt;/Workbench&gt;</code></pre>
 </figure>
-<p>Sharing and publishing live in a native popover. The access setting is a <em>form</em> — two radios that submit on change — because a setting that survives a page with no JavaScript survives anything. Publishing is a command with a result, so it is a button, and a refusal — “Sign in with a passkey first”, if the session has gone — is the server’s sentence in the toast.</p>
+<p>Sharing and publishing live in a native popover, which opens with no script at all. The access setting is a <em>form</em> — two radios — because a setting that survives a page with no JavaScript survives anything. With JavaScript, choosing a radio submits the form. Without it, the radios cannot submit themselves, so the form carries a “Save sharing” button inside <code>&lt;noscript&gt;</code>: Svelte renders that element’s content on the server and leaves it empty in the browser, so the button exists exactly when it is needed. Publishing is a command with a result, so it is a button, and a refusal — “Sign in with a passkey first”, if the session has gone — is the server’s sentence in the toast.</p>
+
+<aside class="callout callout--why">
+	<h4>Why the no-script button is in a noscript element</h4>
+	<p>The first version said it worked without JavaScript, and a probe with JavaScript off proved otherwise: the popover opened, a radio could be chosen, and nothing was sent, because the only way the form submitted was <code>onchange → requestSubmit()</code>. A form needs a submit control to submit by itself. A visible Save button would work everywhere, and would be a second, redundant step for everybody who has JavaScript. <code>&lt;noscript&gt;</code> is the element for content that exists only when scripting is off, and Svelte handles it on purpose: the server renders what is inside, and the browser’s copy is empty. The end-to-end test opens the sheet in a context with JavaScript disabled, chooses the link setting, presses the button, and then checks the workspace — with JavaScript — says “shared by link”.</p>
+</aside>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>

@@ -38,7 +38,7 @@
 			
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:1-27</span></span>
+		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:1-28</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -54,7 +54,8 @@
  * WHERE THE REACTIVITY LINE IS
  * ----------------------------
  * The engine holds ten thousand cells in plain `Map`s and recalculates them
- * without Svelte noticing anything — that is the whole point of chapter 10.
+ * without Svelte noticing anything — that is the whole point of writing it
+ * by hand.
  * This class publishes one number, `version`, which goes up when the engine
  * finishes a batch. The grid reads `sheet.version` and then reads cells from
  * the engine; the read is untracked and the number is what re-runs it. One
@@ -70,11 +71,10 @@
  */</code></pre>
 </figure>
 <p>The header states the two ideas of the class. The engine is plain <code>Map</code>s; this class publishes one number. Undo is commands with inverses rather than snapshots, because a sheet can be megabytes and project 6’s two-kilobyte snapshots would not survive contact with it.</p>
-<aside class="callout callout--note"><p>The header’s “chapter 10” is the project’s own numbering for the hand-written engine, which is chapter 09 here. The note in chapter 08 has the whole mapping.</p></aside>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:46-65</span></span>
+		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:47-66</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">export interface Command {
@@ -101,7 +101,7 @@ const HISTORY_LIMIT = 200;</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:67-111</span></span>
+		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:68-112</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">export class Sheet {
@@ -155,7 +155,7 @@ const HISTORY_LIMIT = 200;</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:117-148</span></span>
+		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:118-149</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/*
@@ -201,7 +201,7 @@ display(row: number, col: number): string {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:158-173</span></span>
+		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:159-174</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/* ---------------------------------------------------------------- */
@@ -224,7 +224,7 @@ move(dRow: number, dCol: number, extend = false): void {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:175-202</span></span>
+		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:176-203</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/* ---------------------------------------------------------------- */
@@ -260,7 +260,7 @@ cancelEdit(): void {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:204-243</span></span>
+		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:205-244</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/* ---------------------------------------------------------------- */
@@ -309,7 +309,7 @@ setFormat(format: CellFormat, target: Rect = this.selection): void {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:592-632</span></span>
+		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:593-633</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/* ---------------------------------------------------------------- */
@@ -357,7 +357,7 @@ toDocument(): Document {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:634-658</span></span>
+		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:635-659</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/** Somebody else's change: applied without an undo entry, and flashed. */
@@ -390,7 +390,7 @@ applyRemote(op: Op): void {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:660-712</span></span>
+		<span class="code__file">src/lib/sheet/sheet.svelte.ts<span class="code__lines">:661-713</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/* ---------------------------------------------------------------- */

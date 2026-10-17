@@ -43,6 +43,54 @@ test('typing, formulas and recalculation', async ({ page }) => {
 	await expect(page.getByText('Saved in this browser')).toBeVisible();
 });
 
+test('a word that starts with a shortcut’s letter is typed, not taken as the shortcut', async ({
+	page
+}) => {
+	// Ctrl+A, Ctrl+Z and Ctrl+Y are the grid's; without the modifier, each
+	// letter is the first of a word, and it used to be swallowed.
+	await enter(page, 0, 0, 'apple');
+	await enter(page, 1, 0, 'zebra');
+	await enter(page, 2, 0, 'Yes');
+	await expect(cell(page, 0, 0)).toHaveText('apple');
+	await expect(cell(page, 1, 0)).toHaveText('zebra');
+	await expect(cell(page, 2, 0)).toHaveText('Yes');
+});
+
+test('committing an edit leaves no error in the page', async ({ page }) => {
+	// The editor's markup used to read `sheet.editing.text` once more on its way
+	// out, after the commit had set the session to null: a TypeError every time.
+	const errors: string[] = [];
+	page.on('pageerror', (error) => errors.push(error.message));
+	await enter(page, 0, 0, '42');
+	await enter(page, 1, 0, '=A1*2');
+	await expect(cell(page, 1, 0)).toHaveText('84');
+	expect(errors).toEqual([]);
+});
+
+test('a double-click while an edit is open belongs to the edit', async ({ page }) => {
+	// Inside the editor, a double-click selects a word, as in any input. The
+	// grid's own double-click — start editing this cell — used to run as well,
+	// and threw away what had been typed.
+	await cell(page, 0, 0).click();
+	await page.keyboard.type('hello world');
+	await page.getByLabel('Cell editor').dblclick();
+	await page.keyboard.press('End');
+	await page.keyboard.type('!');
+	await page.keyboard.press('Enter');
+	await expect(cell(page, 0, 0)).toHaveText('hello world!');
+
+	// Mid-formula, a double-click on a cell is two clicks on a reference, not a
+	// new edit of the cell that was clicked.
+	await enter(page, 1, 0, '5');
+	await cell(page, 2, 0).click();
+	await page.keyboard.type('=');
+	await cell(page, 1, 0).dblclick();
+	await page.keyboard.type('*2');
+	await page.keyboard.press('Enter');
+	await expect(cell(page, 2, 0)).toHaveText('10');
+	await expect(cell(page, 1, 0)).toHaveText('5');
+});
+
 test('errors are values, and a cycle is named as one', async ({ page }) => {
 	await enter(page, 0, 0, '=1/0');
 	await expect(cell(page, 0, 0)).toHaveText('#DIV/0!');
@@ -190,11 +238,29 @@ test('the formula bar completes function names', async ({ page }) => {
 	await bar.pressSequentially('=sum');
 	const suggestions = page.getByRole('listbox');
 	await expect(suggestions).toBeVisible();
-	await expect(suggestions.getByRole('option', { name: /^SUM\(/ })).toBeVisible();
+	const options = suggestions.getByRole('option');
+	await expect(options.first()).toHaveAccessibleName(/^SUM\(/);
+
+	// The caret stays in the input; the input names the option the arrows
+	// have reached, which is what a screen reader announces. So every option
+	// needs an id to be named by.
+	const ids = await options.evaluateAll((items) => items.map((item) => item.id));
+	expect(ids).not.toContain('');
+	await expect(bar).toHaveAttribute('aria-controls', (await suggestions.getAttribute('id'))!);
+	await expect(bar).toHaveAttribute('aria-activedescendant', ids[0]!);
+	await bar.press('ArrowDown');
+	await expect(bar).toHaveAttribute('aria-activedescendant', ids[1]!);
+	await expect(options.nth(1)).toHaveAttribute('aria-selected', 'true');
+	await bar.press('ArrowUp');
+	await expect(options.nth(0)).toHaveAttribute('aria-selected', 'true');
 
 	// Enter takes the highlighted suggestion and leaves the caret inside the call.
 	await bar.press('Enter');
 	await expect(bar).toHaveValue('=SUM(');
+	// The list has gone, and so have the attributes that pointed into it.
+	await expect(suggestions).toHaveCount(0);
+	await expect(bar).not.toHaveAttribute('aria-activedescendant');
+	await expect(bar).not.toHaveAttribute('aria-controls');
 	await bar.pressSequentially('1,2)');
 	await bar.press('Enter');
 	await expect(cell(page, 0, 0)).toHaveText('3');

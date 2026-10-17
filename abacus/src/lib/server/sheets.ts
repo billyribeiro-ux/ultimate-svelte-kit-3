@@ -15,6 +15,7 @@ import { emptyDocument, parseDocument, type Document } from '#lib/sheet/document
 import type { Op } from '#lib/sheet/ops.ts';
 import { db, schema } from './db/index.ts';
 import type { User } from './identity.ts';
+import type { Batch } from './live.ts';
 
 export interface SheetSummary {
 	id: string;
@@ -177,6 +178,7 @@ async function requireSheetRow(id: string, user: User): Promise<Row> {
 export async function applySheetOps(
 	id: string,
 	user: User,
+	client: string,
 	ops: Op[]
 ): Promise<{ version: number; cellCount: number }> {
 	const row = await requireSheetRow(id, user);
@@ -198,22 +200,23 @@ export async function applySheetOps(
 			.where(eq(schema.sheets.id, id));
 		await tx
 			.insert(schema.ops)
-			.values({ sheetId: id, version, userId: user.id, payload: JSON.stringify(ops) });
+			.values({ sheetId: id, version, userId: user.id, client, payload: JSON.stringify(ops) });
 	});
 
 	return { version, cellCount: next.cells.length };
 }
 
-/** The operations after a version, oldest first, for a browser catching up. */
-export async function opsSince(
-	id: string,
-	version: number
-): Promise<{ version: number; ops: Op[] }[]> {
+/** The batches after a version, oldest first, for a browser catching up. */
+export async function opsSince(id: string, version: number): Promise<Batch[]> {
 	const rows = await db.query.ops.findMany({
 		where: and(eq(schema.ops.sheetId, id), gt(schema.ops.version, version)),
 		orderBy: [schema.ops.version]
 	});
-	return rows.map((r) => ({ version: r.version, ops: JSON.parse(r.payload) as Op[] }));
+	return rows.map((r) => ({
+		version: r.version,
+		client: r.client,
+		ops: JSON.parse(r.payload) as Op[]
+	}));
 }
 
 /* ------------------------------------------------------------------ */

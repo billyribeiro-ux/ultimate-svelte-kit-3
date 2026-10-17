@@ -276,7 +276,7 @@ describe('the search body', () =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/healthz/+server.ts<span class="code__lines">:1-30</span></span>
+		<span class="code__file">src/routes/healthz/+server.ts<span class="code__lines">:1-41</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -306,11 +306,27 @@ export const GET: RequestHandler = async ({ setHeaders }) =&gt; {
 		await client.execute('select 1');
 		return Response.json({ ok: true, version, uptime: Math.round(process.uptime()) });
 	} catch (error) {
-		return Response.json({ ok: false, version, error: (error as Error).message }, { status: 503 });
+		/*
+		 * The reason goes to the log, under a reference; the caller gets the
+		 * reference and a fixed sentence. This endpoint answers anybody, and a
+		 * driver's message can carry a file path or a connection string —
+		 * which is why `handleError` keeps unexpected messages back too.
+		 */
+		const id = crypto.randomUUID();
+		console.error(`[${id}] health check: the database did not answer`, error);
+		return Response.json(
+			{ ok: false, version, error: 'database unreachable', id },
+			{ status: 503 }
+		);
 	}
 };</code></pre>
 </figure>
 <p>The health check touches the database and returns the build version — the commit hash from the config — because “which version is running” is the first question in every incident. The container chapter probes it.</p>
+
+<aside class="callout callout--why">
+	<h4>Why a failed health check says so little</h4>
+	<p>This endpoint answers anybody, signed in or not, and the error a database driver throws can carry a file path, a host name or a connection string. The first version put <code>(error as Error).message</code> straight into the response — the cast chapter 29 warns about, on the one route with no access check at all. Now the reason goes to the server’s log under a fresh reference, and the caller gets <code>ok: false</code>, the version, a fixed “database unreachable” and the reference: enough for a load balancer to stop sending traffic and for whoever is on call to find the log line, and nothing for anybody else. It is the same choice <code>handleError</code> makes for an unexpected error, for the same reason.</p>
+</aside>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>

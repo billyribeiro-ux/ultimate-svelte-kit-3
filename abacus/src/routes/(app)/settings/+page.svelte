@@ -3,7 +3,7 @@
 	import { KeyIcon, SignOutIcon, TrashIcon } from 'phosphor-svelte';
 	import Section from '#lib/components/Section.svelte';
 	import { explain, registerPasskey } from '#lib/auth/passkey.ts';
-	import { messageOf } from '#lib/errors.ts';
+	import { failureOf, messageOf } from '#lib/errors.ts';
 	import {
 		getProfile,
 		listPasskeys,
@@ -125,7 +125,7 @@
 				<svelte:boundary>
 					<ul class="keys">
 						{#each await listPasskeys() as passkey (passkey.id)}
-							{const del = $derived(removePasskey.for(passkey.id))}
+							{const del = removePasskey.for(passkey.id)}
 							<li class="card key">
 								<KeyIcon size={20} />
 								<div class="key__body">
@@ -162,6 +162,11 @@
 					{#snippet pending()}
 						<p class="hint">Loading…</p>
 					{/snippet}
+					<!-- The list failed, not the page: the profile above and the buttons below still work. -->
+					{#snippet failed(error, reset)}
+						<p class="issue">{failureOf(error)}</p>
+						<button type="button" class="btn btn--sm" onclick={reset}>Try again</button>
+					{/snippet}
 				</svelte:boundary>
 				<div class="cluster">
 					<button type="button" class="btn" onclick={() => addPasskey(me.name)} disabled={adding}>
@@ -178,6 +183,10 @@
 		{/if}
 		{#snippet pending()}
 			<p class="hint">Loading…</p>
+		{/snippet}
+		{#snippet failed(error, reset)}
+			<p class="issue">{failureOf(error)}</p>
+			<button type="button" class="btn btn--sm" onclick={reset}>Try again</button>
 		{/snippet}
 	</svelte:boundary>
 </div>

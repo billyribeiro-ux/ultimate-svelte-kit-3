@@ -113,6 +113,12 @@ export const ops = sqliteTable(
 		/** The sheet version this op produced. */
 		version: integer('version').notNull(),
 		userId: text('user_id'),
+		/**
+		 * The tab that sent it, so a tab catching up after a dropped connection
+		 * can tell its own operations from everybody else's. `null` on rows
+		 * written before it was recorded.
+		 */
+		client: text('client'),
 		/** `CellOp[]` as JSON. */
 		payload: text('payload').notNull(),
 		createdAt: integer('created_at').notNull().default(now)

@@ -18,47 +18,43 @@ export const part2 = [
 			'A spreadsheet is a graph that recalculates itself. Cells in a `Map`, edges recorded when a formula is compiled, and the four-step procedure — dirty set, in-degrees, Kahn’s sort, leftovers — that recomputes exactly what changed.',
 		goal: 'Understand incremental recalculation well enough to explain why a `$derived` recomputes when it does, and read the engine’s `evaluated` count as proof.',
 		blocks: [
-			code('src/lib/engine/engine.ts', 1, 35),
+			code('src/lib/engine/engine.ts', 1, 36),
 			{
 				type: 'p',
 				text: 'Read the four steps twice; they are the chapter. Everything else in the file is bookkeeping in service of them. The header also records the one performance trade the engine makes: single-cell references are indexed in a `Map` from cell to readers, but *range* references are a list of rectangles scanned per changed cell. That is linear in the number of range formulas, which is honest for a sheet a browser holds, and the tests in this part are what would let you replace it with an interval tree safely.'
 			},
-			{
-				type: 'note',
-				text: 'The header’s “Chapter 12” is the project’s own numbering: it means chapter 17 here, the `$derived` version of this engine. The note in chapter 08 has the whole mapping.'
-			},
 
 			{ type: 'h3', id: 'a-cell', text: 'What a cell is' },
-			code('src/lib/engine/engine.ts', 55, 93),
+			code('src/lib/engine/engine.ts', 56, 94),
 			{
 				type: 'p',
 				text: '`input` is the truth: what the person typed. Everything else — the parsed formula, the value, the rectangles it reads — is derived from it and can be rebuilt. `Recalc` is what a batch of edits returns, and its `evaluated` count is the number that proves the engine is incremental: change one cell in a thousand and it should be small.'
 			},
-			code('src/lib/engine/engine.ts', 95, 130, { partial: true }),
+			code('src/lib/engine/engine.ts', 96, 131, { partial: true }),
 			{
 				type: 'p',
 				text: 'The engine is plain TypeScript. `version` is a number, not `$state` — the sheet model in chapter 15 mirrors it into a rune. The `Context` handed to the evaluator closes over `this.value`, which is how `=A1` reaches another cell without the evaluator ever knowing what a sheet is.'
 			},
 
 			{ type: 'h3', id: 'editing', text: 'Editing is a batch' },
-			code('src/lib/engine/engine.ts', 182, 226),
+			code('src/lib/engine/engine.ts', 183, 227),
 			{
 				type: 'p',
 				text: 'A paste of a hundred cells is one batch, one topological sort and one version bump, rather than a hundred. Note the three outcomes per edit: an empty input with a general format *deletes* the entry — empty is the absence of a cell — an unchanged input keeps the compiled cell and only updates its format, and anything else is compiled, indexed and added to the seeds.'
 			},
-			code('src/lib/engine/engine.ts', 293, 337),
+			code('src/lib/engine/engine.ts', 294, 338),
 			{
 				type: 'p',
 				text: 'Compiling a formula parses it once and turns its references into rectangles. A formula that does not parse becomes an `#ERROR!` cell with the syntax error’s message and position in it — the person sees where, and the rest of the sheet keeps working.'
 			},
-			code('src/lib/engine/engine.ts', 339, 381),
+			code('src/lib/engine/engine.ts', 340, 382),
 			{
 				type: 'p',
 				text: 'The two indexes. A one-cell rectangle goes into `#direct` under the cell it reads; anything bigger goes into `#ranges` under the formula. `#dependents` combines them: the direct readers of a cell, plus every range formula whose rectangle contains it. Unindexing on edit is what keeps a deleted formula from being notified forever.'
 			},
 
 			{ type: 'h3', id: 'recalculation', text: 'The recalculation' },
-			code('src/lib/engine/engine.ts', 383, 436, { partial: true }),
+			code('src/lib/engine/engine.ts', 384, 437, { partial: true }),
 			{
 				type: 'p',
 				text: 'Step one collects the dirty set: the seeds, every volatile cell (`RAND()`, `NOW()`), and everything downstream, transitively. Step two counts in-degrees — but only among dirty *formulas*. A dirty literal was just typed and is already final; it holds nothing back. That distinction is the bug the first version had, and the comment is where it was fixed.'
@@ -72,7 +68,7 @@ export const part2 = [
 				title: 'Why this is what $derived does',
 				text: 'Svelte’s runtime keeps, for each `$derived`, the set of signals it read last time. When a signal changes, the runtime marks the deriveds that read it dirty, transitively, and recomputes them on demand in dependency order — never reading a stale value, never computing a diamond twice. Rename `Map` to “signal”, `#direct` to “reactions”, and the dirty set to “marked”, and this function is the scheduler. The difference is that the framework discovers edges by running the function, where the engine reads them out of a parsed formula — and that the framework has no notion of a cycle being a *value*. Chapter 17 puts the two next to each other.'
 			},
-			code('src/lib/engine/engine.ts', 438, 461, { partial: true }),
+			code('src/lib/engine/engine.ts', 439, 462, { partial: true }),
 			{
 				type: 'p',
 				text: 'Step four is the leftovers, and it is the next chapter.'
@@ -99,12 +95,12 @@ export const part2 = [
 				type: 'p',
 				text: 'When Kahn’s queue empties, anything still unevaluated has an in-degree that never reached zero. That means it is on a cycle — or merely *downstream* of one, which is a different thing. `=A1+1` where A1 is in a cycle is not itself circular; it should evaluate, see `#CYCLE!` as a value, and produce `#CYCLE!` the way it would produce `#DIV/0!` from a division by zero next door.'
 			},
-			code('src/lib/engine/engine.ts', 438, 461, { partial: true }),
+			code('src/lib/engine/engine.ts', 439, 462, { partial: true }),
 			{
 				type: 'p',
 				text: 'So the leftovers are split. The strongly connected components of the remaining graph with more than one node — plus any node that reads itself — are the cycle members. They are marked, counted as done, and *released*, and the queue is drained again. The downstream cells evaluate with the error as an input.'
 			},
-			code('src/lib/engine/engine.ts', 464, 509),
+			code('src/lib/engine/engine.ts', 465, 510),
 			{
 				type: 'p',
 				text: 'Tarjan’s algorithm in thirty lines: one depth-first pass, an index and a low-link per node, and a stack. When a node’s low-link equals its own index it is the root of a component, and everything above it on the stack belongs to that component. A component of one node is a cycle only if the node points at itself.'
@@ -119,7 +115,7 @@ export const part2 = [
 				type: 'p',
 				text: 'The engine’s own tests for cycles, in the language the sheet uses. `sheet()` is a tiny helper that builds an engine from a record of `A1: "=B1"` pairs, which is what every engine test in the file wants.'
 			},
-			code('src/lib/engine/engine.ts', 511, 544),
+			code('src/lib/engine/engine.ts', 512, 545),
 			{
 				type: 'p',
 				text: 'Three small helpers finish the file. `isVolatile` walks a tree looking for a function the library marked volatile. `toScalar` is the rule that this engine does not spill: `=A1:B2` in one cell is an error unless the range is one cell. `same` treats two errors with the same code as equal, so a recalculation does not report a cell as changed when its `#DIV/0!` was replaced with another `#DIV/0!`.'
@@ -160,7 +156,7 @@ export const part2 = [
 				type: 'p',
 				text: 'A range is subtler than a cell. Deleting row 5 from `SUM(A1:A10)` gives `SUM(A1:A9)` — the range *shrinks* — and it vanishes only when all of it is deleted. An insertion inside a range grows it; at or before its start moves it. Those are what a person means, and they are the cases the property test in the next chapter checks by inserting rows and deleting them again.'
 			},
-			code('src/lib/engine/engine.ts', 256, 287),
+			code('src/lib/engine/engine.ts', 257, 288),
 			{
 				type: 'p',
 				text: 'The engine’s side of a shift is deliberately blunt: every cell moves, every formula is rewritten, and everything is recalculated. A structural change is rare, and a full pass is the right price for a procedure with no special cases — the comment says so, and the alternative (tracking exactly which formulas a shift touched) is the kind of cleverness that arrives with its own bugs.'

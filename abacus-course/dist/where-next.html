@@ -82,9 +82,9 @@ After completing the code, ask the user if they want a playground link. Only cal
 	&quot;lint&quot;: &quot;prettier --check . &amp;&amp; eslint .&quot;,
 	&quot;format&quot;: &quot;prettier --write .&quot;,
 	&quot;test:unit&quot;: &quot;vitest&quot;,
-	&quot;test&quot;: &quot;npm run test:unit -- --run &amp;&amp; npm run test:e2e&quot;,
+	&quot;test&quot;: &quot;pnpm run test:unit --run &amp;&amp; pnpm run test:e2e&quot;,
 	&quot;test:e2e&quot;: &quot;playwright test&quot;,
-	&quot;verify&quot;: &quot;npm run check &amp;&amp; npm run lint &amp;&amp; npm run test:unit -- --run &amp;&amp; npm run build &amp;&amp; npm run test:e2e&quot;,
+	&quot;verify&quot;: &quot;pnpm run check &amp;&amp; pnpm run lint &amp;&amp; pnpm run test:unit --run &amp;&amp; pnpm run build &amp;&amp; pnpm run test:e2e&quot;,
 	&quot;db:push&quot;: &quot;drizzle-kit push&quot;,
 	&quot;db:generate&quot;: &quot;drizzle-kit generate&quot;,
 	&quot;db:migrate&quot;: &quot;drizzle-kit migrate&quot;,
@@ -102,9 +102,9 @@ After completing the code, ask the user if they want a playground link. Only cal
 	<pre><code>$ pnpm run verify
   check     svelte-check: 0 errors, 0 warnings · tsc (worker): clean
   lint      prettier + eslint: clean
-  test:unit 86 passed  (server: node · client: chromium)
+  test:unit 92 passed  (server: node · client: chromium)
   build     adapter-node · 11 routes · 5 prerendered · precompressed
-  test:e2e  54 passed  (27 scenarios × desktop, phone)</code></pre>
+  test:e2e  72 passed  (36 scenarios × desktop, phone)</code></pre>
 </figure>
 <h3 id="five-directions">Five directions</h3>
 <ol><li><strong>Charts from a range.</strong> A <code>chart</code> cell format, a <code>&lt;canvas&gt;</code> drawn from <code>tabulate</code>’s rows, and the same <code>sheet.version</code> subscription the grid uses. Everything it needs already exists in chapter 15.</li><li><strong>Conditional formatting.</strong> A rule is a criterion (ch. 08) applied to a rectangle; the grid already turns cell facts into classes. <code>CellFormat</code> grows a <code>rules</code> array and <code>formatScalar</code> stays as it is.</li><li><strong>A shared broadcaster.</strong> <code>live.ts</code> is in-process. Postgres <code>NOTIFY</code> or a Redis stream makes it work across instances, and the mailbox and the generator stay exactly as they are.</li><li><strong>An interval tree for ranges.</strong> The engine scans its range list per changed cell (ch. 09). The property test in chapter 12 is what lets you replace that with a tree and know you did not break anything.</li><li><strong>Spilling.</strong> <code>=A1:A3</code> in one cell is an error today (<code>toScalar</code>). Writing the range into the cells below, and marking them as spilled so a person cannot type over them, is a project of its own — and the engine’s <code>Recalc.changed</code> list is where it starts.</li></ol>

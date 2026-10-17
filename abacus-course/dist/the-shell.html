@@ -164,7 +164,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/+layout.svelte<span class="code__lines">:62-126</span></span>
+		<span class="code__file">src/routes/(app)/+layout.svelte<span class="code__lines">:62-134</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;a class=&quot;skip visually-hidden-focusable&quot; href=&quot;#main&quot;&gt;Skip to content&lt;/a&gt;
@@ -214,6 +214,11 @@
 			Who this browser is, as a remote query rather than layout data: the
 			passkey commands and the sign-out form call `whoAmI().refresh()`, and
 			the new answer arrives in the same response.
+
+			`failed` keeps a failure here, in the corner of the header. Without it
+			the error would climb to `+error.svelte` and replace the page somebody
+			is working in because the chip could not say their name. Every page
+			that needs a person asks again, and says so itself.
 		--&gt;
 		&lt;svelte:boundary&gt;
 			{const me = $derived(await whoAmI())}
@@ -224,6 +229,9 @@
 			{/if}
 			{#snippet pending()}
 				&lt;span class=&quot;chip&quot;&gt;…&lt;/span&gt;
+			{/snippet}
+			{#snippet failed()}
+				&lt;a class=&quot;chip&quot; href={resolve('/(app)/signin')}&gt;Sign in&lt;/a&gt;
 			{/snippet}
 		&lt;/svelte:boundary&gt;
 	&lt;/div&gt;
@@ -237,7 +245,7 @@
 
 <aside class="callout callout--why">
 	<h4>Why the header asks whoAmI instead of reading layout data</h4>
-	<p>The person’s name could be layout <code>data</code>. It is a remote query instead, awaited in markup inside a boundary, because the passkey commands and the sign-out form call <code>whoAmI().refresh()</code> — and a query awaited in a component updates in place, in the same response, while layout data would need a page invalidation. <code>$state.eager(pathname)</code> on the current-link class is the one place the <em>incoming</em> pathname is wanted before the new page’s awaits settle.</p>
+	<p>The person’s name could be layout <code>data</code>. It is a remote query instead, awaited in markup inside a boundary, because the passkey commands and the sign-out form call <code>whoAmI().refresh()</code> — and a query awaited in a component updates in place, in the same response, while layout data would need a page invalidation. <code>$state.eager(pathname)</code> on the current-link class is the one place the <em>incoming</em> pathname is wanted before the new page’s awaits settle. The boundary has a <code>failed</code> snippet as well as a <code>pending</code> one, and both are a chip. Without <code>failed</code>, a <code>whoAmI()</code> that could not be answered would climb to <code>+error.svelte</code> and replace the page somebody was working in because the corner of the header could not say their name; with it, the chip falls back to Sign in, and every page that needs a person asks again and says so itself.</p>
 </aside>
 <h3 id="tokens">Tokens</h3>
 

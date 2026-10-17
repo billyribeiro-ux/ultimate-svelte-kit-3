@@ -80,16 +80,19 @@ RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">pnpm-workspace.yaml<span class="code__lines">:1-23</span></span>
+		<span class="code__file">pnpm-workspace.yaml<span class="code__lines">:1-25</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts"># Not a workspace — a single package. This file exists for one line.
+	<pre><code class="lang-ts"># Not a workspace — a single package. pnpm 12 reads its own settings from
+# this file, and this project has two.
 #
 # pnpm 12 refuses to run a dependency's install scripts unless you say so by
 # name, which is the correct default: `postinstall` is arbitrary code from a
-# transitive dependency you have never read. esbuild needs it to unpack its
-# platform binary, and Vite needs esbuild, so without this the dev server
-# starts and then dies on the first transform.
+# transitive dependency you have never read. esbuild's script puts its
+# platform binary in place, and drizzle-kit needs that binary — directly, and
+# through tsx — to read `drizzle.config.ts` and the schema, so the `db:*`
+# scripts depend on this line. Vite 8 does not: it transforms with Oxc and
+# bundles with Rolldown, and lists esbuild only as an optional peer.
 allowBuilds:
   esbuild: true
 
@@ -102,12 +105,11 @@ minimumReleaseAgeExclude:
   - '@libsql/client@0.18.0'
   - '@libsql/core@0.18.0'
   - '@simplewebauthn/browser@14.0.0'
-  - '@simplewebauthn/server@14.0.0'
   - '@types/node@24.19.2'
   - eslint-plugin-svelte@3.23.1
   - phosphor-svelte@3.1.1</code></pre>
 </figure>
-<p>The one file pnpm reads besides the lockfile. <code>allowBuilds</code> names the single dependency allowed to run an install script, because <code>postinstall</code> is arbitrary code from something you have never read. <code>minimumReleaseAgeExclude</code> is pnpm 12’s supply-chain delay showing: a version published very recently is held back until it has had time to be noticed and pulled, and the list is the record of the ones this project took early — pnpm appends each one as it installs it, and the comment says why the list exists.</p>
+<p>pnpm reads <code>package.json</code>, the lockfile, <code>.npmrc</code> — which here holds a single setting npm shares, <code>engine-strict</code> — and this file, for the settings that are pnpm’s own. <code>allowBuilds</code> names the single dependency allowed to run an install script, because <code>postinstall</code> is arbitrary code from something you have never read, and the comment gives the reason it is esbuild: drizzle-kit loads the config and the schema through it. It is not Vite’s reason any more — Vite 8 transforms with Oxc and bundles with Rolldown, and esbuild is only an optional peer. <code>minimumReleaseAgeExclude</code> is pnpm 12’s supply-chain delay showing: a version published very recently is held back until it has had time to be noticed and pulled, and the list is the record of the ones this project took early. pnpm appends each one as it installs it, and removes nothing, so the list is kept honest by hand — the entry for <code>@simplewebauthn/server@14.0.0</code> went when the lockfile moved on to 14.0.3.</p>
 
 <figure class="code">
 	<figcaption>

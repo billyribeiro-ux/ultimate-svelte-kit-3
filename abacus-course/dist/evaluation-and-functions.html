@@ -38,7 +38,7 @@
 			
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/formula/evaluate.ts<span class="code__lines">:1-43</span></span>
+		<span class="code__file">src/lib/formula/evaluate.ts<span class="code__lines">:1-42</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -49,8 +49,7 @@
  * cells it needs come through a `Context`, which the engine provides — and a
  * test provides a `Map`. That separation is what makes the language testable
  * in a millisecond, and what lets the same evaluator run in the engine, in
- * the `$derived` demonstration of chapter 12, and on the server for a
- * published sheet.
+ * the `$derived` lesson, and on the server for a published sheet.
  */
 
 import type { CellRef, Node, RangeRef } from './ast.ts';
@@ -86,11 +85,10 @@ export interface Context {
 export const MAX_RANGE_CELLS = 1_000_000;</code></pre>
 </figure>
 <p>The evaluator does not know what a sheet is. The cells it needs come through a <code>Context</code> — the engine provides one, a test provides a <code>Map</code>, the lesson page in chapter 17 provides a closure over nine <code>$derived</code>s. The clock and the random source are injected for the same reason: <code>TODAY()</code> in a test must give the same answer tomorrow.</p>
-<aside class="callout callout--note"><p>The project’s own comments number the chapters differently from this course, and the header above has the first of them. Where a comment in the code says “chapter 10” it means the hand-written engine (chapter 09 here), and where it says “chapter 12” it means the <code>$derived</code> version of it (chapter 17 here).</p></aside>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/formula/evaluate.ts<span class="code__lines">:45-94</span></span>
+		<span class="code__file">src/lib/formula/evaluate.ts<span class="code__lines">:44-93</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">export function evaluate(node: Node, ctx: Context): Value {
@@ -148,7 +146,7 @@ export const MAX_RANGE_CELLS = 1_000_000;</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/formula/evaluate.ts<span class="code__lines">:96-107</span></span>
+		<span class="code__file">src/lib/formula/evaluate.ts<span class="code__lines">:95-106</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">function rangeValue(range: RangeRef, ctx: Context): Value {
@@ -168,7 +166,7 @@ export const MAX_RANGE_CELLS = 1_000_000;</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/formula/evaluate.ts<span class="code__lines">:109-168</span></span>
+		<span class="code__file">src/lib/formula/evaluate.ts<span class="code__lines">:108-167</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">function binary(op: string, left: Value, right: Value): Value {

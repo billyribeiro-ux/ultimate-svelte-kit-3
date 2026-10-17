@@ -3,7 +3,7 @@
 	import { PlusIcon, TrashIcon } from 'phosphor-svelte';
 	import { resolve } from '$app/paths';
 	import Section from '#lib/components/Section.svelte';
-	import { messageOf } from '#lib/errors.ts';
+	import { failureOf, messageOf } from '#lib/errors.ts';
 	import { create, getMine, remove, rename } from '#lib/remote/sheets.remote.ts';
 	import { TEMPLATES } from '#lib/sheet/templates.ts';
 	import { toast } from '#lib/toast/toast.ts';
@@ -79,8 +79,8 @@
 		<svelte:boundary>
 			<ul class="cards">
 				{#each await getMine() as sheet (sheet.id)}
-					{const del = $derived(remove.for(sheet.id))}
-					{const ren = $derived(rename.for(sheet.id))}
+					{const del = remove.for(sheet.id)}
+					{const ren = rename.for(sheet.id)}
 					<li class="card sheetcard">
 						<a class="sheetcard__link" href={resolve('/(app)/sheet/[id]', { id: sheet.id })}>
 							<h3>{sheet.title}</h3>
@@ -138,12 +138,12 @@
 			{/snippet}
 			<!--
 				What `failed` receives has been through `handleError`: an `App.Error`,
-				`{ status, message }`, not an `HttpError`. Svelte types it `unknown`,
-				because without SvelteKit it could be anything; the cast says what
-				SvelteKit guarantees.
+				not an `HttpError`, so the sentence is its `message`. Svelte types it
+				`unknown`, because without SvelteKit it could be anything, and
+				`failureOf` reads it without a cast.
 			-->
 			{#snippet failed(error, reset)}
-				<p class="issue">{(error as App.Error).message}</p>
+				<p class="issue">{failureOf(error)}</p>
 				<button type="button" class="btn btn--sm" onclick={reset}>Try again</button>
 			{/snippet}
 		</svelte:boundary>

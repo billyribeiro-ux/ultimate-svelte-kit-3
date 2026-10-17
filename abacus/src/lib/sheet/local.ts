@@ -125,10 +125,22 @@ export function tabId(): string {
 	try {
 		const existing = sessionStorage.getItem('abacus:tab');
 		if (existing) return existing;
-		const id = Math.random().toString(36).slice(2, 10);
+		const id = randomId();
 		sessionStorage.setItem('abacus:tab', id);
 		return id;
 	} catch {
-		return Math.random().toString(36).slice(2, 10);
+		return randomId();
 	}
+}
+
+/**
+ * Twelve hex characters, always. `Math.random().toString(36)` is shorter now
+ * and then, and the server refuses a tab id under four characters;
+ * `getRandomValues` also works where `randomUUID` does not — on a page
+ * served over plain HTTP to another machine on the network.
+ */
+function randomId(): string {
+	return Array.from(crypto.getRandomValues(new Uint8Array(6)), (b) =>
+		b.toString(16).padStart(2, '0')
+	).join('');
 }

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The grid: a thousand cells out of a million — Building Abacus</title>
-<meta name="description" content="Only the cells the scroll position reveals exist in the DOM, positioned absolutely inside a canvas the size of the whole sheet. Two numbers change on scroll, and the two numbers change which cells are rendered. One cell snippet, five layers.">
+<meta name="description" content="Only the cells the scroll position reveals exist in the DOM, positioned absolutely inside a canvas the size of the whole sheet. Two numbers change on scroll, and the two numbers change which cells are rendered. One cell snippet, four layers.">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -33,7 +33,7 @@
 		<article>
 			<p class="eyebrow">Chapter 19</p>
 			<h1>The grid: a thousand cells out of a million</h1>
-			<p class="lede">Only the cells the scroll position reveals exist in the DOM, positioned absolutely inside a canvas the size of the whole sheet. Two numbers change on scroll, and the two numbers change which cells are rendered. One <code>cell</code> snippet, five layers.</p>
+			<p class="lede">Only the cells the scroll position reveals exist in the DOM, positioned absolutely inside a canvas the size of the whole sheet. Two numbers change on scroll, and the two numbers change which cells are rendered. One <code>cell</code> snippet, four layers.</p>
 			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Build a two-axis virtualised grid with frozen panes as sticky layers, and know exactly what is reactive in it and what is not.</p></aside>
 			
 <figure class="code">
@@ -87,12 +87,20 @@ let {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/grid/Grid.svelte<span class="code__lines">:61-70</span></span>
+		<span class="code__file">src/lib/grid/Grid.svelte<span class="code__lines">:61-78</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">const HEADER_HEIGHT = 26;
 const HEADER_WIDTH = 52;
 
+/*
+ * Three handles used from handlers and the scroll effect, after mount: the
+ * viewport is measured and scrolled, the grid takes focus back, and the
+ * editor's exported `insertAtCaret` is called on a click mid-formula.
+ * `bind:this` is the API for a handle like that — the last one is a
+ * component, which no attachment can reach — so the autofixer's suggestion
+ * to use attachments instead is declined here.
+ */
 let viewport = $state&lt;HTMLDivElement&gt;();
 let grid = $state&lt;HTMLDivElement&gt;();
 let editor = $state&lt;CellEditor&gt;();
@@ -104,7 +112,7 @@ let scrollLeft = $state(0);</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/grid/Grid.svelte<span class="code__lines">:72-120</span></span>
+		<span class="code__file">src/lib/grid/Grid.svelte<span class="code__lines">:80-128</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/* ---------------------------------------------------------------- */
@@ -163,11 +171,11 @@ const frozenCols = $derived(Array.from({ length: sheet.frozen.cols }, (_, i) =&g
 	<h4>Why scroll position is state and not read from the element</h4>
 	<p>Every visible cell’s position depends on where the viewport is scrolled. If the grid read <code>element.scrollTop</code> inside the template, nothing would re-run when it changed. Two <code>$state</code> numbers written by an <code>onscroll</code> handler are what let a scroll be a reactive event: the numbers change, <code>rows</code> and <code>cols</code> re-derive, and the each blocks add and remove cells. <code>bind:scrollTop</code> does not exist on elements — the first version tried it — so the handler is the honest way.</p>
 </aside>
-<h3 id="the-cell">One snippet, five layers</h3>
+<h3 id="the-cell">One snippet, four layers</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/grid/Grid.svelte<span class="code__lines">:596-653</span></span>
+		<span class="code__file">src/lib/grid/Grid.svelte<span class="code__lines">:617-674</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">{#snippet cell(r: number, c: number, top: number, left: number)}
@@ -231,9 +239,14 @@ const frozenCols = $derived(Array.from({ length: sheet.frozen.cols }, (_, i) =&g
 </figure>
 <p>A snippet with parameters is a template function. <code>cell(r, c, top, left)</code> renders one cell at a position, and its eight <em>declaration tags</em> — <code>{const value = $derived(sheet.value(r, c))}</code> and the seven beside it — compute everything the cell shows from the sheet and the decorations. Declaration tags arrived in Svelte 5.56 and made <code>{@const}</code> legacy. The <code>$derived</code> keeps the reactivity <code>{@const}</code> had: when the sheet changes, <code>value</code> is worked out again. A bare <code>{const value = sheet.value(r, c)}</code> would be worked out once, like a <code>const</code> in the script, and the cell’s number, true/false and error styling would stop following its value; its text would still update, because <code>{sheet.display(r, c)}</code> is read straight in the markup. A declaration tag is visible to its siblings and their children in the same lexical scope, so these eight, the first children of the snippet, reach the cell’s markup and nothing outside the snippet. The header awaits the same way, <code>{const me = $derived(await whoAmI())}</code> (ch. 30). The class array is the whole visual state: numeric alignment, selection edges, formula highlight edges, the flash, the fill target. The editor mounts <em>inside</em> the cell being edited, so it is positioned by the same geometry as everything else.</p>
 
+<aside class="callout callout--why">
+	<h4>When a declaration tag needs $derived, and when it does not</h4>
+	<p>A declaration tag runs when its block is made, like a <code>const</code> at the top of a function. That is all <code>{const spec = FUNCTIONS.get(name)}</code> needs in the formula bar’s suggestion list: the <code>each</code> is keyed by <code>name</code>, so an item’s name never changes while the item exists, the table of functions never changes at all, and the answer worked out once is the answer for good. The same is true of the lesson’s cell names, of the <code>.for(id)</code> form each workspace card gets, and of the session the cell editor holds. <code>{const value = $derived(sheet.value(r, c))}</code> is the other case. The snippet’s block lives while the cell is on screen, and what the cell holds changes underneath it, so the value must be worked out again whenever what it read changes — which is what <code>$derived</code> adds, at the price of one signal per cell. Ask one question: can anything this expression reads change while the block is alive? If not, write the plain tag; a <code>$derived</code> around a value nothing can change is a signal with nothing to signal. The <code>await</code> tags are always <code>$derived</code>, because the query they await is refreshed in place.</p>
+</aside>
+
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/grid/Grid.svelte<span class="code__lines">:694-748</span></span>
+		<span class="code__file">src/lib/grid/Grid.svelte<span class="code__lines">:715-769</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;!-- The corner, above everything. --&gt;
@@ -296,7 +309,7 @@ const frozenCols = $derived(Array.from({ length: sheet.frozen.cols }, (_, i) =&g
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/grid/Grid.svelte<span class="code__lines">:783-824</span></span>
+		<span class="code__file">src/lib/grid/Grid.svelte<span class="code__lines">:804-845</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">.canvas {
@@ -347,17 +360,28 @@ const frozenCols = $derived(Array.from({ length: sheet.frozen.cols }, (_, i) =&g
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/grid/Grid.svelte<span class="code__lines">:152-183</span></span>
+		<span class="code__file">src/lib/grid/Grid.svelte<span class="code__lines">:160-202</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">/** Cells somebody else changed flash for a moment, then the set is cleared. */
+	<pre><code class="lang-svelte">/**
+ * Cells somebody else changed flash for a moment, then the set is cleared.
+ * An effect because the clearing is driven by a clock, not by state — there
+ * is nothing to derive it from — and the cleanup cancels the timer if the
+ * set changes first.
+ */
 $effect(() =&gt; {
 	if (sheet.flashes.size === 0) return;
 	const timer = setTimeout(() =&gt; sheet.flashes.clear(), 900);
 	return () =&gt; clearTimeout(timer);
 });
 
-/** Keep the active cell on screen. */
+/**
+ * Keep the active cell on screen, and tell whoever is listening where it
+ * is. Both are side effects on things outside Svelte — the element's scroll
+ * position, and (on a stored sheet) the network — which is what `$effect`
+ * is for; neither writes state another rune could derive. `untrack` keeps
+ * the effect from depending on the scroll position it is about to change.
+ */
 $effect(() =&gt; {
 	const { row, col } = sheet.anchor;
 	const el = untrack(() =&gt; viewport);
@@ -387,7 +411,7 @@ $effect(() =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/grid/Grid.svelte<span class="code__lines">:553-595</span></span>
+		<span class="code__file">src/lib/grid/Grid.svelte<span class="code__lines">:574-616</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;!--
@@ -434,11 +458,11 @@ $effect(() =&gt; {
 			style:height=&quot;{HEADER_HEIGHT + totalHeight}px&quot;
 		&gt;</code></pre>
 </figure>
-<p>Three elements nest here, and the comment says what each is for: the grid takes the keys, the viewport scrolls, and the canvas is the size of the whole sheet, which is what gives the viewport something to scroll. The block stops where the canvas opens; inside it come the snippet and the five layers from earlier in the chapter. The outer element is <code>role=&quot;grid&quot;</code> with <code>aria-rowcount</code>, <code>aria-colcount</code>, <code>aria-multiselectable</code> and <code>aria-activedescendant</code> pointing at the active cell’s id — the ARIA grid pattern, which is how a screen reader knows this is a spreadsheet and where in it the person is.</p>
+<p>Three elements nest here, and the comment says what each is for: the grid takes the keys, the viewport scrolls, and the canvas is the size of the whole sheet, which is what gives the viewport something to scroll. The block stops where the canvas opens; inside it come the snippet, the header layers, and the four layers it renders into from earlier in the chapter. The outer element is <code>role=&quot;grid&quot;</code> with <code>aria-rowcount</code>, <code>aria-colcount</code>, <code>aria-multiselectable</code> and <code>aria-activedescendant</code> pointing at the active cell’s id — the ARIA grid pattern, which is how a screen reader knows this is a spreadsheet and where in it the person is.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/grid/Grid.svelte<span class="code__lines">:543-550</span></span>
+		<span class="code__file">src/lib/grid/Grid.svelte<span class="code__lines">:564-571</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">const announcement = $derived.by(() =&gt; {
@@ -453,7 +477,7 @@ $effect(() =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/grid/Grid.svelte<span class="code__lines">:752-752</span></span>
+		<span class="code__file">src/lib/grid/Grid.svelte<span class="code__lines">:773-773</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;div class=&quot;visually-hidden&quot; aria-live=&quot;polite&quot;&gt;{announcement}&lt;/div&gt;</code></pre>

@@ -35,9 +35,13 @@
 	const live = new LiveSheet(initial.sheet.id, sheet, initial.sheet.version);
 
 	/**
-	 * `watchSheet` is a `query.live`. Its `current` is the latest message
-	 * the server yielded and is reactive, so an effect that reads it runs
-	 * once per message — which is where the room's operations are applied.
+	 * `watchSheet` is a `query.live`. The room's operations are applied by
+	 * iterating it (`live.follow`), one loop for as long as the stream lasts.
+	 * A dropped connection is not the end of it — SvelteKit reconnects behind
+	 * the same iterator, and the loop waits. A stream the server ended or
+	 * refused is `done`; `reconnect()` opens a new one, `done` turns false,
+	 * and the effect starts a new loop. The cleanup stops the old one.
+	 * `current` and `connected` stay for the status chip below.
 	 */
 	const stream = watchSheet({
 		id: initial.sheet.id,
@@ -45,17 +49,36 @@
 		since: initial.sheet.version
 	});
 	$effect(() => {
-		const message = stream.current;
-		if (message) live.receive(message);
+		if (stream.done) return;
+		const controller = new AbortController();
+		// Starting the loop reads the query's latest value. Untracked, so a new
+		// message does not re-run this effect and start the loop all over again.
+		untrack(() => void live.follow(stream, controller.signal));
+		return () => controller.abort();
 	});
 
+	// The autofixer asks whether these effects write state that could be
+	// derived. They do not: one applies other people's operations as they
+	// arrive, the other sends what is queued and lets go of the sheet as the
+	// page goes. Both are side effects with a cleanup, which is what `$effect`
+	// is for.
 	$effect(() => () => live.dispose());
 
 	// Whatever is queued goes before the page is left.
 	beforeNavigate(() => void live.flush());
 
-	const shareUrl = $derived(`${page.url.origin}/sheet/${initial.sheet.id}`);
-	const publishedUrl = $derived(`${page.url.origin}/s/${initial.sheet.id}`);
+	/*
+	 * Absolute addresses to copy, still built by `resolve()`. On the server it
+	 * renders a path relative to the page (so the build works under any base
+	 * path), which is why the result is resolved against `page.url` rather than
+	 * glued to an origin.
+	 */
+	const shareUrl = $derived(
+		new URL(resolve('/(app)/sheet/[id]', { id: initial.sheet.id }), page.url.href).href
+	);
+	const publishedUrl = $derived(
+		new URL(resolve('/(app)/s/[id]', { id: initial.sheet.id }), page.url.href).href
+	);
 
 	/**
 	 * The sheet's record — access, published or not — read from the query
@@ -98,14 +121,23 @@
 	 * moment on every load would shift the grid under a finger on a phone.
 	 */
 	const everConnected = $derived(stream.current !== undefined);
-	const statusLabel = $derived(
-		{
-			live: stream.connected ? 'Saved' : everConnected ? 'Reconnecting…' : 'Connecting…',
-			saving: 'Saving…',
-			offline: 'Offline — changes are kept and will be sent',
-			conflict: live.problem ?? 'Could not save — reload to continue'
-		}[live.status]
-	);
+	const statusLabel = $derived.by((): string => {
+		switch (live.status.kind) {
+			case 'live':
+				return stream.connected ? 'Saved' : everConnected ? 'Reconnecting…' : 'Connecting…';
+			case 'saving':
+				return 'Saving…';
+			case 'offline':
+				return 'Offline — changes are kept and will be sent';
+			case 'refused':
+				return 'Not saved';
+		}
+	});
+
+	/** A failed reconnect leaves `connected` false, and the chip and the button say so. */
+	function reconnect() {
+		stream.reconnect().catch(() => {});
+	}
 </script>
 
 <svelte:head>
@@ -131,22 +163,35 @@
 			onkeydown={(event) => {
 				if (event.key === 'Enter') {
 					event.preventDefault();
-					(event.currentTarget as HTMLElement).blur();
+					event.currentTarget.blur();
 				}
 			}}
 		></h1>
 
 		<div class="cluster">
 			<span
-				class={['chip', { 'chip--on': live.status === 'live' && stream.connected }]}
+				class={[
+					'chip',
+					{
+						'chip--on': live.status.kind === 'live' && stream.connected,
+						'chip--refused': live.status.kind === 'refused'
+					}
+				]}
 				role="status"
 			>
 				{statusLabel}
 			</span>
-			{#if !stream.connected && everConnected}
-				<button type="button" class="btn btn--sm btn--ghost" onclick={() => stream.reconnect()}
-					>Reconnect</button
+			{#if live.status.kind === 'refused'}
+				<!--
+					A full reload, not a refresh of the queries: the sheet model was built
+					once from `data` and holds edits the server turned down, so the honest
+					way back is to build it again from what the server kept.
+				-->
+				<button type="button" class="btn btn--sm btn--primary" onclick={() => location.reload()}
+					>Reload</button
 				>
+			{:else if !stream.connected && everConnected}
+				<button type="button" class="btn btn--sm btn--ghost" onclick={reconnect}>Reconnect</button>
 			{/if}
 			{#each live.present as who (who.client)}
 				<span class="chip chip--on" title={who.cell ? `at ${who.cell}` : 'here'}>
@@ -155,12 +200,18 @@
 				</span>
 			{/each}
 		</div>
+		{#if live.status.kind === 'refused'}
+			<p class="issue refused" role="alert">
+				{live.status.message} — your last changes were not saved. Reload to carry on from what the server
+				kept.
+			</p>
+		{/if}
 	</header>
 
 	<Workbench
 		{sheet}
 		cursors={live.present}
-		exportHref="/api/sheets/{initial.sheet.id}/export.csv"
+		exportHref={resolve('/api/sheets/[id]/export.csv', { id: initial.sheet.id })}
 		onactivate={(cell) => live.cursor(cell)}
 	>
 		{#snippet extra()}
@@ -172,7 +223,10 @@
 				{#if owner}
 					<!--
 						A form for the access setting, because a setting that survives a
-						page with no JavaScript is a setting that survives anything.
+						page with no JavaScript is a setting that survives anything. With
+						JavaScript a choice submits itself; without it, the button inside
+						<noscript> is the way to send it — Svelte renders that content on
+						the server and leaves the element empty in the browser.
 					-->
 					<form {...setAccess} class="stack">
 						<input {...setAccess.fields.id.as('hidden', initial.sheet.id)} />
@@ -192,6 +246,9 @@
 							/>
 							Anyone signed in with the link can edit
 						</label>
+						<noscript>
+							<button class="btn btn--sm">Save sharing</button>
+						</noscript>
 					</form>
 				{:else}
 					<p class="hint">Shared with you by its owner.</p>
@@ -266,6 +323,17 @@
 
 	.title:focus {
 		background: var(--surface-active);
+	}
+
+	.chip--refused {
+		border-color: var(--danger);
+		color: var(--danger);
+		background: var(--danger-soft);
+	}
+
+	/* The reason takes a line of its own, under the title and the chips. */
+	.refused {
+		flex-basis: 100%;
 	}
 
 	.share {

@@ -11,7 +11,8 @@
  * WHERE THE REACTIVITY LINE IS
  * ----------------------------
  * The engine holds ten thousand cells in plain `Map`s and recalculates them
- * without Svelte noticing anything — that is the whole point of chapter 10.
+ * without Svelte noticing anything — that is the whole point of writing it
+ * by hand.
  * This class publishes one number, `version`, which goes up when the engine
  * finishes a batch. The grid reads `sheet.version` and then reads cells from
  * the engine; the read is untracked and the number is what re-runs it. One

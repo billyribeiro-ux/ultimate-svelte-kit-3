@@ -24,16 +24,6 @@ declare global {
 			 */
 			id?: string;
 		}
-
-		interface PageState {
-			/**
-			 * Shallow routing: the cell whose inspector is open, as a history entry,
-			 * so the back button closes it instead of leaving the sheet.
-			 */
-			inspect?: string;
-			/** The dialog the workspace has open: a new-sheet form or an import. */
-			dialog?: 'new' | 'import';
-		}
 	}
 }
 

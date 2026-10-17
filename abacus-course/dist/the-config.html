@@ -114,7 +114,7 @@ export default defineConfig(({ mode }) =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:60-94</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:60-97</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/*
@@ -125,7 +125,8 @@ export default defineConfig(({ mode }) =&gt; {
  * project deploys the way most Node apps do — `node build` behind a
  * reverse proxy, in a container — and spends its deployment chapter on
  * the things that make that safe: the origin, the body limit, graceful
- * shutdown, a health check, and a Dockerfile that runs as nobody.
+ * shutdown, a health check, and a Dockerfile that runs as the
+ * unprivileged `node` user.
  *
  * `precompress` writes `.br` and `.gz` beside every asset at build time,
  * so the server never compresses on the fly.
@@ -146,19 +147,21 @@ experimental: {
 	 * turned it on again and its suite found a back navigation that
 	 * completed — URL changed, `navigation.complete` resolved — with the
 	 * old page still on screen, five times in eight. Both bisected cleanly
-	 * to this flag. It stays off here, and the studio↔workspace back
-	 * navigation test in `e2e/sheet.e2e.ts` is the criterion for turning
-	 * it on.
+	 * to this flag. It stays off here. The criterion for turning it on is
+	 * the test &quot;back from a sheet shows the workspace, and forward shows
+	 * the sheet&quot; in `e2e/account.e2e.ts` — the same kind of navigation, on
+	 * a page with a top-level `await` — passing on both profiles, run
+	 * after run.
 	 */
 	forkPreloads: false
 },</code></pre>
 </figure>
 <p>Project 6 wrote an adapter from scratch. This one deploys the way most Node applications do — <code>node build</code> behind a reverse proxy, in a container — and spends its deployment chapter on what makes that safe. <code>precompress</code> writes <code>.br</code> and <code>.gz</code> beside every asset so the server never compresses on the fly.</p>
-<p><code>forkPreloads</code> is off, and the comment says why: two projects’ end-to-end suites found navigation failures that bisected to it. The evidence is in those suites, not in an opinion, and the criterion for turning it back on is named — one test, in one file.</p>
+<p><code>forkPreloads</code> is off, and the comment says why: two projects’ end-to-end suites found navigation failures that bisected to it. The evidence is in those suites, not in an opinion, and the criterion for turning it back on is named — one test, in one file: “back from a sheet shows the workspace, and forward shows the sheet”, in <code>e2e/account.e2e.ts</code>, which chapter 37 quotes. It makes the kind of navigation that failed elsewhere, onto a page with a top-level <code>await</code>, and it passes with the flag off. Turn the flag on, and that test passing run after run, on both profiles, is the evidence that it may stay on. It is a test that can fail, which a criterion has to be: give the sheet page an <code>onNavigate</code> that never lets a back navigation finish — the URL changes, the old page stays — and it fails at the first thing it expects to see, the workspace’s heading.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:96-100</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:99-103</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">prerender: {
@@ -172,7 +175,7 @@ experimental: {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:102-137</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:105-140</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/*
@@ -217,7 +220,7 @@ csp: {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:139-166</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:142-169</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/*
@@ -254,7 +257,7 @@ output: { bundleStrategy: 'split' },</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:168-186</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:171-189</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">	/*
@@ -282,7 +285,7 @@ output: { bundleStrategy: 'split' },</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:188-216</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:191-219</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">	/*
@@ -319,7 +322,7 @@ ssr: { external: ['@libsql/client', 'libsql'] },</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:218-267</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:221-270</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">test: {
@@ -377,7 +380,7 @@ ssr: { external: ['@libsql/client', 'libsql'] },</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:271-286</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:274-289</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**

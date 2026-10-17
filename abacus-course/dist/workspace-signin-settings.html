@@ -118,8 +118,8 @@ const when = (ms: number) =&gt;
 	<pre><code class="lang-svelte">&lt;svelte:boundary&gt;
 	&lt;ul class=&quot;cards&quot;&gt;
 		{#each await getMine() as sheet (sheet.id)}
-			{const del = $derived(remove.for(sheet.id))}
-			{const ren = $derived(rename.for(sheet.id))}
+			{const del = remove.for(sheet.id)}
+			{const ren = rename.for(sheet.id)}
 			&lt;li class=&quot;card sheetcard&quot;&gt;
 				&lt;a class=&quot;sheetcard__link&quot; href={resolve('/(app)/sheet/[id]', { id: sheet.id })}&gt;
 					&lt;h3&gt;{sheet.title}&lt;/h3&gt;
@@ -177,12 +177,12 @@ const when = (ms: number) =&gt;
 	{/snippet}
 	&lt;!--
 		What `failed` receives has been through `handleError`: an `App.Error`,
-		`{ status, message }`, not an `HttpError`. Svelte types it `unknown`,
-		because without SvelteKit it could be anything; the cast says what
-		SvelteKit guarantees.
+		not an `HttpError`, so the sentence is its `message`. Svelte types it
+		`unknown`, because without SvelteKit it could be anything, and
+		`failureOf` reads it without a cast.
 	--&gt;
 	{#snippet failed(error, reset)}
-		&lt;p class=&quot;issue&quot;&gt;{(error as App.Error).message}&lt;/p&gt;
+		&lt;p class=&quot;issue&quot;&gt;{failureOf(error)}&lt;/p&gt;
 		&lt;button type=&quot;button&quot; class=&quot;btn btn--sm&quot; onclick={reset}&gt;Try again&lt;/button&gt;
 	{/snippet}
 &lt;/svelte:boundary&gt;</code></pre>
@@ -190,7 +190,7 @@ const when = (ms: number) =&gt;
 
 <aside class="callout callout--why">
 	<h4>Why delete takes the card off the screen before the server answers</h4>
-	<p><code>remove.for(sheet.id)</code> gives each card its own form instance, so a pending delete disables its own button and no other. <code>f.submit().updates(getMine().withOverride(list =&gt; …))</code> applies an optimistic override to the workspace query — the card disappears now — and the server’s <code>requested(getMine, 1).refreshAll()</code> replaces the override with the truth in the same response. If the delete fails, the override is dropped, the card comes back, and the toast says why rather than a fixed “Could not delete that”. The <code>{:else}</code> on the <code>each</code> is the empty state, and <code>failed</code> on the boundary is the error state with a <code>reset</code>. What <code>failed</code> is handed has been through <code>handleError</code> — an <code>App.Error</code>, so it reads <code>.message</code> — and the cast is there because Svelte, which knows nothing of SvelteKit, types the parameter <code>unknown</code>; annotating the snippet <code>failed(error: App.Error)</code> instead does not type-check.</p>
+	<p><code>remove.for(sheet.id)</code> gives each card its own form instance, so a pending delete disables its own button and no other. <code>f.submit().updates(getMine().withOverride(list =&gt; …))</code> applies an optimistic override to the workspace query — the card disappears now — and the server’s <code>requested(getMine, 1).refreshAll()</code> replaces the override with the truth in the same response. If the delete fails, the override is dropped, the card comes back, and the toast says why rather than a fixed “Could not delete that”. The <code>{:else}</code> on the <code>each</code> is the empty state, and <code>failed</code> on the boundary is the error state with a <code>reset</code>. What <code>failed</code> is handed has been through <code>handleError</code> — an <code>App.Error</code>, whose sentence is its <code>message</code> — but Svelte, which knows nothing of SvelteKit, types the parameter <code>unknown</code>, and annotating the snippet <code>failed(error: App.Error)</code> does not type-check. <code>failureOf</code> from <code>#lib/errors.ts</code> reads the message without a cast: it checks the shape, and says something rather than nothing if it is ever not what SvelteKit promised. Each card’s <code>remove.for(sheet.id)</code> sits in a plain declaration tag, not a <code>$derived</code>: the <code>each</code> is keyed by the id, so a card’s form instance never changes while the card exists.</p>
 </aside>
 <h3 id="signin">Sign in</h3>
 
@@ -422,14 +422,14 @@ async function addPasskey(name: string) {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/settings/+page.svelte<span class="code__lines">:124-177</span></span>
+		<span class="code__file">src/routes/(app)/settings/+page.svelte<span class="code__lines">:124-182</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;Section eyebrow=&quot;Passkeys&quot; title=&quot;Your passkeys&quot;&gt;
 	&lt;svelte:boundary&gt;
 		&lt;ul class=&quot;keys&quot;&gt;
 			{#each await listPasskeys() as passkey (passkey.id)}
-				{const del = $derived(removePasskey.for(passkey.id))}
+				{const del = removePasskey.for(passkey.id)}
 				&lt;li class=&quot;card key&quot;&gt;
 					&lt;KeyIcon size={20} /&gt;
 					&lt;div class=&quot;key__body&quot;&gt;
@@ -466,6 +466,11 @@ async function addPasskey(name: string) {
 		{#snippet pending()}
 			&lt;p class=&quot;hint&quot;&gt;Loading…&lt;/p&gt;
 		{/snippet}
+		&lt;!-- The list failed, not the page: the profile above and the buttons below still work. --&gt;
+		{#snippet failed(error, reset)}
+			&lt;p class=&quot;issue&quot;&gt;{failureOf(error)}&lt;/p&gt;
+			&lt;button type=&quot;button&quot; class=&quot;btn btn--sm&quot; onclick={reset}&gt;Try again&lt;/button&gt;
+		{/snippet}
 	&lt;/svelte:boundary&gt;
 	&lt;div class=&quot;cluster&quot;&gt;
 		&lt;button type=&quot;button&quot; class=&quot;btn&quot; onclick={() =&gt; addPasskey(me.name)} disabled={adding}&gt;
@@ -480,7 +485,7 @@ async function addPasskey(name: string) {
 	&lt;/div&gt;
 &lt;/Section&gt;</code></pre>
 </figure>
-<p>Passkeys are listed from a query, each with its own <code>removePasskey.for(id)</code> form, and the server refuses to remove the last one — an account with no passkey is an account nobody can open — with a 409 whose sentence the toast shows as it is. Adding one on this device runs the registration ceremony for an existing user; the same device is refused, and the test in chapter 37 attaches a second virtual device to prove a second key works.</p>
+<p>Passkeys are listed from a query, each with its own <code>removePasskey.for(id)</code> form, inside a boundary of their own: if the list fails, its <code>failed</code> snippet says why and offers Try again, while the profile above and the buttons below go on working — and the outer boundary does the same for the profile. Without those snippets a failed query climbed to <code>+error.svelte</code> and replaced the whole page. The server refuses to remove the last passkey — an account with no passkey is an account nobody can open — with a 409 whose sentence the toast shows as it is. Adding one on this device runs the registration ceremony for an existing user; the same device is refused, and the test in chapter 37 attaches a second virtual device to prove a second key works.</p>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>

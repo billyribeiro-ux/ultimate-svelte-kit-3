@@ -25,6 +25,17 @@ export const GET: RequestHandler = async ({ setHeaders }) => {
 		await client.execute('select 1');
 		return Response.json({ ok: true, version, uptime: Math.round(process.uptime()) });
 	} catch (error) {
-		return Response.json({ ok: false, version, error: (error as Error).message }, { status: 503 });
+		/*
+		 * The reason goes to the log, under a reference; the caller gets the
+		 * reference and a fixed sentence. This endpoint answers anybody, and a
+		 * driver's message can carry a file path or a connection string —
+		 * which is why `handleError` keeps unexpected messages back too.
+		 */
+		const id = crypto.randomUUID();
+		console.error(`[${id}] health check: the database did not answer`, error);
+		return Response.json(
+			{ ok: false, version, error: 'database unreachable', id },
+			{ status: 503 }
+		);
 	}
 };

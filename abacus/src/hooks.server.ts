@@ -8,18 +8,17 @@
  *   2. security — headers, which fonts to preload, and the one route that may
  *      be framed
  *
- * plus `handleFetch`, `handleError` and `init`. The universal hooks —
- * `transport` and `reroute` — live in `src/hooks.ts` because the browser
- * needs them too.
+ * plus `handleFetch`, `handleError` and `init`. The one universal hook,
+ * `transport`, lives in `src/hooks.ts` because the browser needs it too.
  */
 
 import { building } from '$app/env';
 import { SESSION_SECRET } from '$app/env/private';
 /*
- * SvelteKit 3 moved every hook type into `@sveltejs/kit/hooks`. Importing them
- * from `@sveltejs/kit` compiles to `any` for each destructured argument — which
- * is not an error, so the file keeps working and every parameter silently loses
- * its type.
+ * SvelteKit 3 moved every hook type into `@sveltejs/kit/hooks`. The old import
+ * from `@sveltejs/kit` is now a type error — TS2305, "has no exported member
+ * 'Handle'" — which `pnpm run check` reports for every name, followed by an
+ * implicit `any` for every argument the types used to describe.
  */
 import {
 	sequence,

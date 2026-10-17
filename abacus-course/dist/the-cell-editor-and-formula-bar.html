@@ -38,7 +38,7 @@
 			
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/grid/CellEditor.svelte<span class="code__lines">:1-38</span></span>
+		<span class="code__file">src/lib/grid/CellEditor.svelte<span class="code__lines">:1-45</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
@@ -67,6 +67,13 @@
 		oncancel: () =&gt; void;
 	} = $props();
 
+	/*
+	 * The element, for `insertAtCaret`: the grid calls it later, on a click, and
+	 * it needs the caret and the selection, which only the element has. That is
+	 * what `bind:this` is for. An attachment is for work done *as* the element
+	 * mounts — `focusAtEnd`, below — and the autofixer's suggestion to swap one
+	 * for the other does not fit a handle that is used on demand.
+	 */
 	let input = $state&lt;HTMLInputElement&gt;();
 
 	/**
@@ -80,11 +87,11 @@
 		node.setSelectionRange(node.value.length, node.value.length);
 	};</code></pre>
 </figure>
-<p>The editor is an input that binds to <code>sheet.editing.text</code>. <code>focusAtEnd</code> is an attachment — a function that receives the element when it mounts — and it puts the caret at the end, which is where a person expects it after pressing F2. <code>bind:value</code> on a nested <code>$state</code> property works because <code>editing</code> is a reactive object.</p>
+<p>The editor is an input that binds to the text of the editing session, <code>sheet.editing.text</code>. <code>focusAtEnd</code> is an attachment — a function that receives the element when it mounts — and it puts the caret at the end, which is where a person expects it after pressing F2. <code>input</code> is the other way to hold an element, <code>bind:this</code>, and the comment says why both exist: an attachment is for work done <em>as</em> the element mounts, <code>bind:this</code> for a handle used later, on demand — here by <code>insertAtCaret</code>. The autofixer suggests replacing every <code>bind:this</code> with an attachment; for a handle like this one the suggestion does not fit, and the comment is where that judgement is recorded.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/grid/CellEditor.svelte<span class="code__lines">:40-94</span></span>
+		<span class="code__file">src/lib/grid/CellEditor.svelte<span class="code__lines">:47-111</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">	function keydown(event: KeyboardEvent) {
@@ -130,25 +137,40 @@
 &lt;/script&gt;
 
 {#if sheet.editing}
+	&lt;!--
+		The editing session, held for as long as this block lives. A commit sets
+		`sheet.editing` to null in the same update that removes the block, and
+		the expressions below can be evaluated once more on the way out — read
+		through `sheet.editing`, that was a TypeError in the console on every
+		commit. `session` is still the object they were bound to. A plain `const`,
+		not a `$derived`, because the session never changes under a block: a new
+		edit is a new object, and the grid mounts a new editor for it.
+	--&gt;
+	{const session = sheet.editing}
 	&lt;input
 		bind:this={input}
-		class={['editor', { 'editor--formula': sheet.editing.text.startsWith('=') }]}
+		class={['editor', { 'editor--formula': session.text.startsWith('=') }]}
 		type=&quot;text&quot;
 		aria-label=&quot;Cell editor&quot;
 		spellcheck=&quot;false&quot;
 		autocomplete=&quot;off&quot;
-		bind:value={sheet.editing.text}
+		bind:value={session.text}
 		onkeydown={keydown}
 		{@attach focusAtEnd}
 	/&gt;
 {/if}</code></pre>
 </figure>
 <p>The editor owns Enter, Tab and Escape, and <em>stops propagation</em> of everything so the grid’s handler never sees a keystroke meant for the input. <code>insertAtCaret</code> is an exported function, which is what the grid calls through <code>bind:this</code> when a cell is clicked during a formula: it splices the reference at the caret — or over the reference the last click inserted — and puts the caret after it.</p>
+
+<aside class="callout callout--why">
+	<h4>Why the markup holds the session in a plain const</h4>
+	<p>Committing an edit sets <code>sheet.editing</code> to <code>null</code>, and the same update removes the editor. The first version read <code>sheet.editing.text</code> directly in the class and the binding, and on the way out those expressions could be evaluated once more, after the session had gone: a <code>TypeError</code> in the console on every commit — harmless to the sheet, and noise in every bug report. <code>{const session = sheet.editing}</code> holds the session object for as long as the block lives; <code>bind:value={session.text}</code> binds to a property of that object, which is still a reactive proxy, so typing works exactly as before; and the expressions can no longer meet the null. It is a plain declaration tag, not a <code>$derived</code>, because the answer never changes under the block: a new edit is a new object, and it never replaces one that is open — the grid mounts a new editor for it (ch. 19 has the rule, and ch. 20 the one double-click that used to break it). A test in <code>local.e2e.ts</code> commits two edits and fails on any error the page throws.</p>
+</aside>
 <h3 id="the-mirror">The mirror</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/grid/FormulaBar.svelte<span class="code__lines">:11-42</span></span>
+		<span class="code__file">src/lib/grid/FormulaBar.svelte<span class="code__lines">:11-51</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/**
@@ -172,8 +194,17 @@
  */
 let { sheet, readonly = false }: { sheet: Sheet; readonly?: boolean } = $props();
 
+/*
+ * The element, because completion and the keys act on it from handlers, after
+ * it has mounted: focus, the caret, blur. `bind:this` is the handle for that;
+ * an attachment, which the autofixer suggests, would only rebuild it.
+ */
 let input = $state&lt;HTMLInputElement&gt;();
 let caret = $state(0);
+
+/** Unique per instance and the same on server and client, so the ARIA ids below cannot collide. */
+const uid = $props.id();
+const listId = `${uid}-suggestions`;
 
 /** What the bar shows: the edit in progress, or the anchor cell's input. */
 const text = $derived.by(() =&gt; {
@@ -188,7 +219,7 @@ const isFormula = $derived(text.startsWith('='));</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/grid/FormulaBar.svelte<span class="code__lines">:44-84</span></span>
+		<span class="code__file">src/lib/grid/FormulaBar.svelte<span class="code__lines">:53-93</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/** The text as coloured segments for the mirror. */
@@ -237,46 +268,52 @@ const cellProblem = $derived.by(() =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/grid/FormulaBar.svelte<span class="code__lines">:184-214</span></span>
+		<span class="code__file">src/lib/grid/FormulaBar.svelte<span class="code__lines">:200-236</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">&lt;div class=&quot;mirror mono&quot; aria-hidden=&quot;true&quot;&gt;
-	{#each segments as segment, i (i)}
-		{#if segment.hue === null}{segment.text}{:else}&lt;span
-				class=&quot;ref&quot;
-				style:--hl=&quot;var(--ref-hue-{segment.hue})&quot;&gt;{segment.text}&lt;/span
-			&gt;{/if}
-	{/each}
-&lt;/div&gt;
-&lt;input
-	bind:this={input}
-	class={['input-line mono', { 'input-line--formula': isFormula }]}
-	type=&quot;text&quot;
-	role=&quot;combobox&quot;
-	aria-label=&quot;Formula&quot;
-	aria-autocomplete=&quot;list&quot;
-	aria-expanded={suggestions.length &gt; 0}
-	aria-controls=&quot;formula-suggestions&quot;
-	spellcheck=&quot;false&quot;
-	autocomplete=&quot;off&quot;
-	{readonly}
-	value={text}
-	oninput={(event) =&gt; {
-		if (!sheet.editing) sheet.beginEdit(event.currentTarget.value);
-		else sheet.editing.text = event.currentTarget.value;
-		updateCaret();
-	}}
-	onfocus={focus}
-	onkeydown={keydown}
-	onkeyup={updateCaret}
-	onclick={updateCaret}
-/&gt;</code></pre>
+	<pre><code class="lang-svelte">&lt;div class=&quot;bar&quot;&gt;
+	&lt;output class=&quot;address mono&quot; aria-label=&quot;Active cell&quot;&gt;{toA1(sheet.anchor)}&lt;/output&gt;
+	&lt;span class=&quot;fx&quot; aria-hidden=&quot;true&quot;&gt;&lt;FunctionIcon size={14} /&gt;&lt;/span&gt;
+
+	&lt;div class=&quot;field&quot;&gt;
+		&lt;div class=&quot;mirror mono&quot; aria-hidden=&quot;true&quot;&gt;
+			{#each segments as segment, i (i)}
+				{#if segment.hue === null}{segment.text}{:else}&lt;span
+						class=&quot;ref&quot;
+						style:--hl=&quot;var(--ref-hue-{segment.hue})&quot;&gt;{segment.text}&lt;/span
+					&gt;{/if}
+			{/each}
+		&lt;/div&gt;
+		&lt;input
+			bind:this={input}
+			class={['input-line mono', { 'input-line--formula': isFormula }]}
+			type=&quot;text&quot;
+			role=&quot;combobox&quot;
+			aria-label=&quot;Formula&quot;
+			aria-autocomplete=&quot;list&quot;
+			aria-expanded={open}
+			aria-controls={open ? listId : undefined}
+			aria-activedescendant={open ? optionId(highlighted) : undefined}
+			spellcheck=&quot;false&quot;
+			autocomplete=&quot;off&quot;
+			{readonly}
+			value={text}
+			oninput={(event) =&gt; {
+				if (!sheet.editing) sheet.beginEdit(event.currentTarget.value);
+				else sheet.editing.text = event.currentTarget.value;
+				updateCaret();
+			}}
+			onfocus={focus}
+			onkeydown={keydown}
+			onkeyup={updateCaret}
+			onclick={updateCaret}
+		/&gt;</code></pre>
 </figure>
 <h3 id="completion">Completion, and a reset without an effect</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/grid/FormulaBar.svelte<span class="code__lines">:90-119</span></span>
+		<span class="code__file">src/lib/grid/FormulaBar.svelte<span class="code__lines">:99-140</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/** The function-name prefix under the caret, if the caret is in one. */
@@ -308,7 +345,19 @@ const suggestions = $derived(
 let highlighted = $derived.by(() =&gt; {
 	void suggestions;
 	return 0;
-});</code></pre>
+});
+
+/**
+ * THE ACTIVE-DESCENDANT PATTERN
+ * The caret never leaves the input — a person is still typing — so the
+ * suggestion the arrow keys reach cannot take focus. Instead the input
+ * names it: `aria-activedescendant` holds the id of the highlighted option,
+ * and a screen reader announces that option as though it were focused.
+ * The ids exist only while the list does, and so do the attributes that
+ * point at them.
+ */
+const open = $derived(suggestions.length &gt; 0);
+const optionId = (i: number) =&gt; `${listId}-${i}`;</code></pre>
 </figure>
 
 <aside class="callout callout--why">
@@ -318,7 +367,7 @@ let highlighted = $derived.by(() =&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/grid/FormulaBar.svelte<span class="code__lines">:121-176</span></span>
+		<span class="code__file">src/lib/grid/FormulaBar.svelte<span class="code__lines">:142-197</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">function accept(name: string) {
@@ -381,26 +430,33 @@ function updateCaret() {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/grid/FormulaBar.svelte<span class="code__lines">:216-236</span></span>
+		<span class="code__file">src/lib/grid/FormulaBar.svelte<span class="code__lines">:238-265</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">{#if suggestions.length &gt; 0}
-	&lt;ul class=&quot;suggestions&quot; id=&quot;formula-suggestions&quot; role=&quot;listbox&quot;&gt;
+	<pre><code class="lang-svelte">{#if open}
+	&lt;!--
+		An option is the thing that is chosen, so it takes the pointer itself.
+		A &lt;button&gt; inside it would be a second control where the pattern has
+		one — and an option's children are presentational, so assistive
+		technology would hear a button that is not there. The keys belong to
+		the input (see `keydown`), which is why the options need no handler
+		of their own and no place in the tab order.
+	--&gt;
+	&lt;ul class=&quot;suggestions&quot; id={listId} role=&quot;listbox&quot; aria-label=&quot;Functions&quot;&gt;
 		{#each suggestions as name, i (name)}
-			{const spec = $derived(FUNCTIONS.get(name))}
+			{const spec = FUNCTIONS.get(name)}
+			&lt;!-- svelte-ignore a11y_click_events_have_key_events --&gt;
 			&lt;li
+				id={optionId(i)}
 				role=&quot;option&quot;
+				tabindex=&quot;-1&quot;
 				aria-selected={i === highlighted}
-				class={{ 'suggestion--active': i === highlighted }}
+				class={['suggestion', { 'suggestion--active': i === highlighted }]}
+				onpointerdown={(e) =&gt; e.preventDefault()}
+				onclick={() =&gt; accept(name)}
 			&gt;
-				&lt;button
-					type=&quot;button&quot;
-					onpointerdown={(e) =&gt; e.preventDefault()}
-					onclick={() =&gt; accept(name)}
-				&gt;
-					&lt;span class=&quot;mono&quot;&gt;{spec?.signature}&lt;/span&gt;
-					&lt;span class=&quot;hint&quot;&gt;{spec?.description}&lt;/span&gt;
-				&lt;/button&gt;
+				&lt;span class=&quot;mono&quot;&gt;{spec?.signature}&lt;/span&gt;
+				&lt;span class=&quot;hint&quot;&gt;{spec?.description}&lt;/span&gt;
 			&lt;/li&gt;
 		{/each}
 	&lt;/ul&gt;
@@ -409,7 +465,7 @@ function updateCaret() {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/grid/FormulaBar.svelte<span class="code__lines">:240-244</span></span>
+		<span class="code__file">src/lib/grid/FormulaBar.svelte<span class="code__lines">:269-273</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">{#if problem}
@@ -418,7 +474,12 @@ function updateCaret() {
 	&lt;p class=&quot;issue problem&quot; role=&quot;status&quot;&gt;{cellProblem}&lt;/p&gt;
 {/if}</code></pre>
 </figure>
-<p>The list is a <code>listbox</code> of <code>option</code>s, the input is a <code>combobox</code> that says so with <code>aria-expanded</code> and <code>aria-controls</code>, and the syntax error is <code>role=&quot;alert&quot;</code> so it is announced. <code>onpointerdown</code> on each option prevents default so the input does not lose focus before the click lands — the one line every custom completion needs and most forget.</p>
+<p>The list is a <code>listbox</code> of <code>option</code>s and the input is a <code>combobox</code> that says so: <code>aria-expanded</code> whether the list is open, <code>aria-controls</code> which list it is — only while that list exists, because an id that points at nothing is a broken promise — and <code>aria-activedescendant</code> which option the arrow keys have reached. The ids come from <code>$props.id()</code>, unique to this instance and the same on the server and in the browser. Each option takes the pointer itself, with <code>onpointerdown</code> preventing default so the input does not lose focus before the click lands. The syntax error is <code>role=&quot;alert&quot;</code> so it is announced.</p>
+
+<aside class="callout callout--why">
+	<h4>Why the input points at the option, instead of focus moving to it</h4>
+	<p>The person is typing. If ArrowDown moved focus into the list, the caret would leave the formula, and the next letter would go nowhere useful. So focus never moves: the input keeps the caret and the keys, and <code>aria-activedescendant</code> names the option that would be taken. A screen reader announces that option as though it had focus — its signature, its description, “1 of 2” — while the person keeps typing. Three details make it work, and the first version had none of them. The options need ids for the attribute to name. An option’s children are presentational, so a <code>&lt;button&gt;</code> inside one was a control that assistive technology could not see, standing where the pattern has none: the option is the thing chosen, so the option takes the click, and the <code>svelte-ignore</code> beside it says why it needs no key handler of its own. And <code>aria-controls</code> named an id that only existed while the list was open. The end-to-end test reads all three: the combobox points at the first option, ArrowDown moves the pointer, and once a suggestion is taken neither attribute is left behind.</p>
+</aside>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>

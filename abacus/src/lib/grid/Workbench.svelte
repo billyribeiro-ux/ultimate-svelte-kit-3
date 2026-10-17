@@ -39,6 +39,11 @@
 		status?: Snippet;
 	} = $props();
 
+	/*
+	 * The hidden file input, so the toolbar's Import button can open the
+	 * browser's file picker with `click()` — an imperative call from a handler,
+	 * which is what `bind:this` is for, rather than work done on mount.
+	 */
 	let fileInput = $state<HTMLInputElement>();
 	let files = $state<FileList>();
 	let progress = $state<Progress | null>(null);
@@ -72,7 +77,9 @@
 				`Imported ${rows.length.toLocaleString()} rows (${delimiter === '\t' ? 'tab' : delimiter}-separated)`
 			);
 		} catch (e) {
-			toast((e as Error).message, 'error');
+			// The worker's failures are `Error`s with a sentence for a person; a
+			// cancelled import is a `DOMException`, which is one too.
+			toast(e instanceof Error ? e.message : 'Could not import that file', 'error');
 		} finally {
 			progress = null;
 			files = new DataTransfer().files;

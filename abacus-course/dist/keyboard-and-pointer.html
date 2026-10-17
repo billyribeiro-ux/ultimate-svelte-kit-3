@@ -38,7 +38,7 @@
 			
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/grid/Grid.svelte<span class="code__lines">:228-248</span></span>
+		<span class="code__file">src/lib/grid/Grid.svelte<span class="code__lines">:247-267</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">function keydown(event: KeyboardEvent) {
@@ -67,7 +67,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/grid/Grid.svelte<span class="code__lines">:250-323</span></span>
+		<span class="code__file">src/lib/grid/Grid.svelte<span class="code__lines">:269-343</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">	switch (event.key) {
@@ -112,29 +112,30 @@
 			return;
 		case 'Escape':
 			return sheet.select(sheet.anchor);
+		// The three shortcuts are letters, and without Ctrl or Cmd a letter is
+		// somebody starting to type — so each one `break`s to the code below
+		// rather than returning, or &quot;apple&quot; would arrive as &quot;pple&quot;.
 		case 'a':
-		case 'A':
-			if (mod) {
-				event.preventDefault();
-				const extent = sheet.engine.extent();
-				sheet.select({ row: 0, col: 0 }, { row: extent?.row ?? 0, col: extent?.col ?? 0 });
-			}
+		case 'A': {
+			if (!mod) break;
+			event.preventDefault();
+			const extent = sheet.engine.extent();
+			sheet.select({ row: 0, col: 0 }, { row: extent?.row ?? 0, col: extent?.col ?? 0 });
 			return;
+		}
 		case 'z':
 		case 'Z':
-			if (mod) {
-				event.preventDefault();
-				if (readonly) return;
-				if (shift) sheet.redo();
-				else sheet.undo();
-			}
+			if (!mod) break;
+			event.preventDefault();
+			if (readonly) return;
+			if (shift) sheet.redo();
+			else sheet.undo();
 			return;
 		case 'y':
 		case 'Y':
-			if (mod) {
-				event.preventDefault();
-				if (!readonly) sheet.redo();
-			}
+			if (!mod) break;
+			event.preventDefault();
+			if (!readonly) sheet.redo();
 			return;
 	}
 
@@ -146,11 +147,16 @@
 }</code></pre>
 </figure>
 <p>Note the first line of the handler: while the in-cell editor is open, the grid does nothing — the editor handles its own keys and stops propagation (ch. 21). Two components on one keyboard is a coordination problem, and “the editor wins while it exists” is the whole of the coordination.</p>
+
+<aside class="callout callout--why">
+	<h4>Why the letter shortcuts break instead of returning</h4>
+	<p>Ctrl+A, Ctrl+Z and Ctrl+Y are letters. Without the modifier, the same key is somebody starting to type a word, and it must reach the printable-character branch after the <code>switch</code>. The first version wrote each case as <code>if (mod) { … } return;</code>, so a plain <code>a</code>, <code>z</code> or <code>y</code> returned having done nothing: “apple” typed into an empty cell arrived as “pple”, and nobody noticed until an end-to-end test typed “after” and read back “fter”. Each case now leaves the <code>switch</code> with <code>break</code> when there is no modifier, and only the shortcut itself returns. A test in <code>local.e2e.ts</code> types “apple”, “zebra” and “Yes”.</p>
+</aside>
 <h3 id="clipboard">The clipboard</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/grid/Grid.svelte<span class="code__lines">:329-362</span></span>
+		<span class="code__file">src/lib/grid/Grid.svelte<span class="code__lines">:349-382</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">const MIME = 'application/x-abacus-cells+json';
@@ -197,11 +203,12 @@ function onpaste(event: ClipboardEvent) {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/grid/Grid.svelte<span class="code__lines">:369-393</span></span>
+		<span class="code__file">src/lib/grid/Grid.svelte<span class="code__lines">:388-413</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/**
- * The cell under a pointer. The scroll offsets are read from the element,
+ * The cell under a pointer, accounting for headers, scrolling and frozen
+ * panes. The scroll offsets are read from the element,
  * not from the `scrollTop`/`scrollLeft` state: `scroll` events arrive a
  * frame after the scroll, and a pointer can land in that frame — the phone
  * profile of the end-to-end suite did exactly that, and typed into B2.
@@ -230,12 +237,12 @@ let drag = $state&lt;Drag | null&gt;(null);</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/grid/Grid.svelte<span class="code__lines">:395-462</span></span>
+		<span class="code__file">src/lib/grid/Grid.svelte<span class="code__lines">:415-482</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">function pointerdown(event: PointerEvent) {
-	if (event.button !== 0) return;
-	const target = event.target as HTMLElement;
+	if (event.button !== 0 || !(event.target instanceof Element)) return;
+	const target = event.target;
 
 	const handle = target.closest&lt;HTMLElement&gt;('[data-resize]');
 	if (handle) {
@@ -306,7 +313,7 @@ let drag = $state&lt;Drag | null&gt;(null);</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/grid/Grid.svelte<span class="code__lines">:464-532</span></span>
+		<span class="code__file">src/lib/grid/Grid.svelte<span class="code__lines">:484-553</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">function commitIfEditing() {
@@ -371,8 +378,9 @@ function pointerup() {
 }
 
 function dblclick(event: MouseEvent) {
-	if (readonly) return;
-	if ((event.target as HTMLElement).closest('[data-resize]')) return;
+	// An open edit keeps its double-click: a word selected, or a reference in a formula.
+	if (readonly || sheet.editing) return;
+	if (event.target instanceof Element &amp;&amp; event.target.closest('[data-resize]')) return;
 	const cell = cellAt(event.clientX, event.clientY);
 	if (!cell) return;
 	sheet.select(cell);
@@ -380,6 +388,11 @@ function dblclick(event: MouseEvent) {
 }</code></pre>
 </figure>
 <p>Move updates the drag; up commits it. A fill drag decides its direction by which way the pointer went furthest and extends the source rectangle that way. A resize drag holds the new width in the drag state until the pointer is released, so the column follows the pointer live and the sheet is written once.</p>
+
+<aside class="callout callout--why">
+	<h4>Why a double-click does nothing while an edit is open</h4>
+	<p>A double-click is two clicks and then a <code>dblclick</code> event, and the grid has already done the right thing with the clicks before the event arrives. Inside the open editor, the clicks belong to the input — <code>pointerdown</code> leaves them alone — and the browser’s own double-click selects a word. Mid-formula, the clicks put a reference to the cell into the formula. Either way an edit is still open when <code>dblclick</code> fires, and starting a new edit then would throw the open one away: the first version did, and a person who double-clicked a word in a cell lost everything they had typed into it. So <code>dblclick</code> starts an edit only when none is open — which, for a plain cell, is always, because its first click committed whatever was being typed. The test in <code>local.e2e.ts</code> does both: a word double-clicked in the editor, and a reference double-clicked into a formula.</p>
+</aside>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>

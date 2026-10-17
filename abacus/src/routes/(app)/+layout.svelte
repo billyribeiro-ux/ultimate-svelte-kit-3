@@ -106,6 +106,11 @@
 			Who this browser is, as a remote query rather than layout data: the
 			passkey commands and the sign-out form call `whoAmI().refresh()`, and
 			the new answer arrives in the same response.
+
+			`failed` keeps a failure here, in the corner of the header. Without it
+			the error would climb to `+error.svelte` and replace the page somebody
+			is working in because the chip could not say their name. Every page
+			that needs a person asks again, and says so itself.
 		-->
 		<svelte:boundary>
 			{const me = $derived(await whoAmI())}
@@ -116,6 +121,9 @@
 			{/if}
 			{#snippet pending()}
 				<span class="chip">…</span>
+			{/snippet}
+			{#snippet failed()}
+				<a class="chip" href={resolve('/(app)/signin')}>Sign in</a>
 			{/snippet}
 		</svelte:boundary>
 	</div>

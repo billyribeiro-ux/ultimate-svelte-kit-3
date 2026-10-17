@@ -77,7 +77,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">playwright.config.ts<span class="code__lines">:33-87</span></span>
+		<span class="code__file">playwright.config.ts<span class="code__lines">:33-94</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">export default defineConfig({
@@ -122,7 +122,7 @@
 		 * against the request origin at run time. A mismatch is a 403 on every
 		 * form submission, and the passkey relying-party id comes from it too.
 		 */
-		command: 'node scripts/prepare-e2e-db.js &amp;&amp; npm run build &amp;&amp; node build/index.js',
+		command: 'node scripts/prepare-e2e-db.js &amp;&amp; pnpm run build &amp;&amp; node build/index.js',
 		port: 4173,
 		reuseExistingServer: !process.env.CI,
 		timeout: 240_000,
@@ -130,7 +130,14 @@
 			DATABASE_URL: 'file:e2e.db',
 			PUBLIC_ORIGIN: 'http://localhost:4173',
 			SESSION_SECRET: 'e2e-only-secret-of-at-least-thirty-two-characters',
-			CELL_LIMIT: '50000',
+			/*
+			 * The smallest limit `src/env.ts` accepts. A real deployment sets
+			 * hundreds of thousands; the suite sets a thousand so that one test can
+			 * cross it with a 1,200-cell CSV and see what a refused save looks like.
+			 * No other test comes near it: the largest template, the loan
+			 * schedule, has under two hundred cells.
+			 */
+			CELL_LIMIT: '1000',
 			PORT: '4173'
 		}
 	}
@@ -226,7 +233,7 @@ export async function register(page: Page, name: string, next = '/sheets') {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">e2e/local.e2e.ts<span class="code__lines">:122-156</span></span>
+		<span class="code__file">e2e/local.e2e.ts<span class="code__lines">:170-204</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">test('imports a CSV through the worker and exports it back', async ({ page }) =&gt; {
@@ -426,15 +433,15 @@ export async function register(page: Page, name: string, next = '/sheets') {
 
 <aside class="callout callout--why">
 	<h4>What the suite found</h4>
-	<p>Five real bugs, none of which the unit tests could see. A cell that depended on another cell kept its old value on screen — the version subscription of chapter 15. The Unpublish button never appeared — the load snapshot of chapter 33. A person who closed their tab stayed in the room — the mailbox close of chapter 28. A Reconnect button flashed on every load and shifted the grid on a phone — chapter 33. And a tap on a phone landed one cell down and one across, because the pointer arrived in the frame between a scroll and its event, and the hit test used a stale scroll position — chapter 20’s <code>cellAt</code> now reads the element. Each one was a failing assertion with a screenshot, and each fix is a comment in the code that names the test. Three more turned up later, in the error paths: toasts that were empty because an <code>HttpError</code> has no <code>message</code> of its own, a client hook that put one sentence in place of every deliberate message, and a lesson page that never recovered from the cycle it asks you to make (ch. 17, 29). A probe found those; the tests below and in <code>lesson.e2e.ts</code> are what keep them fixed.</p>
+	<p>Five real bugs, none of which the unit tests could see. A cell that depended on another cell kept its old value on screen — the version subscription of chapter 15. The Unpublish button never appeared — the load snapshot of chapter 33. A person who closed their tab stayed in the room — the mailbox close of chapter 28. A Reconnect button flashed on every load and shifted the grid on a phone — chapter 33. And a tap on a phone landed one cell down and one across, because the pointer arrived in the frame between a scroll and its event, and the hit test used a stale scroll position — chapter 20’s <code>cellAt</code> now reads the element. Each one was a failing assertion with a screenshot, and each fix is a comment in the code that names the test. Three more turned up later, in the error paths: toasts that were empty because an <code>HttpError</code> has no <code>message</code> of its own, a client hook that put one sentence in place of every deliberate message, and a lesson page that never recovered from the cycle it asks you to make (ch. 17, 29). And a review found six more that every test passed over: a refused save that went back to saying “Saved” on the next edit, a reconnect that applied every batch since the page loaded a second time, a sharing form that could not submit without JavaScript, a lesson whose two counts measured different things, a <code>TypeError</code> in the console on every committed edit, and a double-click that threw an open edit away (ch. 17, 20, 21, 28, 33). Probes found those; the tests below, and the new ones in <code>collab.e2e.ts</code>, <code>lesson.e2e.ts</code> and <code>local.e2e.ts</code>, are what keep them fixed.</p>
 </aside>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">e2e/errors.e2e.ts<span class="code__lines">:1-57</span></span>
+		<span class="code__file">e2e/errors.e2e.ts<span class="code__lines">:1-59</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">import { expect, test } from '@playwright/test';
+	<pre><code class="lang-ts">import { expect, test, type Locator, type Page } from '@playwright/test';
 import { attachAuthenticator, register } from './passkeys.ts';
 
 /**
@@ -456,6 +463,8 @@ import { attachAuthenticator, register } from './passkeys.ts';
  * Each test makes the server, or a load, refuse something on purpose and
  * checks that the person reads the refusal itself.
  */
+
+const cell = (page: Page, row: number, col: number) =&gt; page.locator(`#cell-${row}-${col}`);
 
 test('a query awaited in the page says what the server said', async ({ page }) =&gt; {
 	// `?from=` names a published sheet to copy; this one does not exist, so
@@ -495,7 +504,7 @@ test('a refused form and a refused command say what the server said', async ({ p
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">e2e/errors.e2e.ts<span class="code__lines">:59-84</span></span>
+		<span class="code__file">e2e/errors.e2e.ts<span class="code__lines">:61-86</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">test('a load that fails in the browser shows its own message on the error page', async ({
@@ -526,6 +535,204 @@ test('a refused form and a refused command say what the server said', async ({ p
 });</code></pre>
 </figure>
 <p>Each test makes the server, or a load, refuse something on purpose — a published sheet that does not exist, the only passkey, a passkey the server never issued, a template that is not there — and passes only if the person reads the refusal itself. Against the first version of the pages they fail with an empty toast, “Something went wrong with the passkey.” and “Something went wrong in this tab.”. <code>addUnknownPasskey</code> in <code>passkeys.ts</code> puts a key on the virtual device that no server issued. The last test waits for <code>history.scrollRestoration</code> to turn <code>'manual'</code>, the first thing SvelteKit’s router does when it starts, so the click is a client-side navigation and the browser’s hook is the one under test; clicked any sooner, it is an ordinary page load and the server answers instead.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/errors.e2e.ts<span class="code__lines">:88-137</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">test('a session that ends while a page is open: every refusal says why', async ({ page }) =&gt; {
+	const device = await attachAuthenticator(page);
+	await register(page, 'Barbara');
+	await page.getByLabel('Title').fill('Kept');
+	await page.getByRole('button', { name: 'New sheet' }).click();
+	await page.waitForURL(/\/sheet\/[a-z0-9]{8}$/);
+	const sheet = new URL(page.url()).pathname;
+	const session = await page.context().cookies();
+
+	/**
+	 * Open a page signed in and wait until what it shows has arrived — the
+	 * lists and the profile are queries the browser asks for after hydration —
+	 * then end the session the way an expiry would: the cookie goes, the page
+	 * stays. Every page load here is a fresh one, so the toast on screen is
+	 * always the latest action's and never the one before.
+	 */
+	async function openThenExpire(path: string, ready: Locator) {
+		await page.context().addCookies(session);
+		await page.goto(path);
+		await expect(ready).toBeVisible();
+		await page.context().clearCookies();
+	}
+
+	// `create` — an enhanced form, so the refusal is a toast, not a page.
+	await openThenExpire('/sheets', page.getByRole('link', { name: 'Kept' }));
+	await page.getByLabel('Title').fill('Never made');
+	await page.getByRole('button', { name: 'New sheet' }).click();
+	await expect(page.getByText('Sign in with a passkey first')).toBeVisible();
+
+	// `remove` — the optimistic override takes the card away, and the refusal
+	// brings it back.
+	await openThenExpire('/sheets', page.getByRole('link', { name: 'Kept' }));
+	page.once('dialog', (dialog) =&gt; void dialog.accept());
+	await page.getByRole('button', { name: 'Delete Kept' }).click();
+	await expect(page.getByText('Sign in with a passkey first')).toBeVisible();
+	await expect(page.getByRole('link', { name: 'Kept' })).toBeVisible();
+
+	// `publish` — a command awaited in a click handler.
+	await openThenExpire(sheet, page.getByText('Saved', { exact: true }));
+	await page.getByRole('button', { name: 'Share' }).click();
+	await page.getByRole('button', { name: 'Publish', exact: true }).click();
+	await expect(page.getByText('Sign in with a passkey first')).toBeVisible();
+
+	// `updateProfile` — the settings form.
+	await openThenExpire('/settings', page.getByRole('button', { name: 'Save' }));
+	await page.getByRole('button', { name: 'Save' }).click();
+	await expect(page.getByText('Sign in with a passkey first')).toBeVisible();
+
+	await device.detach();
+});</code></pre>
+</figure>
+<p>The session test covers the four places a page reads a refusal in a <code>catch</code>: the <code>create</code> form, the delete with its optimistic override, the <code>publish</code> command and the profile form. Each page is opened signed in and left to fetch what it shows; then the cookie is cleared, as an expiry would, and the action is tried. Every one must show “Sign in with a passkey first” — the server’s sentence, by way of <code>messageOf</code> — and the deleted card must come back. Revert <code>messageOf</code> at any of the four and the toast falls back to a fixed sentence, and this test fails.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/errors.e2e.ts<span class="code__lines">:139-188</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">test('a batch the server refuses stops the saving, says why, and a reload shows what was kept', async ({
+	page
+}) =&gt; {
+	const device = await attachAuthenticator(page);
+	await register(page, 'Annie');
+	await page.getByLabel('Title').fill('Too big');
+	await page.getByRole('button', { name: 'New sheet' }).click();
+	await page.waitForURL(/\/sheet\/[a-z0-9]{8}$/);
+	await expect(page.getByText('Saved', { exact: true })).toBeVisible();
+
+	// One cell the server keeps.
+	await cell(page, 0, 0).click();
+	await page.keyboard.type('42');
+	await page.keyboard.press('Enter');
+	await expect(page.getByText('Saved', { exact: true })).toBeVisible();
+
+	// Thirty rows of forty: 1,200 cells, past the suite's limit of a thousand
+	// (see `playwright.config.ts`). The server answers 413 with its own sentence.
+	const rows = Array.from({ length: 30 }, (_, r) =&gt;
+		Array.from({ length: 40 }, (_, c) =&gt; r * 40 + c).join(',')
+	);
+	await cell(page, 2, 0).click();
+	await page.getByLabel('Import a CSV file').setInputFiles({
+		name: 'big.csv',
+		mimeType: 'text/csv',
+		buffer: Buffer.from(rows.join('\n'))
+	});
+	await expect(page.getByText('Not saved', { exact: true })).toBeVisible();
+	const refusal = page
+		.getByRole('alert')
+		.filter({ hasText: 'A sheet may hold at most 1,000 cells' });
+	await expect(refusal).toContainText('your last changes were not saved');
+
+	// A later edit is not sent on top of the refusal, and does not paper over it.
+	await cell(page, 0, 1).click();
+	await page.keyboard.type('after');
+	await page.keyboard.press('Enter');
+	await expect(cell(page, 0, 1)).toHaveText('after');
+	await expect(page.getByText('Not saved', { exact: true })).toBeVisible();
+
+	// The reload is the stored sheet, read again: what was saved is there, the
+	// refused import and the edit after it are not.
+	await page.getByRole('button', { name: 'Reload', exact: true }).click();
+	await expect(page.getByText('Saved', { exact: true })).toBeVisible();
+	await expect(cell(page, 0, 0)).toHaveText('42');
+	await expect(cell(page, 2, 0)).toHaveText('');
+	await expect(cell(page, 0, 1)).toHaveText('');
+
+	await device.detach();
+});</code></pre>
+</figure>
+<p>The refused batch. The suite runs its server with a <code>CELL_LIMIT</code> of a thousand — the smallest <code>src/env.ts</code> allows — so a 1,200-cell CSV crosses it. The test asserts what the page says, that a later edit does not quietly turn the chip back to “Saved”, and that after Reload the sheet is what the server kept: the cell saved before the refusal, and neither the import nor the edit after it. It found a second bug on the way: the grid swallowed a first keystroke of <code>a</code>, <code>z</code> or <code>y</code>, because the cases for Ctrl+A, Ctrl+Z and Ctrl+Y returned even without the modifier. A test of its own in <code>local.e2e.ts</code> now types “apple”, “zebra” and “Yes”.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/account.e2e.ts<span class="code__lines">:157-181</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * The criterion `vite.config.ts` names for turning `forkPreloads` back on. In
+ * another project, with that flag on, a back navigation like this one
+ * completed — URL changed, `navigation.complete` resolved — with the old page
+ * still on screen. The sheet page has a top-level `await`, which is what a
+ * forked preload has to get right.
+ */
+test('back from a sheet shows the workspace, and forward shows the sheet', async ({ page }) =&gt; {
+	const device = await attachAuthenticator(page);
+	await register(page, 'Katherine');
+	const id = await createSheet(page, 'Round trip');
+	await expect(page.getByLabel('Sheet title')).toHaveText('Round trip');
+
+	await page.goBack();
+	await expect(page).toHaveURL(/\/sheets$/);
+	await expect(page.getByRole('heading', { name: 'Your sheets' })).toBeVisible();
+	await expect(page.getByLabel('Sheet title')).toHaveCount(0);
+
+	await page.goForward();
+	await expect(page).toHaveURL(new RegExp(`/sheet/${id}$`));
+	await expect(page.getByLabel('Sheet title')).toHaveText('Round trip');
+	await expect(page.getByRole('heading', { name: 'Your sheets' })).toHaveCount(0);
+
+	await device.detach();
+});</code></pre>
+</figure>
+<p>The back-and-forward test is the criterion chapter 02 names for turning <code>forkPreloads</code> on: the navigation that failed in another project with the flag on, onto a page with a top-level <code>await</code>. Each direction checks that one page is on screen and the other is not, because the failure it guards against was a changed URL over the old page.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/account.e2e.ts<span class="code__lines">:183-209</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">test('the sharing setting is a form that works with JavaScript off', async ({ page, browser }) =&gt; {
+	const device = await attachAuthenticator(page);
+	await register(page, 'Mary');
+	const id = await createSheet(page, 'Shared by a form');
+
+	// The same person — the same session cookie — in a browser with no JavaScript.
+	const plain = await browser.newContext({
+		javaScriptEnabled: false,
+		storageState: await page.context().storageState()
+	});
+	const tab = await plain.newPage();
+	await tab.goto(`/sheet/${id}`);
+	// `popovertarget` is HTML: the menu opens with no script at all.
+	await tab.getByRole('button', { name: 'Share' }).click();
+	await tab.getByLabel('Anyone signed in with the link can edit').check();
+	await tab.getByRole('button', { name: 'Save sharing' }).click();
+	await expect(tab.getByLabel('Anyone signed in with the link can edit')).toBeChecked();
+
+	// Stored, not just checked: the workspace, with JavaScript, says so.
+	await page.goto('/sheets');
+	await expect(page.getByRole('link', { name: /Shared by a form/ })).toContainText(
+		'shared by link'
+	);
+
+	await plain.close();
+	await device.detach();
+});</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/platform.e2e.ts<span class="code__lines">:22-28</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">// A client-side navigation: with `router.resolution: 'server'` the browser
+// asks the server which route a path belongs to, then loads only that.
+await page.getByRole('link', { name: 'Start from a template' }).click();
+await expect(page).toHaveURL(/\/templates$/);
+await expect(page.getByRole('link', { name: 'Monthly budget' })).toBeVisible();
+await expect(page.getByRole('link', { name: 'Loan schedule' })).toBeVisible();
+await expect(page.getByRole('link', { name: 'Grade book' })).toBeVisible();</code></pre>
+</figure>
+<p>The second half of the first platform test is the one that proves <code>router.resolution: 'server'</code> (ch. 02): a click from the prerendered landing page to the templates page is a client-side navigation, so the browser has to ask the server which route the path belongs to before it can load it, and the three templates must be there when it has. The first half checks the landing page’s policy arrived as a meta tag with script hashes, which is how a prerendered page carries one.</p>
 
 <figure class="code">
 	<figcaption>
@@ -564,10 +771,10 @@ test('a refused form and a refused command say what the server said', async ({ p
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code>$ pnpm exec playwright test
-Running 54 tests using 1 worker
-  ✓ [desktop] account · collab · errors · lesson · local · platform  (27)
-  ✓ [phone]   account · collab · errors · lesson · local · platform  (27)
-  54 passed</code></pre>
+Running 72 tests using 1 worker
+  ✓ [desktop] account · collab · errors · lesson · local · platform  (36)
+  ✓ [phone]   account · collab · errors · lesson · local · platform  (36)
+  72 passed</code></pre>
 </figure>
 
 <aside class="callout callout--check">

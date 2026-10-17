@@ -38,7 +38,7 @@
 			
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/engine/engine.ts<span class="code__lines">:1-35</span></span>
+		<span class="code__file">src/lib/engine/engine.ts<span class="code__lines">:1-36</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -50,10 +50,11 @@
  * and the procedure that — when one cell changes — recomputes exactly the
  * cells that depended on it, in an order that never reads a stale value.
  *
- * It is plain TypeScript with no Svelte in it, on purpose. Chapter 12 builds
- * the same thing out of `$derived` and shows that Svelte's runtime *is* one
- * of these; the reason to write it by hand first is that the algorithm is
- * the lesson, and a lesson hidden inside a framework is a lesson missed.
+ * It is plain TypeScript with no Svelte in it, on purpose. The `$derived`
+ * lesson (`#lib/lesson/reactive.svelte.ts`) builds the same thing out of runes
+ * and shows that Svelte's runtime *is* one of these; the reason to write it by
+ * hand first is that the algorithm is the lesson, and a lesson hidden inside
+ * a framework is a lesson missed.
  *
  * HOW A RECALCULATION WORKS
  * -------------------------
@@ -78,12 +79,11 @@
  */</code></pre>
 </figure>
 <p>Read the four steps twice; they are the chapter. Everything else in the file is bookkeeping in service of them. The header also records the one performance trade the engine makes: single-cell references are indexed in a <code>Map</code> from cell to readers, but <em>range</em> references are a list of rectangles scanned per changed cell. That is linear in the number of range formulas, which is honest for a sheet a browser holds, and the tests in this part are what would let you replace it with an interval tree safely.</p>
-<aside class="callout callout--note"><p>The header’s “Chapter 12” is the project’s own numbering: it means chapter 17 here, the <code>$derived</code> version of this engine. The note in chapter 08 has the whole mapping.</p></aside>
 <h3 id="a-cell">What a cell is</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/engine/engine.ts<span class="code__lines">:55-93</span></span>
+		<span class="code__file">src/lib/engine/engine.ts<span class="code__lines">:56-94</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">export interface Cell {
@@ -130,7 +130,7 @@ export interface EngineOptions {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/engine/engine.ts<span class="code__lines">:95-130</span></span>
+		<span class="code__file">src/lib/engine/engine.ts<span class="code__lines">:96-131</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/** The canonical literal parser: numbers with `.`, TRUE/FALSE, a leading `'` for text. */
@@ -175,7 +175,7 @@ export class Engine {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/engine/engine.ts<span class="code__lines">:182-226</span></span>
+		<span class="code__file">src/lib/engine/engine.ts<span class="code__lines">:183-227</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/** One edit. `apply` is the general form and the one the sheet model uses. */
@@ -228,7 +228,7 @@ apply(edits: Edit[]): Recalc {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/engine/engine.ts<span class="code__lines">:293-337</span></span>
+		<span class="code__file">src/lib/engine/engine.ts<span class="code__lines">:294-338</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">#compile(input: string, format: CellFormat): Cell {
@@ -281,7 +281,7 @@ apply(edits: Edit[]): Recalc {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/engine/engine.ts<span class="code__lines">:339-381</span></span>
+		<span class="code__file">src/lib/engine/engine.ts<span class="code__lines">:340-382</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">#index(k: number, cell: Cell): void {
@@ -333,7 +333,7 @@ apply(edits: Edit[]): Recalc {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/engine/engine.ts<span class="code__lines">:383-436</span></span>
+		<span class="code__file">src/lib/engine/engine.ts<span class="code__lines">:384-437</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">#recalculate(seeds: Set&lt;number&gt;): Recalc {
@@ -401,7 +401,7 @@ apply(edits: Edit[]): Recalc {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/engine/engine.ts<span class="code__lines">:438-461</span></span>
+		<span class="code__file">src/lib/engine/engine.ts<span class="code__lines">:439-462</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">	// 4. Whatever is left is in a cycle, or downstream of one. The members of

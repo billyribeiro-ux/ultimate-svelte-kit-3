@@ -122,7 +122,7 @@ export async function saveLocal(doc: Document): Promise&lt;'opfs' | 'storage' | 
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/sheet/local.ts<span class="code__lines">:86-134</span></span>
+		<span class="code__file">src/lib/sheet/local.ts<span class="code__lines">:86-146</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/** A message on the channel: an operation from another tab, tagged with that tab. */
@@ -167,20 +167,32 @@ export function tabId(): string {
 	try {
 		const existing = sessionStorage.getItem('abacus:tab');
 		if (existing) return existing;
-		const id = Math.random().toString(36).slice(2, 10);
+		const id = randomId();
 		sessionStorage.setItem('abacus:tab', id);
 		return id;
 	} catch {
-		return Math.random().toString(36).slice(2, 10);
+		return randomId();
 	}
+}
+
+/**
+ * Twelve hex characters, always. `Math.random().toString(36)` is shorter now
+ * and then, and the server refuses a tab id under four characters;
+ * `getRandomValues` also works where `randomUUID` does not — on a page
+ * served over plain HTTP to another machine on the network.
+ */
+function randomId(): string {
+	return Array.from(crypto.getRandomValues(new Uint8Array(6)), (b) =&gt;
+		b.toString(16).padStart(2, '0')
+	).join('');
 }</code></pre>
 </figure>
-<p>A <code>BroadcastChannel</code> is a message bus between the tabs of one origin with no server in the loop. Each tab has an id kept in <code>sessionStorage</code> for its life, and tags its operations with it so a tab can ignore itself — a channel does not echo, but the id makes that explicit and survives somebody changing the transport.</p>
+<p>A <code>BroadcastChannel</code> is a message bus between the tabs of one origin with no server in the loop. Each tab has an id kept in <code>sessionStorage</code> for its life, and tags its operations with it so a tab can ignore itself — a channel does not echo, but the id makes that explicit and survives somebody changing the transport. The stored sheet uses the same id as its live-query client (ch. 28), and the server stores it with every batch, so it is always twelve hex characters from <code>getRandomValues</code>: <code>Math.random().toString(36)</code> is shorter now and then, and <code>randomUUID</code> is missing on a page served over plain HTTP to another machine.</p>
 <h3 id="the-page">The page</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/sheet/local/+page.svelte<span class="code__lines">:16-48</span></span>
+		<span class="code__file">src/routes/(app)/sheet/local/+page.svelte<span class="code__lines">:16-40</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/**
@@ -199,9 +211,6 @@ const sheet = new Sheet();
 let storage = $state&lt;'opfs' | 'storage' | 'none' | null&gt;(null);
 let ready = $state(false);
 
-const tab = tabId();
-const channel = openTabChannel(tab);
-
 let saveTimer: ReturnType&lt;typeof setTimeout&gt; | null = null;
 function scheduleSave() {
 	if (saveTimer) clearTimeout(saveTimer);
@@ -210,21 +219,28 @@ function scheduleSave() {
 		storage = await saveLocal(sheet.toDocument());
 		if (storage !== 'none') sheet.markSaved();
 	}, 400);
-}
-
-sheet.onop = (op) =&gt; {
-	channel.post(op);
-	scheduleSave();
-};</code></pre>
+}</code></pre>
 </figure>
-<p>Every operation the sheet emits goes to the channel and schedules a save, debounced by four hundred milliseconds. <code>?template=budget</code> starts from a template; <code>?from=&lt;id&gt;</code> starts from a published sheet — both are “make me a copy of this” without an account.</p>
+<p>The sheet and two pieces of state: which storage the last save used, and whether the first document has loaded. A save is debounced by four hundred milliseconds. <code>?template=budget</code> starts from a template; <code>?from=&lt;id&gt;</code> starts from a published sheet — both are “make me a copy of this” without an account.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/sheet/local/+page.svelte<span class="code__lines">:50-104</span></span>
+		<span class="code__file">src/routes/(app)/sheet/local/+page.svelte<span class="code__lines">:42-93</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">onMount(() =&gt; {
+	<pre><code class="lang-svelte">/*
+ * Everything that belongs to the browser starts here, not at the top of
+ * the script. A component's `&lt;script&gt;` runs on the server too, for the
+ * first render, and Node 24 has a `BroadcastChannel` of its own: opened up
+ * there, a channel would be held open by every server render and closed by
+ * none, because `onMount` — and its cleanup — never run on the server.
+ */
+onMount(() =&gt; {
+	const channel = openTabChannel(tabId());
+	sheet.onop = (op) =&gt; {
+		channel.post(op);
+		scheduleSave();
+	};
 	sheet.locale = navigator.language;
 
 	const template = page.url.searchParams.get('template');
@@ -259,10 +275,25 @@ sheet.onop = (op) =&gt; {
 	return () =&gt; {
 		stop();
 		channel.close();
+		// A save still waiting on its timer is left to run: leaving the page
+		// is no reason to lose the last thing typed.
+		sheet.onop = null;
 	};
-});
+});</code></pre>
+</figure>
+<p>Every operation the sheet emits goes to the channel and schedules a save. If <code>?from=</code> names a sheet that is not published, <code>getPublished</code> throws <code>error(404, 'No such published sheet')</code>. Awaited here, in <code>onMount</code>, rather than in the markup, that rejects with an <code>HttpError</code>, and the toast reads the sentence from its <code>body</code> with <code>messageOf</code> (ch. 29) before the page falls back to an empty sheet. The first version read <code>(e as Error).message</code>, which an <code>HttpError</code> does not have: the toast appeared, red and empty.</p>
 
-/** The document as JSON for the &quot;save to account&quot; form, current with every edit. */
+<aside class="callout callout--why">
+	<h4>Why the channel is opened in onMount, not at the top of the script</h4>
+	<p>A component’s <code>&lt;script&gt;</code> runs on the server as well, for the first render, and only <code>onMount</code> — with its cleanup — is reserved for the browser. The first version opened the <code>BroadcastChannel</code> at the top of the script, guarded by <code>typeof BroadcastChannel === 'undefined'</code>. That guard was written for a server without one, and Node 24 has one: every server render of <code>/sheet/local</code> opened a channel nobody would ever close, and an open channel keeps a Node process’s event loop alive. A probe that did nothing but <code>new BroadcastChannel('x')</code> in Node never exited. So the channel, the <code>onop</code> hook that posts to it, and <code>navigator.language</code> all start in <code>onMount</code>, and its cleanup closes the channel and lets go of the hook. The rule is general: anything that belongs to the browser — a channel, a listener on <code>window</code>, a timer that outlives the render — starts in <code>onMount</code>, an attachment or an effect, never in the script’s top level.</p>
+</aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(app)/sheet/local/+page.svelte<span class="code__lines">:95-111</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/** The document as JSON for the &quot;save to account&quot; form, current with every edit. */
 const json = $derived.by(() =&gt; {
 	void sheet.version;
 	return JSON.stringify(sheet.toDocument());
@@ -280,11 +311,10 @@ const storageLabel = $derived(
 					: 'Loading…'
 );</code></pre>
 </figure>
-<p>If <code>?from=</code> names a sheet that is not published, <code>getPublished</code> throws <code>error(404, 'No such published sheet')</code>. Awaited here, in <code>onMount</code>, rather than in the markup, that rejects with an <code>HttpError</code>, and the toast reads the sentence from its <code>body</code> with <code>messageOf</code> (ch. 29) before the page falls back to an empty sheet. The first version read <code>(e as Error).message</code>, which an <code>HttpError</code> does not have: the toast appeared, red and empty.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/(app)/sheet/local/+page.svelte<span class="code__lines">:111-146</span></span>
+		<span class="code__file">src/routes/(app)/sheet/local/+page.svelte<span class="code__lines">:118-159</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;div class=&quot;page sheetpage&quot;&gt;
@@ -319,6 +349,12 @@ const storageLabel = $derived(
 				{#snippet pending()}
 					&lt;span class=&quot;chip&quot;&gt;…&lt;/span&gt;
 				{/snippet}
+				&lt;!-- Nobody could be asked; the sheet is still here, and signing in is still the way to save it. --&gt;
+				{#snippet failed()}
+					&lt;a class=&quot;btn btn--sm&quot; href={resolve('/(app)/signin?next=/sheet/local')}
+						&gt;Sign in to save it&lt;/a
+					&gt;
+				{/snippet}
 			&lt;/svelte:boundary&gt;
 		{/snippet}
 	&lt;/Workbench&gt;
@@ -329,11 +365,11 @@ const storageLabel = $derived(
 	<h4>Why the title is a function binding</h4>
 	<p>The title is an <code>&lt;h1&gt;</code> you can type into. <code>bind:textContent={() =&gt; sheet.title, (text) =&gt; sheet.rename(text)}</code> is a function binding: the getter feeds the element, the setter is called with what was typed, and <code>rename</code> trims it, refuses an empty title and emits an operation. The element stays a heading — no <code>role=&quot;textbox&quot;</code> — because a contenteditable heading is already editable to assistive technology, and the accessibility check in <code>svelte-check</code> says so.</p>
 </aside>
-<p>“Save to my account” is the <code>create</code> form with the whole document in a hidden field, kept current by a <code>$derived</code> that re-serialises on every version. The form posts JSON the server validates with the same <code>DocumentSchema</code> — the one from chapter 14 — and redirects to the new sheet.</p>
+<p>“Save to my account” is the <code>create</code> form with the whole document in a hidden field, kept current by a <code>$derived</code> that re-serialises on every version. If <code>whoAmI()</code> cannot be asked at all, the boundary’s <code>failed</code> snippet still offers the sign-in link: the sheet is in this browser either way. The form posts JSON the server validates with the same <code>DocumentSchema</code> — the one from chapter 14 — and redirects to the new sheet.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">e2e/local.e2e.ts<span class="code__lines">:158-177</span></span>
+		<span class="code__file">e2e/local.e2e.ts<span class="code__lines">:206-225</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">test('what was typed is still there after a reload', async ({ page }) =&gt; {

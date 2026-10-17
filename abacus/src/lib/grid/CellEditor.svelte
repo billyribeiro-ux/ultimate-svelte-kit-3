@@ -24,6 +24,13 @@
 		oncancel: () => void;
 	} = $props();
 
+	/*
+	 * The element, for `insertAtCaret`: the grid calls it later, on a click, and
+	 * it needs the caret and the selection, which only the element has. That is
+	 * what `bind:this` is for. An attachment is for work done *as* the element
+	 * mounts — `focusAtEnd`, below — and the autofixer's suggestion to swap one
+	 * for the other does not fit a handle that is used on demand.
+	 */
 	let input = $state<HTMLInputElement>();
 
 	/**
@@ -80,14 +87,24 @@
 </script>
 
 {#if sheet.editing}
+	<!--
+		The editing session, held for as long as this block lives. A commit sets
+		`sheet.editing` to null in the same update that removes the block, and
+		the expressions below can be evaluated once more on the way out — read
+		through `sheet.editing`, that was a TypeError in the console on every
+		commit. `session` is still the object they were bound to. A plain `const`,
+		not a `$derived`, because the session never changes under a block: a new
+		edit is a new object, and the grid mounts a new editor for it.
+	-->
+	{const session = sheet.editing}
 	<input
 		bind:this={input}
-		class={['editor', { 'editor--formula': sheet.editing.text.startsWith('=') }]}
+		class={['editor', { 'editor--formula': session.text.startsWith('=') }]}
 		type="text"
 		aria-label="Cell editor"
 		spellcheck="false"
 		autocomplete="off"
-		bind:value={sheet.editing.text}
+		bind:value={session.text}
 		onkeydown={keydown}
 		{@attach focusAtEnd}
 	/>

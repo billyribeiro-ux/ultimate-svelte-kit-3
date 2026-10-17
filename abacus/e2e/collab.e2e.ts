@@ -80,3 +80,47 @@ test('edits and presence flow both ways', async ({ browser, contextOptions }) =>
 	await contextA.close();
 	await contextB.close();
 });
+
+test('a dropped connection catches up without applying anything twice', async ({ page }) => {
+	const device = await attachAuthenticator(page);
+	await register(page, 'Grace');
+	await page.getByLabel('Title').fill('Rows');
+	await page.getByRole('button', { name: 'New sheet' }).click();
+	await page.waitForURL(/\/sheet\/[a-z0-9]{8}$/);
+	await expect(page.getByText('Saved', { exact: true })).toBeVisible();
+
+	// The same person in a second tab: its own tab id, its own live query.
+	const other = await page.context().newPage();
+	await other.goto(page.url());
+	await expect(other.getByText('Saved', { exact: true })).toBeVisible();
+
+	// Two batches from the first tab: a cell, then a row inserted above it.
+	await type(page, 0, 0, 'first');
+	await expect(cell(other, 0, 0)).toHaveText('first');
+	await cell(page, 0, 0).click();
+	await page.getByRole('button', { name: 'Rows and columns', exact: true }).click();
+	await page.getByRole('button', { name: 'Insert 1 row above' }).click();
+	await expect(cell(other, 1, 0)).toHaveText('first');
+	// Both cursors well away from the cells being read: a cursor's name shows in its cell.
+	await cell(page, 5, 3).click();
+	await cell(other, 6, 3).click();
+
+	// The connection drops and comes back. The catch-up replays every batch
+	// since the page was loaded; taken in again, the insert would push
+	// "first" down a second row, in both tabs.
+	await page.context().setOffline(true);
+	await expect(other.getByText('Reconnecting…')).toBeVisible();
+	await page.context().setOffline(false);
+	for (const tab of [page, other]) {
+		await expect(tab.getByText('Saved', { exact: true })).toBeVisible();
+		await expect(cell(tab, 0, 0)).toHaveText('');
+		await expect(cell(tab, 1, 0)).toHaveText('first');
+		await expect(cell(tab, 2, 0)).toHaveText('');
+	}
+
+	// And it is still live: an edit after the reconnect goes through.
+	await type(other, 3, 0, 'after');
+	await expect(cell(page, 3, 0)).toHaveText('after');
+
+	await device.detach();
+});
