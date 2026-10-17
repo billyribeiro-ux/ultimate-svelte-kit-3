@@ -196,14 +196,14 @@ export const me = command(async () =&gt; getRequestEvent().locals.user?.id ?? nu
 
 import * as v from 'valibot';
 import { invalid } from '@sveltejs/kit';
-import { command, form, requested } from '$app/server';
+import { command, form } from '$app/server';
 import { and, eq } from 'drizzle-orm';
 import { toMinor } from '#lib/domain/money.ts';
 import { ExpenseFormSchema, IdSchema } from '#lib/domain/schemas.ts';
 import { m } from '#lib/paraglide/messages.js';
 import { bump, requireMember } from '#lib/server/access.ts';
 import { db, schema } from '#lib/server/db/index.ts';
-import { tripBySlug } from './trips.remote.ts';
+import { watchTrip } from './live.remote.ts';
 
 export const addExpense = form(
 	// Shared with the browser, which runs it as a preflight before sending anything.
@@ -217,44 +217,44 @@ export const addExpense = form(
 		<span class="code__file">src/lib/remote/expenses.remote.ts<span class="code__lines">:32-67</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">	async (data, issue) =&gt; {
-		const { trip } = await requireMember(data.tripId, 'editor');
+	<pre><code class="lang-ts">async (data, issue) =&gt; {
+	const { trip } = await requireMember(data.tripId, 'editor');
 
-		// Only companions can pay or share. Anything else is a stale form.
-		const members = await db.query.member.findMany({
-			where: eq(schema.member.tripId, trip.id),
-			columns: { userId: true }
-		});
-		const ids = new Set(members.map((member) =&gt; member.userId));
-		if (!ids.has(data.paidBy)) invalid(issue.paidBy(m.issue_payer_not_member()));
-		const participants = data.participants.filter((id) =&gt; ids.has(id));
-		// `invalid` with a field-bound issue lands under that field in the form.
-		if (participants.length === 0) invalid(issue.participants(m.issue_participants_member()));
+	// Only companions can pay or share. Anything else is a stale form.
+	const members = await db.query.member.findMany({
+		where: eq(schema.member.tripId, trip.id),
+		columns: { userId: true }
+	});
+	const ids = new Set(members.map((member) =&gt; member.userId));
+	if (!ids.has(data.paidBy)) invalid(issue.paidBy(m.issue_payer_not_member()));
+	const participants = data.participants.filter((id) =&gt; ids.has(id));
+	// `invalid` with a field-bound issue lands under that field in the form.
+	if (participants.length === 0) invalid(issue.participants(m.issue_participants_member()));
 
-		await db.transaction(async (tx) =&gt; {
-			const [row] = await tx
-				.insert(schema.expense)
-				.values({
-					tripId: trip.id,
-					title: data.title,
-					amountMinor: toMinor(data.amount, trip.currency),
-					currency: trip.currency,
-					category: data.category,
-					date: data.date,
-					paidBy: data.paidBy
-				})
-				.returning({ id: schema.expense.id });
-			await tx
-				.insert(schema.expenseShare)
-				.values(participants.map((userId) =&gt; ({ expenseId: row!.id, userId, weight: 1 })));
-		});
+	await db.transaction(async (tx) =&gt; {
+		const [row] = await tx
+			.insert(schema.expense)
+			.values({
+				tripId: trip.id,
+				title: data.title,
+				amountMinor: toMinor(data.amount, trip.currency),
+				currency: trip.currency,
+				category: data.category,
+				date: data.date,
+				paidBy: data.paidBy
+			})
+			.returning({ id: schema.expense.id });
+		await tx
+			.insert(schema.expenseShare)
+			.values(participants.map((userId) =&gt; ({ expenseId: row!.id, userId, weight: 1 })));
+	});
 
-		await bump(trip.id);
-		await requested(tripBySlug, 1).refreshAll();
-	}
-);</code></pre>
+	await bump(trip.id);
+	/*
+	 * RECONNECT THE LIVE VIEW, REFRESH NOTHING ELSE. A form handler that
+	 * refreshes nothing gets SvelteKit's default — &quot;automatically</code></pre>
 </figure>
-<p><code>invalid(issue.participants(m.issue_participants_member()))</code> is programmatic validation: the schema cannot know whether an id belongs to a companion, the handler can, and <code>invalid</code> with a field-bound issue lands the message under that field in the form as if the schema had produced it — in the request’s language, because <code>m</code> reads the locale the middleware stored. A payer who is not on the trip is the same kind of answer, <code>issue.paidBy(…)</code>, rather than a bare 400 that would have thrown the whole form away. The transaction writes the expense and its shares together, <code>bump</code> wakes the room, and the same <code>requested().refreshAll()</code> gives the submitting client its updated <code>tripBySlug</code> in the same response.</p>
+<p><code>invalid(issue.participants(m.issue_participants_member()))</code> is programmatic validation: the schema cannot know whether an id belongs to a companion, the handler can, and <code>invalid</code> with a field-bound issue lands the message under that field in the form as if the schema had produced it — in the request’s language, because <code>m</code> reads the locale the middleware stored. A payer who is not on the trip is the same kind of answer, <code>issue.paidBy(…)</code>, rather than a bare 400 that would have thrown the whole form away. The transaction writes the expense and its shares together, <code>bump</code> wakes the room, and <code>watchTrip(trip.slug).reconnect()</code> ends the handler. That last line matters: this form’s client never calls <code>submit().updates(...)</code>, and a form handler that refreshes nothing gets SvelteKit’s default — invalidating every query and load function — which re-ran the trip page’s <code>await tripBySlug(slug)</code> and, now and then, held the live stream’s new document behind an await that never settled. Reconnecting the live query is the docs’ pattern for a mutation that changes what a live query shows, and because it counts as the handler’s own refresh it replaces that default.</p>
 
 <figure class="code">
 	<figcaption>

@@ -17,14 +17,14 @@
 
 import * as v from 'valibot';
 import { invalid } from '@sveltejs/kit';
-import { command, form, requested } from '$app/server';
+import { command, form } from '$app/server';
 import { and, eq } from 'drizzle-orm';
 import { toMinor } from '#lib/domain/money.ts';
 import { ExpenseFormSchema, IdSchema } from '#lib/domain/schemas.ts';
 import { m } from '#lib/paraglide/messages.js';
 import { bump, requireMember } from '#lib/server/access.ts';
 import { db, schema } from '#lib/server/db/index.ts';
-import { tripBySlug } from './trips.remote.ts';
+import { watchTrip } from './live.remote.ts';
 
 export const addExpense = form(
 	// Shared with the browser, which runs it as a preflight before sending anything.
@@ -62,7 +62,29 @@ export const addExpense = form(
 		});
 
 		await bump(trip.id);
-		await requested(tripBySlug, 1).refreshAll();
+		/*
+		 * RECONNECT THE LIVE VIEW, REFRESH NOTHING ELSE. A form handler that
+		 * refreshes nothing gets SvelteKit's default — "automatically
+		 * invalidating all queries and load functions following a successful
+		 * submission" — and this form's client asks for nothing
+		 * (`submit().updates(...)` is never called), so the old
+		 * `requested(tripBySlug, 1).refreshAll()` refreshed nothing and the
+		 * default ran. That re-ran the trip page's `await tripBySlug(slug)`;
+		 * while an await is pending Svelte holds later state changes, the live
+		 * stream's new document among them, and about one add in fifteen the
+		 * re-run never settled and the table stayed on the old document
+		 * (traced: `$effect.pending()` went to 1 and stayed there while the
+		 * server had already yielded the new document).
+		 *
+		 * The page shows the trip through the live stream, so the live stream is
+		 * what this mutation reconnects — the docs' pattern for exactly this
+		 * ("Reconnecting live queries in mutations", kit/remote-functions). A
+		 * reconnect counts as the handler's own refresh, so it "replaces the
+		 * default invalidation of all queries and load functions": the page's
+		 * first-paint await is left alone, and the new connection's first yield
+		 * is the document with this expense in it.
+		 */
+		void watchTrip(trip.slug).reconnect();
 	}
 );
 
