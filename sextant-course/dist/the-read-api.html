@@ -60,7 +60,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/api/v1/query/+server.ts<span class="code__lines">:230-233</span></span>
+		<span class="code__file">src/routes/api/v1/query/+server.ts<span class="code__lines">:229-232</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">export const QUERY: RequestHandler = ({ request }) =&gt; handle(request, 'QUERY');
@@ -78,7 +78,7 @@ export const POST: RequestHandler = ({ request }) =&gt; handle(request, 'POST');
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/api/v1/query/+server.ts<span class="code__lines">:56-92</span></span>
+		<span class="code__file">src/routes/api/v1/query/+server.ts<span class="code__lines">:56-91</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -88,8 +88,7 @@ export const POST: RequestHandler = ({ request }) =&gt; handle(request, 'POST');
  * `from..to` in epoch milliseconds — so a link copied out of the address bar
  * pastes straight into a script. Sharing the vocabulary is most of what makes an
  * API feel like the same product.
- */
-/**
+ *
  * `_`-prefixed, so it can be tested from the file next door.
  *
  * SvelteKit refuses unknown exports from a `+server.ts` — the list is the HTTP
@@ -119,14 +118,14 @@ export const _RequestSchema = v.object({
 	maxRows: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(20_000)), 1_000)
 });</code></pre>
 </figure>
-<p>The <code>_</code> in <code>_RequestSchema</code> is a SvelteKit convention rather than a style choice — it is what lets a <code>+server.ts</code> export something that is not a route handler. The chapter on verifying it explains the escape hatch where the test that reaches through it lives; here the schema itself is the point.</p>
+<p>The <code>_</code> in <code>_RequestSchema</code> is a SvelteKit convention rather than a style choice — it is what lets a <code>+server.ts</code> export something that is not a route handler. Chapter 46 shows the test that imports it, in the file beside this one; here the schema itself is the point.</p>
 <p><code>range</code> takes the same expressions the address bar does — <code>-6h</code>, or <code>from..to</code> in epoch milliseconds — so a link somebody copied out of the interface pastes straight into a script. Sharing the vocabulary is most of what makes an API feel like the same product rather than a second one bolted on.</p>
 <p>The default <code>maxRows</code> is lower than the interface’s ceiling on purpose. A machine asking for twenty thousand rows on a schedule is nearly always a query that wanted a <code>summarize</code>, and the honest way to find that out is a truncation flag in the first response rather than a slow endpoint nobody looks at.</p>
 <h3 id="the-scope">The scope, finally load-bearing</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/api/v1/query/+server.ts<span class="code__lines">:94-125</span></span>
+		<span class="code__file">src/routes/api/v1/query/+server.ts<span class="code__lines">:93-124</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/** One implementation; two methods point at it. See the note above. */
@@ -169,7 +168,7 @@ async function handle(request: Request, method: 'QUERY' | 'POST'): Promise&lt;Re
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/api/v1/query/+server.ts<span class="code__lines">:148-181</span></span>
+		<span class="code__file">src/routes/api/v1/query/+server.ts<span class="code__lines">:147-180</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/*
@@ -212,7 +211,7 @@ if (checked.errors.length &gt; 0) {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/api/v1/query/+server.ts<span class="code__lines">:195-227</span></span>
+		<span class="code__file">src/routes/api/v1/query/+server.ts<span class="code__lines">:194-226</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">return Response.json(

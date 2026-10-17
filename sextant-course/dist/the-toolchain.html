@@ -46,7 +46,7 @@
 cd sextant
 pnpm install</code></pre>
 </figure>
-<aside class="callout callout--note"><p>The versions this course was built and verified against: SvelteKit 3.0.1, Svelte 5.57, Vite 8.3, Vitest 5.0, Playwright 1.64, TypeScript 6.0, Node 24.21 (the current LTS) and pnpm 12.10. <code>packageManager</code> in <code>package.json</code> and <code>.nvmrc</code> pin the two that are not dependencies, so a machine with a different pnpm or Node says so at <code>pnpm install</code> rather than three chapters in.</p></aside>
+<aside class="callout callout--note"><p>The versions this course was built and verified against: SvelteKit 3.0.1, Svelte 5.57, Vite 8.3, Vitest 5.0, Playwright 1.64, TypeScript 6.0, Node 24.21 (the current LTS) and pnpm 12.10. Two of those are not dependencies, and three settings look after them. <code>packageManager</code> in <code>package.json</code> records the exact pnpm the lockfile was written with, and both pnpm and Corepack read it. <code>engines.node</code> is the floor, and it is the check that runs at <code>pnpm install</code>: pnpm refuses an older Node there rather than three chapters in. <code>.nvmrc</code> holds the exact Node this was verified on, for version managers such as nvm and fnm; pnpm never reads it.</p></aside>
 <p>The config is a *function* rather than an object, and that is not stylistic. It has to read the environment before the build starts, because one value is substituted into the output.</p>
 
 <figure class="code">

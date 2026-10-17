@@ -103,9 +103,11 @@ export class Workspace {
 	 *
 	 * This class knows the three keys and nothing about routes — that is what
 	 * lets it be tested without a router. The page knows its route id and calls
-	 * `resolve('/[tenant]/explore?…')` for it, which is also what keeps the
-	 * `goto` below typed: a `ResolvedPathname` is the proof that the URL points
-	 * at a route this app has.
+	 * `resolve('/[tenant]/explore?…')` for it. `ResolvedPathname` is the type
+	 * `resolve()` returns, so the type says where the string came from; the
+	 * guarantee that every `goto` is handed one is `eslint-plugin-svelte`'s
+	 * `no-navigation-without-resolve`. `goto` itself accepts any string, and
+	 * rejects one that is no route only when it runs.
 	 */
 	readonly #href: (search: string) => ResolvedPathname;
 

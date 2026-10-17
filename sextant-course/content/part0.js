@@ -266,7 +266,7 @@ pnpm install`
 			},
 			{
 				type: 'note',
-				text: 'The versions this course was built and verified against: SvelteKit 3.0.1, Svelte 5.57, Vite 8.3, Vitest 5.0, Playwright 1.64, TypeScript 6.0, Node 24.21 (the current LTS) and pnpm 12.10. `packageManager` in `package.json` and `.nvmrc` pin the two that are not dependencies, so a machine with a different pnpm or Node says so at `pnpm install` rather than three chapters in.'
+				text: 'The versions this course was built and verified against: SvelteKit 3.0.1, Svelte 5.57, Vite 8.3, Vitest 5.0, Playwright 1.64, TypeScript 6.0, Node 24.21 (the current LTS) and pnpm 12.10. Two of those are not dependencies, and three settings look after them. `packageManager` in `package.json` records the exact pnpm the lockfile was written with, and both pnpm and Corepack read it. `engines.node` is the floor, and it is the check that runs at `pnpm install`: pnpm refuses an older Node there rather than three chapters in. `.nvmrc` holds the exact Node this was verified on, for version managers such as nvm and fnm; pnpm never reads it.'
 			},
 			{
 				type: 'p',
@@ -403,7 +403,7 @@ pnpm db:push`
 			},
 			{
 				type: 'note',
-				text: '`db:push` writes the *current* schema, so a fresh database never sees the one column this project has lost: Better Auth 1.7.0 added a required `issuer` to `account`, 1.7.3 withdrew it, and 1.7.7 never writes it — a `NOT NULL` nothing fills, which fails every sign-up on its insert. `src/lib/server/db/auth.schema.ts` explains it, and `drizzle/0001_drop_account_issuer.sql` is the migration for a database that was pushed before the change; `pnpm db:migrate` walks the journal.'
+				text: '`db:push` writes the *current* schema, so a fresh database never sees the one column this project has lost: Better Auth 1.7.0 added a required `issuer` to `account`, 1.7.3 withdrew it, and 1.7.7 never writes it — a `NOT NULL` nothing fills, which fails every sign-up on its insert. `src/lib/server/db/auth.schema.ts` explains it. A database made with `pnpm db:push` before the change is mended the same way it was made: run `pnpm db:push` again, and it compares the schema with the database and drops the column, asking first, because `strict` is on. `drizzle/0001_drop_account_issuer.sql` is for the other kind of database, one built with `pnpm db:migrate` from the start. `db:push` records no migration history, so `db:migrate` on a pushed database starts again from the first migration and stops at its first `CREATE TABLE`, on a table that is already there.'
 			},
 
 			{

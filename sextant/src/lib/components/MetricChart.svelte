@@ -375,8 +375,7 @@
 				means `measureText` and doing the box arithmetic by hand.
 			-->
 			<div
-				class="tooltip"
-				class:tooltip--right={pointer.x > width * 0.6}
+				class={['tooltip', { 'tooltip--right': pointer.x > width * 0.6 }]}
 				style:left="{pointer.x}px"
 				role="status"
 			>

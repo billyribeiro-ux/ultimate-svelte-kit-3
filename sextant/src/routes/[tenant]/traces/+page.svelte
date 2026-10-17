@@ -40,7 +40,6 @@
 		].join(' ')
 	);
 
-	const result = $derived(await runQuery({ tenant: data.tenant, q, range }));
 	const window_ = $derived(resolve(range));
 </script>
 
@@ -73,7 +72,23 @@
 
 	<p class="page__query mono">{q}</p>
 
+	<!--
+		The query is awaited here, inside the boundary, and not in the script.
+
+		In the script, the server waited for it — every `await` there settles before
+		anything renders — and then drew this boundary's `pending` snippet in place
+		of the list it had, because "during server-side rendering, a boundary with a
+		`pending` snippet renders that snippet and ignores the rest of its content".
+		A link to this page said "Loading…", and with JavaScript off it said so for
+		good. With the `await` here and no `pending`, the server renders the list,
+		and a refusal is this boundary's `failed`, on the server and in the browser.
+
+		Changing the order or the range keeps the old list up until the new one is
+		in, because Svelte holds an update back until its `await`s have settled.
+	-->
 	<svelte:boundary>
+		{const result = $derived(await runQuery({ tenant: data.tenant, q, range }))}
+
 		{#if result.rows.length === 0}
 			<p class="empty">No traces in this range.</p>
 		{:else}
@@ -92,7 +107,9 @@
 								{row.name}
 							</span>
 							<span class="trace__time">{formatTimestamp(Number(row.timestamp), window_)}</span>
-							<span class="trace__duration" class:trace__duration--error={row.status === 'error'}>
+							<span
+								class={['trace__duration', { 'trace__duration--error': row.status === 'error' }]}
+							>
 								{formatDuration(Number(row.duration))}
 							</span>
 						</a>
@@ -100,10 +117,6 @@
 				{/each}
 			</ul>
 		{/if}
-
-		{#snippet pending()}
-			<p class="empty" role="status">Loading…</p>
-		{/snippet}
 
 		<!--
 			An `App.Error`, not the `HttpError` that was thrown: SvelteKit runs every

@@ -32,7 +32,7 @@ export const part6 = [
 				type: 'p',
 				text: 'Because it is a navigation: a hundred history entries for a sentence, and a re-run of every `load` on the route. The shape that works is to edit a local reactive params object and sync it to the address bar when the edits settle — which is exactly what `SvelteURLSearchParams` is for.'
 			},
-			code('src/lib/state/workspace.svelte.ts', 46, 70, { partial: true }),
+			code('src/lib/state/workspace.svelte.ts', 114, 150),
 			{
 				type: 'note',
 				text: 'A plain `URLSearchParams` in `$state` would need replacing wholesale on every edit to be reactive at all, and `.set()` on it would silently do nothing. This is the case the reactive built-ins exist for, and the mirror image of the virtualizer’s plain `Map` in chapter 28.'
@@ -68,22 +68,22 @@ cause:  \`adopt()\` ended with \`#synced = params.toString()\`.
 			},
 
 			{ type: 'h3', id: 'canonicalising', text: 'And a consequence worth naming' },
-			code('src/lib/state/workspace.svelte.ts', 146, 188),
+			code('src/lib/state/workspace.svelte.ts', 148, 190),
 			{
 				type: 'p',
 				text: 'Arriving on `?q=from+logs` with no `range` rewrites the URL to include it, once, shortly after load. That is deliberate: the address bar is the state, so it should say all of it — and a link copied a moment later then carries the whole view rather than the half somebody happened to type.'
 			},
 
 			{ type: 'h3', id: 'the-write', text: 'The write itself: a shallow `goto`' },
-			code('src/lib/state/workspace.svelte.ts', 228, 266),
+			code('src/lib/state/workspace.svelte.ts', 230, 268),
 			{
 				type: 'p',
-				text: 'SvelteKit 3 folded `pushState` and `replaceState` into `goto`. `shallow: true` means "change the URL and `page.state`, run no `load`", and `replace: true` is the difference between one history entry per pause in typing and one per page. The old pair still exists, deprecated; the new spelling is better because *every* change to the address bar now goes through one function with one set of options — and because `goto` only accepts a URL that resolves to a route, which is where the next block comes in. (The early return in the middle has a section of its own, below.)'
+				text: 'SvelteKit 3 folded `pushState` and `replaceState` into `goto`. `shallow: true` means "change the URL and `page.state`, run no `load`", and `replace: true` is the difference between one history entry per pause in typing and one per page. The migration guide gives the reasons, and they are about behaviour, not spelling: the old pair is deprecated, and “shallow routing now triggers navigation hooks” — `beforeNavigate`, `onNavigate` and `afterNavigate` run for a shallow `goto`, with `navigation.shallow` to tell them apart. Every change to the address bar now goes through one function with one set of options, `replace`, `state` and the new `persistState`, which reapplies `page.state` after a reload. (The early return in the middle has a section of its own, below.)'
 			},
-			code('src/lib/state/workspace.svelte.ts', 101, 118),
+			code('src/lib/state/workspace.svelte.ts', 101, 112),
 			{
 				type: 'p',
-				text: 'The class does not know its own route. The page hands it a function that turns a search string into a URL through `resolve()` from `$app/paths`, and the return type — `ResolvedPathname` — is the proof that the URL points at a route this app has. That is what keeps the `goto` typed, and what lets the class be tested with no router at all.'
+				text: 'The class does not know its own route, which is what lets it be tested with no router at all. The page hands it a function that turns a search string into a URL through `resolve()` from `$app/paths`, typed `ResolvedPathname`, the type `resolve()` returns. Be clear about what does the checking. `goto` accepts any string, and a URL that is no route is rejected only when the call runs — and the deprecated `pushState` rejects it in exactly the same way. What makes every `goto` in the project take a resolved path is the linter: `eslint-plugin-svelte`’s `no-navigation-without-resolve`, part of its recommended set, which chapter 36 comes back to.'
 			},
 
 			{ type: 'h3', id: 'settling-writes', text: 'A write that is still settling belongs to one entry' },
@@ -106,7 +106,7 @@ cause:  the write that adds \`view=table\` fired while the router was
         it took that one over, and SvelteKit abandoned the navigation
         somebody had asked for — after its page had already rendered.`
 			},
-			code('src/routes/[tenant]/explore/+page.svelte', 47, 107),
+			code('src/routes/[tenant]/explore/+page.svelte', 52, 112),
 			{
 				type: 'p',
 				text: 'Two conditions on one effect. `ownsAddressBar` holds the write while the drawer’s trace URL is in the address bar, and lets the effect run again when the drawer closes, so the write is made after all, to the entry it was meant for. `navigating.type !== null` holds it while the router is in the middle of anything: a link, the back button, the drawer opening. Reading `navigating` is also what makes the effect run at the two moments that matter. When a navigation starts, the effect runs and its cleanup drops the waiting timer before the timer can take the navigation over. When the router is idle again, it runs once more and schedules whatever is still unwritten.'
@@ -130,20 +130,20 @@ cause:  the write that adds \`view=table\` fired while the router was
 			},
 			{
 				type: 'note',
-				text: 'The in-effect changed for the same reason. In SvelteKit 3 `page.url` keeps describing the page as it was *rendered*; the address bar after a shallow `goto` is `page.shallow.url`. Adopting `page.url` was harmless while writes could not be held back. Once they can, it would undo a zoom made just before a trace was opened: closing the drawer goes back to an entry that SvelteKit renders from the page’s first URL.'
+				text: 'The effect that adopts the URL — the *In* effect in the block above — changed for the same reason. In SvelteKit 3 `page.url` keeps describing the page as it was *rendered*; the address bar after a shallow `goto` is `page.shallow.url`. Adopting `page.url` was harmless while writes could not be held back. Once they can, it would undo a zoom made just before a trace was opened: closing the drawer goes back to an entry that SvelteKit renders from the page’s first URL.'
 			},
 
 			{ type: 'h3', id: 'holding-the-window', text: 'A test that holds the window open' },
-			code('e2e/explore.e2e.ts', 154, 187),
+			code('e2e/explore.e2e.ts', 179, 212),
 			{
 				type: 'p',
-				text: 'A race found under load is not proved fixed by a suite that passes under no load. These tests install Playwright’s clock and stop it once the page has written its URL out — which is also the proof that it hydrated, because only the client adds `view` — so "a write is waiting" is a fact the test arranged rather than a coincidence it hopes for. Each one checks that less than 400ms of page time has passed before the moment that matters, holds the next page’s request so its navigation is still in flight, then moves the clock past the debounce.'
+				text: 'A race found under load is not proved fixed by a suite that passes under no load. These tests install Playwright’s clock and stop it once the page has written its URL out — which is also the proof that it hydrated, because only the client adds `view` — so "a write is waiting" is a fact the test arranged rather than a coincidence it hopes for. Each one checks that less than 400ms of page time has passed before the moment that matters, then moves the clock past the debounce. Three of them also hold the next page’s request, so that its navigation is still in flight when the write comes due; the drawer’s test holds nothing, because what must keep the write back there is the drawer’s own URL, which stays in the address bar for as long as the drawer is open.'
 			},
 			{
 				type: 'p',
 				text: 'There are four, two for each half of the claim. Two check that nothing is written where it must not be: onto the drawer’s entry, or into a navigation to another page, and that includes pressing Run, which skips the effect and leaves only the guard in `#write`. The other two check that what was held back is still written: when the drawer closes, and when the navigation comes back to this page. Each was run against the code without the rule it covers, and failed at the step it targets.'
 			},
-			code('e2e/explore.e2e.ts', 299, 338),
+			code('e2e/explore.e2e.ts', 324, 363),
 			{
 				type: 'warn',
 				text: 'A stopped clock stops more than your own timers. In async mode Svelte’s `tick()` resolves on a frame or a zero-length timeout, and on a clock that never moves neither comes — so the drawer waited for its data and then never painted, and the first version of these tests failed against the fixed code too. `openTheDrawer` moves the clock a millisecond at a time instead, which lets the frames through and stays nowhere near the 400ms.'
@@ -174,10 +174,10 @@ cause:  the write that adds \`view=table\` fired while the router was
 				type: 'p',
 				text: 'Somebody ran a query, found a slow request, and wants to see why — and then wants to look at the next one. A full navigation loses the query, the scroll position and the place in the list, and getting back means the browser’s back button *and* re-finding the row.'
 			},
-			code('src/routes/[tenant]/explore/+page.svelte', 267, 310),
+			code('src/routes/[tenant]/explore/+page.svelte', 336, 379),
 			{
 				type: 'p',
-				text: '`goto(url, { shallow: true, state })` adds a history entry — so the back button closes the drawer — without running a single `load` function. The results stay exactly as they were. SvelteKit 3 spells it this way instead of `pushState(url, state)` so that one function owns every change to the address bar, and so that the URL has to be one `resolve()` can vouch for.'
+				text: '`goto(url, { shallow: true, state })` adds a history entry — so the back button closes the drawer — without running a single `load` function. The results stay exactly as they were. SvelteKit 3 spells it this way instead of `pushState(url, state)` because shallow routing is now a navigation like any other: one function owns every change to the address bar, and the navigation hooks hear about this one too.'
 			},
 			{
 				type: 'p',
@@ -185,21 +185,37 @@ cause:  the write that adds \`view=table\` fired while the router was
 			},
 
 			{ type: 'h3', id: 'page-state', text: 'The drawer reads history, not a variable' },
-			code('src/routes/[tenant]/explore/+page.svelte', 530, 540),
+			code('src/routes/[tenant]/explore/+page.svelte', 644, 654),
 			{
 				type: 'warn',
 				text: 'A local `open` variable that the shallow `goto` also happens to set is the version that looks right and is broken: the back button changes the history entry and leaves the variable true. Reading `page.state` directly means there is exactly one source of truth, and the browser’s own navigation is it.'
 			},
 
 			{ type: 'h3', id: 'closing', text: 'Four ways to close, one implementation' },
-			code('src/lib/components/TraceDrawer.svelte', 44, 51, { partial: true }),
+			code('src/lib/components/TraceDrawer.svelte', 44, 49),
 			{
 				type: 'p',
 				text: 'Escape, the button, the backdrop and the back button all do the same thing: `history.back()`. Anything else leaves the history entry behind, so the back button reopens a drawer somebody just closed.'
 			},
 
+			{ type: 'h3', id: 'focus', text: 'Focus in, and focus back' },
+			code('src/lib/components/TraceDrawer.svelte', 51, 73),
+			{
+				type: 'p',
+				text: 'A dialog that opens without moving focus leaves a screen reader reading the page behind it. The attachment focuses the panel as it is mounted, and the function it returns gives the focus back when the panel is removed — and because every way of closing ends with the panel removed, that one function covers all four.'
+			},
+			{
+				type: 'why',
+				title: 'Why an attachment, and not `bind:this` with an `$effect`',
+				text: 'Attachments “run in an effect when an element is mounted to the DOM”, and the function one returns is called “after the element is later removed from the DOM”. That is this behaviour exactly, said once, on the element it is about. The first version bound the panel to a variable and watched the variable from an effect — the same thing said in two places — and cast `document.activeElement` to `HTMLElement` so that it could call `focus()`. The property is typed `Element | null`, and `instanceof` narrows it where the cast only asserted.'
+			},
+			{
+				type: 'note',
+				text: 'The comment is honest about what is missing. Tab can still leave the panel for the page behind it; keeping it in would take `inert` on everything the drawer covers.'
+			},
+
 			{ type: 'h3', id: 'modifier-clicks', text: 'And a link that is still a link' },
-			code('src/lib/components/TraceDrawer.svelte', 115, 136),
+			code('src/lib/components/TraceDrawer.svelte', 119, 140),
 			{
 				type: 'p',
 				text: 'A modifier-click or a middle-click must keep its normal meaning. Hijacking every click is how a link stops being a link — and "open in a new tab" is exactly what somebody does with a trace they want to keep while they look at the next one.'
@@ -213,7 +229,7 @@ cause:  the write that adds \`view=table\` fired while the router was
 			code('src/routes/+layout.svelte', 5, 13),
 			{
 				type: 'p',
-				text: '`resolve(\'/[tenant]/traces/[traceId]\', { tenant, traceId })` instead of a template string. The route id is a member of a union SvelteKit generates from `src/routes`, so a link to a page that was renamed is a type error rather than a 404 somebody finds a week later — and `eslint-plugin-svelte`\'s `no-navigation-without-resolve` asks every `href` and every `goto` to go through it, for the same reason. The explore page imports it as `resolvePath`, because it already has a `resolve` of its own for time ranges, and two functions with one name are easier to read apart than to tell apart.'
+				text: '`resolve(\'/[tenant]/traces/[traceId]\', { tenant, traceId })` instead of a template string. The route id is a member of a union SvelteKit generates from `src/routes`, so a link to a page that was renamed is a type error rather than a 404 somebody finds a week later — and `eslint-plugin-svelte`\'s `no-navigation-without-resolve` asks every `href` and every `goto` to go through it, for the same reason. The explore page imports it as `resolvePath`, because it already has a `resolve` of its own for time ranges, and the alias means the two `resolve`s cannot be confused.'
 			},
 
 			{ type: 'h3', id: 'view-transitions', text: 'View transitions, in six lines and two guards' },
@@ -236,7 +252,8 @@ cause:  the write that adds \`view=table\` fired while the router was
 				items: [
 					'Opening a trace changes the URL and does not re-run any load.',
 					'The back button closes the drawer and the results are still there.',
-					'Reloading the drawer’s URL lands on a full page.'
+					'Reloading the drawer’s URL lands on a full page.',
+					'Opening the drawer moves the focus into it, and closing it by any route puts the focus back.'
 				]
 			}
 		]
@@ -249,7 +266,7 @@ cause:  the write that adds \`view=table\` fired while the router was
 			'The rule for deciding, and the `.catch` that is not defensive programming.',
 		goal: 'Send HTML immediately and let the slow half arrive later, without breaking hydration.',
 		blocks: [
-			code('src/routes/[tenant]/explore/+page.server.ts', 1, 27),
+			code('src/routes/[tenant]/explore/+page.server.ts', 1, 28),
 			{
 				type: 'p',
 				text: 'Two returned values, and the difference between them is the whole lesson. `q` and `range` come straight off the URL and the page cannot render without them — there is no sensible loading state for the contents of a query box, and rendering an empty one that fills in a moment later means the editor is briefly wrong and the caret jumps.'
@@ -258,18 +275,33 @@ cause:  the write that adds \`view=table\` fired while the router was
 				type: 'p',
 				text: '`services` is a promise, returned unawaited. SvelteKit streams it: the HTML goes out immediately and the value arrives in a later chunk. It feeds completion, which nobody can use until they have focused the editor and typed something.'
 			},
-			code('src/routes/[tenant]/explore/+page.server.ts', 7, 48),
+			code('src/routes/[tenant]/explore/+page.server.ts', 29, 48),
 			{
 				type: 'why',
 				title: 'The `.catch` is load-bearing, not defensive',
 				text: 'A rejection in a streamed promise arrives **after** the response has started, so it cannot become an error page. It becomes an unhandled rejection in the browser and a page that never finishes hydrating — a blank interface with no error anywhere. Resolving to an empty list degrades completion and nothing else.'
 			},
 
-			{ type: 'h3', id: 'consuming', text: 'And nothing to show while it lands' },
-			code('src/routes/[tenant]/explore/+page.svelte', 362, 376),
+			{ type: 'h3', id: 'consuming', text: 'Reading it without waiting for it' },
+			code('src/routes/[tenant]/explore/+page.svelte', 245, 251),
+			code('src/routes/[tenant]/explore/+page.svelte', 431, 442),
 			{
 				type: 'p',
-				text: '`{#await … then}` with no pending branch, on purpose: the editor is fully usable without completion, and a spinner over a working editor would be worse than no spinner.'
+				text: 'The editor is drawn at once, on the server as well, and its catalogue reads `services.current`: an empty list in the first paint, and the streamed list as soon as it lands. Nothing on the screen depends on it except the completion list, and nobody asks for a completion in the first moment of a page. When the list arrives, the editor is not drawn again — the same textarea, with the same caret, simply has more to offer.'
+			},
+			code('src/lib/reactivity/streamed.svelte.ts', 38, 51),
+			{
+				type: 'p',
+				text: 'A stand-in until the promise resolves, then the value, in a `$state.raw` field. Raw, because the value is replaced whole and never changed in place, so a deep proxy around it would be work for nothing. The page creates one inside a `$derived`, so a navigation that streams a new list makes a new `Streamed`, and the old one is dropped with the promise it was waiting for.'
+			},
+			{
+				type: 'why',
+				title: 'Why not `{#await data.services then services}`',
+				text: 'That was the first version, and it cost two things. “During server-side rendering, only the pending branch will be rendered”, and the pending branch here was empty, so the editor was the one control missing from the server’s HTML: a link to a refused query, opened before the JavaScript arrived, explained the refusal and offered nowhere to fix it. And in the browser the `then` branch is drawn from scratch when the promise lands, so an editor inside it is a new editor — an early click or a caret placed while the list was in flight would be thrown away. The block is the right tool when the content *is* the value; here the value only improves a control that is useful without it.'
+			},
+			{
+				type: 'note',
+				text: 'Not an `$effect` that copies the value into `$state` either. An effect would need a flag to ignore a promise that landed after it had been replaced, and an effect that writes state another rune could hold is the pattern the `$effect` documentation warns against. A small class keeps the promise and the state it settles into together, and the `$derived` that creates it decides when it is replaced.'
 			},
 
 			{ type: 'h3', id: 'the-rule', text: 'The rule, stated once' },
@@ -281,7 +313,8 @@ cause:  the write that adds \`view=table\` fired while the router was
 			{
 				type: 'checkpoint',
 				items: [
-					'The explore page renders rows before the completion catalogue has loaded.',
+					'The explore page, editor and rows, is in the server’s HTML before the completion catalogue has loaded.',
+					'Completion still offers service names once the catalogue lands, and the caret does not move when it does.',
 					'A failing catalogue query degrades completion and nothing else.',
 					'You can say which of your loads should be awaited and why.'
 				]
@@ -335,9 +368,9 @@ cause:  the write that adds \`view=table\` fired while the router was
 			code('src/lib/components/LiveTail.svelte', 87, 104),
 			{
 				type: 'p',
-				text: 'The tail used to ask for `text/event-stream` and nothing else, and that decided what a refusal looked like. SvelteKit answers an `error()` from an endpoint “with either a fallback error page or a JSON representation of the error object, depending on the request’s `Accept` headers”. A tail of a query that summarizes got the HTML page, `response.json()` could not read it, and “The tail could not start (400).” stood in for the server’s sentence every time. Accepting JSON as well changes nothing on success, because the stream is still a stream, and the refusal then arrives as `{ status, message }`.'
+				text: 'The tail used to ask for `text/event-stream` and nothing else, and that decided what a refusal looked like. SvelteKit answers an `error()` from an endpoint “with either a fallback error page or a JSON representation of the error object, depending on the request’s `Accept` headers”. A tail of a query with a `summarize` in it got the HTML page, `response.json()` could not read it, and “The tail could not start (400).” stood in for the server’s sentence every time. Accepting JSON as well changes nothing on success, because the stream is still a stream, and the refusal then arrives as `{ status, message }`.'
 			},
-			code('e2e/explore.e2e.ts', 377, 391),
+			code('e2e/explore.e2e.ts', 606, 620),
 
 			{
 				type: 'checkpoint',
@@ -388,7 +421,7 @@ cause:  the write that adds \`view=table\` fired while the router was
 			},
 
 			{ type: 'h3', id: 'fields', text: 'Fields come from the form, not from a `name` attribute' },
-			code('src/routes/[tenant]/alerts/+page.svelte', 242, 263),
+			code('src/routes/[tenant]/alerts/+page.svelte', 249, 270),
 			{
 				type: 'terminal',
 				code: `
@@ -404,7 +437,7 @@ cause:  the write that adds \`view=table\` fired while the router was
 			},
 
 			{ type: 'h3', id: 'default-value', text: '`defaultValue`, because a remote form resets itself' },
-			code('src/routes/[tenant]/alerts/+page.svelte', 270, 293),
+			code('src/routes/[tenant]/alerts/+page.svelte', 277, 300),
 			{
 				type: 'p',
 				text: 'A remote form resets after a successful submission — and a reset does not restore what is *selected*, it restores what each option says is its **default**: `option.defaultSelected`, which is the `selected` attribute. `fields.as(\'select\', …)` sets the select’s value **property** and marks no option at all, so before this line every option’s default was `false` and a reset fell to the first one.'
@@ -438,14 +471,14 @@ $ npx playwright test e2e/alerts.e2e.ts -g "form reset keeps the direction"
 				type: 'p',
 				text: 'A remote form is a single object with one attached `<form>` element, so spreading the same one inside an `{#each}` throws — and the page then renders its error branch, which looks like the query failed rather than like a markup mistake. `.for(id)` mints one instance per id, which is also what gives each row its own pending state.'
 			},
-			code('src/routes/[tenant]/alerts/+page.svelte', 102, 111),
+			code('src/routes/[tenant]/alerts/+page.svelte', 113, 122),
 
 			{ type: 'h3', id: 'a-refused-command', text: 'A command the server refuses' },
 			{
 				type: 'p',
 				text: 'The toggle used to call `toggleRule(…)` and forget it. When the server refused, nothing said so: the rejection went unhandled, and the box went on showing what had been asked for rather than what the server had kept. A boundary could not have helped. The Svelte documentation is plain that errors “in event handlers or after a `setTimeout` or async work” are **not** caught by error boundaries. So the page catches the rejection itself, puts the box back, and shows the refusal in the row.'
 			},
-			code('src/routes/[tenant]/alerts/+page.svelte', 38, 66),
+			code('src/routes/[tenant]/alerts/+page.svelte', 42, 70),
 			{
 				type: 'p',
 				text: 'The line that matters is the one that reads the message, because a refusal reaches the browser in two shapes. A `failed` snippet is handed what SvelteKit’s `handleError` made of the error, and the documentation says so in a comment on its own example: “error went through the `handleError` hook and is of type `App.Error`” — `{ status, message }`, plus whatever the app adds. Awaiting a command hands back something else: the `HttpError` the client rebuilt from the response, with the message on `body` and none of its own. A probe that ended the session under a live page, then made a list reload and pressed the toggle, printed both.'
@@ -489,25 +522,133 @@ $ pnpm exec playwright test e2e/alerts.e2e.ts -g 'refuses'
 			},
 			{
 				type: 'p',
-				text: 'The result is awaited in the script, and the boundary catches what is read inside it. The trouble was three values made from the result — the rows, the columns and the chart — which were `$derived`s in the script too. A `$derived` belongs to the component that declares it, and when one throws, Svelte reports the error from there: to the boundary around the component, not to the one around whatever was reading it. For a page, that is the boundary SvelteKit puts around every page, and its `failed` is the error page. The traces page reads its result straight from the markup, and never had the problem.'
+				text: 'Two rules decide where a failure lands, one for the browser and one for the server, and the page had broken both. The browser’s rule is about where a value is *read*. The server’s is about where an `await` is *written*.'
 			},
-			code('src/routes/[tenant]/explore/+page.svelte', 451, 466),
+
+			{ type: 'h3', id: 'values-made-from-the-result', text: 'In the browser: thrown where it is read' },
 			{
 				type: 'p',
-				text: 'Declaration tags fix it without changing a line that uses the three. Declared inside the boundary, they belong to it, so “errors in `await` expressions will bubble to the nearest error boundary” now means this one. The chart became a plain function, `chartOf()`, so that its `$derived` could be declared here with the other two.'
+				text: 'An awaited value that rejects keeps the rejection as its value, and reading it throws. Read in the markup inside a boundary, it throws there, and “errors in `await` expressions will bubble to the nearest error boundary” means that one. A `$derived` that throws is the exception that caught the explore page out: Svelte computes a derived on behalf of the component that *declared* it, so what it throws is reported to the boundary around the declaration, not to the one around whatever read it.'
 			},
 			{
 				type: 'p',
-				text: 'A boundary that has failed then has to be told to draw again. Its content is gone, so nothing in it reads the result any more, and the next answer would never reach it. The boundary’s `onerror` hands over its `reset`, and an effect that reads the result only to hear it change calls it when the next answer lands — rows, or the next refusal. A first version timed the reset with `settled()` instead, with and without a `tick()` before it, and either way one of Run and Try again drew the area before its answer had arrived.'
+				text: 'The page declared three values made from the result — the rows, the columns and the chart — as `$derived`s in its script. When the query was refused, each one threw as it read the result, and each reported from the script: to the boundary SvelteKit puts around every page, whose `failed` is the error page. The traces page shows the other half of the rule. It awaited its query in the script too, but only its markup read the result, inside its boundary, so in the browser its refusal was caught where it was read — the `boundary (traces list)` line in the probe output above is exactly that. Its trouble was on the server.'
 			},
-			code('src/routes/[tenant]/explore/+page.svelte', 152, 173),
+			code('src/routes/[tenant]/explore/+page.svelte', 548, 563),
+			{
+				type: 'p',
+				text: 'Declaration tags fix it without changing a line that uses the three. Declared inside the boundary, they report to it. The chart became a plain function, `chartOf()`, so that its `$derived` could be declared here with the other two.'
+			},
+
+			{ type: 'h3', id: 'on-the-server', text: 'On the server: every `await` in a script comes first' },
+			{
+				type: 'p',
+				text: 'That made Run work, and a review found the other half the same day. A link to the same query still opened on the error page, and so did a reload after a refused Run, because Run writes the query into the address bar. The query itself was still awaited in the script, as `const result = $derived(await runQuery(…))`, and the Svelte documentation says what the server does with that: “All `await` expressions encountered outside boundaries with `pending` snippets will resolve and render their contents prior to `await render(...)` returning.” A boundary on the server catches only what is thrown inside it, and a script is not inside anything, so a refusal there refuses the whole render.'
+			},
+			code('src/routes/[tenant]/explore/+page.svelte', 128, 142),
+			{
+				type: 'p',
+				text: 'So the `await` moved into the boundary as well. It is `{const result = $derived(await query)}`, the first of the declaration tags quoted above, and the script keeps only the request. A remote query is a promise and an object at once, which is what makes the split work. The script creates it, the markup awaits it, and a button can refresh it.'
+			},
+			{
+				type: 'p',
+				text: 'The `pending` snippet had to go with it, and it had been costing something all along. “During server-side rendering, a boundary with a `pending` snippet renders that snippet and ignores the rest of its content.” The server had been waiting for the query, because the script told it to, and then sending “Running…” where the rows should have been. Without the snippet, the server renders what the boundary holds: the result when the query answers, and the `failed` snippet when it refuses, because in SvelteKit 3 errors thrown during rendering are “routed through `handleError` and then passed to the nearest error boundary” — on the server as well as in the browser.'
+			},
+			code('src/routes/[tenant]/explore/+page.svelte', 514, 547),
 			{
 				type: 'why',
-				title: 'Why “Try again” refreshes the query',
-				text: 'The boundary’s own `reset` only draws the area afresh, and the client remembers a refused query: drawn again, it shows the same refusal without asking the server anything. After a dropped connection or an expired session that is no use, so the button calls `refresh()` on the query and lets the answer arrive through the result, like any other.'
+				title: 'Why the response is still a 400',
+				text: 'SvelteKit gives the response the status of the error a boundary caught while it rendered, and here that is the checker’s 400. Forcing a 200 would be a small lie. A link to a query the server refuses is a bad request, and the status is what a load balancer, a crawler and this product’s own access log read. The person in front of the page gets the same fact as a sentence, next to the query they can fix.'
 			},
-			code('src/routes/[tenant]/explore/+page.svelte', 125, 135),
-			code('e2e/explore.e2e.ts', 340, 375),
+			{
+				type: 'warn',
+				text: 'The caught error also becomes `page.error`, and `page.status` follows it — when the server renders, and again in the browser for every refusal a boundary catches — and neither is cleared when the next run succeeds. Nothing in Sextant reads them. Copy this pattern into an app whose layout does, and it will believe it is showing an error page long after it is not: on a page with boundaries like these, `page.error` means “a boundary caught something”, not “this route failed”.'
+			},
+			{
+				type: 'note',
+				text: 'A first repair kept the `await` in the script and caught the refusal there as a value, to throw it again inside the boundary. It worked, at the price of a wrapper type, a function that threw on purpose and an effect that watched every answer to reset the boundary — and the server still sent “Running…”. Moving one `await` replaced all of it.'
+			},
+
+			{ type: 'h3', id: 'three-more-pages', text: 'The same `await` on three more pages' },
+			{
+				type: 'p',
+				text: 'The traces list, the trace page and the alerts list had all awaited their queries in the script, each with a `pending` snippet in its boundary. In the browser that held up, because each read its result only in the markup. On the server it was the explore page’s waste exactly: the server waited for the query, then sent “Loading…” in its place, and with JavaScript off the page said “Loading…” for good. Each got the same fix — the `await` inside the boundary as a declaration tag, and no `pending`.'
+			},
+			code('src/routes/[tenant]/traces/+page.svelte', 75, 90),
+			{
+				type: 'terminal',
+				code: `
+$ # the server's HTML for /demo/traces, signed in, before and after
+  await in the script, pending snippet    "Loading…" ×1    trace links: 0
+  await in the boundary, no pending        "Loading…" ×0    trace links: 100`
+			},
+			{
+				type: 'p',
+				text: 'The alerts page needed one more line. Its rule form sits outside the boundary and used to name a rule’s type as `(typeof list)[number]`; with `list` declared inside the boundary, the type is named from the query instead: `type Rule = Awaited<ReturnType<typeof rules>>[number]`.'
+			},
+			{
+				type: 'p',
+				text: 'The settings page keeps its `pending` snippets, and that is the same rule applied the other way. Its two lists were awaited in the markup already, inside boundaries that have a `pending` snippet, so the server never runs those queries at all: it sends “Loading…” and the browser asks once it is awake. What was wrong on the other pages was paying for both: the server waited for the data, sent it along in the page’s payload for the browser, and drew “Loading…” instead of it. Either draw it, or do not ask for it; chapter 43 has the settings lists.'
+			},
+			code('src/lib/components/TraceDrawer.svelte', 145, 155),
+			{
+				type: 'p',
+				text: 'The drawer keeps its `pending` snippet, on purpose, and the reason is where it is drawn. It exists only in the browser, opened from `page.state`, so the server’s way with `pending` never comes into it — and with the `await` inside the boundary, the drawer opens at once and says it is loading. In the script, that snippet had never shown: a component’s own `await` is waited for by whatever boundary holds the component, not by the boundaries it draws, so the drawer appeared only once the trace had arrived.'
+			},
+
+			{ type: 'h3', id: 'a-boundary-per-run', text: 'A boundary for each run' },
+			{
+				type: 'p',
+				text: 'A boundary that has failed then has to be drawn again. Its content is gone, so nothing in it is waiting for the next answer. Svelte has a block for exactly this: key blocks “destroy and recreate their contents when the value of an expression changes”. Keyed on the run — the query, the range and which press of Run asked — the results area is a new boundary for every run. The old area stays on screen while the new one waits for its answer, because Svelte keeps a block’s new content out of the page until its `await` has settled, and then the two change places — rows, or the next refusal.'
+			},
+			code('src/routes/[tenant]/explore/+page.svelte', 144, 157),
+			{
+				type: 'warn',
+				text: 'The first version was keyed on `query`, and the tab froze when two runs overlapped. The remote-functions documentation says that queries “are cached while they’re on the page, meaning `getPosts() === getPosts()`”, and in SvelteKit 3.0.1 the client does not do that: each call makes a new object in front of the shared cache entry. With two runs in flight, each read of the key found a new object and started the block over, without end. A string built from the arguments is equal to itself.'
+			},
+			{
+				type: 'terminal',
+				code: `
+$ # keyed on \`query\`: two runs in flight, both answers let go together
+  page.evaluate(() => 1)    no answer in 2s: the tab is busy
+  paused in                 skip_effect ← ensure ← {#key} ← update_effect ← flush
+
+$ # in the page: two calls with the same arguments
+  runQuery(args) === runQuery(args)    false`
+			},
+
+			{ type: 'h3', id: 'running', text: 'Run always asks, and says so' },
+			code('src/routes/[tenant]/explore/+page.svelte', 159, 196),
+			{
+				type: 'p',
+				text: 'Run sends a request every time, even when the query on screen is the one in the editor. A range like `-6h` means something new every minute, and an area that failed for a passing reason — a dropped connection, an expired session — can only be drawn again from a fresh answer. The client keeps a query’s last answer for as long as the query is on the page, so the new area would be drawn from the old answer without the `refresh()`. Each press also counts as a new run, so even the same question gets an area of its own.'
+			},
+			code('src/routes/[tenant]/explore/+page.svelte', 450, 454),
+			{
+				type: 'why',
+				title: 'Why “Running…” needs `tick()` and `settled()`',
+				text: 'Because Svelte keeps the old rows up on purpose. “When an `await` expression depends on a particular piece of state, changes to that state will not be reflected in the UI until the asynchronous work has completed”, and a status changed in the same update is held back with it, appearing only once there is nothing left to wait for. `$effect.pending()` cannot see it either: it counts the promises “pending in the current boundary, not including child boundaries”, and the run’s `await` is in the next area, a boundary not yet on the page. So the count goes up in an update of its own, and `tick()` lets it paint — in the documentation’s words, “without this, the change to `updating` will be grouped with the other changes, meaning it won’t be reflected in the UI” — and `settled()`, which “resolves when the current update is complete”, says when to take it down. The status is a live region that is always there and only sometimes has words in it, so a screen reader already knows it when “Running…” arrives; the results say `aria-busy` while they wait.'
+			},
+
+			{ type: 'h3', id: 'trying-again', text: 'Trying again' },
+			code('src/routes/[tenant]/explore/+page.svelte', 198, 236),
+			{
+				type: 'p',
+				text: '“Try again” is a run of the query on screen, not of whatever is now in the editor, so it shares everything above: a fresh answer, a new area, the refusal kept up until the answer is in. What it adds is the focus. The area it sits in is replaced by its own answer, so the button that was pressed is gone afterwards, and focus on a removed element falls back to the page body. Somebody pressing it with a keyboard was thrown to the top of the page after every try.'
+			},
+			{
+				type: 'why',
+				title: 'Why the focus is handed back after `settled()`',
+				text: 'Each area offers an element for the focus through an attachment — the results section, which has `tabindex="-1"` so it can be focused without becoming a stop for Tab, or the new “Try again”. The first attempt had that element focus itself as it was attached, and the test that held the keyboard on a refusal failed: “Expected: focused, Received: inactive”. The rows case passed and the refusal did not, which gave it away. Svelte builds the next area out of sight and swaps it in once its `await` has settled, and a `failed` snippet is drawn the moment the refusal arrives — before the swap — so the button was focusing itself while it was not yet in the document, and the browser ignores that. After `settled()`, whichever area the answer drew is on the page.'
+			},
+			code('src/routes/[tenant]/explore/+page.svelte', 617, 639),
+			{
+				type: 'p',
+				text: 'While a run is waiting, the button is `aria-disabled` rather than `disabled`. A disabled button gives up the keyboard focus that just pressed it, before there is anywhere for the focus to go.'
+			},
+
+			{ type: 'h3', id: 'testing-refusals', text: 'Tests for every way a refusal arrives' },
+			code('e2e/explore.e2e.ts', 365, 400),
 			{
 				type: 'terminal',
 				code: `
@@ -520,6 +661,75 @@ $ pnpm exec playwright test e2e/explore.e2e.ts -g 'refuses is explained'
 
   2 failed`
 			},
+			code('e2e/explore.e2e.ts', 402, 429),
+			{
+				type: 'p',
+				text: 'With JavaScript off, the screen is only what the server sent, which is where this half of the bug lived. Run against three earlier pages, the same test fails for three different reasons, and together they show why it looks at the page as well as the status — down to the editor, with the query in it.'
+			},
+			{
+				type: 'terminal',
+				code: `
+$ # the original page: the await and three $derived values in the script
+  ✘ a link to a query the server refuses is the explore page, saying why
+      Expected: "Expected a value"
+      Error: element(s) not found          ← a 400, from SvelteKit's error page
+
+$ # the first repair: the refusal caught in the script, \`pending\` kept
+  ✘ a link to a query the server refuses is the explore page, saying why
+      Expected: 400
+      Received: 200                        ← and "Running…" where the reason belongs
+
+$ # the editor inside {#await data.services}
+  ✘ a link to a query the server refuses is the explore page, saying why
+      Expected: "from logs | where"
+      Error: element(s) not found          ← the reason, and nowhere to fix it`
+			},
+			{
+				type: 'p',
+				text: 'Two more tests use the live page: a link opens with the query in the editor, ready to fix, and a reload after a refused Run lands on the same explanation. The rest hold requests back, or cut them off. The first presses “Try again” with the keyboard on a refusal that will come back the same: it proves a request is made, that the refusal stays up and the page says it is running while it waits, and that the focus ends on the new button.'
+			},
+			code('e2e/explore.e2e.ts', 487, 519),
+			{
+				type: 'p',
+				text: 'The second is the case the button exists for. It cuts the connection, runs a query, and expects the client hook’s sentence from chapter 41 in place of “Internal Error”; then it puts the connection back, presses “Try again”, and expects the rows, with the focus on them.'
+			},
+			code('e2e/explore.e2e.ts', 521, 545),
+			{
+				type: 'terminal',
+				code: `
+$ # focus taken by the new area as it was attached, not after settled()
+  ✘ "Try again" asks again, keeps the refusal up until it answers, and keeps the keyboard there
+      Expected: focused
+      Received: inactive
+
+$ # no refresh() before the new area: the client's old answer is reused
+  ✘ a run lost to a dropped connection says so, and "Try again" draws its rows
+      Expected: "2"
+      Error: element(s) not found          ← the lost run's refusal, drawn again
+
+$ # the same area for every run of the same query
+  ✘ a run lost to a dropped connection says so, and "Try again" draws its rows
+      Expected: "2"
+      Error: element(s) not found          ← a failed area has nothing left to hear the rows`
+			},
+			{
+				type: 'p',
+				text: 'The last two hold answers back. One presses Run on the query already on screen and expects a request, “Running…” and `aria-busy` while it waits, and the old rows kept up until the new ones land. The other lets two runs’ answers go at once and expects the second one’s rows — the test that froze on the key made from `query`.'
+			},
+			code('e2e/explore.e2e.ts', 547, 578),
+			code('e2e/explore.e2e.ts', 580, 604),
+			{
+				type: 'terminal',
+				code: `
+$ # Run on the query already on screen, with no refresh()
+  ✘ Run asks the server again for the query already on screen, and says it is running
+      page.waitForRequest: Test timeout of 30000ms exceeded.    ← nothing was asked
+
+$ # the results area keyed on \`query\`
+  ✘ two runs in flight at once end on the answer to the second
+      Expected: "2"
+      Received: "5"`
+			},
 
 			{
 				type: 'checkpoint',
@@ -528,11 +738,17 @@ $ pnpm exec playwright test e2e/explore.e2e.ts -g 'refuses is explained'
 					'Your rule form works with JavaScript disabled.',
 					'An invalid rule shows a message beside the field rather than an error page.',
 					'A toggle the server refuses goes back to how it was and says why.',
-					'A query the server refuses is explained where its rows would be, with the editor still there.'
+					'A query the server refuses is explained where its rows would be, with the editor still there.',
+					'A link to a refused query opens the explore page with the reason, the editor and a 400, even with JavaScript off.',
+					'The traces, a trace and the alert rules are in the server’s HTML, not “Loading…”.',
+					'Run asks the server every time, and says “Running…” until the answer is drawn.',
+					'“Try again” after a dropped connection draws the rows, and leaves the keyboard on them.',
+					'Two runs pressed in quick succession end on the answer to the second.'
 				]
 			}
 		]
 	},
+
 
 	{
 		slug: 'the-read-api',
@@ -573,7 +789,7 @@ GET /api/v1/query?q=from%20logs%20%7C%20where%20user_id%20%3D%3D%20%22u_8123%22�
 				type: 'p',
 				text: '`POST` fixes all three and then lies about the semantics. It tells every cache and every retry policy that this request *changes something*: nothing may cache it, and a well-behaved client library will refuse to retry it on a timeout — which for a read is the one case where retrying is obviously safe.'
 			},
-			code('src/routes/api/v1/query/+server.ts', 230, 233),
+			code('src/routes/api/v1/query/+server.ts', 229, 232),
 			{
 				type: 'p',
 				text: '`QUERY` — which SvelteKit 3 added to `+server` handlers — is the method that means "a read, with a body". Safe and idempotent like `GET`, a body like `POST`. Exporting it is the same one-line shape as exporting `GET`, because it is just another method handler; what is new is that the router recognises the name.'
@@ -585,10 +801,10 @@ GET /api/v1/query?q=from%20logs%20%7C%20where%20user_id%20%3D%3D%20%22u_8123%22�
 			},
 
 			{ type: 'h3', id: 'the-body', text: 'The body, in the vocabulary the interface already uses' },
-			code('src/routes/api/v1/query/+server.ts', 56, 92),
+			code('src/routes/api/v1/query/+server.ts', 56, 91),
 			{
 				type: 'p',
-				text: 'The `_` in `_RequestSchema` is a SvelteKit convention rather than a style choice — it is what lets a `+server.ts` export something that is not a route handler. The chapter on verifying it explains the escape hatch where the test that reaches through it lives; here the schema itself is the point.'
+				text: 'The `_` in `_RequestSchema` is a SvelteKit convention rather than a style choice — it is what lets a `+server.ts` export something that is not a route handler. Chapter 46 shows the test that imports it, in the file beside this one; here the schema itself is the point.'
 			},
 			{
 				type: 'p',
@@ -600,7 +816,7 @@ GET /api/v1/query?q=from%20logs%20%7C%20where%20user_id%20%3D%3D%20%22u_8123%22�
 			},
 
 			{ type: 'h3', id: 'the-scope', text: 'The scope, finally load-bearing' },
-			code('src/routes/api/v1/query/+server.ts', 94, 125, { partial: true }),
+			code('src/routes/api/v1/query/+server.ts', 93, 124, { partial: true }),
 			{
 				type: 'note',
 				text: '`Response.json(...)`, the platform\'s own, rather than `json(...)` from `@sveltejs/kit`. SvelteKit 3 deprecates its helper because the standard one does the same job — serialise, set `content-type: application/json` — and a handler written against `Request` and `Response` alone is one a reader can follow with the MDN page open and nothing else. The ingest route made the same change.'
@@ -615,14 +831,14 @@ GET /api/v1/query?q=from%20logs%20%7C%20where%20user_id%20%3D%3D%20%22u_8123%22�
 			},
 
 			{ type: 'h3', id: 'one-language', text: 'The same parser and the same checker' },
-			code('src/routes/api/v1/query/+server.ts', 148, 181),
+			code('src/routes/api/v1/query/+server.ts', 147, 180),
 			{
 				type: 'p',
 				text: 'Not a second, laxer path for machines. A query the interface refuses must be refused here too, or the two disagree about what the language *is* — and the API becomes the place people go to run the thing the product told them was wrong. The span comes back with the message so a client can underline exactly what the editor would.'
 			},
 
 			{ type: 'h3', id: 'the-response', text: 'What the response has to say out loud' },
-			code('src/routes/api/v1/query/+server.ts', 195, 227),
+			code('src/routes/api/v1/query/+server.ts', 194, 226),
 			{
 				type: 'p',
 				text: '`truncated` is in the payload rather than implied by the row count, because a machine cannot look at a banner. A script that pages by asking for a thousand rows and receiving a thousand has no way to distinguish "that is all of them" from "that is the first page" unless the response says so. `pushed` is the same courtesy about speed: it names which stages reached SQL, so a caller can tell a fast query from a slow one without timing it.'
@@ -712,7 +928,7 @@ allow: POST, QUERY                 ← QUERY is a real method handler`
 		slug: 'hooks',
 		title: 'Hooks: auth, security, `handleFetch`, `handleError` and `init`',
 		summary:
-			'Five hooks, what each is genuinely for, and the one that turns a broken deploy into a process that never claims to be healthy.',
+			'Five server hooks and one in the browser, what each is genuinely for, and the one that turns a broken deploy into a process that never claims to be healthy.',
 		goal: 'Wire the request lifecycle, and put each concern where it can only be applied once.',
 		blocks: [
 			code('src/hooks.server.ts', 1, 27),
@@ -777,6 +993,17 @@ $ grep -rl "/fonts/" .svelte-kit/output/client
 				text: 'SvelteKit distinguishes a 404, a thrown `error()`, a validation failure and something genuinely broken. Only the last is worth a log line and a correlation id — writing an id for every 404 buries the one that matters, which is the precise mechanism by which teams stop reading their own error logs.'
 			},
 
+			{ type: 'h3', id: 'handleerror-client', text: 'And `handleError` in the browser' },
+			{
+				type: 'p',
+				text: 'The same hook can live in `src/hooks.client.ts`, typed `HandleClientError`, and it sees what goes wrong in the browser: a render that throws, and a remote call that fails before any server could shape the error. That second case is the one this project needed it for. Drop the connection and press Run, and the explore page used to say “Internal Error”. The query never reached the server, and the sentence blamed it anyway — SvelteKit’s default for `kind: \'unknown\'` is a 500 that reads exactly that.'
+			},
+			code('src/hooks.client.ts', 11, 46),
+			{
+				type: 'p',
+				text: 'A failed `fetch` rejects with a `TypeError`, and so does a bug, so the check reads the message as well, and the three browser engines each have one wording for “no response at all”. Anything it does not recognise passes through to SvelteKit’s default, and a refusal the server already shaped never reaches this hook: “errors that were already transformed by the server-side hook are not passed to the client-side hook a second time”. Chapter 39 has the test, which cuts the connection under a live page and then lets “Try again” put it right.'
+			},
+
 			{ type: 'h3', id: 'init', text: '`init`, and an honest limitation' },
 			code('src/hooks.server.ts', 185, 219, { partial: true }),
 			{
@@ -794,7 +1021,8 @@ $ grep -rl "/fonts/" .svelte-kit/output/client
 				items: [
 					'Every authenticated response carries `Vary: Cookie`.',
 					'A server-side `fetch` that hangs is cut off rather than hanging the request.',
-					'A broken database means the process never starts.'
+					'A broken database means the process never starts.',
+					'A query lost to a dropped connection says that, not “Internal Error”.'
 				]
 			}
 		]

@@ -32,8 +32,9 @@ const hydrated = (page: Page) => page.locator('html[data-hydrated]');
 
 /*
  * Every workspace page, because they differ in the one way that matters here.
- * Three have a top-level `await` and one does not, and the first version of the
- * marker only ever appeared on the one that did not.
+ * Three await a query while they hydrate, with no `pending` snippet to stand in
+ * for it, and one does not — and the first version of the marker only ever
+ * appeared on the one that did not.
  */
 for (const path of ['/demo/explore', '/demo/traces', '/demo/alerts', '/demo/settings']) {
 	test(`${path} says when it has hydrated, and not before`, async ({ page }) => {

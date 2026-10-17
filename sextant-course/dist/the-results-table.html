@@ -39,7 +39,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/components/ResultTable.svelte<span class="code__lines">:7-18</span></span>
+		<span class="code__file">src/lib/components/ResultTable.svelte<span class="code__lines">:9-20</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/**
@@ -60,7 +60,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/components/ResultTable.svelte<span class="code__lines">:68-90</span></span>
+		<span class="code__file">src/lib/components/ResultTable.svelte<span class="code__lines">:78-100</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/**
@@ -92,7 +92,7 @@ function measure(index: number): Attachment&lt;HTMLElement&gt; {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/components/ResultTable.svelte<span class="code__lines">:159-175</span></span>
+		<span class="code__file">src/lib/components/ResultTable.svelte<span class="code__lines">:173-189</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;!--
@@ -114,11 +114,34 @@ function measure(index: number): Attachment&lt;HTMLElement&gt; {
 	{#each virtualizer.visible as slot (slot.index)}</code></pre>
 </figure>
 <p>A virtualized table renders a window of rows, so a screen reader that counted the DOM would announce &quot;row 3 of 12&quot; while the person is at row 4,000 of 100,000. <code>aria-rowcount</code> on the grid and <code>aria-rowindex</code> on each row tell it the truth — and are the reason a virtualizer does not have to choose between being usable and being fast.</p>
+<h3 id="server-rows">Rows the server can draw</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/ResultTable.svelte<span class="code__lines">:35-47</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/*
+ * Counted from the rows it starts with, and given a screen's height to fill,
+ * so that the first window is drawn before any effect has run — which on the
+ * server is never. Without both, the server sent the header, the footer and
+ * no rows at all, and a shared link opened on an empty table until the
+ * JavaScript arrived.
+ */
+const virtualizer = new Virtualizer({ estimate: 26, overscan: 4, viewport: 640 });
+virtualizer.count = untrack(() =&gt; rows.length);
+
+let container = $state&lt;HTMLElement | null&gt;(null);
+/** How many rows there were last time, so an insertion at the top can be anchored. */
+let previousCount = virtualizer.count;</code></pre>
+</figure>
+<p>A virtualizer learns which rows to draw from two things the server does not have: an effect that tells it how many rows there are, and a measurement of the scrolling container. Effects “only run in the browser, not during server-side rendering”, and nothing can be measured there either, so the server used to draw the grid’s header and footer around no rows at all — and the end-to-end test that said “the first paint already has rows, from the server” passed anyway, because it left JavaScript on and the browser drew them.</p>
+<p>So the count is set from the rows the table starts with, and the virtualizer is told what viewport height to assume until it can measure one. The browser starts from the same two numbers, so hydration finds the rows the server drew, and the attachment that measures the container corrects the window straight after. The count is read inside <code>untrack</code>, which says on the page what is true of any <code>$props</code> read at the top of a script: this is the starting value, and the <code>$effect</code> below is what follows the rows from here. The test now turns JavaScript off.</p>
 <h3 id="formatting">Format by value, not by column name</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/components/ResultTable.svelte<span class="code__lines">:104-127</span></span>
+		<span class="code__file">src/lib/components/ResultTable.svelte<span class="code__lines">:114-141</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/**
@@ -129,11 +152,15 @@ function measure(index: number): Attachment&lt;HTMLElement&gt; {
  * off the name would format the first and miss the other two, which is exactly
  * the case where a raw number is least readable.
  */
-function classOf(column: string, value: Value): string {
-	if (column === 'level') return `cell cell--level level--${String(value)}`;
-	if (typeof value === 'number') return 'cell cell--number';
-	if (value === null) return 'cell cell--null';
-	return 'cell';
+function classOf(column: string, value: Value): ClassValue {
+	return [
+		'cell',
+		{
+			'cell--level': column === 'level',
+			'cell--number': typeof value === 'number',
+			'cell--null': value === null
+		}
+	];
 }
 
 function render(column: string, value: Value): string {
@@ -148,11 +175,35 @@ function render(column: string, value: Value): string {
 </figure>
 <p>A column called <code>duration</code> is a duration; so is <code>p95</code> from <code>percentile(duration, 95)</code>, and <code>slowest</code> from <code>max(duration)</code>. Keying off the name formats the first and misses the other two — which is exactly the case where a raw number is least readable.</p>
 <p>The heuristic that follows is honest about being one. The evaluator knows each column’s SQF type and this component does not, because the result crosses the wire as plain rows; threading the type through would be the correct fix and would mean the result shape carries a schema.</p>
+<h3 id="class-values">A class made of values, not of strings</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/ResultTable.svelte<span class="code__lines">:207-220</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">{#each columns as column (column)}
+	{const value = $derived(row[column] ?? null)}
+	&lt;!--
+		The level itself is an attribute, and the stylesheet picks its colour:
+		a value from the data names no class, so none is built from it.
+	--&gt;
+	&lt;div
+		class={classOf(column, value)}
+		data-level={column === 'level' ? String(value) : undefined}
+		role=&quot;gridcell&quot;
+	&gt;
+		{render(column, value)}
+	&lt;/div&gt;
+{/each}</code></pre>
+</figure>
+<p><code>classOf</code> returns an array with an object in it: the keys are class names, and each value says whether its class applies. “Since Svelte 5.16, <code>class</code> can be an object or array, and is converted to a string using clsx”, and <code>ClassValue</code> from <code>svelte/elements</code> is its type. The documentation is plain about the older directive: “Unless you’re using an older version of Svelte, consider avoiding <code>class:</code>, since the attribute is more powerful and composable.” This project uses the one form everywhere, from the selected row in this table to the error bars in the flame graph, so there is one idiom to read rather than two.</p>
+<p>The level is different, because it is a value from the data rather than a switch. Building <code>level--${value}</code> into a class would hand the stylesheet a name made at run time from whatever the logs said. <code>data-level</code> states the value, and <code>.cell[data-level='error']</code> decides which values get a colour; a level nobody styled is simply plain text. The query editor colours its tokens the same way.</p>
 <h3 id="truncation">Truncation, said plainly</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/components/ResultTable.svelte<span class="code__lines">:206-219</span></span>
+		<span class="code__file">src/lib/components/ResultTable.svelte<span class="code__lines">:228-241</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">{#if truncated}
@@ -175,7 +226,7 @@ function render(column: string, value: Value): string {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/components/ResultTable.svelte<span class="code__lines">:234-247</span></span>
+		<span class="code__file">src/lib/components/ResultTable.svelte<span class="code__lines">:256-269</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/*

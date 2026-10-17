@@ -68,7 +68,6 @@
 	let caret = $state(0);
 
 	let open = $state(false);
-	let active = $state(0);
 	let popupAt = $state({ x: 0, y: 0 });
 
 	const chunks = $derived(highlight(value));
@@ -108,10 +107,19 @@
 		return completionsAt(value, caret, catalogue);
 	});
 
-	/** Keep the highlighted item in range when the list shrinks under it. */
-	$effect(() => {
-		if (active >= suggestions.items.length) active = 0;
-	});
+	/**
+	 * Which suggestion is highlighted: the first whenever the list changes —
+	 * `-1`, none, while it is empty — and wherever the arrow keys move it in
+	 * between.
+	 *
+	 * A `$derived` that the arrow keys overwrite, rather than `$state` that an
+	 * `$effect` kept in range. Deriveds can be reassigned since Svelte 5.25, and
+	 * the documentation names the effect version as the thing not to do: an
+	 * effect that synchronises state runs after the change, so for a moment the
+	 * highlight pointed past the end of a list that had just shrunk. A derived is
+	 * recomputed from the list it indexes before anything reads it.
+	 */
+	let active = $derived(suggestions.items.length > 0 ? 0 : -1);
 
 	/**
 	 * Where to draw the popup.
@@ -170,7 +178,6 @@
 			event.preventDefault();
 			sync();
 			open = true;
-			active = 0;
 			return;
 		}
 
@@ -218,7 +225,6 @@
 		// Opened by typing, never closed by it: somebody who dismissed the popup with
 		// Escape and kept typing does not want it back on the next character.
 		if (!open) open = true;
-		active = 0;
 	}
 
 	/** Put the caret on a problem, so clicking the message goes to the mistake. */
@@ -231,7 +237,7 @@
 </script>
 
 <div class="editor">
-	<div class="editor__box" class:editor__box--invalid={problems.length > 0}>
+	<div class={['editor__box', { 'editor__box--invalid': problems.length > 0 }]}>
 		<!--
 			Layer 1: the error underlay.
 
@@ -254,9 +260,11 @@
 			line that does not exist yet.
 		-->
 		<pre class="layer layer--code" aria-hidden="true">{#each parts[0] as chunk, i (i)}<span
-					class="tok tok--{chunk.category}">{chunk.text}</span
+					class="tok"
+					data-category={chunk.category}>{chunk.text}</span
 				>{/each}<span class="anchor" bind:this={anchor}></span>{#each parts[1] as chunk, i (i)}<span
-					class="tok tok--{chunk.category}">{chunk.text}</span
+					class="tok"
+					data-category={chunk.category}>{chunk.text}</span
 				>{/each}<br /></pre>
 
 		<!--
@@ -310,13 +318,12 @@
 				{#each suggestions.items.slice(0, 12) as item, index (item.kind + item.label)}
 					<li
 						id="sqf-completion-{index}"
-						class="option"
-						class:option--active={index === active}
+						class={['option', { 'option--active': index === active }]}
 						role="option"
 						aria-selected={index === active}
 					>
 						<button type="button" tabindex="-1" onclick={() => accept(item)}>
-							<span class="option__kind option__kind--{item.kind}" aria-hidden="true"
+							<span class="option__kind" data-kind={item.kind} aria-hidden="true"
 								>{item.kind[0]}</span
 							>
 							<span class="option__label">{item.label}</span>
@@ -460,28 +467,36 @@
 		width: 0;
 	}
 
-	/* ---- Token colours ------------------------------------------------ */
+	/*
+	 * ---- Token colours ------------------------------------------------
+	 *
+	 * Selected on `data-category`, not on a class made from it. A token's
+	 * category is data — what the lexer decided — rather than a modifier
+	 * somebody switches on, so the markup states the value and the stylesheet
+	 * decides which values get a colour. Nothing assembles a class name from a
+	 * string, and a category with no rule here is simply plain text.
+	 */
 
-	.tok--keyword {
+	.tok[data-category='keyword'] {
 		color: var(--accent);
 		font-weight: var(--weight-semibold);
 	}
 
-	.tok--function {
+	.tok[data-category='function'] {
 		color: var(--info);
 	}
 
-	.tok--string {
+	.tok[data-category='string'] {
 		color: var(--ok);
 	}
 
-	.tok--number,
-	.tok--duration {
+	.tok[data-category='number'],
+	.tok[data-category='duration'] {
 		color: var(--warn);
 	}
 
-	.tok--operator,
-	.tok--punctuation {
+	.tok[data-category='operator'],
+	.tok[data-category='punctuation'] {
 		color: var(--text-muted);
 	}
 
@@ -537,17 +552,17 @@
 		color: var(--text-faint);
 	}
 
-	.option__kind--column {
+	.option__kind[data-kind='column'] {
 		color: var(--accent);
 	}
-	.option__kind--function {
+	.option__kind[data-kind='function'] {
 		color: var(--info);
 	}
-	.option__kind--stage,
-	.option__kind--source {
+	.option__kind[data-kind='stage'],
+	.option__kind[data-kind='source'] {
 		color: var(--warn);
 	}
-	.option__kind--value {
+	.option__kind[data-kind='value'] {
 		color: var(--ok);
 	}
 

@@ -1,5 +1,7 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import type { Attachment } from 'svelte/attachments';
+	import type { ClassValue } from 'svelte/elements';
 	import type { Row, Value } from '#lib/sqf/value.ts';
 	import { formatDuration, formatTimestamp, type Resolved } from '#lib/time/range.ts';
 	import { Virtualizer } from './Virtualizer.svelte.ts';
@@ -30,11 +32,19 @@
 
 	let { columns, rows, range, truncated = false, onselect, selected = null }: Props = $props();
 
-	const virtualizer = new Virtualizer({ estimate: 26, overscan: 4 });
+	/*
+	 * Counted from the rows it starts with, and given a screen's height to fill,
+	 * so that the first window is drawn before any effect has run — which on the
+	 * server is never. Without both, the server sent the header, the footer and
+	 * no rows at all, and a shared link opened on an empty table until the
+	 * JavaScript arrived.
+	 */
+	const virtualizer = new Virtualizer({ estimate: 26, overscan: 4, viewport: 640 });
+	virtualizer.count = untrack(() => rows.length);
 
 	let container = $state<HTMLElement | null>(null);
 	/** How many rows there were last time, so an insertion at the top can be anchored. */
-	let previousCount = 0;
+	let previousCount = virtualizer.count;
 
 	$effect(() => {
 		/*
@@ -109,11 +119,15 @@
 	 * off the name would format the first and miss the other two, which is exactly
 	 * the case where a raw number is least readable.
 	 */
-	function classOf(column: string, value: Value): string {
-		if (column === 'level') return `cell cell--level level--${String(value)}`;
-		if (typeof value === 'number') return 'cell cell--number';
-		if (value === null) return 'cell cell--null';
-		return 'cell';
+	function classOf(column: string, value: Value): ClassValue {
+		return [
+			'cell',
+			{
+				'cell--level': column === 'level',
+				'cell--number': typeof value === 'number',
+				'cell--null': value === null
+			}
+		];
 	}
 
 	function render(column: string, value: Value): string {
@@ -176,8 +190,7 @@
 					{const row = $derived(rows[slot.index])}
 					{#if row}
 						<div
-							class="tr"
-							class:tr--selected={selected === slot.index}
+							class={['tr', { 'tr--selected': selected === slot.index }]}
 							role="row"
 							aria-rowindex={slot.index + 1}
 							tabindex={0}
@@ -192,8 +205,17 @@
 							{@attach measure(slot.index)}
 						>
 							{#each columns as column (column)}
-								<div class={classOf(column, row[column] ?? null)} role="gridcell">
-									{render(column, row[column] ?? null)}
+								{const value = $derived(row[column] ?? null)}
+								<!--
+									The level itself is an attribute, and the stylesheet picks its colour:
+									a value from the data names no class, so none is built from it.
+								-->
+								<div
+									class={classOf(column, value)}
+									data-level={column === 'level' ? String(value) : undefined}
+									role="gridcell"
+								>
+									{render(column, value)}
 								</div>
 							{/each}
 						</div>
@@ -328,19 +350,19 @@
 		letter-spacing: 0.04em;
 	}
 
-	.level--debug {
+	.cell[data-level='debug'] {
 		color: var(--level-debug);
 	}
-	.level--info {
+	.cell[data-level='info'] {
 		color: var(--level-info);
 	}
-	.level--warn {
+	.cell[data-level='warn'] {
 		color: var(--level-warn);
 	}
-	.level--error {
+	.cell[data-level='error'] {
 		color: var(--level-error);
 	}
-	.level--fatal {
+	.cell[data-level='fatal'] {
 		color: var(--level-fatal);
 	}
 

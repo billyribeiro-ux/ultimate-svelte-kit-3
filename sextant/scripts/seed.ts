@@ -32,16 +32,19 @@
  */
 
 /*
- * `.env` is for a developer's machine; CI and `prepare-e2e-db.js` put the
- * variables straight into the environment and have no file to load. Only its
- * absence is tolerated — a malformed `.env` is still an error worth seeing.
+ * `.env` is loaded by Node, before this module or anything it imports has run:
+ * `pnpm db:seed` is `node --env-file-if-exists=.env scripts/seed.ts`.
+ *
+ * Not by a `process.loadEnvFile('.env')` at the top of this file, which is
+ * where it used to be. `import` declarations are hoisted: every imported module
+ * is evaluated before the first line of this one, so the call ran after them
+ * however high it was written, and worked only because none of them happens to
+ * read `process.env` as it loads. The flag puts the order where it looks.
+ *
+ * `-if-exists`, because the file is for a developer's machine. CI and
+ * `prepare-e2e-db.js` put the variables straight into the environment and have
+ * no file to load, and a variable that is already set wins over the file.
  */
-try {
-	process.loadEnvFile('.env');
-} catch (cause) {
-	if ((cause as NodeJS.ErrnoException).code !== 'ENOENT') throw cause;
-}
-
 import { createClient } from '@libsql/client';
 import { drizzle } from 'drizzle-orm/libsql';
 import { eq } from 'drizzle-orm';

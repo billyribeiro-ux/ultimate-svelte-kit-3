@@ -39,7 +39,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/[tenant]/explore/+page.svelte<span class="code__lines">:267-310</span></span>
+		<span class="code__file">src/routes/[tenant]/explore/+page.svelte<span class="code__lines">:336-379</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/**
@@ -87,13 +87,13 @@ function openRow(index: number, row: Row | undefined): void {
 	}
 }</code></pre>
 </figure>
-<p><code>goto(url, { shallow: true, state })</code> adds a history entry — so the back button closes the drawer — without running a single <code>load</code> function. The results stay exactly as they were. SvelteKit 3 spells it this way instead of <code>pushState(url, state)</code> so that one function owns every change to the address bar, and so that the URL has to be one <code>resolve()</code> can vouch for.</p>
+<p><code>goto(url, { shallow: true, state })</code> adds a history entry — so the back button closes the drawer — without running a single <code>load</code> function. The results stay exactly as they were. SvelteKit 3 spells it this way instead of <code>pushState(url, state)</code> because shallow routing is now a navigation like any other: one function owns every change to the address bar, and the navigation hooks hear about this one too.</p>
 <p>And the URL it writes is a <strong>real page</strong>. Reloading lands on <code>/[tenant]/traces/[traceId]</code>, which renders the same two views at full size. That combination — shallow within a session, real when shared — is what shallow routing is for, and it is why the drawer is not simply a component with an <code>open</code> prop.</p>
 <h3 id="page-state">The drawer reads history, not a variable</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/[tenant]/explore/+page.svelte<span class="code__lines">:530-540</span></span>
+		<span class="code__file">src/routes/[tenant]/explore/+page.svelte<span class="code__lines">:644-654</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;!--
@@ -113,12 +113,10 @@ function openRow(index: number, row: Row | undefined): void {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/components/TraceDrawer.svelte<span class="code__lines">:44-51</span></span>
+		<span class="code__file">src/lib/components/TraceDrawer.svelte<span class="code__lines">:44-49</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">const assembled = $derived(await traceQuery({ tenant, traceId }));
-
-function close(): void {
+	<pre><code class="lang-svelte">function close(): void {
 	// `history.back()` and not a shallow `goto` to an empty state, because the
 	// drawer *was* opened with a push: going back removes that entry, where a
 	// second push would add another and make the back button reopen it.
@@ -126,11 +124,49 @@ function close(): void {
 }</code></pre>
 </figure>
 <p>Escape, the button, the backdrop and the back button all do the same thing: <code>history.back()</code>. Anything else leaves the history entry behind, so the back button reopens a drawer somebody just closed.</p>
+<h3 id="focus">Focus in, and focus back</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/TraceDrawer.svelte<span class="code__lines">:51-73</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/**
+ * Focus the panel when it opens, and put focus back when it closes.
+ *
+ * A dialog that opens without moving focus leaves a screen reader reading the
+ * page behind it, and leaves a keyboard user tabbing through the results table
+ * that is now covered. It is the minimum: Tab can still walk out of the panel
+ * into the page behind it, and stopping that would take `inert` on everything
+ * the drawer covers.
+ *
+ * An attachment, because this is about one element's time on the page: it
+ * runs when the panel is mounted, and what it returns runs when the panel is
+ * removed. A `bind:this` and an `$effect` said the same thing in two places.
+ * `document.activeElement` is typed `Element | null`, and `instanceof`
+ * narrows it where a cast would only have asserted what it was.
+ */
+const holdFocus: Attachment&lt;HTMLElement&gt; = (panel) =&gt; {
+	const previous = document.activeElement;
+	panel.focus();
+
+	return () =&gt; {
+		if (previous instanceof HTMLElement) previous.focus();
+	};
+};</code></pre>
+</figure>
+<p>A dialog that opens without moving focus leaves a screen reader reading the page behind it. The attachment focuses the panel as it is mounted, and the function it returns gives the focus back when the panel is removed — and because every way of closing ends with the panel removed, that one function covers all four.</p>
+
+<aside class="callout callout--why">
+	<h4>Why an attachment, and not <code>bind:this</code> with an <code>$effect</code></h4>
+	<p>Attachments “run in an effect when an element is mounted to the DOM”, and the function one returns is called “after the element is later removed from the DOM”. That is this behaviour exactly, said once, on the element it is about. The first version bound the panel to a variable and watched the variable from an effect — the same thing said in two places — and cast <code>document.activeElement</code> to <code>HTMLElement</code> so that it could call <code>focus()</code>. The property is typed <code>Element | null</code>, and <code>instanceof</code> narrows it where the cast only asserted.</p>
+</aside>
+<aside class="callout callout--note"><p>The comment is honest about what is missing. Tab can still leave the panel for the page behind it; keeping it in would take <code>inert</code> on everything the drawer covers.</p></aside>
 <h3 id="modifier-clicks">And a link that is still a link</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/components/TraceDrawer.svelte<span class="code__lines">:115-136</span></span>
+		<span class="code__file">src/lib/components/TraceDrawer.svelte<span class="code__lines">:119-140</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;!--
@@ -175,7 +211,7 @@ function close(): void {
  */
 import { resolve } from '$app/paths';</code></pre>
 </figure>
-<p><code>resolve('/[tenant]/traces/[traceId]', { tenant, traceId })</code> instead of a template string. The route id is a member of a union SvelteKit generates from <code>src/routes</code>, so a link to a page that was renamed is a type error rather than a 404 somebody finds a week later — and <code>eslint-plugin-svelte</code>'s <code>no-navigation-without-resolve</code> asks every <code>href</code> and every <code>goto</code> to go through it, for the same reason. The explore page imports it as <code>resolvePath</code>, because it already has a <code>resolve</code> of its own for time ranges, and two functions with one name are easier to read apart than to tell apart.</p>
+<p><code>resolve('/[tenant]/traces/[traceId]', { tenant, traceId })</code> instead of a template string. The route id is a member of a union SvelteKit generates from <code>src/routes</code>, so a link to a page that was renamed is a type error rather than a 404 somebody finds a week later — and <code>eslint-plugin-svelte</code>'s <code>no-navigation-without-resolve</code> asks every <code>href</code> and every <code>goto</code> to go through it, for the same reason. The explore page imports it as <code>resolvePath</code>, because it already has a <code>resolve</code> of its own for time ranges, and the alias means the two <code>resolve</code>s cannot be confused.</p>
 <h3 id="view-transitions">View transitions, in six lines and two guards</h3>
 
 <figure class="code">
@@ -238,7 +274,7 @@ onNavigate((navigation) =&gt; {
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>
-	<ul><li>Opening a trace changes the URL and does not re-run any load.</li><li>The back button closes the drawer and the results are still there.</li><li>Reloading the drawer’s URL lands on a full page.</li></ul>
+	<ul><li>Opening a trace changes the URL and does not re-run any load.</li><li>The back button closes the drawer and the results are still there.</li><li>Reloading the drawer’s URL lands on a full page.</li><li>Opening the drawer moves the focus into it, and closing it by any route puts the focus back.</li></ul>
 </aside>
 		</article>
 

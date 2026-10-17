@@ -205,11 +205,11 @@ if (!response.ok || !response.body) {
 	return;
 }</code></pre>
 </figure>
-<p>The tail used to ask for <code>text/event-stream</code> and nothing else, and that decided what a refusal looked like. SvelteKit answers an <code>error()</code> from an endpoint “with either a fallback error page or a JSON representation of the error object, depending on the request’s <code>Accept</code> headers”. A tail of a query that summarizes got the HTML page, <code>response.json()</code> could not read it, and “The tail could not start (400).” stood in for the server’s sentence every time. Accepting JSON as well changes nothing on success, because the stream is still a stream, and the refusal then arrives as <code>{ status, message }</code>.</p>
+<p>The tail used to ask for <code>text/event-stream</code> and nothing else, and that decided what a refusal looked like. SvelteKit answers an <code>error()</code> from an endpoint “with either a fallback error page or a JSON representation of the error object, depending on the request’s <code>Accept</code> headers”. A tail of a query with a <code>summarize</code> in it got the HTML page, <code>response.json()</code> could not read it, and “The tail could not start (400).” stood in for the server’s sentence every time. Accepting JSON as well changes nothing on success, because the stream is still a stream, and the refusal then arrives as <code>{ status, message }</code>.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">e2e/explore.e2e.ts<span class="code__lines">:377-391</span></span>
+		<span class="code__file">e2e/explore.e2e.ts<span class="code__lines">:606-620</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">test('a tail the server refuses says why', async ({ page }) =&gt; {

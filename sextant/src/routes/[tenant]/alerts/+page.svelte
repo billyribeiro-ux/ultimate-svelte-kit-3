@@ -7,11 +7,12 @@
 
 	let { data }: PageProps = $props();
 
+	/** One rule as the list query returns it, with its last evaluation. */
+	type Rule = Awaited<ReturnType<typeof rules>>[number];
+
 	/** The rule being edited, or `null` for the new-rule form. */
 	let editing = $state<string | null>(null);
 	let creating = $state(false);
-
-	const list = $derived(await rules({ tenant: data.tenant }));
 
 	/**
 	 * How stale an evaluation may be before it is worth saying so.
@@ -24,9 +25,12 @@
 		return evaluatedAt > 0 && now - evaluatedAt > intervalMs * 3;
 	}
 
-	function stateOf(rule: (typeof list)[number], now: number): { label: string; tone: string } {
-		if (!rule.enabled) return { label: 'Disabled', tone: '' };
-		if (rule.evaluatedAt === 0) return { label: 'Not yet evaluated', tone: '' };
+	/** The chip's word, and the tone class that colours it — none for a quiet state. */
+	type Tone = 'chip--ok' | 'chip--warn' | 'chip--danger' | null;
+
+	function stateOf(rule: Rule, now: number): { label: string; tone: Tone } {
+		if (!rule.enabled) return { label: 'Disabled', tone: null };
+		if (rule.evaluatedAt === 0) return { label: 'Not yet evaluated', tone: null };
 		if (stale(rule.evaluatedAt, rule.intervalMs, now)) {
 			return { label: 'Evaluation is behind', tone: 'chip--warn' };
 		}
@@ -89,7 +93,14 @@
 		{@render ruleForm(null)}
 	{/if}
 
+	<!--
+		The rules are awaited here, inside the boundary, and not in the script: in
+		the script the server waited for them and then drew a `pending` snippet in
+		their place. The traces page says why, and what the boundary does instead.
+	-->
 	<svelte:boundary>
+		{const list = $derived(await rules({ tenant: data.tenant }))}
+
 		{#if list.length === 0}
 			<p class="empty">
 				No rules yet. A rule runs a query on a schedule and fires when the first number it returns
@@ -111,7 +122,7 @@
 					{const remove = $derived(deleteRule.for(rule.id))}
 					<li class="rule">
 						<div class="rule__head">
-							<span class="chip {state.tone}">{state.label}</span>
+							<span class={['chip', state.tone]}>{state.label}</span>
 							<h2>{rule.name}</h2>
 
 							<div class="rule__actions">
@@ -201,10 +212,6 @@
 			</ul>
 		{/if}
 
-		{#snippet pending()}
-			<p class="empty" role="status">Loading rules…</p>
-		{/snippet}
-
 		<!-- An `App.Error`, not an `HttpError`, unlike the toggle's rejection above. -->
 		{#snippet failed(error)}
 			<p class="empty" role="alert">{(error as App.Error).message}</p>
@@ -219,7 +226,7 @@
 	only difference between them is a hidden `id`, which is exactly what the server
 	branches on.
 -->
-{#snippet ruleForm(rule: (typeof list)[number] | null)}
+{#snippet ruleForm(rule: Rule | null)}
 	{const save = $derived(saveRule.for(rule?.id ?? 'new'))}
 	<!--
 		EVERY FIELD COMES FROM `save.fields`, NOT FROM A `name` ATTRIBUTE.

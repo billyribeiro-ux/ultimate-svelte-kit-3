@@ -142,26 +142,26 @@ write status AND outbox row in one transaction; a worker delivers
 			code('src/routes/[tenant]/settings/+page.svelte', 12, 14),
 			{
 				type: 'p',
-				text: 'The explore page has the other server-rendered field somebody types into, the name a view is saved under, and asks for the same thing. Its script has a top-level `await`, and the call goes after it, because code after a top-level `await` still runs before the template, and later is better here: it reads whatever was typed while the `await` was waiting too.'
+				text: 'The explore page has the other server-rendered field somebody types into, the name a view is saved under, and asks for the same thing from the same place: its script, which runs before the template is hydrated.'
 			},
-			code('src/routes/[tenant]/explore/+page.svelte', 175, 178),
+			code('src/routes/[tenant]/explore/+page.svelte', 238, 241),
 			{
 				type: 'warn',
 				text: 'The select is the worse half. An emptied name at least stops the form; a `read` scope chosen before hydration comes back as `ingest` and submits perfectly happily — a key that cannot do the one thing it was made for, and nothing on the screen to say so.'
 			},
 
 			{ type: 'h3', id: 'seeing-hydration', text: 'A test that has to see hydration happen' },
-			code('src/routes/+layout.svelte', 68, 87),
+			code('src/routes/+layout.svelte', 68, 88),
 			{
 				type: 'p',
-				text: 'The obvious hook was the wrong one. An `afterNavigate` of type `enter` is SvelteKit’s own word for “the app has hydrated”, and the first version of this marker used it. The marker then appeared on the settings page and on no other page. `enter` goes out once, a moment after hydration starts, to whichever callbacks are registered by then. `afterNavigate` registers in `onMount`, and on a page with a top-level `await` the layout does not mount until that `await` has resolved. `onMount` has no event to miss. So the marker has a test of its own, on all four workspace pages, checking both sides: absent while the bundle is held, present once it is let through.'
+				text: 'The obvious hook was the wrong one. An `afterNavigate` of type `enter` is SvelteKit’s own word for “the app has hydrated”, and the first version of this marker used it. The marker then appeared on the settings page and on no other. `enter` goes out once, a moment after hydration starts, to whichever callbacks are registered by then. `afterNavigate` registers in `onMount`, and on a page that awaits a query as it hydrates, with no `pending` snippet to stand in for it, the layout does not mount until that `await` has resolved. Three of the four workspace pages do, and the marker never appeared on them. `onMount` has no event to miss. So the marker has a test of its own, on all four workspace pages, checking both sides: absent while the bundle is held, present once it is let through.'
 			},
-			code('e2e/hydration.e2e.ts', 33, 48),
+			code('e2e/hydration.e2e.ts', 33, 49),
 			{
 				type: 'p',
 				text: 'The form test holds the client bundle back, types and chooses while the page is only the server’s HTML, then lets the bundle through. It checks the marker on both sides — absent while it types, so it cannot accidentally type after hydration and prove nothing; present before it looks, so it cannot pass by looking before hydration had a chance to throw anything away — and then reads the key list the form’s own refresh brought back, so the scope it finds is the one the server stored. Its twin on the explore page saves a view and finds it listed under the name typed early.'
 			},
-			code('e2e/hydration.e2e.ts', 50, 77),
+			code('e2e/hydration.e2e.ts', 51, 78),
 
 			{ type: 'h3', id: 'a-list-that-redraws', text: 'A list that redraws without a reload' },
 			{
@@ -279,41 +279,45 @@ $ pnpm exec playwright test e2e/settings.e2e.ts -g 'cannot load'
 			'Uniform random data makes every screen look the same and every one of them look wrong. This generates an incident.',
 		goal: 'Produce demo data where every view has something to show, identically on every machine.',
 		blocks: [
-			code('scripts/seed.ts', 1, 30),
+			code('scripts/seed.ts', 1, 32),
 			{
 				type: 'p',
 				text: 'None of the interesting behaviour in this product is reachable from random input: the percentile that moves, the flame graph with one fat bar, the alert that pends and then fires. A generator that emits noise produces a latency chart that is flat noise and a trace where every span is the same length.'
 			},
 
 			{ type: 'h3', id: 'the-story', text: 'A normal afternoon, and twenty minutes that are not' },
-			code('scripts/seed.ts', 174, 201, { partial: true }),
+			code('scripts/seed.ts', 197, 260, { partial: true }),
 			{
 				type: 'p',
-				text: 'Traces are generated as **trees** rather than as independent spans, because the viewer’s whole job is to reassemble a tree — and data that was never a tree would let a broken assembler pass every test you thought to write.'
+				text: 'Traces are generated as **trees** rather than as independent spans, because the viewer’s whole job is to reassemble a tree — and data that was never a tree would let a broken assembler pass every test you thought to write. Every four seconds of the six hours, a few requests arrive at the gateway, which calls checkout, which calls payments and inventory; inside the incident window more than half of the payment calls take seconds instead of milliseconds, and the spans above them carry the error.'
 			},
+			code('scripts/seed.ts', 93, 96),
 			{
 				type: 'p',
 				text: 'The latency is log-normal-ish rather than uniform, because real latency is never symmetric: mostly fast, with a tail. A uniform generator produces a p50 and a p99 that are close together, which is the one thing latency never is.'
 			},
 
 			{ type: 'h3', id: 'determinism', text: 'Seeded, so the demo is the same demo' },
-			code('scripts/seed.ts', 70, 88),
+			code('scripts/seed.ts', 73, 91),
 			{
 				type: 'p',
 				text: 'A fixed seed matters more than it sounds: a screenshot in the documentation stays true, and an end-to-end test can assert on a specific trace. It is also what lets the seed plant **one deliberately incomplete trace at a known id**, which turns the orphan-handling path from a coin toss into something a test can name.'
 			},
-			code('scripts/seed.ts', 310, 325, { partial: true }),
+			code('scripts/seed.ts', 360, 401),
 
 			{ type: 'h3', id: 'plain-node', text: 'And why it runs under plain Node' },
-			code('scripts/seed.ts', 1, 29),
 			{
 				type: 'p',
-				text: 'The seed imports `schema.ts`, `keys.ts` and `auth.options.ts` — and deliberately not `db/index.ts` or `auth.ts`, which read `$app/env/*`. Those modules are generated by SvelteKit’s Vite plugin and do not exist outside it, so importing them would mean booting a Vite dev server to insert some rows.'
+				text: 'The seed imports `schema.ts`, `keys.ts` and `auth.options.ts` — and deliberately not `db/index.ts` or `auth.ts`, which read `$app/env/*`. Those modules are generated by SvelteKit’s Vite plugin and do not exist outside it, so importing them would mean booting a Vite dev server to insert some rows. The header above says so; the cost is that the seed reads its own environment.'
 			},
-			code('scripts/seed.ts', 34, 43),
+			code('scripts/seed.ts', 34, 58),
 			{
 				type: 'p',
-				text: 'And `.env` is optional, not assumed. `prepare-e2e-db.js` and a CI job put the variables straight into the environment and have no file to load, and the first version of this line — a bare `process.loadEnvFile(\'.env\')` — made the end-to-end database refuse to seed on any machine without one. Only the *absence* is tolerated: a malformed file is still an error worth seeing.'
+				text: 'Node reads `.env` for it: the `db:seed` script is `node --env-file-if-exists=.env scripts/seed.ts`. The file used to be loaded by a `process.loadEnvFile(\'.env\')` written above the `import` lines, as though it ran first, and it did not. `import` declarations are hoisted — every imported module is evaluated before the first line of the module that imports it — so the call ran after all of them, and the seed worked only because none of them happens to read `process.env` as it loads. A flag on the command puts the order where it looks.'
+			},
+			{
+				type: 'p',
+				text: 'And `.env` is optional, not assumed, which is what `-if-exists` says. `prepare-e2e-db.js` and a CI job put the variables straight into the environment and have no file to load, and a variable that is already set wins over the file. The very first version of the line, a bare `process.loadEnvFile(\'.env\')`, made the end-to-end database refuse to seed on any machine without one.'
 			},
 			{
 				type: 'why',
@@ -321,12 +325,13 @@ $ pnpm exec playwright test e2e/settings.e2e.ts -g 'cannot load'
 				text: 'The seed duplicates the *environment* — three lines reading `process.env` — and shares the *configuration*, which is one function in `auth.options.ts`. The alternative, configuring Better Auth a second time, works until the day the two disagree about the password minimum, at which point the seed produces an account the application rejects and the error says nothing about why.'
 			},
 
-			{ type: 'h3', id: 'chunking', text: 'One more thing the first version got wrong' },
-			code('scripts/seed.ts', 259, 270),
+			{ type: 'h3', id: 'chunking', text: 'Two more things the first version got wrong' },
+			code('scripts/seed.ts', 316, 335),
 			{
 				type: 'p',
 				text: 'SQLite has a hard limit on bound parameters in one statement, and a thousand rows of twelve columns is comfortably past it. The error is `too many SQL variables`, which is a much less obvious message than it should be.'
 			},
+			code('scripts/seed.ts', 102, 123),
 			{
 				type: 'p',
 				text: 'And the ids are seeded from a **counter** rather than from a timestamp. The first version used the span’s start time, which is unique most of the time — two requests in the same four-second tick can land on the same millisecond, and then their ids are identical and the insert dies on the unique index. That is also why they are OpenTelemetry-sized: 32 hex characters for a trace and 16 for a span. Shortening them to 8 for readability made the collision likely enough to hit at sixteen thousand spans.'
@@ -335,7 +340,7 @@ $ pnpm exec playwright test e2e/settings.e2e.ts -g 'cannot load'
 			{
 				type: 'checkpoint',
 				items: [
-					'`pnpm db:seed` twice produces byte-identical data.',
+					'`pnpm db:seed` twice produces the same traces, ids and incident, placed relative to when it ran.',
 					'Every view — table, chart, flame graph, waterfall, alerts — has something to show.',
 					'There is an incident in the data, and an alert that fires because of it.'
 				]
@@ -441,7 +446,7 @@ $ pnpm exec playwright test e2e/csp.e2e.ts
 		slug: 'verifying-it',
 		title: 'Verifying it, and the six bugs the tests found',
 		summary:
-			'337 unit tests, 123 end-to-end across two viewports, and the specific things each layer caught that the other could not.',
+			'337 unit tests, 149 end-to-end across two viewports, and the specific things each layer caught that the other could not.',
 		goal: 'Get to green, and understand what each kind of test is actually for.',
 		blocks: [
 			{
@@ -483,7 +488,7 @@ $ pnpm exec playwright test e2e/csp.e2e.ts
 			},
 			{
 				type: 'p',
-				text: 'A later audit of every error path found four more, by forcing each error under a live page and reading what reached the screen. Five `failed` snippets looked for the message where an `HttpError` keeps it, and always showed their fallback. The explore page’s results boundary never ran at all, because the values made from the result were `$derived`s in the script. The alert toggle’s refusal went unhandled. And the live tail asked for a stream alone and was answered with an HTML error page. Each has a test now that fails on the old code. Chapters 38, 39 and 43.'
+				text: 'A later audit of every error path found four more, by forcing each error under a live page and reading what reached the screen. Five `failed` snippets looked for the message where an `HttpError` keeps it, and always showed their fallback; a sixth, on the views list, did not look at the error at all. The explore page’s results boundary never ran at all, because the values made from the result were `$derived`s in the script — and the review of that fix found the query’s own `await` in the script as well, which still turned a link to a refused query into SvelteKit’s error page on the server. The alert toggle’s refusal went unhandled. And the live tail asked for a stream alone and was answered with an HTML error page. Each has a test now that fails on the old code: one per boundary, each forcing a real refusal, and one each for the toggle, the tail and the explore page. Chapters 38, 39 and 43.'
 			},
 			{
 				type: 'why',
@@ -546,7 +551,7 @@ $ npx vitest run src/routes/api/v1/query
 				type: 'terminal',
 				code: `
 $ node sextant-course/verify.js
-46 chapters · 256 blocks quoted from sextant/ by line range · 0 illustrative
+46 chapters · 276 blocks quoted from sextant/ by line range · 0 illustrative
 every range is inside its file, whole, and starts somewhere a reader can follow
 
 $ pnpm verify
@@ -554,7 +559,7 @@ $ pnpm verify
 ✓ eslint           clean
 ✓ vitest           337 passed
 ✓ vite build       done
-✓ playwright       123 passed, 4 skipped, 2 viewports`
+✓ playwright       149 passed, 4 skipped, 2 viewports`
 			},
 
 			{

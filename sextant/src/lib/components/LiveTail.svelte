@@ -185,7 +185,16 @@
 </script>
 
 <div class="tail" role="status">
-	<span class="tail__state tail__state--{status}">
+	<span
+		class={[
+			'tail__state',
+			{
+				'tail__state--live': status === 'live',
+				'tail__state--connecting': status === 'connecting',
+				'tail__state--error': status === 'error'
+			}
+		]}
+	>
 		{#if status === 'live'}Live{:else if status === 'connecting'}Connecting…{:else if status === 'error'}Stopped{:else}Paused{/if}
 	</span>
 

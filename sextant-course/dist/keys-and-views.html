@@ -320,14 +320,14 @@ function changedSinceRendered(
 // chosen while the bundle was still loading must survive it arriving.
 keepTyped(createKey.fields.name, createKey.fields.scopes);</code></pre>
 </figure>
-<p>The explore page has the other server-rendered field somebody types into, the name a view is saved under, and asks for the same thing. Its script has a top-level <code>await</code>, and the call goes after it, because code after a top-level <code>await</code> still runs before the template, and later is better here: it reads whatever was typed while the <code>await</code> was waiting too.</p>
+<p>The explore page has the other server-rendered field somebody types into, the name a view is saved under, and asks for the same thing from the same place: its script, which runs before the template is hydrated.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/[tenant]/explore/+page.svelte<span class="code__lines">:175-178</span></span>
+		<span class="code__file">src/routes/[tenant]/explore/+page.svelte<span class="code__lines">:238-241</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">// After that `await` and before the template: the last moment the server's
+	<pre><code class="lang-svelte">// From the script, which runs before the template is hydrated: the server's
 // controls are still on the page as somebody left them, so a view name typed
 // while the bundle loaded is read from them here and survives hydration.
 keepTyped(saveView.fields.name);</code></pre>
@@ -337,7 +337,7 @@ keepTyped(saveView.fields.name);</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/+layout.svelte<span class="code__lines">:68-87</span></span>
+		<span class="code__file">src/routes/+layout.svelte<span class="code__lines">:68-88</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/*
@@ -351,27 +351,29 @@ keepTyped(saveView.fields.name);</code></pre>
  * `onMount`, not an `afterNavigate` of type `enter`, although `enter` is
  * SvelteKit's own word for &quot;the app has hydrated&quot;. SvelteKit sends `enter`
  * once, a moment after it starts hydrating, and `afterNavigate` registers its
- * callback when the component mounts. On a page whose script has a top-level
- * `await` (explore, traces, alerts), the layout mounts only after that
- * `await` has resolved. By then `enter` has come and gone, and the attribute
- * never appeared. `onMount` has no event to miss: the layout mounting is
- * exactly the moment this is meant to mark.
+ * callback when the component mounts. A page that awaits a query outside any
+ * boundary with a `pending` snippet — explore, traces and alerts all do, in
+ * their markup now — holds the layout's mounting until that `await` has
+ * resolved. By then `enter` has come and gone, and the attribute never
+ * appeared. `onMount` has no event to miss: the layout mounting is exactly the
+ * moment this is meant to mark.
  */
 onMount(() =&gt; {
 	document.documentElement.dataset.hydrated = '';
 });</code></pre>
 </figure>
-<p>The obvious hook was the wrong one. An <code>afterNavigate</code> of type <code>enter</code> is SvelteKit’s own word for “the app has hydrated”, and the first version of this marker used it. The marker then appeared on the settings page and on no other page. <code>enter</code> goes out once, a moment after hydration starts, to whichever callbacks are registered by then. <code>afterNavigate</code> registers in <code>onMount</code>, and on a page with a top-level <code>await</code> the layout does not mount until that <code>await</code> has resolved. <code>onMount</code> has no event to miss. So the marker has a test of its own, on all four workspace pages, checking both sides: absent while the bundle is held, present once it is let through.</p>
+<p>The obvious hook was the wrong one. An <code>afterNavigate</code> of type <code>enter</code> is SvelteKit’s own word for “the app has hydrated”, and the first version of this marker used it. The marker then appeared on the settings page and on no other. <code>enter</code> goes out once, a moment after hydration starts, to whichever callbacks are registered by then. <code>afterNavigate</code> registers in <code>onMount</code>, and on a page that awaits a query as it hydrates, with no <code>pending</code> snippet to stand in for it, the layout does not mount until that <code>await</code> has resolved. Three of the four workspace pages do, and the marker never appeared on them. <code>onMount</code> has no event to miss. So the marker has a test of its own, on all four workspace pages, checking both sides: absent while the bundle is held, present once it is let through.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">e2e/hydration.e2e.ts<span class="code__lines">:33-48</span></span>
+		<span class="code__file">e2e/hydration.e2e.ts<span class="code__lines">:33-49</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/*
  * Every workspace page, because they differ in the one way that matters here.
- * Three have a top-level `await` and one does not, and the first version of the
- * marker only ever appeared on the one that did not.
+ * Three await a query while they hydrate, with no `pending` snippet to stand in
+ * for it, and one does not — and the first version of the marker only ever
+ * appeared on the one that did not.
  */
 for (const path of ['/demo/explore', '/demo/traces', '/demo/alerts', '/demo/settings']) {
 	test(`${path} says when it has hydrated, and not before`, async ({ page }) =&gt; {
@@ -389,7 +391,7 @@ for (const path of ['/demo/explore', '/demo/traces', '/demo/alerts', '/demo/sett
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">e2e/hydration.e2e.ts<span class="code__lines">:50-77</span></span>
+		<span class="code__file">e2e/hydration.e2e.ts<span class="code__lines">:51-78</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">test('a key typed before the page has hydrated is the key that is made', async ({ page }) =&gt; {

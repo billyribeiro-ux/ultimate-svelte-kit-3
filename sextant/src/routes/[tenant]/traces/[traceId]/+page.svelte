@@ -26,8 +26,6 @@
 	let { data }: PageProps = $props();
 
 	let selected = $state<string | null>(null);
-
-	const assembled = $derived(await traceQuery({ tenant: data.tenant, traceId: data.traceId }));
 </script>
 
 <svelte:head>
@@ -45,7 +43,14 @@
 		</a>
 	</header>
 
+	<!--
+		Awaited inside the boundary, with no `pending` snippet, for the reason the
+		traces page gives: the server renders the trace itself, or the reason it
+		could not, rather than "Loading the trace…" over a trace it already had.
+	-->
 	<svelte:boundary>
+		{const assembled = $derived(await traceQuery({ tenant: data.tenant, traceId: data.traceId }))}
+
 		{#if assembled}
 			<ul class="totals">
 				{#each serviceTotals(assembled) as total (total.service)}
@@ -63,10 +68,6 @@
 				No spans for this trace. They may still be arriving, or they may have aged out of retention.
 			</p>
 		{/if}
-
-		{#snippet pending()}
-			<p class="empty" role="status">Loading the trace…</p>
-		{/snippet}
 
 		<!-- An `App.Error`, not an `HttpError`: the server's words are on `message`. Why: the traces page. -->
 		{#snippet failed(error)}

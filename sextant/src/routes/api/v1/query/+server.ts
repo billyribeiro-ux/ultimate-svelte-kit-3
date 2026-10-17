@@ -60,8 +60,7 @@ import { DEFAULT_RANGE, resolve } from '#lib/time/range.ts';
  * `from..to` in epoch milliseconds — so a link copied out of the address bar
  * pastes straight into a script. Sharing the vocabulary is most of what makes an
  * API feel like the same product.
- */
-/**
+ *
  * `_`-prefixed, so it can be tested from the file next door.
  *
  * SvelteKit refuses unknown exports from a `+server.ts` — the list is the HTTP

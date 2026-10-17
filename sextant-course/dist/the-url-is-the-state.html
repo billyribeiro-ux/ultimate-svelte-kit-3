@@ -83,34 +83,46 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/state/workspace.svelte.ts<span class="code__lines">:46-70</span></span>
+		<span class="code__file">src/lib/state/workspace.svelte.ts<span class="code__lines">:114-150</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">	readonly range: string;
-	readonly view: View;
+	<pre><code class="lang-ts">constructor(init: WorkspaceInit, href: (search: string) =&gt; ResolvedPathname) {
+	this.#href = href;
+	this.params = new SvelteURLSearchParams();
+	this.params.set('q', init.q);
+	this.params.set('range', init.range);
+	this.params.set('view', init.view);
 }
 
-export const VIEWS = ['table', 'chart'] as const;
-export type View = (typeof VIEWS)[number];
+get q(): string {
+	return this.params.get('q') ?? '';
+}
 
-/**
- * How long to wait before writing to the address bar.
- *
- * Long enough that typing a query produces one history entry rather than forty,
- * short enough that copying the URL a moment after typing gets the current
- * query. 400ms is roughly the gap between words.
- *
- * This is the one debounce in the application, and it is here rather than around
- * the parser because *this* is the expensive side effect: `history.replaceState`
- * on every keystroke is what makes a browser's address bar stutter.
- */
-const SETTLE = 400;
+set q(value: string) {
+	this.params.set('q', value);
+}
 
-/** The three keys this workspace owns. Anything else in the URL is left alone. */
-const KEYS = ['q', 'range', 'view'] as const;
+get range(): string {
+	return this.params.get('range') || DEFAULT_RANGE;
+}
 
-/** `?a=b` and `a=b` are the same search string. Comparing them raw is a bug. */
-function normalise(search: string): string {</code></pre>
+set range(value: string) {
+	this.params.set('range', value);
+}
+
+get view(): View {
+	const value = this.params.get('view');
+	return VIEWS.includes(value as View) ? (value as View) : 'table';
+}
+
+set view(value: View) {
+	this.params.set('view', value);
+}
+
+/** The query string as it would appear in the address bar, without the `?`. */
+get search(): string {
+	return this.params.toString();
+}</code></pre>
 </figure>
 <aside class="callout callout--note"><p>A plain <code>URLSearchParams</code> in <code>$state</code> would need replacing wholesale on every edit to be reactive at all, and <code>.set()</code> on it would silently do nothing. This is the case the reactive built-ins exist for, and the mirror image of the virtualizer’s plain <code>Map</code> in chapter 28.</p></aside>
 <h3 id="the-bug">One marker cannot answer two questions</h3>
@@ -171,7 +183,7 @@ cause:  `adopt()` ended with `#synced = params.toString()`.
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/state/workspace.svelte.ts<span class="code__lines">:146-188</span></span>
+		<span class="code__file">src/lib/state/workspace.svelte.ts<span class="code__lines">:148-190</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">get search(): string {
@@ -223,7 +235,7 @@ adopt(search: string): void {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/state/workspace.svelte.ts<span class="code__lines">:228-266</span></span>
+		<span class="code__file">src/lib/state/workspace.svelte.ts<span class="code__lines">:230-268</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">#write(search: string): void {
@@ -266,11 +278,11 @@ adopt(search: string): void {
 	void goto(this.#href(search), { shallow: true, replace: true });
 }</code></pre>
 </figure>
-<p>SvelteKit 3 folded <code>pushState</code> and <code>replaceState</code> into <code>goto</code>. <code>shallow: true</code> means &quot;change the URL and <code>page.state</code>, run no <code>load</code>&quot;, and <code>replace: true</code> is the difference between one history entry per pause in typing and one per page. The old pair still exists, deprecated; the new spelling is better because *every* change to the address bar now goes through one function with one set of options — and because <code>goto</code> only accepts a URL that resolves to a route, which is where the next block comes in. (The early return in the middle has a section of its own, below.)</p>
+<p>SvelteKit 3 folded <code>pushState</code> and <code>replaceState</code> into <code>goto</code>. <code>shallow: true</code> means &quot;change the URL and <code>page.state</code>, run no <code>load</code>&quot;, and <code>replace: true</code> is the difference between one history entry per pause in typing and one per page. The migration guide gives the reasons, and they are about behaviour, not spelling: the old pair is deprecated, and “shallow routing now triggers navigation hooks” — <code>beforeNavigate</code>, <code>onNavigate</code> and <code>afterNavigate</code> run for a shallow <code>goto</code>, with <code>navigation.shallow</code> to tell them apart. Every change to the address bar now goes through one function with one set of options, <code>replace</code>, <code>state</code> and the new <code>persistState</code>, which reapplies <code>page.state</code> after a reload. (The early return in the middle has a section of its own, below.)</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/lib/state/workspace.svelte.ts<span class="code__lines">:101-118</span></span>
+		<span class="code__file">src/lib/state/workspace.svelte.ts<span class="code__lines">:101-112</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -278,21 +290,15 @@ adopt(search: string): void {
  *
  * This class knows the three keys and nothing about routes — that is what
  * lets it be tested without a router. The page knows its route id and calls
- * `resolve('/[tenant]/explore?…')` for it, which is also what keeps the
- * `goto` below typed: a `ResolvedPathname` is the proof that the URL points
- * at a route this app has.
+ * `resolve('/[tenant]/explore?…')` for it. `ResolvedPathname` is the type
+ * `resolve()` returns, so the type says where the string came from; the
+ * guarantee that every `goto` is handed one is `eslint-plugin-svelte`'s
+ * `no-navigation-without-resolve`. `goto` itself accepts any string, and
+ * rejects one that is no route only when it runs.
  */
-readonly #href: (search: string) =&gt; ResolvedPathname;
-
-constructor(init: WorkspaceInit, href: (search: string) =&gt; ResolvedPathname) {
-	this.#href = href;
-	this.params = new SvelteURLSearchParams();
-	this.params.set('q', init.q);
-	this.params.set('range', init.range);
-	this.params.set('view', init.view);
-}</code></pre>
+readonly #href: (search: string) =&gt; ResolvedPathname;</code></pre>
 </figure>
-<p>The class does not know its own route. The page hands it a function that turns a search string into a URL through <code>resolve()</code> from <code>$app/paths</code>, and the return type — <code>ResolvedPathname</code> — is the proof that the URL points at a route this app has. That is what keeps the <code>goto</code> typed, and what lets the class be tested with no router at all.</p>
+<p>The class does not know its own route, which is what lets it be tested with no router at all. The page hands it a function that turns a search string into a URL through <code>resolve()</code> from <code>$app/paths</code>, typed <code>ResolvedPathname</code>, the type <code>resolve()</code> returns. Be clear about what does the checking. <code>goto</code> accepts any string, and a URL that is no route is rejected only when the call runs — and the deprecated <code>pushState</code> rejects it in exactly the same way. What makes every <code>goto</code> in the project take a resolved path is the linter: <code>eslint-plugin-svelte</code>’s <code>no-navigation-without-resolve</code>, part of its recommended set, which chapter 36 comes back to.</p>
 <h3 id="settling-writes">A write that is still settling belongs to one entry</h3>
 <p>A debounced write is a promise made to the address bar 400ms ahead of time, and the entry it was made to is not always the one that is current when it comes due. The end-to-end suite found that out under load, in a test that had passed every time before.</p>
 
@@ -316,7 +322,7 @@ cause:  the write that adds `view=table` fired while the router was
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/[tenant]/explore/+page.svelte<span class="code__lines">:47-107</span></span>
+		<span class="code__file">src/routes/[tenant]/explore/+page.svelte<span class="code__lines">:52-112</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/*
@@ -390,12 +396,12 @@ $effect(() =&gt; {
 	<h4>Why the old <code>replaceState</code> did not race like this</h4>
 	<p>The deprecated function is still in SvelteKit 3, and for backwards compatibility it runs no navigation hooks and leaves the router’s in-flight navigation alone. <code>goto(url, { shallow: true })</code> is a navigation: it fires <code>beforeNavigate</code>, <code>onNavigate</code> and <code>afterNavigate</code> — the root layout’s view-transition guard depends on that — and it takes over whatever navigation the router is in the middle of. Going back to <code>replaceState</code> would only have changed the symptom. It would still have written the explore URL onto whichever entry was current: the drawer’s, or the trace page’s the moment the router had pushed it.</p>
 </aside>
-<aside class="callout callout--note"><p>The in-effect changed for the same reason. In SvelteKit 3 <code>page.url</code> keeps describing the page as it was *rendered*; the address bar after a shallow <code>goto</code> is <code>page.shallow.url</code>. Adopting <code>page.url</code> was harmless while writes could not be held back. Once they can, it would undo a zoom made just before a trace was opened: closing the drawer goes back to an entry that SvelteKit renders from the page’s first URL.</p></aside>
+<aside class="callout callout--note"><p>The effect that adopts the URL — the *In* effect in the block above — changed for the same reason. In SvelteKit 3 <code>page.url</code> keeps describing the page as it was *rendered*; the address bar after a shallow <code>goto</code> is <code>page.shallow.url</code>. Adopting <code>page.url</code> was harmless while writes could not be held back. Once they can, it would undo a zoom made just before a trace was opened: closing the drawer goes back to an entry that SvelteKit renders from the page’s first URL.</p></aside>
 <h3 id="holding-the-window">A test that holds the window open</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">e2e/explore.e2e.ts<span class="code__lines">:154-187</span></span>
+		<span class="code__file">e2e/explore.e2e.ts<span class="code__lines">:179-212</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/** Load the explore page, stop its clock, and leave a write waiting. Returns when the wait began. */
@@ -414,8 +420,8 @@ async function aWriteIsWaiting(page: Page): Promise&lt;number&gt; {
  * millisecond at a time.
  *
  * In async mode Svelte's `tick()` waits for a frame or a zero-length timeout,
- * and on a stopped clock neither ever comes, so the drawer would wait for its
- * data and then never paint. A millisecond a step lets those through and keeps
+ * and on a stopped clock neither ever comes, so a drawer whose opening waits on
+ * either would never paint. A millisecond a step lets those through and keeps
  * the clock nowhere near the debounce — which each test then checks.
  */
 async function openTheDrawer(page: Page): Promise&lt;void&gt; {
@@ -433,12 +439,12 @@ async function openTheDrawer(page: Page): Promise&lt;void&gt; {
 		.toBe(true);
 }</code></pre>
 </figure>
-<p>A race found under load is not proved fixed by a suite that passes under no load. These tests install Playwright’s clock and stop it once the page has written its URL out — which is also the proof that it hydrated, because only the client adds <code>view</code> — so &quot;a write is waiting&quot; is a fact the test arranged rather than a coincidence it hopes for. Each one checks that less than 400ms of page time has passed before the moment that matters, holds the next page’s request so its navigation is still in flight, then moves the clock past the debounce.</p>
+<p>A race found under load is not proved fixed by a suite that passes under no load. These tests install Playwright’s clock and stop it once the page has written its URL out — which is also the proof that it hydrated, because only the client adds <code>view</code> — so &quot;a write is waiting&quot; is a fact the test arranged rather than a coincidence it hopes for. Each one checks that less than 400ms of page time has passed before the moment that matters, then moves the clock past the debounce. Three of them also hold the next page’s request, so that its navigation is still in flight when the write comes due; the drawer’s test holds nothing, because what must keep the write back there is the drawer’s own URL, which stays in the address bar for as long as the drawer is open.</p>
 <p>There are four, two for each half of the claim. Two check that nothing is written where it must not be: onto the drawer’s entry, or into a navigation to another page, and that includes pressing Run, which skips the effect and leaves only the guard in <code>#write</code>. The other two check that what was held back is still written: when the drawer closes, and when the navigation comes back to this page. Each was run against the code without the rule it covers, and failed at the step it targets.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">e2e/explore.e2e.ts<span class="code__lines">:299-338</span></span>
+		<span class="code__file">e2e/explore.e2e.ts<span class="code__lines">:324-363</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">test('a write held back by a navigation to this same page is made once it lands', async ({

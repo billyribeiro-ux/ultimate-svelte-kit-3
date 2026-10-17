@@ -1,8 +1,9 @@
 <script lang="ts">
-	import { untrack } from 'svelte';
+	import { settled, tick, untrack } from 'svelte';
+	import type { Attachment } from 'svelte/attachments';
 	import { goto } from '$app/navigation';
 	// Aliased: this page already has a `resolve` — the time-range one, from
-	// `#lib/time/range.ts` — and the two are easier to read apart than to tell apart.
+	// `#lib/time/range.ts` — so the two `resolve`s cannot be confused.
 	import { resolve as resolvePath } from '$app/paths';
 	import { navigating, page } from '$app/state';
 	import type { PageProps, Snapshot } from './$types.js';
@@ -17,6 +18,7 @@
 	import { saveView } from '#lib/remote/settings.remote.ts';
 	import { SOURCES, type Source } from '#lib/sqf/ast.ts';
 	import type { Row } from '#lib/sqf/value.ts';
+	import { Streamed } from '#lib/reactivity/streamed.svelte.ts';
 	import { Workspace } from '#lib/state/workspace.svelte.ts';
 	import { resolve } from '#lib/time/range.ts';
 
@@ -110,111 +112,143 @@
 	});
 
 	/**
-	 * The query that has actually been *run*.
+	 * The run that is on screen: the query and range it asked for, and which
+	 * press of Run or "Try again" asked.
 	 *
 	 * Separate from `workspace.q`, and the separation is the point. Typing changes
 	 * the text; only pressing Run changes what is on screen. A query language with
 	 * a live-as-you-type result sounds delightful and means every half-finished
 	 * query — `from logs | where` — is sent to the server, and the results flicker
 	 * through nonsense on the way to what somebody meant.
+	 *
+	 * `run` is new for every press, even of the same query: see `ask` below.
 	 */
-	let submitted = $state(untrack(() => ({ q: data.q, range: data.range })));
+	let submitted = $state(untrack(() => ({ q: data.q, range: data.range, run: 0 })));
 
-	/** The query for the run that is on screen — the request, not its answer. */
+	/**
+	 * The query for the run that is on screen — the request, not its answer.
+	 *
+	 * Nothing in this script reads its answer, and that is what keeps a refusal
+	 * on this page. Where a refusal lands depends on where the answer is read.
+	 * In the browser, an awaited value that rejects throws wherever it is read:
+	 * read in the markup inside the results' boundary, it is caught there. A
+	 * `$derived` in this script that read it would throw too, and a `$derived`
+	 * reports what it throws to the boundary around where it is *declared* —
+	 * past the results, to SvelteKit's error page. On the server it is blunter:
+	 * every `await` in a script settles before anything renders, so a refusal
+	 * there fails the whole render, and a shared link to a query with a typo came
+	 * back as SvelteKit's error page, with no editor to fix it in.
+	 */
 	const query = $derived(runQuery({ tenant: data.tenant, q: submitted.q, range: submitted.range }));
+
+	/**
+	 * Which run is on screen, as one string. The results area is keyed on it
+	 * below, so every run gets an area of its own.
+	 *
+	 * A string, and not `query` itself. Calling `runQuery(…)` makes a new object
+	 * every time, even with the same arguments: the cached query behind it is
+	 * shared, the object handed back is not. A key that is new each time it is
+	 * read never settles. With two runs in flight, each one read it again, found
+	 * a new key, and drew a new area, round and round, and the tab froze. A
+	 * string equals itself.
+	 */
+	const asked = $derived(
+		JSON.stringify([data.tenant, submitted.q, submitted.range, submitted.run])
+	);
+
+	/** How many runs are still waiting for their answer. */
+	let waiting = $state(0);
+
+	/**
+	 * Run a query, and say so until its answer is drawn.
+	 *
+	 * The server is asked every time, even when the query on screen is the same
+	 * one. A range like `-6h` means something new every minute, and an area
+	 * that failed for a passing reason — a dropped connection, an expired session
+	 * — is drawn again only from a fresh answer. The client keeps a query's last
+	 * answer while it is on the page, so the new area would be drawn from that
+	 * without a `refresh`.
+	 *
+	 * "Running…" needs one step the rest does not. Svelte holds an update back
+	 * until the `await`s it started have settled — that is what keeps the old
+	 * rows up until the new ones can replace them — and a status set in the same
+	 * update would be held back with it, appearing only once there was nothing
+	 * left to wait for. So the count goes up first, `tick()` lets it paint, and
+	 * `settled()` says when the run's own update has landed. Both are what the
+	 * Svelte documentation reaches for to show that an update is in progress.
+	 */
+	async function ask(q: string, range: string): Promise<void> {
+		waiting += 1;
+		try {
+			await tick();
+			submitted = { q, range, run: submitted.run + 1 };
+			void query.refresh();
+			await settled();
+		} finally {
+			waiting -= 1;
+		}
+	}
 
 	function run(): void {
 		workspace.flush();
-		submitted = { q: workspace.q, range: workspace.range };
+		handBack = false;
+		void ask(workspace.q, workspace.range);
 	}
 
 	/**
-	 * `await` in a `$derived`, and a refusal kept as a value.
+	 * "Try again" runs the query on screen again — not the text in the editor,
+	 * which may have changed since — and puts the keyboard where its answer is.
 	 *
-	 * This is what the async compiler option buys: the result of a query is
-	 * *literally* the awaited value, with no `loading` flag and no effect that
-	 * assigns into state. The boundary below supplies the pending and failed
-	 * states for the whole subtree, which means those two states are declared
-	 * once rather than in every component that can be waiting.
+	 * The button cannot keep the focus itself. Each run draws a new results area,
+	 * so the button that was pressed is gone once the answer is in, and focus
+	 * that was on a removed element falls back to the page body: a keyboard or
+	 * screen reader user would be thrown to the top of the page after every try.
+	 * So once the answer has landed, the focus goes to the area it drew — the new
+	 * "Try again" if the server refused again, the results if it did not.
 	 *
-	 * A refusal is caught here and thrown again inside the boundary, by
-	 * `answerOf`, because where a value throws decides who catches it. Thrown
-	 * from this script, it goes past the results' boundary: in the browser to the
-	 * page's, and on the server — which waits for every `await` in a script
-	 * before it renders anything — it fails the render as a whole. Either way the
-	 * person got SvelteKit's error page, with no editor to fix the query in.
+	 * After `settled()`, and not from the new area as it is made. Svelte builds
+	 * the next area out of sight and swaps it in once its `await` has settled, so
+	 * an element that focused itself as it was created would be focusing
+	 * something not yet in the document, and the browser ignores that.
 	 *
-	 * The server still waits for the answer, so the answer travels with the page,
-	 * rows or refusal, and the browser does not have to ask for it again.
+	 * One try at a time: a second press while the first is waiting would only
+	 * ask the same question twice. A Run in the meantime keeps the focus where
+	 * the person put it.
 	 */
-	type Outcome = { answer: Answer } | { refusal: unknown };
+	let handBack = false;
 
-	const outcome = $derived(
-		await query.then(
-			(answer): Outcome => ({ answer }),
-			(refusal: unknown): Outcome => ({ refusal })
-		)
-	);
-
-	/** The rows, for the results boundary — or the refusal, thrown where it can catch it. */
-	function answerOf(current: Outcome): Answer {
-		if ('refusal' in current) {
-			failedOn = current;
-			throw current.refusal;
-		}
-		return current.answer;
+	async function retry(): Promise<void> {
+		if (waiting > 0) return;
+		handBack = true;
+		await ask(submitted.q, submitted.range);
+		if (handBack) focusable?.focus();
+		handBack = false;
 	}
 
-	/*
-	 * A FAILED RESULTS AREA HAS TO BE TOLD TO DRAW AGAIN.
-	 *
-	 * Once the boundary below shows `failed`, its content is gone, so nothing in
-	 * it reads `outcome`, and the next answer would never reach it. Its `onerror`
-	 * leaves its `reset` here, and the area is drawn again as soon as the
-	 * outcome on hand is not the one it failed on: rows, or a different refusal.
-	 *
-	 * Both sides check, because runs overlap. A refusal that arrives late can
-	 * fail the area while a newer run is still on its way (this effect then
-	 * hears it land), or after it has already landed (`onerror` then sees it).
-	 * `reset` goes in a microtask: Svelte refuses one called while `onerror` is
-	 * still running.
-	 */
-	let failedOn: Outcome | null = null;
-	let resetResults: (() => void) | null = null;
+	/** The newest results area's place for the focus: the results, or its "Try again". */
+	let focusable: HTMLElement | null = null;
 
-	function redraw(): void {
-		const reset = resetResults;
-		resetResults = null;
-		if (reset) queueMicrotask(reset);
-	}
+	const offerFocus: Attachment<HTMLElement> = (element) => {
+		focusable = element;
+		return () => {
+			if (focusable === element) focusable = null;
+		};
+	};
 
-	function onfailure(_: unknown, reset: () => void): void {
-		resetResults = reset;
-		if (outcome !== failedOn) redraw();
-	}
-
-	$effect(() => {
-		// Read first, every time: an effect that never reads `outcome` never runs again.
-		const current = outcome;
-		if (resetResults && current !== failedOn) redraw();
-	});
-
-	/**
-	 * "Try again" asks the server again. The client remembers a refused query,
-	 * so redrawing the results area on its own would show the same refusal
-	 * without making a request — no use after a dropped connection or an expired
-	 * session. Whatever comes back arrives through `outcome`, like any answer.
-	 */
-	function retry(): void {
-		void query.refresh().catch(() => {});
-	}
-
-	// After that `await` and before the template: the last moment the server's
+	// From the script, which runs before the template is hydrated: the server's
 	// controls are still on the page as somebody left them, so a view name typed
 	// while the bundle loaded is read from them here and survives hydration.
 	keepTyped(saveView.fields.name);
 
 	const window_ = $derived(resolve(submitted.range));
+
+	/**
+	 * The service names completion offers, streamed by the `load`: none until
+	 * they land, then the list. Read as state rather than through an `{#await}`
+	 * block, so the editor is in the server's HTML and stays mounted when they
+	 * arrive. Why a class: `streamed.svelte.ts`.
+	 */
+	const services = $derived(new Streamed(data.services, []));
 
 	/** Which table the query reads, for completion. Cheap enough to redo per keystroke. */
 	const source = $derived.by((): Source => {
@@ -395,26 +429,29 @@
 	-->
 	<section class="explore__query" aria-label="Query editor">
 		<!--
-			The catalogue is streamed, so completion is behind an `#await`.
-
-			`then` with no `pending` branch: there is nothing to show while it is in
-			flight, because the editor is fully usable without completion. A spinner
-			over a working editor would be a worse experience than no spinner.
+			The editor is drawn at once, by the server too, with whatever service
+			names have landed so far: none in the first paint, the streamed list a
+			moment later. Completion is the only thing that reads them, and nobody
+			asks for a completion in the first moment of a page.
 		-->
-		{#await data.services then services}
-			<QueryEditor
-				bind:value={workspace.q}
-				catalogue={{ source, services }}
-				onrun={run}
-				serverError={null}
-			/>
-		{/await}
+		<QueryEditor
+			bind:value={workspace.q}
+			catalogue={{ source, services: services.current }}
+			onrun={run}
+			serverError={null}
+		/>
 
 		<div class="explore__controls">
 			<button type="button" class="btn btn--primary" onclick={run}>
 				Run
 				<kbd>⌘↵</kbd>
 			</button>
+
+			<!--
+				Present and empty when nothing is running, so that a screen reader
+				already knows the region when "Running…" is written into it.
+			-->
+			<span class="explore__status" role="status">{waiting > 0 ? 'Running…' : ''}</span>
 
 			<RangePicker bind:value={workspace.range} />
 
@@ -475,93 +512,133 @@
 	{/if}
 
 	<!--
-		ONE BOUNDARY FOR THE WHOLE RESULT AREA.
+		ONE BOUNDARY FOR THE WHOLE RESULT AREA, MADE AFRESH FOR EACH RUN.
 
-		`pending` is what the server draws here, because it renders nothing else of a
-		boundary that has one, and `failed` renders when the result throws — including
-		a 400 from the checker, which is the common case and is not an exceptional
-		condition at all. Doing this with flags would mean three states threaded
-		through four components; doing it with a boundary means the components below
-		can be written as though the data is simply there.
+		`failed` renders when the result throws — including a 400 from the checker,
+		which is the common case and is not an exceptional condition at all. Doing
+		this with flags would mean three states threaded through four components;
+		doing it with a boundary means the components below can be written as
+		though the data is simply there.
+
+		Keyed on the run, because a boundary that has failed has no content left
+		to hear the next answer. Key blocks "destroy and recreate their contents
+		when the value of an expression changes", so each run gets a boundary of
+		its own. The old area stays on screen while the new one waits for its
+		answer, and the two change places when it lands: rows, or the next
+		refusal.
 	-->
-	<svelte:boundary onerror={onfailure}>
+	{#key asked}
 		<!--
-			EVERYTHING MADE FROM THE RESULT IS DECLARED HERE, NOT IN THE SCRIPT.
+			No `pending` snippet, on purpose. During server-side rendering a boundary
+			with one renders that snippet and nothing else of its content, so the
+			server waited for the query and then sent "Running…" in place of the rows
+			it had. Without one, the server awaits the query here and renders the
+			rows. A refusal goes through `handleError` to this boundary's `failed`,
+			still on the server, so the page that comes back is this one, with the
+			reason in place of the rows, not SvelteKit's error page. Its status is
+			the refusal's, a 400, which is the truth about a link to a broken query.
 
-			A `$derived` belongs to the component that declares it, and when it
-			throws, the error goes to that component's boundary rather than to the
-			one around whatever was reading it. These were in the script, so a refused
-			query took the whole page down to SvelteKit's error page — the editor and
-			the Run button with it — and this boundary's `failed` never ran. Declared
-			here, they belong to it, and so does the throw in `answerOf`.
+			SvelteKit also sets `page.error` and `page.status` from an error that a
+			boundary catches, on the server and again in the browser, and leaves
+			them there after the next run succeeds. Nothing here reads them, and on
+			a page with boundaries like this one `page.error` does not mean "this is
+			an error page".
 		-->
-		{const result = $derived(answerOf(outcome))}
-		{const rows = $derived(tailing ? tailRows : result.rows)}
-		{const columns = $derived(
-			tailing && tailRows.length > 0 ? Object.keys(tailRows[0]!) : result.columns
-		)}
-		{const chart = $derived(chartOf(result))}
+		<svelte:boundary>
+			<!--
+				EVERYTHING MADE FROM THE RESULT IS DECLARED HERE, NOT IN THE SCRIPT.
 
-		<section class="explore__results" aria-label="Results">
-			{#if workspace.view === 'chart' && !tailing}
-				{#if chart.problem}
-					<p class="notice">{chart.problem}</p>
+				An awaited value that rejects throws wherever it is read, but a
+				`$derived` that throws reports to the boundary around where it was
+				declared. In the script, these three took a refused query past this
+				boundary to SvelteKit's error page — the editor and the Run button
+				with it. Declared here, they report to this boundary, and so does the
+				`await`.
+			-->
+			{const result = $derived(await query)}
+			{const rows = $derived(tailing ? tailRows : result.rows)}
+			{const columns = $derived(
+				tailing && tailRows.length > 0 ? Object.keys(tailRows[0]!) : result.columns
+			)}
+			{const chart = $derived(chartOf(result))}
+
+			<!--
+				`tabindex="-1"`: not a stop for Tab, but somewhere "Try again" can put
+				the focus when its answer is rows.
+			-->
+			<section
+				class="explore__results"
+				aria-label="Results"
+				aria-busy={waiting > 0}
+				tabindex="-1"
+				{@attach offerFocus}
+			>
+				{#if workspace.view === 'chart' && !tailing}
+					{#if chart.problem}
+						<p class="notice">{chart.problem}</p>
+					{:else}
+						<MetricChart
+							series={chart.series}
+							from={window_.from}
+							to={window_.to}
+							height={280}
+							label="Query result over time"
+						/>
+					{/if}
 				{:else}
-					<MetricChart
-						series={chart.series}
-						from={window_.from}
-						to={window_.to}
-						height={280}
-						label="Query result over time"
+					<ResultTable
+						{columns}
+						{rows}
+						range={window_}
+						truncated={!tailing && result.truncated}
+						selected={page.state.row ?? null}
+						onselect={(index) => openRow(index, rows[index])}
 					/>
 				{/if}
-			{:else}
-				<ResultTable
-					{columns}
-					{rows}
-					range={window_}
-					truncated={!tailing && result.truncated}
-					selected={page.state.row ?? null}
-					onselect={(index) => openRow(index, rows[index])}
-				/>
-			{/if}
-		</section>
-
-		{#if !tailing}
-			<footer class="explore__stats">
-				<span>{result.rows.length.toLocaleString()} rows</span>
-				<span>{result.scanned.toLocaleString()} scanned</span>
-				<!--
-					Whether the filter ran in SQLite or in the evaluator.
-
-					Exposed rather than hidden because it is the difference between a query
-					that stays fast as the data grows and one that does not — and knowing
-					*which* is how somebody learns to write the first kind.
-				-->
-				<span class="chip" class:chip--ok={result.pushed}>
-					{result.pushed ? 'pushed to SQL' : 'filtered in memory'}
-				</span>
-			</footer>
-		{/if}
-
-		{#snippet pending()}
-			<div class="explore__results">
-				<p class="notice" role="status">Running…</p>
-			</div>
-		{/snippet}
-
-		<!--
-			The same region as the rows it replaces, so the reason is where the
-			answer would have been. `error` is SvelteKit's `App.Error`, made by
-			`handleError`, so the checker's sentence is on `message`.
-		-->
-		{#snippet failed(error)}
-			<section class="explore__results" aria-label="Results">
-				<p class="notice notice--error" role="alert">{(error as App.Error).message}</p>
-				<button type="button" class="btn btn--sm" onclick={retry}>Try again</button>
 			</section>
-		{/snippet}
-	</svelte:boundary>
+
+			{#if !tailing}
+				<footer class="explore__stats">
+					<span>{result.rows.length.toLocaleString()} rows</span>
+					<span>{result.scanned.toLocaleString()} scanned</span>
+					<!--
+						Whether the filter ran in SQLite or in the evaluator.
+
+						Exposed rather than hidden because it is the difference between a
+						query that stays fast as the data grows and one that does not — and
+						knowing *which* is how somebody learns to write the first kind.
+					-->
+					<span class={['chip', { 'chip--ok': result.pushed }]}>
+						{result.pushed ? 'pushed to SQL' : 'filtered in memory'}
+					</span>
+				</footer>
+			{/if}
+
+			<!--
+				The same region as the rows it replaces, so the reason is where the
+				answer would have been. `error` is SvelteKit's `App.Error`, made by
+				`handleError`, so the checker's sentence is on `message`.
+
+				`aria-disabled` rather than `disabled` while a run is waiting: a
+				disabled button drops the keyboard focus that just pressed it, before
+				there is anywhere for it to go.
+			-->
+			{#snippet failed(error)}
+				<section class="explore__results" aria-label="Results" aria-busy={waiting > 0}>
+					<p class="notice notice--error" role="alert">{(error as App.Error).message}</p>
+					<button
+						type="button"
+						class="btn btn--sm explore__retry"
+						aria-disabled={waiting > 0}
+						onclick={() => void retry()}
+						{@attach offerFocus}
+					>
+						Try again
+					</button>
+				</section>
+			{/snippet}
+		</svelte:boundary>
+	{/key}
 </div>
 
 <!--
@@ -622,6 +699,11 @@
 		color: var(--accent);
 	}
 
+	.explore__status {
+		font-size: var(--fs-xs);
+		color: var(--text-muted);
+	}
+
 	kbd {
 		font-family: var(--font-mono);
 		font-size: var(--fs-xs);
@@ -658,5 +740,15 @@
 		border-color: var(--danger);
 		background: var(--danger-bg);
 		color: var(--text);
+	}
+
+	.explore__retry {
+		align-self: flex-start;
+		margin-top: var(--space-2);
+	}
+
+	.explore__retry[aria-disabled='true'] {
+		opacity: 0.5;
+		cursor: progress;
 	}
 </style>

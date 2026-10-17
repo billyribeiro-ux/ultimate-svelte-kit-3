@@ -163,3 +163,59 @@ test('a list of traces that cannot load says what the server said', async ({ pag
 	 */
 	await expect(page.getByRole('alert')).toHaveText('Sign in to continue.');
 });
+
+/*
+ * The trace page and the drawer, refused. Each one's boundary is handed
+ * SvelteKit's `App.Error`, and both used to look for the message on `body`,
+ * where a thrown `HttpError` keeps it, and say "Could not load the trace."
+ * whatever had gone wrong. The session ends under a live page, and the next
+ * trace each one asks for is refused for real.
+ */
+test('a trace page that cannot load says what the server said', async ({ page, context }) => {
+	await page.goto('/demo/traces');
+	await expect(page.locator('html[data-hydrated]')).toHaveCount(1);
+
+	// The trace page loads no server data of its own, so the navigation asks
+	// for nothing but the trace — and that is refused.
+	await context.clearCookies();
+	await page.getByRole('list', { name: 'Recent traces' }).getByRole('link').first().click();
+
+	await expect(page).toHaveURL(/\/demo\/traces\/[0-9a-f]+/);
+	await expect(page.getByRole('alert')).toHaveText('Sign in to continue.');
+});
+
+test('a drawer whose trace cannot load says what the server said', async ({ page, context }) => {
+	await page.goto(WITH_TRACES);
+	await expect(page).toHaveURL(/view=table/);
+	await expect(page.getByRole('row').first()).toBeVisible();
+
+	await context.clearCookies();
+	await page.getByRole('row').first().click();
+
+	await expect(page.getByRole('dialog').getByRole('alert')).toHaveText('Sign in to continue.');
+});
+
+/*
+ * With JavaScript off, so the page is what the server sent. Both trace views
+ * used to await in their scripts and then draw a `pending` snippet: the server
+ * waited for the data and sent "Loading…" in its place, for good.
+ */
+test.describe('with JavaScript off, so the screen is what the server sent', () => {
+	test.use({ javaScriptEnabled: false });
+
+	test('the list of traces is in the server’s HTML', async ({ page }) => {
+		await page.goto('/demo/traces');
+
+		await expect(
+			page.getByRole('list', { name: 'Recent traces' }).getByRole('link')
+		).not.toHaveCount(0);
+		await expect(page.getByRole('status')).toHaveCount(0);
+	});
+
+	test('a trace is in the server’s HTML', async ({ page }) => {
+		await page.goto(`/demo/traces/${INCOMPLETE_TRACE}`);
+
+		await expect(page.getByRole('tree', { name: 'Spans' })).toBeVisible();
+		await expect(page.getByRole('treeitem')).toHaveCount(3);
+	});
+});

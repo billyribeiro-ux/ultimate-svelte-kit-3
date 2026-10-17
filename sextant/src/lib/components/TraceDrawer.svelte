@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { Attachment } from 'svelte/attachments';
 	import { resolve } from '$app/paths';
 	import FlameGraph from './FlameGraph.svelte';
 	import Waterfall from './Waterfall.svelte';
@@ -39,9 +40,6 @@
 	let { tenant, traceId }: Props = $props();
 
 	let selected = $state<string | null>(null);
-	let panel = $state<HTMLElement | null>(null);
-
-	const assembled = $derived(await traceQuery({ tenant, traceId }));
 
 	function close(): void {
 		// `history.back()` and not a shallow `goto` to an empty state, because the
@@ -55,18 +53,24 @@
 	 *
 	 * A dialog that opens without moving focus leaves a screen reader reading the
 	 * page behind it, and leaves a keyboard user tabbing through the results table
-	 * that is now covered. This is the minimum; the `inert` on the background is
-	 * what stops Tab from reaching it at all.
+	 * that is now covered. It is the minimum: Tab can still walk out of the panel
+	 * into the page behind it, and stopping that would take `inert` on everything
+	 * the drawer covers.
+	 *
+	 * An attachment, because this is about one element's time on the page: it
+	 * runs when the panel is mounted, and what it returns runs when the panel is
+	 * removed. A `bind:this` and an `$effect` said the same thing in two places.
+	 * `document.activeElement` is typed `Element | null`, and `instanceof`
+	 * narrows it where a cast would only have asserted what it was.
 	 */
-	$effect(() => {
-		const element = panel;
-		if (!element) return;
+	const holdFocus: Attachment<HTMLElement> = (panel) => {
+		const previous = document.activeElement;
+		panel.focus();
 
-		const previous = document.activeElement as HTMLElement | null;
-		element.focus();
-
-		return () => previous?.focus?.();
-	});
+		return () => {
+			if (previous instanceof HTMLElement) previous.focus();
+		};
+	};
 </script>
 
 <svelte:window
@@ -103,7 +107,7 @@
 	aria-modal="true"
 	aria-label="Trace {traceId}"
 	tabindex="-1"
-	bind:this={panel}
+	{@attach holdFocus}
 >
 	<header class="drawer__head">
 		<div>
@@ -138,7 +142,18 @@
 		</div>
 	</header>
 
+	<!--
+		The trace is awaited inside this boundary, so the drawer opens at once and
+		says it is loading. Awaited in the script instead, the drawer appeared only
+		once the trace had arrived, and this `pending` snippet never showed: an
+		`await` in a component's script is waited for by whatever boundary holds the
+		component, not by the boundaries it draws. The drawer is only ever drawn in
+		the browser, from `page.state`, so the server's way with `pending` does not
+		come into it.
+	-->
 	<svelte:boundary>
+		{const assembled = $derived(await traceQuery({ tenant, traceId }))}
+
 		{#if assembled}
 			{const totals = $derived(serviceTotals(assembled))}
 

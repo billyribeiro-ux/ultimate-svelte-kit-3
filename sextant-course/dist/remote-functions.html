@@ -124,7 +124,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/[tenant]/alerts/+page.svelte<span class="code__lines">:242-263</span></span>
+		<span class="code__file">src/routes/[tenant]/alerts/+page.svelte<span class="code__lines">:249-270</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;div class=&quot;field&quot;&gt;
@@ -167,7 +167,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/[tenant]/alerts/+page.svelte<span class="code__lines">:270-293</span></span>
+		<span class="code__file">src/routes/[tenant]/alerts/+page.svelte<span class="code__lines">:277-300</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;div class=&quot;field&quot;&gt;
@@ -253,7 +253,7 @@ if (clearsAt !== null &amp;&amp; !Number.isFinite(clearsAt)) {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/[tenant]/alerts/+page.svelte<span class="code__lines">:102-111</span></span>
+		<span class="code__file">src/routes/[tenant]/alerts/+page.svelte<span class="code__lines">:113-122</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">&lt;!--
@@ -272,7 +272,7 @@ if (clearsAt !== null &amp;&amp; !Number.isFinite(clearsAt)) {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/[tenant]/alerts/+page.svelte<span class="code__lines">:38-66</span></span>
+		<span class="code__file">src/routes/[tenant]/alerts/+page.svelte<span class="code__lines">:42-70</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/** The last toggle the server refused, and what it said. */
@@ -371,88 +371,354 @@ $ pnpm exec playwright test e2e/alerts.e2e.ts -g 'refuses'
 </figure>
 <h3 id="what-a-boundary-catches">What a boundary can catch</h3>
 <p>The explore page puts its results in one <code>&lt;svelte:boundary&gt;</code>, and the comment above it promised that a refused query — a 400 from the checker is the common case — would be explained by the boundary’s <code>failed</code> snippet. It never was. Pressing Run on <code>from logs | where</code> replaced the whole page with SvelteKit’s error page: a “400” heading, “Expected a value” under it, and no editor to fix the query in.</p>
-<p>The result is awaited in the script, and the boundary catches what is read inside it. The trouble was three values made from the result — the rows, the columns and the chart — which were <code>$derived</code>s in the script too. A <code>$derived</code> belongs to the component that declares it, and when one throws, Svelte reports the error from there: to the boundary around the component, not to the one around whatever was reading it. For a page, that is the boundary SvelteKit puts around every page, and its <code>failed</code> is the error page. The traces page reads its result straight from the markup, and never had the problem.</p>
+<p>Two rules decide where a failure lands, one for the browser and one for the server, and the page had broken both. The browser’s rule is about where a value is *read*. The server’s is about where an <code>await</code> is *written*.</p>
+<h3 id="values-made-from-the-result">In the browser: thrown where it is read</h3>
+<p>An awaited value that rejects keeps the rejection as its value, and reading it throws. Read in the markup inside a boundary, it throws there, and “errors in <code>await</code> expressions will bubble to the nearest error boundary” means that one. A <code>$derived</code> that throws is the exception that caught the explore page out: Svelte computes a derived on behalf of the component that *declared* it, so what it throws is reported to the boundary around the declaration, not to the one around whatever read it.</p>
+<p>The page declared three values made from the result — the rows, the columns and the chart — as <code>$derived</code>s in its script. When the query was refused, each one threw as it read the result, and each reported from the script: to the boundary SvelteKit puts around every page, whose <code>failed</code> is the error page. The traces page shows the other half of the rule. It awaited its query in the script too, but only its markup read the result, inside its boundary, so in the browser its refusal was caught where it was read — the <code>boundary (traces list)</code> line in the probe output above is exactly that. Its trouble was on the server.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/[tenant]/explore/+page.svelte<span class="code__lines">:451-466</span></span>
+		<span class="code__file">src/routes/[tenant]/explore/+page.svelte<span class="code__lines">:548-563</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">&lt;svelte:boundary onerror={(_, reset) =&gt; (resetResults = reset)}&gt;
-	&lt;!--
-		EVERYTHING DERIVED FROM `result` IS DECLARED HERE, NOT IN THE SCRIPT.
+	<pre><code class="lang-svelte">&lt;!--
+	EVERYTHING MADE FROM THE RESULT IS DECLARED HERE, NOT IN THE SCRIPT.
 
-		A `$derived` belongs to the component that declares it, and when it
-		throws, the error goes to that component's boundary rather than to the
-		one around whatever was reading it. These three were in the script, so a
-		refused query took the whole page down to SvelteKit's error page — the
-		editor and the Run button with it — and this boundary's `failed` never
-		ran. Declared in the boundary, they belong to it.
-	--&gt;
-	{const rows = $derived(tailing ? tailRows : result.rows)}
-	{const columns = $derived(
-		tailing &amp;&amp; tailRows.length &gt; 0 ? Object.keys(tailRows[0]!) : result.columns
-	)}
-	{const chart = $derived(chartOf())}</code></pre>
+	An awaited value that rejects throws wherever it is read, but a
+	`$derived` that throws reports to the boundary around where it was
+	declared. In the script, these three took a refused query past this
+	boundary to SvelteKit's error page — the editor and the Run button
+	with it. Declared here, they report to this boundary, and so does the
+	`await`.
+--&gt;
+{const result = $derived(await query)}
+{const rows = $derived(tailing ? tailRows : result.rows)}
+{const columns = $derived(
+	tailing &amp;&amp; tailRows.length &gt; 0 ? Object.keys(tailRows[0]!) : result.columns
+)}
+{const chart = $derived(chartOf(result))}</code></pre>
 </figure>
-<p>Declaration tags fix it without changing a line that uses the three. Declared inside the boundary, they belong to it, so “errors in <code>await</code> expressions will bubble to the nearest error boundary” now means this one. The chart became a plain function, <code>chartOf()</code>, so that its <code>$derived</code> could be declared here with the other two.</p>
-<p>A boundary that has failed then has to be told to draw again. Its content is gone, so nothing in it reads the result any more, and the next answer would never reach it. The boundary’s <code>onerror</code> hands over its <code>reset</code>, and an effect that reads the result only to hear it change calls it when the next answer lands — rows, or the next refusal. A first version timed the reset with <code>settled()</code> instead, with and without a <code>tick()</code> before it, and either way one of Run and Try again drew the area before its answer had arrived.</p>
+<p>Declaration tags fix it without changing a line that uses the three. Declared inside the boundary, they report to it. The chart became a plain function, <code>chartOf()</code>, so that its <code>$derived</code> could be declared here with the other two.</p>
+<h3 id="on-the-server">On the server: every <code>await</code> in a script comes first</h3>
+<p>That made Run work, and a review found the other half the same day. A link to the same query still opened on the error page, and so did a reload after a refused Run, because Run writes the query into the address bar. The query itself was still awaited in the script, as <code>const result = $derived(await runQuery(…))</code>, and the Svelte documentation says what the server does with that: “All <code>await</code> expressions encountered outside boundaries with <code>pending</code> snippets will resolve and render their contents prior to <code>await render(...)</code> returning.” A boundary on the server catches only what is thrown inside it, and a script is not inside anything, so a refusal there refuses the whole render.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/[tenant]/explore/+page.svelte<span class="code__lines">:152-173</span></span>
+		<span class="code__file">src/routes/[tenant]/explore/+page.svelte<span class="code__lines">:128-142</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/**
- * A FAILED RESULTS AREA HAS TO BE TOLD TO DRAW AGAIN.
+ * The query for the run that is on screen — the request, not its answer.
  *
- * Once the boundary below shows `failed`, nothing left inside it reads
- * `result`, so the next answer would never reach it. Its `onerror` leaves its
- * `reset` here, and this effect — which reads `result` only to hear it
- * change — calls it when that answer arrives: rows, or the next refusal. The
- * `try` matters. Reading a `result` that holds an error throws, and a throw
- * from this script would go to the page's boundary, not the results'.
+ * Nothing in this script reads its answer, and that is what keeps a refusal
+ * on this page. Where a refusal lands depends on where the answer is read.
+ * In the browser, an awaited value that rejects throws wherever it is read:
+ * read in the markup inside the results' boundary, it is caught there. A
+ * `$derived` in this script that read it would throw too, and a `$derived`
+ * reports what it throws to the boundary around where it is *declared* —
+ * past the results, to SvelteKit's error page. On the server it is blunter:
+ * every `await` in a script settles before anything renders, so a refusal
+ * there fails the whole render, and a shared link to a query with a typo came
+ * back as SvelteKit's error page, with no editor to fix it in.
  */
-let resetResults: (() =&gt; void) | null = null;
+const query = $derived(runQuery({ tenant: data.tenant, q: submitted.q, range: submitted.range }));</code></pre>
+</figure>
+<p>So the <code>await</code> moved into the boundary as well. It is <code>{const result = $derived(await query)}</code>, the first of the declaration tags quoted above, and the script keeps only the request. A remote query is a promise and an object at once, which is what makes the split work. The script creates it, the markup awaits it, and a button can refresh it.</p>
+<p>The <code>pending</code> snippet had to go with it, and it had been costing something all along. “During server-side rendering, a boundary with a <code>pending</code> snippet renders that snippet and ignores the rest of its content.” The server had been waiting for the query, because the script told it to, and then sending “Running…” where the rows should have been. Without the snippet, the server renders what the boundary holds: the result when the query answers, and the <code>failed</code> snippet when it refuses, because in SvelteKit 3 errors thrown during rendering are “routed through <code>handleError</code> and then passed to the nearest error boundary” — on the server as well as in the browser.</p>
 
-$effect(() =&gt; {
-	try {
-		void result;
-	} catch {
-		// A refusal. The boundary draws it, once the reset below has run.
-	}
-	const reset = resetResults;
-	resetResults = null;
-	if (reset) queueMicrotask(reset);
-});</code></pre>
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/[tenant]/explore/+page.svelte<span class="code__lines">:514-547</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;!--
+	ONE BOUNDARY FOR THE WHOLE RESULT AREA, MADE AFRESH FOR EACH RUN.
+
+	`failed` renders when the result throws — including a 400 from the checker,
+	which is the common case and is not an exceptional condition at all. Doing
+	this with flags would mean three states threaded through four components;
+	doing it with a boundary means the components below can be written as
+	though the data is simply there.
+
+	Keyed on the run, because a boundary that has failed has no content left
+	to hear the next answer. Key blocks &quot;destroy and recreate their contents
+	when the value of an expression changes&quot;, so each run gets a boundary of
+	its own. The old area stays on screen while the new one waits for its
+	answer, and the two change places when it lands: rows, or the next
+	refusal.
+--&gt;
+{#key asked}
+	&lt;!--
+		No `pending` snippet, on purpose. During server-side rendering a boundary
+		with one renders that snippet and nothing else of its content, so the
+		server waited for the query and then sent &quot;Running…&quot; in place of the rows
+		it had. Without one, the server awaits the query here and renders the
+		rows. A refusal goes through `handleError` to this boundary's `failed`,
+		still on the server, so the page that comes back is this one, with the
+		reason in place of the rows, not SvelteKit's error page. Its status is
+		the refusal's, a 400, which is the truth about a link to a broken query.
+
+		SvelteKit also sets `page.error` and `page.status` from an error that a
+		boundary catches, on the server and again in the browser, and leaves
+		them there after the next run succeeds. Nothing here reads them, and on
+		a page with boundaries like this one `page.error` does not mean &quot;this is
+		an error page&quot;.
+	--&gt;
+	&lt;svelte:boundary&gt;</code></pre>
 </figure>
 
 <aside class="callout callout--why">
-	<h4>Why “Try again” refreshes the query</h4>
-	<p>The boundary’s own <code>reset</code> only draws the area afresh, and the client remembers a refused query: drawn again, it shows the same refusal without asking the server anything. After a dropped connection or an expired session that is no use, so the button calls <code>refresh()</code> on the query and lets the answer arrive through the result, like any other.</p>
+	<h4>Why the response is still a 400</h4>
+	<p>SvelteKit gives the response the status of the error a boundary caught while it rendered, and here that is the checker’s 400. Forcing a 200 would be a small lie. A link to a query the server refuses is a bad request, and the status is what a load balancer, a crawler and this product’s own access log read. The person in front of the page gets the same fact as a sentence, next to the query they can fix.</p>
+</aside>
+<aside class="callout callout--warn"><p>The caught error also becomes <code>page.error</code>, and <code>page.status</code> follows it — when the server renders, and again in the browser for every refusal a boundary catches — and neither is cleared when the next run succeeds. Nothing in Sextant reads them. Copy this pattern into an app whose layout does, and it will believe it is showing an error page long after it is not: on a page with boundaries like these, <code>page.error</code> means “a boundary caught something”, not “this route failed”.</p></aside>
+<aside class="callout callout--note"><p>A first repair kept the <code>await</code> in the script and caught the refusal there as a value, to throw it again inside the boundary. It worked, at the price of a wrapper type, a function that threw on purpose and an effect that watched every answer to reset the boundary — and the server still sent “Running…”. Moving one <code>await</code> replaced all of it.</p></aside>
+<h3 id="three-more-pages">The same <code>await</code> on three more pages</h3>
+<p>The traces list, the trace page and the alerts list had all awaited their queries in the script, each with a <code>pending</code> snippet in its boundary. In the browser that held up, because each read its result only in the markup. On the server it was the explore page’s waste exactly: the server waited for the query, then sent “Loading…” in its place, and with JavaScript off the page said “Loading…” for good. Each got the same fix — the <code>await</code> inside the boundary as a declaration tag, and no <code>pending</code>.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/[tenant]/traces/+page.svelte<span class="code__lines">:75-90</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;!--
+	The query is awaited here, inside the boundary, and not in the script.
+
+	In the script, the server waited for it — every `await` there settles before
+	anything renders — and then drew this boundary's `pending` snippet in place
+	of the list it had, because &quot;during server-side rendering, a boundary with a
+	`pending` snippet renders that snippet and ignores the rest of its content&quot;.
+	A link to this page said &quot;Loading…&quot;, and with JavaScript off it said so for
+	good. With the `await` here and no `pending`, the server renders the list,
+	and a refusal is this boundary's `failed`, on the server and in the browser.
+
+	Changing the order or the range keeps the old list up until the new one is
+	in, because Svelte holds an update back until its `await`s have settled.
+--&gt;
+&lt;svelte:boundary&gt;
+	{const result = $derived(await runQuery({ tenant: data.tenant, q, range }))}</code></pre>
+</figure>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>$ # the server's HTML for /demo/traces, signed in, before and after
+  await in the script, pending snippet    &quot;Loading…&quot; ×1    trace links: 0
+  await in the boundary, no pending        &quot;Loading…&quot; ×0    trace links: 100</code></pre>
+</figure>
+<p>The alerts page needed one more line. Its rule form sits outside the boundary and used to name a rule’s type as <code>(typeof list)[number]</code>; with <code>list</code> declared inside the boundary, the type is named from the query instead: <code>type Rule = Awaited&lt;ReturnType&lt;typeof rules&gt;&gt;[number]</code>.</p>
+<p>The settings page keeps its <code>pending</code> snippets, and that is the same rule applied the other way. Its two lists were awaited in the markup already, inside boundaries that have a <code>pending</code> snippet, so the server never runs those queries at all: it sends “Loading…” and the browser asks once it is awake. What was wrong on the other pages was paying for both: the server waited for the data, sent it along in the page’s payload for the browser, and drew “Loading…” instead of it. Either draw it, or do not ask for it; chapter 43 has the settings lists.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/TraceDrawer.svelte<span class="code__lines">:145-155</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;!--
+	The trace is awaited inside this boundary, so the drawer opens at once and
+	says it is loading. Awaited in the script instead, the drawer appeared only
+	once the trace had arrived, and this `pending` snippet never showed: an
+	`await` in a component's script is waited for by whatever boundary holds the
+	component, not by the boundaries it draws. The drawer is only ever drawn in
+	the browser, from `page.state`, so the server's way with `pending` does not
+	come into it.
+--&gt;
+&lt;svelte:boundary&gt;
+	{const assembled = $derived(await traceQuery({ tenant, traceId }))}</code></pre>
+</figure>
+<p>The drawer keeps its <code>pending</code> snippet, on purpose, and the reason is where it is drawn. It exists only in the browser, opened from <code>page.state</code>, so the server’s way with <code>pending</code> never comes into it — and with the <code>await</code> inside the boundary, the drawer opens at once and says it is loading. In the script, that snippet had never shown: a component’s own <code>await</code> is waited for by whatever boundary holds the component, not by the boundaries it draws, so the drawer appeared only once the trace had arrived.</p>
+<h3 id="a-boundary-per-run">A boundary for each run</h3>
+<p>A boundary that has failed then has to be drawn again. Its content is gone, so nothing in it is waiting for the next answer. Svelte has a block for exactly this: key blocks “destroy and recreate their contents when the value of an expression changes”. Keyed on the run — the query, the range and which press of Run asked — the results area is a new boundary for every run. The old area stays on screen while the new one waits for its answer, because Svelte keeps a block’s new content out of the page until its <code>await</code> has settled, and then the two change places — rows, or the next refusal.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/[tenant]/explore/+page.svelte<span class="code__lines">:144-157</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/**
+ * Which run is on screen, as one string. The results area is keyed on it
+ * below, so every run gets an area of its own.
+ *
+ * A string, and not `query` itself. Calling `runQuery(…)` makes a new object
+ * every time, even with the same arguments: the cached query behind it is
+ * shared, the object handed back is not. A key that is new each time it is
+ * read never settles. With two runs in flight, each one read it again, found
+ * a new key, and drew a new area, round and round, and the tab froze. A
+ * string equals itself.
+ */
+const asked = $derived(
+	JSON.stringify([data.tenant, submitted.q, submitted.range, submitted.run])
+);</code></pre>
+</figure>
+<aside class="callout callout--warn"><p>The first version was keyed on <code>query</code>, and the tab froze when two runs overlapped. The remote-functions documentation says that queries “are cached while they’re on the page, meaning <code>getPosts() === getPosts()</code>”, and in SvelteKit 3.0.1 the client does not do that: each call makes a new object in front of the shared cache entry. With two runs in flight, each read of the key found a new object and started the block over, without end. A string built from the arguments is equal to itself.</p></aside>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>$ # keyed on `query`: two runs in flight, both answers let go together
+  page.evaluate(() =&gt; 1)    no answer in 2s: the tab is busy
+  paused in                 skip_effect ← ensure ← {#key} ← update_effect ← flush
+
+$ # in the page: two calls with the same arguments
+  runQuery(args) === runQuery(args)    false</code></pre>
+</figure>
+<h3 id="running">Run always asks, and says so</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/[tenant]/explore/+page.svelte<span class="code__lines">:159-196</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/** How many runs are still waiting for their answer. */
+let waiting = $state(0);
+
+/**
+ * Run a query, and say so until its answer is drawn.
+ *
+ * The server is asked every time, even when the query on screen is the same
+ * one. A range like `-6h` means something new every minute, and an area
+ * that failed for a passing reason — a dropped connection, an expired session
+ * — is drawn again only from a fresh answer. The client keeps a query's last
+ * answer while it is on the page, so the new area would be drawn from that
+ * without a `refresh`.
+ *
+ * &quot;Running…&quot; needs one step the rest does not. Svelte holds an update back
+ * until the `await`s it started have settled — that is what keeps the old
+ * rows up until the new ones can replace them — and a status set in the same
+ * update would be held back with it, appearing only once there was nothing
+ * left to wait for. So the count goes up first, `tick()` lets it paint, and
+ * `settled()` says when the run's own update has landed. Both are what the
+ * Svelte documentation reaches for to show that an update is in progress.
+ */
+async function ask(q: string, range: string): Promise&lt;void&gt; {
+	waiting += 1;
+	try {
+		await tick();
+		submitted = { q, range, run: submitted.run + 1 };
+		void query.refresh();
+		await settled();
+	} finally {
+		waiting -= 1;
+	}
+}
+
+function run(): void {
+	workspace.flush();
+	handBack = false;
+	void ask(workspace.q, workspace.range);
+}</code></pre>
+</figure>
+<p>Run sends a request every time, even when the query on screen is the one in the editor. A range like <code>-6h</code> means something new every minute, and an area that failed for a passing reason — a dropped connection, an expired session — can only be drawn again from a fresh answer. The client keeps a query’s last answer for as long as the query is on the page, so the new area would be drawn from the old answer without the <code>refresh()</code>. Each press also counts as a new run, so even the same question gets an area of its own.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/[tenant]/explore/+page.svelte<span class="code__lines">:450-454</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;!--
+	Present and empty when nothing is running, so that a screen reader
+	already knows the region when &quot;Running…&quot; is written into it.
+--&gt;
+&lt;span class=&quot;explore__status&quot; role=&quot;status&quot;&gt;{waiting &gt; 0 ? 'Running…' : ''}&lt;/span&gt;</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why “Running…” needs <code>tick()</code> and <code>settled()</code></h4>
+	<p>Because Svelte keeps the old rows up on purpose. “When an <code>await</code> expression depends on a particular piece of state, changes to that state will not be reflected in the UI until the asynchronous work has completed”, and a status changed in the same update is held back with it, appearing only once there is nothing left to wait for. <code>$effect.pending()</code> cannot see it either: it counts the promises “pending in the current boundary, not including child boundaries”, and the run’s <code>await</code> is in the next area, a boundary not yet on the page. So the count goes up in an update of its own, and <code>tick()</code> lets it paint — in the documentation’s words, “without this, the change to <code>updating</code> will be grouped with the other changes, meaning it won’t be reflected in the UI” — and <code>settled()</code>, which “resolves when the current update is complete”, says when to take it down. The status is a live region that is always there and only sometimes has words in it, so a screen reader already knows it when “Running…” arrives; the results say <code>aria-busy</code> while they wait.</p>
+</aside>
+<h3 id="trying-again">Trying again</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/[tenant]/explore/+page.svelte<span class="code__lines">:198-236</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/**
+ * &quot;Try again&quot; runs the query on screen again — not the text in the editor,
+ * which may have changed since — and puts the keyboard where its answer is.
+ *
+ * The button cannot keep the focus itself. Each run draws a new results area,
+ * so the button that was pressed is gone once the answer is in, and focus
+ * that was on a removed element falls back to the page body: a keyboard or
+ * screen reader user would be thrown to the top of the page after every try.
+ * So once the answer has landed, the focus goes to the area it drew — the new
+ * &quot;Try again&quot; if the server refused again, the results if it did not.
+ *
+ * After `settled()`, and not from the new area as it is made. Svelte builds
+ * the next area out of sight and swaps it in once its `await` has settled, so
+ * an element that focused itself as it was created would be focusing
+ * something not yet in the document, and the browser ignores that.
+ *
+ * One try at a time: a second press while the first is waiting would only
+ * ask the same question twice. A Run in the meantime keeps the focus where
+ * the person put it.
+ */
+let handBack = false;
+
+async function retry(): Promise&lt;void&gt; {
+	if (waiting &gt; 0) return;
+	handBack = true;
+	await ask(submitted.q, submitted.range);
+	if (handBack) focusable?.focus();
+	handBack = false;
+}
+
+/** The newest results area's place for the focus: the results, or its &quot;Try again&quot;. */
+let focusable: HTMLElement | null = null;
+
+const offerFocus: Attachment&lt;HTMLElement&gt; = (element) =&gt; {
+	focusable = element;
+	return () =&gt; {
+		if (focusable === element) focusable = null;
+	};
+};</code></pre>
+</figure>
+<p>“Try again” is a run of the query on screen, not of whatever is now in the editor, so it shares everything above: a fresh answer, a new area, the refusal kept up until the answer is in. What it adds is the focus. The area it sits in is replaced by its own answer, so the button that was pressed is gone afterwards, and focus on a removed element falls back to the page body. Somebody pressing it with a keyboard was thrown to the top of the page after every try.</p>
+
+<aside class="callout callout--why">
+	<h4>Why the focus is handed back after <code>settled()</code></h4>
+	<p>Each area offers an element for the focus through an attachment — the results section, which has <code>tabindex=&quot;-1&quot;</code> so it can be focused without becoming a stop for Tab, or the new “Try again”. The first attempt had that element focus itself as it was attached, and the test that held the keyboard on a refusal failed: “Expected: focused, Received: inactive”. The rows case passed and the refusal did not, which gave it away. Svelte builds the next area out of sight and swaps it in once its <code>await</code> has settled, and a <code>failed</code> snippet is drawn the moment the refusal arrives — before the swap — so the button was focusing itself while it was not yet in the document, and the browser ignores that. After <code>settled()</code>, whichever area the answer drew is on the page.</p>
 </aside>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/[tenant]/explore/+page.svelte<span class="code__lines">:125-135</span></span>
+		<span class="code__file">src/routes/[tenant]/explore/+page.svelte<span class="code__lines">:617-639</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">/**
- * &quot;Try again&quot; asks the server again. The client remembers a refused query,
- * so redrawing the results area on its own would show the same refusal
- * without making a request — no use after a dropped connection or an expired
- * session. Whatever comes back arrives through `result`, like any answer.
- */
-function retry(): void {
-	void runQuery({ tenant: data.tenant, q: submitted.q, range: submitted.range })
-		.refresh()
-		.catch(() =&gt; {});
-}</code></pre>
+	<pre><code class="lang-svelte">&lt;!--
+	The same region as the rows it replaces, so the reason is where the
+	answer would have been. `error` is SvelteKit's `App.Error`, made by
+	`handleError`, so the checker's sentence is on `message`.
+
+	`aria-disabled` rather than `disabled` while a run is waiting: a
+	disabled button drops the keyboard focus that just pressed it, before
+	there is anywhere for it to go.
+--&gt;
+{#snippet failed(error)}
+	&lt;section class=&quot;explore__results&quot; aria-label=&quot;Results&quot; aria-busy={waiting &gt; 0}&gt;
+		&lt;p class=&quot;notice notice--error&quot; role=&quot;alert&quot;&gt;{(error as App.Error).message}&lt;/p&gt;
+		&lt;button
+			type=&quot;button&quot;
+			class=&quot;btn btn--sm explore__retry&quot;
+			aria-disabled={waiting &gt; 0}
+			onclick={() =&gt; void retry()}
+			{@attach offerFocus}
+		&gt;
+			Try again
+		&lt;/button&gt;
+	&lt;/section&gt;
+{/snippet}</code></pre>
 </figure>
+<p>While a run is waiting, the button is <code>aria-disabled</code> rather than <code>disabled</code>. A disabled button gives up the keyboard focus that just pressed it, before there is anywhere for the focus to go.</p>
+<h3 id="testing-refusals">Tests for every way a refusal arrives</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">e2e/explore.e2e.ts<span class="code__lines">:340-375</span></span>
+		<span class="code__file">e2e/explore.e2e.ts<span class="code__lines">:365-400</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -508,9 +774,248 @@ $ pnpm exec playwright test e2e/explore.e2e.ts -g 'refuses is explained'
   2 failed</code></pre>
 </figure>
 
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/explore.e2e.ts<span class="code__lines">:402-429</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/*
+ * The same refusal, when the server renders the page: a link somebody shared,
+ * a new tab, a reload. The query used to be awaited in the page's script, the
+ * server waits for every such `await` before it renders anything, and so the
+ * refusal failed the render as a whole and came back as SvelteKit's error page.
+ *
+ * The response is still a 400, and should be: the request asked for a query
+ * the server refuses, and SvelteKit answers with the status of an error that a
+ * boundary caught while it rendered. What changed is the page that comes with
+ * it, so these tests look at the page. A status cannot tell SvelteKit's error
+ * page from this one, and the first test turns JavaScript off so that the
+ * page it looks at is the one the server sent, not one the browser repaired —
+ * down to the editor, with the query in it, ready to be fixed.
+ */
+test.describe('with JavaScript off, so the screen is what the server sent', () =&gt; {
+	test.use({ javaScriptEnabled: false });
+
+	test('a link to a query the server refuses is the explore page, saying why', async ({ page }) =&gt; {
+		const response = await page.goto(
+			`${DEMO}?q=${encodeURIComponent('from logs | where')}&amp;range=-6h`
+		);
+		expect(response?.status()).toBe(400);
+
+		const results = page.getByRole('region', { name: 'Results' });
+		await expect(results.getByRole('alert')).toHaveText('Expected a value');
+		await expect(page.getByRole('combobox', { name: 'Query' })).toHaveValue('from logs | where');
+	});
+});</code></pre>
+</figure>
+<p>With JavaScript off, the screen is only what the server sent, which is where this half of the bug lived. Run against three earlier pages, the same test fails for three different reasons, and together they show why it looks at the page as well as the status — down to the editor, with the query in it.</p>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>$ # the original page: the await and three $derived values in the script
+  ✘ a link to a query the server refuses is the explore page, saying why
+      Expected: &quot;Expected a value&quot;
+      Error: element(s) not found          ← a 400, from SvelteKit's error page
+
+$ # the first repair: the refusal caught in the script, `pending` kept
+  ✘ a link to a query the server refuses is the explore page, saying why
+      Expected: 400
+      Received: 200                        ← and &quot;Running…&quot; where the reason belongs
+
+$ # the editor inside {#await data.services}
+  ✘ a link to a query the server refuses is the explore page, saying why
+      Expected: &quot;from logs | where&quot;
+      Error: element(s) not found          ← the reason, and nowhere to fix it</code></pre>
+</figure>
+<p>Two more tests use the live page: a link opens with the query in the editor, ready to fix, and a reload after a refused Run lands on the same explanation. The rest hold requests back, or cut them off. The first presses “Try again” with the keyboard on a refusal that will come back the same: it proves a request is made, that the refusal stays up and the page says it is running while it waits, and that the focus ends on the new button.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/explore.e2e.ts<span class="code__lines">:487-519</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">test('&quot;Try again&quot; asks again, keeps the refusal up until it answers, and keeps the keyboard there', async ({
+	page
+}) =&gt; {
+	await page.goto(`${DEMO}?q=${encodeURIComponent('from logs | where')}&amp;range=-6h`);
+	await live(page);
+
+	const results = page.getByRole('region', { name: 'Results' });
+	const status = page.getByRole('status').filter({ hasText: 'Running…' });
+	await expect(results.getByRole('alert')).toHaveText('Expected a value');
+
+	const release = await hold(page, (url) =&gt; url.pathname.includes('/remote/'));
+	const asked = page.waitForRequest((request) =&gt; request.url().includes('/remote/'));
+	await results.getByRole('button', { name: 'Try again' }).focus();
+	await page.keyboard.press('Enter');
+	await asked;
+
+	await expect(status).toHaveCount(1);
+	await expect(results).toHaveAttribute('aria-busy', 'true');
+	await expect(results.getByRole('alert')).toHaveText('Expected a value');
+	await expect(results.getByRole('button', { name: 'Try again' })).toHaveAttribute(
+		'aria-disabled',
+		'true'
+	);
+
+	release();
+	await expect(status).toHaveCount(0);
+	await expect(results.getByRole('alert')).toHaveText('Expected a value');
+	await expect(results.getByRole('button', { name: 'Try again' })).toBeFocused();
+	await expect(results.getByRole('button', { name: 'Try again' })).toHaveAttribute(
+		'aria-disabled',
+		'false'
+	);
+});</code></pre>
+</figure>
+<p>The second is the case the button exists for. It cuts the connection, runs a query, and expects the client hook’s sentence from chapter 41 in place of “Internal Error”; then it puts the connection back, presses “Try again”, and expects the rows, with the focus on them.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/explore.e2e.ts<span class="code__lines">:521-545</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">test('a run lost to a dropped connection says so, and &quot;Try again&quot; draws its rows', async ({
+	page
+}) =&gt; {
+	await page.goto(`${DEMO}?q=${encodeURIComponent('from logs | take 5')}&amp;range=-6h`);
+	await live(page);
+
+	const results = page.getByRole('region', { name: 'Results' });
+	const restore = await cut(page);
+	await page.getByRole('combobox', { name: 'Query' }).fill('from logs | take 2');
+	await page.getByRole('button', { name: 'Run', exact: false }).click();
+
+	// The client's `handleError`, not SvelteKit's &quot;Internal Error&quot;: the server
+	// never heard the request, and the sentence says what to do about it.
+	await expect(results.getByRole('alert')).toHaveText(
+		'Sextant could not be reached. Check your connection, then try again.'
+	);
+
+	await restore();
+	await results.getByRole('button', { name: 'Try again' }).focus();
+	await page.keyboard.press('Enter');
+
+	await expect(results.getByRole('grid')).toHaveAttribute('aria-rowcount', '2');
+	await expect(results.getByRole('alert')).toHaveCount(0);
+	await expect(results).toBeFocused();
+});</code></pre>
+</figure>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>$ # focus taken by the new area as it was attached, not after settled()
+  ✘ &quot;Try again&quot; asks again, keeps the refusal up until it answers, and keeps the keyboard there
+      Expected: focused
+      Received: inactive
+
+$ # no refresh() before the new area: the client's old answer is reused
+  ✘ a run lost to a dropped connection says so, and &quot;Try again&quot; draws its rows
+      Expected: &quot;2&quot;
+      Error: element(s) not found          ← the lost run's refusal, drawn again
+
+$ # the same area for every run of the same query
+  ✘ a run lost to a dropped connection says so, and &quot;Try again&quot; draws its rows
+      Expected: &quot;2&quot;
+      Error: element(s) not found          ← a failed area has nothing left to hear the rows</code></pre>
+</figure>
+<p>The last two hold answers back. One presses Run on the query already on screen and expects a request, “Running…” and <code>aria-busy</code> while it waits, and the old rows kept up until the new ones land. The other lets two runs’ answers go at once and expects the second one’s rows — the test that froze on the key made from <code>query</code>.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/explore.e2e.ts<span class="code__lines">:547-578</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/*
+ * Run asks the server even when the query on screen is the one in the editor.
+ * A range like `-6h` means something new every minute, and a Run that sent
+ * nothing could neither show it nor recover an area that failed for a passing
+ * reason. The request is held, so the test can see the page say it is running.
+ */
+test('Run asks the server again for the query already on screen, and says it is running', async ({
+	page
+}) =&gt; {
+	await page.goto(`${DEMO}?q=${encodeURIComponent('from logs | take 5')}&amp;range=-6h`);
+	await live(page);
+
+	const results = page.getByRole('region', { name: 'Results' });
+	const status = page.getByRole('status').filter({ hasText: 'Running…' });
+	await expect(results.getByRole('grid')).toHaveAttribute('aria-rowcount', '5');
+	await expect(status).toHaveCount(0);
+
+	const release = await hold(page, (url) =&gt; url.pathname.includes('/remote/'));
+	const asked = page.waitForRequest((request) =&gt; request.url().includes('/remote/'));
+	await page.getByRole('button', { name: 'Run', exact: false }).click();
+	await asked;
+
+	await expect(status).toHaveCount(1);
+	await expect(results).toHaveAttribute('aria-busy', 'true');
+	// The rows on screen stay up while the new ones are on their way.
+	await expect(results.getByRole('grid')).toHaveAttribute('aria-rowcount', '5');
+
+	release();
+	await expect(status).toHaveCount(0);
+	await expect(results).toHaveAttribute('aria-busy', 'false');
+	await expect(results.getByRole('grid')).toHaveAttribute('aria-rowcount', '5');
+});</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/explore.e2e.ts<span class="code__lines">:580-604</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/*
+ * Two runs in flight at once, both answers held and then let go together.
+ *
+ * The results area is keyed on what a run asked for. Keyed on the query object
+ * instead, which is a new object at every call, this froze the tab: each run
+ * still waiting read the key again, found a new one, and started over.
+ */
+test('two runs in flight at once end on the answer to the second', async ({ page }) =&gt; {
+	await page.goto(`${DEMO}?q=${encodeURIComponent('from logs | take 5')}&amp;range=-6h`);
+	await expect(page).toHaveURL(/view=table/);
+
+	const editor = page.getByRole('combobox', { name: 'Query' });
+	const run = page.getByRole('button', { name: 'Run', exact: false });
+	const results = page.getByRole('region', { name: 'Results' });
+
+	const release = await hold(page, (url) =&gt; url.pathname.includes('/remote/'));
+	await editor.fill('from logs | where');
+	await run.click();
+	await editor.fill('from logs | take 2');
+	await run.click();
+	release();
+
+	await expect(results.getByRole('grid')).toHaveAttribute('aria-rowcount', '2');
+	await expect(results.getByRole('alert')).toHaveCount(0);
+});</code></pre>
+</figure>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>$ # Run on the query already on screen, with no refresh()
+  ✘ Run asks the server again for the query already on screen, and says it is running
+      page.waitForRequest: Test timeout of 30000ms exceeded.    ← nothing was asked
+
+$ # the results area keyed on `query`
+  ✘ two runs in flight at once end on the answer to the second
+      Expected: &quot;2&quot;
+      Received: &quot;5&quot;</code></pre>
+</figure>
+
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>
-	<ul><li>A results table draws forty sparklines in one round trip.</li><li>Your rule form works with JavaScript disabled.</li><li>An invalid rule shows a message beside the field rather than an error page.</li><li>A toggle the server refuses goes back to how it was and says why.</li><li>A query the server refuses is explained where its rows would be, with the editor still there.</li></ul>
+	<ul><li>A results table draws forty sparklines in one round trip.</li><li>Your rule form works with JavaScript disabled.</li><li>An invalid rule shows a message beside the field rather than an error page.</li><li>A toggle the server refuses goes back to how it was and says why.</li><li>A query the server refuses is explained where its rows would be, with the editor still there.</li><li>A link to a refused query opens the explore page with the reason, the editor and a 400, even with JavaScript off.</li><li>The traces, a trace and the alert rules are in the server’s HTML, not “Loading…”.</li><li>Run asks the server every time, and says “Running…” until the answer is drawn.</li><li>“Try again” after a dropped connection draws the rows, and leaves the keyboard on them.</li><li>Two runs pressed in quick succession end on the answer to the second.</li></ul>
 </aside>
 		</article>
 

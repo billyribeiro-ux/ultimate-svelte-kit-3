@@ -76,11 +76,12 @@
 	 * `onMount`, not an `afterNavigate` of type `enter`, although `enter` is
 	 * SvelteKit's own word for "the app has hydrated". SvelteKit sends `enter`
 	 * once, a moment after it starts hydrating, and `afterNavigate` registers its
-	 * callback when the component mounts. On a page whose script has a top-level
-	 * `await` (explore, traces, alerts), the layout mounts only after that
-	 * `await` has resolved. By then `enter` has come and gone, and the attribute
-	 * never appeared. `onMount` has no event to miss: the layout mounting is
-	 * exactly the moment this is meant to mark.
+	 * callback when the component mounts. A page that awaits a query outside any
+	 * boundary with a `pending` snippet — explore, traces and alerts all do, in
+	 * their markup now — holds the layout's mounting until that `await` has
+	 * resolved. By then `enter` has come and gone, and the attribute never
+	 * appeared. `onMount` has no event to miss: the layout mounting is exactly the
+	 * moment this is meant to mark.
 	 */
 	onMount(() => {
 		document.documentElement.dataset.hydrated = '';
@@ -130,8 +131,10 @@
 						<li>
 							<a
 								href={item.href}
-								class="nav__link"
-								class:nav__link--current={page.url.pathname.startsWith(item.href)}
+								class={[
+									'nav__link',
+									{ 'nav__link--current': page.url.pathname.startsWith(item.href) }
+								]}
 								aria-current={page.url.pathname.startsWith(item.href) ? 'page' : undefined}
 							>
 								{item.label}
@@ -172,7 +175,7 @@
 	</header>
 {/if}
 
-<main id="main" class:main--full={signedIn}>
+<main id="main" class={{ 'main--full': signedIn }}>
 	{@render children()}
 </main>
 

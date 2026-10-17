@@ -155,3 +155,40 @@ test('a toggle the server refuses says why, and the box goes back', async ({ pag
 	await expect(row.getByRole('alert')).toHaveText('Sign in to continue.');
 	await expect(toggle).toBeChecked({ checked: before });
 });
+
+test('a list of rules that cannot load says what the server said', async ({ page, context }) => {
+	/*
+	 * The session ends under a live page, then the header's Alerts link is
+	 * followed. The page loads no server data of its own, so the navigation asks
+	 * for nothing but the rules, and that is refused for real. The boundary is
+	 * handed SvelteKit's `App.Error`; it used to look for the message on `body`.
+	 */
+	await page.goto('/demo/settings');
+	await expect(page.locator('html[data-hydrated]')).toHaveCount(1);
+
+	await context.clearCookies();
+	await page
+		.getByRole('navigation', { name: 'Workspace' })
+		.getByRole('link', { name: 'Alerts' })
+		.click();
+
+	await expect(page).toHaveURL(/\/demo\/alerts$/);
+	await expect(page.getByRole('alert')).toHaveText('Sign in to continue.');
+});
+
+test.describe('with JavaScript off, so the screen is what the server sent', () => {
+	test.use({ javaScriptEnabled: false });
+
+	test('the rules are in the server’s HTML', async ({ page }) => {
+		/*
+		 * The list used to be awaited in the page's script, with a `pending`
+		 * snippet in its boundary: the server waited for the rules and then sent
+		 * "Loading rules…" in their place, which is all a page with no JavaScript
+		 * ever showed.
+		 */
+		await page.goto('/demo/alerts');
+
+		await expect(page.getByRole('heading', { name: 'Checkout p95 latency' })).toBeVisible();
+		await expect(page.getByRole('status')).toHaveCount(0);
+	});
+});

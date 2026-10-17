@@ -84,7 +84,7 @@ export const part5 = [
 			},
 
 			{ type: 'h3', id: 'the-map', text: 'A plain Map, on purpose' },
-			code('src/lib/components/Virtualizer.svelte.ts', 75, 91),
+			code('src/lib/components/Virtualizer.svelte.ts', 84, 100),
 			{
 				type: 'p',
 				text: 'This is the one place in the project that argues *against* `SvelteMap`, and the argument is about write frequency. A measurement pass sets thirty heights in a loop — thirty reactive invalidations for one visual change, in the hot path of scrolling. Replacing the map wholesale is one invalidation.'
@@ -95,14 +95,14 @@ export const part5 = [
 			},
 
 			{ type: 'h3', id: 'offsets', text: 'Cumulative offsets, and an honest complexity note' },
-			code('src/lib/components/Virtualizer.svelte.ts', 99, 128, { partial: true }),
+			code('src/lib/components/Virtualizer.svelte.ts', 109, 138, { partial: true }),
 			{
 				type: 'p',
 				text: 'O(n) in the row count, recomputed only when a measurement actually changed something. A prefix-sum tree makes it O(log n) and is the right answer at a million rows; at ten thousand it is a data structure to maintain in exchange for nothing measurable. Saying which side of that line you are on is more useful than picking the clever one.'
 			},
 
 			{ type: 'h3', id: 'flushsync', text: 'The anchor, and why `flushSync`' },
-			code('src/lib/components/Virtualizer.svelte.ts', 192, 226, { partial: true }),
+			code('src/lib/components/Virtualizer.svelte.ts', 202, 236, { partial: true }),
 			{
 				type: 'why',
 				title: 'The one place a synchronous flush is not a smell',
@@ -114,7 +114,7 @@ export const part5 = [
 			},
 
 			{ type: 'h3', id: 'scrollto', text: 'And `tick`, which is the other one' },
-			code('src/lib/components/Virtualizer.svelte.ts', 228, 250, { partial: true }),
+			code('src/lib/components/Virtualizer.svelte.ts', 238, 260, { partial: true }),
 			{
 				type: 'p',
 				text: '`await tick()` rather than `flushSync()`, because nothing here reads layout immediately afterwards — one tick is enough, and it is cheaper. Knowing which of the two you need is knowing whether a layout read follows.'
@@ -142,28 +142,39 @@ export const part5 = [
 				type: 'p',
 				text: 'Every query lands in one table, whatever its shape: a hundred thousand log lines, a six-row summary, one column of numbers. Rather than three components with a conditional between them, this renders whatever columns the result has and formats each cell by what the value *is*.'
 			},
-			code('src/lib/components/ResultTable.svelte', 7, 18),
+			code('src/lib/components/ResultTable.svelte', 9, 20),
 			{
 				type: 'p',
 				text: 'That is a constraint on the query language too, and a useful one: because the table is generic, a new SQF function needs no interface work at all.'
 			},
 
 			{ type: 'h3', id: 'attachments', text: 'An attachment factory, and why not an inline arrow' },
-			code('src/lib/components/ResultTable.svelte', 68, 90),
+			code('src/lib/components/ResultTable.svelte', 78, 100),
 			{
 				type: 'warn',
 				text: 'The inline version — `{@attach (el) => …}` — looks identical and is a performance bug. An attachment re-runs whenever its expression produces a new function, and an arrow written in markup is new on every render, so an inline version detaches and reattaches a `ResizeObserver` per row per frame.'
 			},
 
 			{ type: 'h3', id: 'aria', text: 'The ARIA a virtualized grid needs' },
-			code('src/lib/components/ResultTable.svelte', 159, 175),
+			code('src/lib/components/ResultTable.svelte', 173, 189),
 			{
 				type: 'p',
 				text: 'A virtualized table renders a window of rows, so a screen reader that counted the DOM would announce "row 3 of 12" while the person is at row 4,000 of 100,000. `aria-rowcount` on the grid and `aria-rowindex` on each row tell it the truth — and are the reason a virtualizer does not have to choose between being usable and being fast.'
 			},
 
+			{ type: 'h3', id: 'server-rows', text: 'Rows the server can draw' },
+			code('src/lib/components/ResultTable.svelte', 35, 47),
+			{
+				type: 'p',
+				text: 'A virtualizer learns which rows to draw from two things the server does not have: an effect that tells it how many rows there are, and a measurement of the scrolling container. Effects “only run in the browser, not during server-side rendering”, and nothing can be measured there either, so the server used to draw the grid’s header and footer around no rows at all — and the end-to-end test that said “the first paint already has rows, from the server” passed anyway, because it left JavaScript on and the browser drew them.'
+			},
+			{
+				type: 'p',
+				text: 'So the count is set from the rows the table starts with, and the virtualizer is told what viewport height to assume until it can measure one. The browser starts from the same two numbers, so hydration finds the rows the server drew, and the attachment that measures the container corrects the window straight after. The count is read inside `untrack`, which says on the page what is true of any `$props` read at the top of a script: this is the starting value, and the `$effect` below is what follows the rows from here. The test now turns JavaScript off.'
+			},
+
 			{ type: 'h3', id: 'formatting', text: 'Format by value, not by column name' },
-			code('src/lib/components/ResultTable.svelte', 104, 127),
+			code('src/lib/components/ResultTable.svelte', 114, 141),
 			{
 				type: 'p',
 				text: 'A column called `duration` is a duration; so is `p95` from `percentile(duration, 95)`, and `slowest` from `max(duration)`. Keying off the name formats the first and misses the other two — which is exactly the case where a raw number is least readable.'
@@ -173,15 +184,26 @@ export const part5 = [
 				text: 'The heuristic that follows is honest about being one. The evaluator knows each column’s SQF type and this component does not, because the result crosses the wire as plain rows; threading the type through would be the correct fix and would mean the result shape carries a schema.'
 			},
 
+			{ type: 'h3', id: 'class-values', text: 'A class made of values, not of strings' },
+			code('src/lib/components/ResultTable.svelte', 207, 220),
+			{
+				type: 'p',
+				text: '`classOf` returns an array with an object in it: the keys are class names, and each value says whether its class applies. “Since Svelte 5.16, `class` can be an object or array, and is converted to a string using clsx”, and `ClassValue` from `svelte/elements` is its type. The documentation is plain about the older directive: “Unless you’re using an older version of Svelte, consider avoiding `class:`, since the attribute is more powerful and composable.” This project uses the one form everywhere, from the selected row in this table to the error bars in the flame graph, so there is one idiom to read rather than two.'
+			},
+			{
+				type: 'p',
+				text: 'The level is different, because it is a value from the data rather than a switch. Building `level--${value}` into a class would hand the stylesheet a name made at run time from whatever the logs said. `data-level` states the value, and `.cell[data-level=\'error\']` decides which values get a colour; a level nobody styled is simply plain text. The query editor colours its tokens the same way.'
+			},
+
 			{ type: 'h3', id: 'truncation', text: 'Truncation, said plainly' },
-			code('src/lib/components/ResultTable.svelte', 206, 219),
+			code('src/lib/components/ResultTable.svelte', 228, 241),
 			{
 				type: 'p',
 				text: 'A truncated result that looks complete is how somebody concludes an error stopped happening. The count shown is the *shown* count, because the true one is not known — and "of many" is more honest than a number that would have to be guessed.'
 			},
 
 			{ type: 'h3', id: 'mobile', text: 'And a phone gets a different table' },
-			code('src/lib/components/ResultTable.svelte', 234, 247),
+			code('src/lib/components/ResultTable.svelte', 256, 269),
 			{
 				type: 'p',
 				text: 'Mobile first, and the breakpoint adds columns rather than removing them. A six-column grid at 390px gives each column sixty pixels, which is narrower than a timestamp; stacked, each row is a small record — which is how a log line reads on a phone anyway.'
@@ -214,7 +236,7 @@ export const part5 = [
 				type: 'p',
 				text: 'Svelte 5 snippets can recurse. `{@render flame(child, depth + 1)}` **inside the definition of `flame`** is legal, terminates on the base case like any other recursion, and needs no second file.'
 			},
-			code('src/lib/components/FlameGraph.svelte', 105, 135),
+			code('src/lib/components/FlameGraph.svelte', 105, 139),
 
 			{ type: 'h3', id: 'the-depth-guard', text: 'The guard, and where it lives' },
 			code('src/lib/components/FlameGraph.svelte', 1, 27),
@@ -346,7 +368,7 @@ export const part5 = [
 			},
 
 			{ type: 'h3', id: 'three-layers', text: 'Three layers, one grid cell' },
-			code('src/lib/components/QueryEditor.svelte', 258, 276),
+			code('src/lib/components/QueryEditor.svelte', 241, 307),
 			{
 				type: 'p',
 				text: 'An error underlay in transparent text with a wavy underline, the highlighted source, and a transparent textarea with a visible caret. The grid cell sizes to the tallest — which is the `<pre>` — so the editor grows with the query and never scrolls independently of its own highlighting. No `scrollHeight` read per keystroke, no resize effect.'
@@ -354,6 +376,10 @@ export const part5 = [
 			{
 				type: 'warn',
 				text: 'Every metric must match in all three layers: font, size, line height, letter spacing, padding, wrapping, tab size. A single mismatch and the highlighting drifts from the caret by a fraction of a character per line, which looks like a browser bug and is not. They are declared once on a shared selector for exactly that reason.'
+			},
+			{
+				type: 'note',
+				text: 'Each token carries its category as `data-category`, and the stylesheet selects on it: `.tok[data-category=\'keyword\']`. A category is what the lexer decided about the text, not a modifier anybody switches on, so the markup states the value and the stylesheet decides which values get a colour. No class name is assembled from a string, and a category with no rule is plain text.'
 			},
 
 			{ type: 'h3', id: 'the-caret', text: 'Measuring the caret without a hidden mirror' },
@@ -368,7 +394,7 @@ export const part5 = [
 			},
 
 			{ type: 'h3', id: 'no-debounce', text: 'And no debounce' },
-			code('src/lib/components/QueryEditor.svelte', 77, 104),
+			code('src/lib/components/QueryEditor.svelte', 76, 103),
 			{
 				type: 'p',
 				text: 'Parse and check run on every keystroke. The whole front end takes well under a millisecond on a few hundred characters, so a debounce would make the underline appear a quarter of a second after the mistake — which is exactly long enough to have started typing the next thing. Hiding a fast thing behind a timer makes it feel slow.'
@@ -424,6 +450,18 @@ export const part5 = [
 				type: 'why',
 				title: 'Fuzzy matching is wonderful in a file finder and wrong here',
 				text: 'In a file finder you know the answer and are recalling it, so `dur` matching `p95_duration_ms` is a shortcut. In a schema you are still learning, it puts things you have never heard of at the top of the list, and you cannot tell whether they are relevant or noise. Prefix beats substring, shorter beats longer, alphabetical breaks the tie.'
+			},
+
+			{ type: 'h3', id: 'the-highlight', text: 'Which suggestion is highlighted' },
+			code('src/lib/components/QueryEditor.svelte', 105, 122),
+			{
+				type: 'p',
+				text: 'The highlighted suggestion is derived from the list it indexes — the first one, or none while the list is empty — and the arrow keys assign to it in between. That is a `$derived` being written to, which Svelte has allowed since 5.25: “you can temporarily override their values by reassigning them”, and the next change to the list recomputes it from scratch.'
+			},
+			{
+				type: 'why',
+				title: 'Why not `$state` and an effect that keeps it in range',
+				text: 'Because that is the version the documentation asks you not to write. An effect that synchronises one piece of state from another runs after the change has happened, so for a moment the highlight pointed past the end of a list that had just shrunk, and the code had two places that could disagree. “If you’re using an effect because you want to be able to reassign the derived value (to build an optimistic UI, for example) note that deriveds can be directly overridden as of Svelte 5.25.” A derived is recomputed before anything reads it, so the index is never out of step with its list, and the two `active = 0` lines that typing and Ctrl+Space used to need went with the effect.'
 			},
 
 			{ type: 'h3', id: 'the-hyphen', text: 'The hyphen that broke the replacement range' },
