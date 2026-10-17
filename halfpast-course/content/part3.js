@@ -95,7 +95,7 @@ export default defineConfig(({ mode }) => {
 			{
 				type: 'why',
 				title: 'paths.origin — new in 3.0, and not optional here',
-				text: 'It is the origin SvelteKit trusts for cross-site request checks. Up to v5, `@sveltejs/adapter-node` read that origin from an `ORIGIN` environment variable at runtime; v6, the adapter for SvelteKit 3, removed it, so the value is baked in at build time from this setting, and the header fallback **assumes https**. (This app still declares an `ORIGIN` of its own in `src/env.ts`, for Better Auth in the next chapter; the adapter no longer looks at it.) A plain-HTTP preview server therefore computes `https://localhost:4173`, the browser sends `http://localhost:4173`, they disagree, and *every* form post comes back 403 "Cross-site remote requests are forbidden". Setting `paths.origin` fixes it in one line and is genuinely hard to diagnose without knowing.'
+				text: 'It is the origin SvelteKit trusts for cross-site request checks. Up to v5, `@sveltejs/adapter-node` read that origin from an `ORIGIN` environment variable at runtime; v6, the adapter for SvelteKit 3, removed it, so the value is baked in at build time from this setting, and the header fallback **assumes https**. (This app still declares an `ORIGIN` of its own in `src/env.ts`, for Better Auth in the next chapter; the adapter no longer looks at it.) So the built server, `node build`, served over plain HTTP computes `https://localhost:4173`, the browser sends `http://localhost:4173`, they disagree, and *every* form post comes back 403 "Cross-site remote requests are forbidden". (`pnpm preview` will not show you this: `vite preview` takes its protocol from Vite\'s own `preview.https` setting and gets `http` right. It is adapter-node\'s handler that assumes `https`, which is why the end-to-end tests, which run `node build`, were the ones that met it.) Setting `paths.origin` fixes it in one line and is genuinely hard to diagnose without knowing.'
 			},
 
 			{ type: 'h3', id: 'env', text: 'Environment variables, declared' },
@@ -109,10 +109,16 @@ export default defineConfig(({ mode }) => {
 				lang: 'ts',
 				code: `
 import { defineEnvVars } from '@sveltejs/kit/env';
+import { building } from '$app/env';
 import * as v from 'valibot';
 
 /** A non-empty string, with surrounding whitespace stripped. */
 const required = v.pipe(v.string(), v.trim(), v.minLength(1));
+
+// …
+function neededAtRuntime<Schema extends v.GenericSchema<string, string>>(schema: Schema) {
+	return building ? v.optional(schema) : schema;
+}
 
 // …
 
@@ -121,18 +127,20 @@ export const variables = defineEnvVars({
 
 	DATABASE_URL: {
 		description:
-			'libSQL connection string. \`file:local.db\` in development, a \`libsql://…\` Turso URL in production.',
-		schema: required
+			'libSQL connection string. \`file:local.db\` in development, a \`libsql://…\` Turso URL in production. Not needed to build.',
+		schema: neededAtRuntime(required)
 	},
 
 	// …
 
 	BETTER_AUTH_SECRET: {
 		description:
-			'Signing key for session tokens. Generate with \`openssl rand -base64 32\`. See https://www.better-auth.com/docs/installation.',
-		schema: v.pipe(
-			required,
-			v.minLength(32, 'BETTER_AUTH_SECRET must be at least 32 characters of high entropy')
+			'Signing key for session tokens. Generate with \`openssl rand -base64 32\`. See https://www.better-auth.com/docs/installation. Not needed to build.',
+		schema: neededAtRuntime(
+			v.pipe(
+				required,
+				v.minLength(32, 'BETTER_AUTH_SECRET must be at least 32 characters of high entropy')
+			)
 		)
 	},
 
@@ -159,6 +167,21 @@ export const variables = defineEnvVars({
 					'**Each one carries a schema.** The app refuses to start with a bad value, rather than failing at 3am when the first request reaches that branch.',
 					'**`public: true` is an explicit, reviewable act.** You cannot leak a secret to the browser by accident; you have to type the word `public` next to it.'
 				]
+			},
+
+			{ type: 'h3', id: 'building', text: 'Required to run, not to build' },
+			{
+				type: 'p',
+				text: 'The schemas run at build time as well as at start-up, because SvelteKit analyses the app during `vite build` by running it. For the two public variables that is right: `static: true` inlines them into the bundle, so they have to be the real values when you build. The three private ones are different. Nothing inlines them, the build never uses them, and a CI job that builds the app should not need a database address or a signing secret to do it.'
+			},
+			{
+				type: 'p',
+				text: 'The SvelteKit docs give the way out in the same paragraph that says a bad value fails the build: "use `building` from `$app/env` along with a validator that accepts an optional value: `schema: building ? v.optional(v.string()) : v.string()`". `neededAtRuntime` is that sentence as a function, wrapped round the three private schemas. While building, a missing value is fine; once the server starts, `building` is `false` and a missing or malformed one stops it on the spot, exactly as before.'
+			},
+			{
+				type: 'why',
+				title: 'Why accept a weaker type',
+				text: 'Each of the three now imports as `string | undefined`, because at build time it can be, so the two modules that read them check `building` themselves — chapter 10 showed the database one, and the next chapter shows Better Auth\'s. That is a real cost, paid in a few lines, and it buys a build that needs no secret and reaches no database. The alternative is to feed the build placeholder values, which is where this project started; chapter 35 tells how that ended, with a build that could talk to production.'
 			},
 			{
 				type: 'code',
@@ -256,6 +279,7 @@ const timeZone = v.pipe(
 				file: 'src/lib/server/auth.ts',
 				lang: 'ts',
 				code: `
+import { building } from '$app/env';
 import { ORIGIN, BETTER_AUTH_SECRET } from '$app/env/private';
 import { betterAuth } from 'better-auth/minimal';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
@@ -267,7 +291,14 @@ import { db } from './db/index.ts';
 
 export const auth = betterAuth({
 	baseURL: ORIGIN,
-	secret: BETTER_AUTH_SECRET,
+	/*
+	 * The real secret whenever the server is running: \`src/env.ts\` refuses to
+	 * start without one. While SvelteKit builds, it imports this module to
+	 * analyse the app, the secret is allowed to be missing, and Better Auth
+	 * refuses to initialise without one — so the build gets a random throwaway.
+	 * Nothing is signed while building, and the value dies with the build.
+	 */
+	secret: building ? \`build-\${crypto.randomUUID()}-\${crypto.randomUUID()}\` : BETTER_AUTH_SECRET,
 
 	database: drizzleAdapter(db, { provider: 'sqlite' }),
 
@@ -428,7 +459,7 @@ export const handleError: HandleServerError = ({ kind, error, event }) => {
 			},
 			{
 				type: 'note',
-				text: 'Write `src/hooks.client.ts` too, with the same shape and `HandleClientError`. A remote query that rejects during a client-side navigation renders the error page and writes **nothing** to the server log, because the server was never involved. Without the client hook, that is a blank 500 with no evidence anywhere. This exact tool found two real bugs in this project.'
+				text: 'Write `src/hooks.client.ts` too, with the same shape and `HandleClientError`. A bug that throws in the browser after a client-side navigation — a component reading route data that is momentarily absent, say — renders the error page and writes **nothing** to the server log, because the server was never involved. Without the client hook, that is a blank 500 with no evidence anywhere. This exact tool found two real bugs in this project. Remote calls are the subtle part. A rejection SvelteKit\'s server produced — its own `error(404, …)`, or an unknown failure its `handleError` has already logged and reworded — reaches the browser in its final shape and never comes here. A request that never got a SvelteKit answer does: offline, the browser\'s `TypeError: Failed to fetch` arrives as `kind: \'unknown\'` and is logged like a bug, and a proxy\'s 502 page arrives as an `HttpError` with `kind: \'app\'`. We checked both in a real browser, by aborting a query\'s request and by answering it with an HTML 502.'
 			},
 
 			{ type: 'h3', id: 'customer-token', text: 'The customer’s bearer token' },
@@ -703,7 +734,8 @@ async function createBookingNow(input: CreateBookingInput): Promise<Booking> {
 			})
 			.returning();
 
-		if (!created) throw new BookingError('slot_taken', 'That time was just taken.');
+		// …
+		if (!created) throw new Error('Inserting the booking returned no row.');
 
 		/* --- 4. The claim. This is the part that cannot be raced. ------------- */
 
@@ -733,7 +765,7 @@ async function createBookingNow(input: CreateBookingInput): Promise<Booking> {
 
 			{
 				type: 'p',
-				text: 'The elided lines are less interesting than they are long. Before step 1 the transaction loads the business, the service and the staff member, and checks that this person actually offers this service, each with its own `BookingError`. Step 1 then loads that person\'s working rules and the cells already claimed a day either side, and hands them to the same pure `availableSlots` from chapter 8. Step 2 finds the customer by business and lowercased email, or inserts one. Step 3\'s row copies the service name, duration, price, currency and time zone onto the booking, so an owner who changes a price next month does not rewrite what this customer agreed to.'
+				text: 'The elided lines are less interesting than they are long. Before step 1 the transaction loads the business, the service and the staff member, and checks that this person actually offers this service, each with its own `BookingError`. Step 1 then loads that person\'s working rules and the cells already claimed a day either side, and hands them to the same pure `availableSlots` from chapter 8. Step 2 finds the customer by business and lowercased email, or inserts one. Step 3\'s row copies the service name, duration, price, currency and time zone onto the booking, so an owner who changes a price next month does not rewrite what this customer agreed to. The `if (!created)` after it is not a race at all: `insert … returning` either returns the row it wrote or throws, and the check exists only because indexing an array is `T | undefined` under `noUncheckedIndexedAccess`. It used to throw a `BookingError` saying "That time was just taken." — a sentence that could never actually reach a customer — and now throws a plain `Error`, because if it ever fires, it is a bug.'
 			},
 
 			{ type: 'h3', id: 'order', text: 'Why that order' },
@@ -752,7 +784,7 @@ async function createBookingNow(input: CreateBookingInput): Promise<Booking> {
 			},
 			{
 				type: 'p',
-				text: 'Notice how carefully step 1 splits its refusal into three. "No longer available", "too close to now" and "the diary is not open that far ahead" are the same failure to the code and three different problems to the person reading them — and only one of the three is solved by picking another time.'
+				text: 'Notice how carefully step 1 splits its refusal into three. "No longer available", "too close to now" and "the diary is not open that far ahead" are the same failure to the code and three different problems to the person reading them, with three different remedies: another time, a later one, an earlier one. Chapter 25 shows where the booking page puts each of them — on the form, beside the grid, with everything the customer typed still there.'
 			},
 
 			{ type: 'h3', id: 'after-commit', text: 'Publishing after the commit, not inside it' },

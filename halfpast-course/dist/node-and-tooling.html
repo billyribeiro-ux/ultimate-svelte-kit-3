@@ -75,28 +75,32 @@ node --version   # v24.21.0</code></pre>
 }</code></pre>
 </figure>
 <p><code>engines</code> says which Node the project needs. <code>packageManager</code> does the same job for the package manager: pnpm reads it and switches to exactly 12.10.1 in this folder, whatever version is installed globally.</p>
+<p>On its own, <code>engines</code> is advisory: a statement of what the project needs, which nothing enforces. Making pnpm enforce it is one line, and it goes in <code>pnpm-workspace.yaml</code>, because that is where pnpm 12 reads its settings from:</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">.npmrc</span>
+		<span class="code__file">pnpm-workspace.yaml</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ini">engine-strict=true</code></pre>
+	<pre><code class="lang-yaml">engineStrict: true</code></pre>
 </figure>
-<p>On its own, <code>engines</code> is advisory. What <code>engine-strict=true</code> buys you depends on which tool reads it: <strong>npm</strong> turns the mismatch into a refusal, while <strong>pnpm 12</strong> — what this project actually installs with — still carries on, but complains loudly. Run <code>pnpm install</code> under Node 22, the LTS line before this one, and you get:</p>
+<p>Now run <code>pnpm install</code> under Node 22, the LTS line before this one, and it stops before touching a single package:</p>
 
 <figure class="code code--terminal">
 	<figcaption>
 		<span class="code__file">terminal</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code> WARN  Unsupported engine: wanted: {&quot;node&quot;:&quot;&gt;=24.21.0&quot;} (current: {&quot;node&quot;:&quot;v22.11.0&quot;,&quot;pnpm&quot;:&quot;12.10.1&quot;})</code></pre>
+	<pre><code>Error: ERR_PNPM_UNSUPPORTED_ENGINE
+
+  × Unsupported engine for /home/you/halfpast-app: wanted:
+  │ {&quot;node&quot;:&quot;&gt;=24.21.0&quot;} (current: {&quot;node&quot;:&quot;22.22.0&quot;})</code></pre>
 </figure>
-<p>If you want pnpm to refuse outright rather than warn, set <code>engineStrict: true</code> in <code>pnpm-workspace.yaml</code>. Then the same install stops dead with <code>ERR_PNPM_UNSUPPORTED_ENGINE  Unsupported environment (bad pnpm and/or Node.js version)</code> before touching a single package.</p>
+<aside class="callout callout--warn"><p>You will see <code>engine-strict=true</code> in an <code>.npmrc</code> in a great many projects, and this one had it too. That is npm's spelling of the setting, and pnpm 12 does not read it. We checked rather than assumed: with only the <code>.npmrc</code> line, the same install under Node 22 printed <code>Done in 25ms using pnpm v12.10.1</code> and exited 0, with no warning of any kind, and <code>pnpm config get engine-strict</code> answered <code>undefined</code>. A guard that does nothing is worse than no guard, because everybody believes it is there. So the line moved to <code>pnpm-workspace.yaml</code> and the <code>.npmrc</code> went.</p></aside>
 
 <aside class="callout callout--why">
 	<h4>Why this is worth the friction</h4>
-	<p>Because the alternative is a colleague still on Node 20, which reached end of life in April 2026, everything appearing to work, and a subtly different result appearing in production three weeks later. A loud complaint on day one — or better, a refusal — is cheaper than a quiet failure on day twenty-one.</p>
+	<p>Because the alternative is a colleague still on Node 20, which reached end of life in April 2026, everything appearing to work, and a subtly different result appearing in production three weeks later. A refusal on day one is cheaper than a quiet failure on day twenty-one — and it is only a refusal if the tool you install with actually reads the setting, which is why the setting lives where pnpm looks.</p>
 </aside>
 <p>Add an <code>.nvmrc</code> too, so <code>nvm use</code> in the project folder picks the right one with no arguments:</p>
 

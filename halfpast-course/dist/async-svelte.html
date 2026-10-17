@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Async Svelte, and its sharp edges — Building Halfpast</title>
-<meta name="description" content="await inside $derived, boundaries with pending and failed snippets, and two traps that cost this project an afternoon each.">
+<meta name="description" content="await inside $derived, the boundary SvelteKit already wrote, boundaries of your own, and two traps that cost this project an afternoon each.">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -33,7 +33,7 @@
 		<article>
 			<p class="eyebrow">Chapter 23</p>
 			<h1>Async Svelte, and its sharp edges</h1>
-			<p class="lede"><code>await</code> inside <code>$derived</code>, boundaries with pending and failed snippets, and two traps that cost this project an afternoon each.</p>
+			<p class="lede"><code>await</code> inside <code>$derived</code>, the boundary SvelteKit already wrote, boundaries of your own, and two traps that cost this project an afternoon each.</p>
 			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Components that await data directly, with sensible loading and error states — and no server-side crashes.</p></aside>
 			<p>Svelte 5 with <code>experimental.async</code> lets you <code>await</code> inside <code>$derived</code> and directly in markup. It removes an entire category of code: no <code>{#await}</code> pyramids, no <code>loading</code> booleans, no <code>data.streamed.thing</code>.</p>
 
@@ -58,34 +58,145 @@
 	// …
 }),</code></pre>
 </figure>
-<h3 id="boundaries">Boundaries</h3>
-<p>An awaiting component needs somewhere for its loading and error states to live. That is <code>&lt;svelte:boundary&gt;</code>.</p>
+<h3 id="boundaries">Boundaries, and the one SvelteKit already wrote</h3>
+<p>An awaiting component needs somewhere for its loading and error states to live. That is <code>&lt;svelte:boundary&gt;</code>: an <code>await</code> that has not settled suspends the nearest boundary above it, and a promise that rejects puts that boundary into its failed state.</p>
+<p>In a SvelteKit 3 app you do not write the outermost one. SvelteKit renders everything below the root layout inside a boundary of its own, and that boundary's failed state is the nearest <code>+error.svelte</code>. So the app-wide failure screen is a file, not a snippet:</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/+error.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
+	import { resolve } from '$app/paths';
+	import Button from '#lib/components/Button.svelte';
+	import type { ErrorProps } from './$types';
+
+	// …
+	let { error }: ErrorProps = $props();
+
+	// …
+	const heading = $derived(
+		error.status === 404
+			? 'Not found'
+			: error.status &lt; 500
+				? 'That did not work'
+				: 'Something went wrong'
+	);
+&lt;/script&gt;
+
+&lt;!-- … --&gt;
+
+&lt;div class=&quot;container-narrow section&quot;&gt;
+	&lt;div class=&quot;failure&quot; role=&quot;alert&quot;&gt;
+		&lt;h1&gt;{heading}&lt;/h1&gt;
+		&lt;p&gt;{error.message}&lt;/p&gt;
+
+		&lt;!-- … --&gt;
+		{#if error.id}
+			&lt;p class=&quot;reference&quot;&gt;Reference &lt;code&gt;{error.id}&lt;/code&gt;&lt;/p&gt;
+		{/if}
+
+		&lt;div class=&quot;actions&quot;&gt;
+			&lt;Button href={resolve('/')} variant=&quot;secondary&quot;&gt;Back to the start&lt;/Button&gt;
+		&lt;/div&gt;
+	&lt;/div&gt;
+&lt;/div&gt;</code></pre>
+</figure>
+<p><code>error</code> is an <code>App.Error</code>: <code>{ status, message }</code>, plus the <code>id</code> this app declares in <code>app.d.ts</code>. It has already been through <code>handleError</code> (the server's, or the browser's for a bug that throws there), so <code>message</code> is either the sentence somebody wrote in <code>error(…)</code> or the hook's safe replacement, and the component shows it as it is. The <code>id</code> appears only for unknown failures, the ones the hook logged next to a stack trace. The heading is chosen from the status, because a 403 is the server refusing on purpose, and &quot;Something went wrong&quot; would tell somebody the app is broken when it is working exactly as designed.</p>
+
+<aside class="callout callout--why">
+	<h4>Why error.message, and not messageFrom</h4>
+	<p>Chapter 20's helper is for a <code>catch</code> around a remote call, which receives an <code>HttpError</code> with the words one level down, in <code>body</code>. A boundary receives the <code>App.Error</code> itself, with no <code>body</code>, because SvelteKit has already unwrapped it. Hand that to <code>messageFrom</code> and the fallback wins every time, while a plausible sentence sits on screen and nothing looks broken. We probed it rather than trusting it: on the server and after a client-side navigation alike, the failed state was handed a plain object, <code>{ status: 404, message: 'We could not find that booking.' }</code>, neither an <code>Error</code> nor an <code>HttpError</code>.</p>
+</aside>
 
 <figure class="code">
 	<figcaption>
 		<span class="code__file">src/routes/+layout.svelte</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">&lt;svelte:boundary&gt;
-	{@render children()}
+	<pre><code class="lang-svelte">&lt;main id=&quot;main&quot; class=&quot;main&quot;&gt;
+	&lt;!--
+		NO BOUNDARY HERE, AND THAT IS DELIBERATE
+		========================================
 
-	{#snippet failed(error, reset)}
-		&lt;div class=&quot;container-narrow section&quot;&gt;
-			&lt;div class=&quot;failure&quot; role=&quot;alert&quot;&gt;
-				&lt;h1&gt;Something went wrong&lt;/h1&gt;
-				&lt;p&gt;
-					{messageFrom(error, 'We could not load this page.')}
-				&lt;/p&gt;
-				&lt;button type=&quot;button&quot; onclick={reset}&gt;Try again&lt;/button&gt;
-			&lt;/div&gt;
-		&lt;/div&gt;
+		With Svelte's async mode, `await` inside a `$derived` — which is how
+		every page in this app reads its data — suspends the nearest
+		`&lt;svelte:boundary&gt;` above it, and a rejection lands in that boundary's
+		failed state. The nearest one is never in this file. SvelteKit 3 renders
+		`children` inside a boundary of its own, whose failed state is
+		`src/routes/+error.svelte`, so a boundary written around `children` here
+		would sit outside SvelteKit's and never see a single error. This project
+		had one, and its friendly failure card never once rendered. The app's
+		failure screen is `+error.svelte`.
+
+		NO `pending` SNIPPET ABOVE A PAGE, EITHER, and this is the part worth
+		knowing.
+
+		A `pending` snippet is rendered *immediately* on the server and the
+		awaits inside are not waited for. Put one on a boundary around the page
+		and every page ships HTML whose entire body is the word &quot;Loading…&quot;, with
+		the real content arriving only after hydration. For a public booking page
+		that is the difference between a search engine seeing a salon's services
+		and seeing nothing, and between a slow phone showing prices at first
+		paint or a second later.
+
+		Without one, SvelteKit waits for the awaits to settle and sends complete
+		HTML. On subsequent client-side navigations Svelte keeps the current page
+		on screen until the next one is ready — which is better than a spinner
+		anyway. Where a page needs a local &quot;working…&quot; state, it uses
+		`$effect.pending()` or a form's own `pending` count instead.
+	--&gt;
+	{@render children()}
+&lt;/main&gt;</code></pre>
+</figure>
+<p>That comment is a confession. This layout used to wrap <code>children</code> in a boundary of its own, with a <code>failed</code> snippet showing a &quot;Something went wrong&quot; card and a Try again button. It looked like the app's error handling, and it could never run: SvelteKit's boundary sits between the layout and the page and catches every error first. What visitors actually got was SvelteKit's bare default page, a status code above a sentence. The card hid a second bug behind the first, too. It passed <code>error</code> to <code>messageFrom</code>, so had it ever rendered, it would have shown the fallback.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/booking.e2e.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">test('an unknown token gets the server s own sentence, not a fallback', async ({ page }) =&gt; {
+	// …
+	const response = await page.goto('/booking/ZZZZZZZZZZZZZZZZZZZZZZZZZZ');
+	expect(response?.status()).toBe(404);
+	await expect(page.getByRole('alert')).toContainText('We could not find that booking.');
+	// The heading names the kind of failure: a missing booking is not a broken app.
+	await expect(page.getByRole('heading', { level: 1 })).toHaveText('Not found');
+});
+
+test('the same failure after a client-side navigation shows the same sentence', async ({
+	page
+}) =&gt; {
+	// …
+	await arriveClientSide(page, '/booking/ZZZZZZZZZZZZZZZZZZZZZZZZZZ');
+	await expect(page.getByRole('alert')).toContainText('We could not find that booking.');
+	await expect(page.getByRole('heading', { level: 1 })).toHaveText('Not found');
+});</code></pre>
+</figure>
+<p>Two tests for one screen, because there are two roads to it. A fresh load renders the failure on the server. Following a link renders it in the browser, where the query's rejection arrives over the network and SvelteKit unwraps it into an <code>App.Error</code> before the boundary sees it. <code>arriveClientSide</code>, in <code>e2e/fixtures.ts</code>, gets there by clicking a link inside the running app and then checks that no page load happened on the way, so the second test cannot quietly turn into the first. Both fail against the old layout, which had no <code>alert</code> to find, and both fail if <code>+error.svelte</code> is changed to read <code>messageFrom(error, …)</code>; we made each change and watched.</p>
+<h3 id="your-own">A boundary of your own</h3>
+<p>Write <code>&lt;svelte:boundary&gt;</code> yourself when one region of a page can fail on its own while the rest stays useful: a chart, a feed, a panel of suggestions. Its <code>failed</code> snippet receives the same <code>App.Error</code> as <code>+error.svelte</code>, because SvelteKit passes every boundary's error through <code>handleError</code> on its way in, and so does <code>onerror</code>. The SvelteKit documentation shows the shape:</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">the shape, from the SvelteKit docs on error boundaries</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;svelte:boundary&gt;
+	...
+	{#snippet failed(error: App.Error)}
+		&lt;!-- error went through the `handleError` hook and is of type `App.Error` --&gt;
+		{error.message}
 	{/snippet}
 &lt;/svelte:boundary&gt;</code></pre>
 </figure>
-<p>The <code>reset</code> function re-runs the failed work. For a network hiccup that is genuinely all the recovery anybody needs, and it is one line.</p>
-<aside class="callout callout--warn"><p>A <code>pending</code> snippet renders <strong>immediately during server rendering and does not wait for the awaits</strong>. Put one on the root boundary and every page in your app ships HTML whose entire body is the word &quot;Loading…&quot;. The page looks fine in a browser — it hydrates a moment later — and is empty to a search engine, a link preview, and anybody on a slow connection. We shipped that for an hour before noticing.</p></aside>
+<p>The snippet takes a second argument, <code>reset</code>, which throws the failed content away and renders it afresh: the Try again button. A probe page with a boundary around an awaited query that rejects showed the same <code>{ status: 404, message: 'We could not find that booking.' }</code> in both <code>failed</code> and <code>onerror</code>, on a fresh load and after a client-side navigation.</p>
+<aside class="callout callout--warn"><p>A boundary only catches what renders inside it. An <code>await</code> in a component's <code>&lt;script&gt;</code> suspends the boundary <em>above</em> that component, so a boundary in the same component's markup never sees it. Put the <code>await</code> in the markup inside the boundary, or move the region into a child component. Every page in this app awaits in its script, which is exactly why its failures belong to <code>+error.svelte</code>.</p></aside>
+<aside class="callout callout--warn"><h4>Trap one: pending on the server</h4><p>A <code>pending</code> snippet renders <strong>immediately during server rendering and does not wait for the awaits</strong>. Put one on a boundary that wraps a whole page and every page in your app ships HTML whose entire body is the word &quot;Loading…&quot;. The page looks fine in a browser — it hydrates a moment later — and is empty to a search engine, a link preview, and anybody on a slow connection. We shipped that for an hour before noticing.</p></aside>
 <p>The fix is to put <code>pending</code> only where a client-side wait is genuinely expected — a panel that refetches when a filter changes — and never on the boundary that wraps a whole page.</p>
-<aside class="callout callout--warn"><p>When a component binds to a <strong>member</strong> of a <code>$state</code> object — <code>bind:value={draft.weekday}</code> — the compiler emits a getter that runs before the part of the script following the first awaited <code>$derived</code>. Declare the state after those and it is still <code>undefined</code> when the getter runs. Server rendering dies with &quot;Cannot read properties of undefined (reading 'weekday')&quot; and the page 500s before anybody sees it.</p></aside>
+<aside class="callout callout--warn"><h4>Trap two: declaration order with bound state</h4><p>When a component binds to a <strong>member</strong> of a <code>$state</code> object — <code>bind:value={draft.weekday}</code> — the compiler emits a getter that runs before the part of the script following the first awaited <code>$derived</code>. Declare the state after those and it is still <code>undefined</code> when the getter runs. Server rendering dies with &quot;Cannot read properties of undefined (reading 'weekday')&quot; and the page 500s before anybody sees it.</p></aside>
 
 <figure class="code">
 	<figcaption>
@@ -105,8 +216,8 @@
 <p>Move <code>let draft</code> above the <code>$derived</code> and it renders. Binding to a plain <code>$state</code> variable is unaffected, and so is reading <code>draft.weekday</code> in ordinary markup — which is exactly what makes it so easy to walk into, and so confusing when it happens.</p>
 <aside class="callout callout--note"><p>The rule to remember: <strong>declare any state you <code>bind:</code> to at the top of the script, above anything that awaits.</strong> It costs nothing, and it is a good habit regardless.</p></aside>
 <h3 id="untrack">Effects that trigger themselves</h3>
-<p>One more, because it produces a symptom that makes no sense: radio buttons that will not stay selected.</p>
-<p>The booking page forgets the chosen time whenever the service, the person or the day changes, because a time picked for one of those means nothing for another. The obvious effect for that:</p>
+<p>One more, because it produces a symptom that makes no sense — radio buttons that will not stay selected — and because the real fix turned out to be deleting the code.</p>
+<p>The booking page used to forget the chosen time whenever the service, the person or the day changed, because a time picked for one of those means nothing for another. The obvious effect for that:</p>
 
 <figure class="code">
 	<figcaption>
@@ -123,22 +234,36 @@
 	book.fields.slot.set('');
 });</code></pre>
 </figure>
+<p>The first fix was <code>untrack</code>, which says &quot;run this, but do not count what it reads as a dependency&quot;. Wrapped in it, the <code>set</code> no longer subscribed the effect to the field, and the three <code>void</code> lines were left as the only things that re-ran it:</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/book/[slug]/+page.svelte</span>
+		<span class="code__file">the first fix — since deleted</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">import { untrack } from 'svelte';
-// …
-$effect(() =&gt; {
+	<pre><code class="lang-ts">$effect(() =&gt; {
 	void service?.id;
 	void staffId;
 	void selectedDay;
 	untrack(() =&gt; book.fields.slot.set(''));
 });</code></pre>
 </figure>
-<p><code>untrack</code> says &quot;run this, but do not count what it reads as a dependency&quot;. The three <code>void</code> lines are there on purpose: reading a value is all it takes for an effect to depend on it, so they name exactly what should re-run this one. The effect now re-runs when the service, the person or the day changes, which are the only reasons it should, and clearing the field does not wake it up again. Nothing in the console ever says why the first version misbehaves, which is why the comment above it in the real file is longer than the code.</p>
+<p>It worked, and it was still the wrong shape. A second effect beside it cleared the field again when the live grid dropped the chosen time. Both were <em>state written in reaction to other state</em>, which is the one job the Svelte docs tell you not to give an effect: &quot;Effects are an escape hatch and should mostly be avoided. In particular, avoid updating state inside effects.&quot; What the page actually needed to know was not &quot;has something changed since the time was picked&quot; but &quot;is the picked time on screen right now&quot; — and that is a value you can derive.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/book/[slug]/+page.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">const selectedValue = $derived(book.fields.slot.value());
+const selected = $derived(daySlots.find((slot) =&gt; slotValue(slot) === selectedValue) ?? null);</code></pre>
+</figure>
+<p><code>selected</code> is the chosen slot if it is one of the times on screen, and <code>null</code> otherwise. Look at another day, narrow to another person, or lose the time to somebody else, and it becomes <code>null</code> — no effect, no <code>untrack</code>, no clearing — and the summary, the time-zone note and the details form all follow it. Nothing writes state in response to anything, so nothing can wake itself up.</p>
+
+<aside class="callout callout--why">
+	<h4>When untrack is still the answer</h4>
+	<p><code>untrack</code> is not a smell; an effect writing state is. Keep it for an effect with a genuine side effect — talking to a library, the DOM, the network — that has to read something without subscribing to it. If the thing you are writing could be a <code>$derived</code> instead, make it one, and the trap disappears along with the effect.</p>
+</aside>
 <h3 id="why-worth-it">Why this is worth the sharp edges</h3>
 <p>In SvelteKit 2, data that arrived late came from a <code>load</code> function that returned a promise without awaiting it, and the page unwrapped it with <code>{#await}</code>. Even with runes, every component that wanted the value wrote its own three states:</p>
 
@@ -154,7 +279,7 @@ $effect(() =&gt; {
 {#await data.availability}
 	&lt;p&gt;Loading…&lt;/p&gt;
 {:then availability}
-	&lt;SlotGrid {availability} /&gt;
+	&lt;TimesList {availability} /&gt;
 {:catch error}
 	&lt;p&gt;{error.message}&lt;/p&gt;
 {/await}</code></pre>
@@ -169,13 +294,13 @@ $effect(() =&gt; {
 	const availability = $derived(await getAvailability(args));
 &lt;/script&gt;
 
-&lt;SlotGrid {availability} /&gt;</code></pre>
+&lt;TimesList {availability} /&gt;</code></pre>
 </figure>
-<p>The loading and error states did not disappear — they moved to a boundary, where they are written once for a whole region instead of once per await. Multiply that across a dozen components and it is a different codebase.</p>
+<p>The loading and error states did not disappear — they moved to a boundary, where they are written once for a whole region instead of once per await. Multiply that across a dozen components and it is a different codebase. (<code>TimesList</code> is a stand-in for any component that takes the data, not a file in this project; the real slot grid takes one day's slots, a zone and a form field.)</p>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>
-	<p>Every page in the app server-renders its real content — view source and see the studio name, not &quot;Loading…&quot; — and a thrown query renders your boundary's <code>failed</code> snippet with a working Try again button.</p>
+	<p>Every page in the app server-renders its real content — view source and see the studio name, not &quot;Loading…&quot;. Then open <code>/booking/ZZZZZZZZZZZZZZZZZZZZZZZZZZ</code>, once by typing it and once by following a link to it from inside the app: both times you get your own failure screen, headed &quot;Not found&quot;, saying &quot;We could not find that booking.&quot;</p>
 </aside>
 		</article>
 

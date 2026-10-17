@@ -1,5 +1,4 @@
 <script lang="ts">
-	import type { Snippet } from 'svelte';
 	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import {
@@ -11,44 +10,40 @@
 	} from 'phosphor-svelte';
 	import Button from '#lib/components/Button.svelte';
 	import { signOut } from '../../sign-in/auth.remote.ts';
-	import type { LayoutData } from './$types';
+	import type { LayoutProps } from './$types';
 
-	let { children, data }: { children: Snippet; data: LayoutData } = $props();
+	/*
+	 * `LayoutProps` comes from the generated `./$types`, so `data` is exactly what
+	 * this directory's `+layout.server.ts` returns and `params.slug` is the typed
+	 * route parameter. Rename a key in the load and this file stops compiling.
+	 */
+	let { children, data, params }: LayoutProps = $props();
 
 	/**
-	 * The sections of the dashboard.
+	 * The sections of the dashboard, by route ID.
+	 *
+	 * A route ID — `/manage/[slug]/hours` — rather than a path suffix glued onto
+	 * a base URL. `resolve()` turns it into a link with `slug` filled in and
+	 * type-checked, so renaming the `hours` folder fails svelte-check here
+	 * instead of shipping a tab that 404s. And `page.route.id` says which
+	 * section is open by the same name, so the active tab is one comparison,
+	 * not a longest-prefix search over pathnames.
 	 *
 	 * `ownerOnly` drives what a member sees. Hiding a link is a courtesy, not a
 	 * control — `requireOwner` on the server is the control. Both exist because
 	 * showing somebody a door they cannot open is its own kind of rude.
 	 */
 	const SECTIONS = [
-		{ path: '', label: 'Diary', icon: CalendarDotsIcon, ownerOnly: false },
-		{ path: '/services', label: 'Services', icon: ScissorsIcon, ownerOnly: true },
-		{ path: '/hours', label: 'Hours', icon: ClockIcon, ownerOnly: false },
-		{ path: '/team', label: 'Team', icon: UsersThreeIcon, ownerOnly: true },
-		{ path: '/settings', label: 'Settings', icon: GearIcon, ownerOnly: true }
+		{ route: '/manage/[slug]', label: 'Diary', icon: CalendarDotsIcon, ownerOnly: false },
+		{ route: '/manage/[slug]/services', label: 'Services', icon: ScissorsIcon, ownerOnly: true },
+		{ route: '/manage/[slug]/hours', label: 'Hours', icon: ClockIcon, ownerOnly: false },
+		{ route: '/manage/[slug]/team', label: 'Team', icon: UsersThreeIcon, ownerOnly: true },
+		{ route: '/manage/[slug]/settings', label: 'Settings', icon: GearIcon, ownerOnly: true }
 	] as const;
 
 	const visible = $derived(
 		SECTIONS.filter((section) => !section.ownerOnly || data.viewer.role === 'owner')
 	);
-
-	const base = $derived(resolve('/manage/[slug]', { slug: data.slug }));
-
-	/**
-	 * Longest-match wins, so `/hours` does not light up while you are on the
-	 * diary. Comparing with `startsWith` alone would mark the diary tab active on
-	 * every page, because its path is a prefix of all the others.
-	 */
-	const current = $derived(page.url.pathname);
-	const activePath = $derived.by(() => {
-		const suffix = current.startsWith(base) ? current.slice(base.length) : '';
-		const match = visible
-			.filter((section) => section.path !== '' && suffix.startsWith(section.path))
-			.sort((a, b) => b.path.length - a.path.length)[0];
-		return match?.path ?? '';
-	});
 </script>
 
 <div class="dash">
@@ -61,7 +56,15 @@
 		<div class="who">
 			<span class="name">{data.viewer.displayName}</span>
 			<span class="role">{data.viewer.role === 'owner' ? 'Owner' : 'Staff'}</span>
-			<Button variant="ghost" size="sm" onclick={() => void signOut()}>Sign out</Button>
+			<!--
+				A form, so signing out is a POST that works with or without
+				JavaScript and ends in a redirect the browser follows.
+			-->
+			<form {...signOut}>
+				<Button type="submit" variant="ghost" size="sm" loading={signOut.pending > 0}>
+					Sign out
+				</Button>
+			</form>
 		</div>
 	</header>
 
@@ -72,13 +75,12 @@
 	-->
 	<nav class="tabs" aria-label="Dashboard sections">
 		<div class="tabs-inner container">
-			{#each visible as section (section.path)}
+			{#each visible as section (section.route)}
 				{const Icon = $derived(section.icon)}
-				{const active = $derived(activePath === section.path)}
+				{const active = $derived(page.route.id === section.route)}
 				<a
-					class="tab"
-					class:active
-					href="{base}{section.path}"
+					class={['tab', { active }]}
+					href={resolve(section.route, { slug: params.slug })}
 					aria-current={active ? 'page' : undefined}
 				>
 					<Icon weight={active ? 'fill' : 'regular'} aria-hidden="true" />

@@ -1,16 +1,18 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
+	import Button from '#lib/components/Button.svelte';
 	import type { ErrorProps } from './$types';
 
 	/*
 	 * THE FAILURE SCREEN FOR EVERY PAGE
 	 * =================================
 	 *
-	 * SvelteKit 3 wraps every layout and page in a `<svelte:boundary>` of its own,
-	 * and that boundary's failed state is the nearest `+error.svelte`. So this one
-	 * file catches all of it: a `load` that calls `error(403, …)`, a query a page
-	 * awaits that rejects with `error(404, …)`, and a bug that throws while a page
-	 * renders, on the server and after a client-side navigation alike.
+	 * SvelteKit 3 renders everything below the root layout inside a
+	 * `<svelte:boundary>` of its own, and that boundary's failed state is this
+	 * file. So this one component catches all of it: a `load` that calls
+	 * `error(403, …)`, a query a page awaits that rejects with `error(404, …)`,
+	 * and a bug that throws while a page renders, on the server and after a
+	 * client-side navigation alike.
 	 *
 	 * `error` is an `App.Error`: `{ status, message }` plus our own `id`. It has
 	 * already been through `handleError`, so `message` is either the sentence we
@@ -25,7 +27,19 @@
 	 */
 	let { error }: ErrorProps = $props();
 
-	const heading = $derived(error.status === 404 ? 'Not found' : 'Something went wrong');
+	/*
+	 * The heading says what kind of failure it was; the message says what
+	 * happened. A 403 is the server refusing on purpose, and "Something went
+	 * wrong" would tell the visitor that the app is broken when it is working
+	 * exactly as designed. Only a 5xx is our fault.
+	 */
+	const heading = $derived(
+		error.status === 404
+			? 'Not found'
+			: error.status < 500
+				? 'That did not work'
+				: 'Something went wrong'
+	);
 </script>
 
 <svelte:head>
@@ -48,7 +62,9 @@
 			<p class="reference">Reference <code>{error.id}</code></p>
 		{/if}
 
-		<a class="home" href={resolve('/')}>Back to the start</a>
+		<div class="actions">
+			<Button href={resolve('/')} variant="secondary">Back to the start</Button>
+		</div>
 	</div>
 </div>
 
@@ -71,17 +87,7 @@
 		color: var(--ink-muted);
 	}
 
-	.home {
-		display: inline-flex;
-		align-items: center;
+	.actions {
 		margin-block-start: var(--space-4);
-		padding: var(--space-2) var(--space-4);
-		min-height: 2.75rem;
-		background: var(--surface);
-		border: var(--border) solid var(--line-strong);
-		border-radius: var(--radius-md);
-		color: var(--ink);
-		font-weight: var(--weight-medium);
-		text-decoration: none;
 	}
 </style>

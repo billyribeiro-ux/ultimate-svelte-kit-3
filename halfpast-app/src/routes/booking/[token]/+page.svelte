@@ -5,6 +5,7 @@
 	import { PUBLIC_DEFAULT_TIME_ZONE } from '$app/env/public';
 	import { CalendarBlankIcon, MapPinIcon, PhoneIcon, UserIcon } from 'phosphor-svelte';
 
+	import type { Attachment } from 'svelte/attachments';
 	import Alert from '#lib/components/Alert.svelte';
 	import Button from '#lib/components/Button.svelte';
 	import { loadMotion } from '#lib/motion/index.ts';
@@ -20,8 +21,15 @@
 	} from '#lib/time/index.ts';
 	import { cancelOwnBooking, getManagedBooking } from './manage.remote.ts';
 	import { messageFrom } from '#lib/errors.ts';
+	import type { PageProps } from './$types';
 
-	let { data }: { data: { token: string } } = $props();
+	/*
+	 * The token is the route parameter itself. There used to be a `+page.ts`
+	 * whose only job was to copy `params.token` into `data.token`; since
+	 * SvelteKit 2.24 a page receives `params` directly, typed from the folder
+	 * name, so that file was a moving part with nothing to do.
+	 */
+	let { params }: PageProps = $props();
 
 	/** `?new=1` is set by the redirect after a successful booking. */
 	const justBooked = $derived(page.url.searchParams.get('new') === '1');
@@ -47,7 +55,7 @@
 	 * hydration. An unknown token rejects with `error(404, …)`, and that same
 	 * boundary renders `+error.svelte` with the message.
 	 */
-	const b = $derived(await getManagedBooking(data.token));
+	const b = $derived(await getManagedBooking(params.token));
 
 	const cancelled = $derived(b.status === 'cancelled');
 	const zonesDiffer = $derived(!sameWallClock(b.startsAt, viewerZone, b.businessTimeZone));
@@ -71,7 +79,7 @@
 			 * going to tell the browser the answer changed. That is exactly when
 			 * single-flight earns its keep.
 			 */
-			await cancelOwnBooking({ token: data.token, reason: '' });
+			await cancelOwnBooking({ token: params.token, reason: '' });
 		} catch (thrown) {
 			cancelError = messageFrom(thrown, 'We could not cancel that.');
 		} finally {
@@ -82,20 +90,19 @@
 	/**
 	 * A confetti-free celebration: the confirmation card lifts into place once.
 	 *
-	 * Fired from an effect rather than an attachment because it should happen
-	 * only when the booking is new, and only once — an attachment would replay it
-	 * every time the query refreshed.
+	 * An attachment, applied only when the booking is new:
+	 * `{@attach justBooked && celebrate}` below. Svelte runs an attachment when
+	 * its element mounts, and again only if state *read inside the function*
+	 * changes. `celebrate` reads none — the element is all it needs — so the
+	 * cancellation refreshing the booking re-renders the card without replaying
+	 * the entrance. A falsy value attaches nothing, which is the "only when new"
+	 * half, with no flag to remember and no `bind:this` to wait for.
 	 */
-	let card = $state<HTMLElement | null>(null);
-	let celebrated = false;
+	const celebrate: Attachment<HTMLElement> = (node) => {
+		let cancelled = false;
 
-	$effect(() => {
-		if (!justBooked || celebrated || !card) return;
-		celebrated = true;
-
-		const node = card;
 		void loadMotion().then((motion) => {
-			if (!motion) return;
+			if (!motion || cancelled) return;
 			motion.gsap
 				.timeline()
 				.from(node, { y: 24, opacity: 0, duration: 0.6, ease: 'power3.out' })
@@ -112,7 +119,11 @@
 					'-=0.3'
 				);
 		});
-	});
+
+		return () => {
+			cancelled = true;
+		};
+	};
 </script>
 
 <svelte:head>
@@ -142,7 +153,7 @@
 		<Alert tone="error" title="We could not cancel that"><p>{cancelError}</p></Alert>
 	{/if}
 
-	<article class="card" class:dim={cancelled} bind:this={card}>
+	<article class={['card', { dim: cancelled }]} {@attach justBooked && celebrate}>
 		<p class="eyebrow">{b.businessName}</p>
 
 		<h1 class="when">
@@ -270,10 +281,11 @@
 		border-block-start: var(--border) solid var(--line);
 	}
 
+	/* Mobile first: label above value on a phone, side by side once there is room. */
 	.detail {
 		display: grid;
-		grid-template-columns: 7rem 1fr;
-		gap: var(--space-3);
+		grid-template-columns: 1fr;
+		gap: var(--space-1);
 		align-items: baseline;
 	}
 
@@ -324,10 +336,10 @@
 		max-width: none;
 	}
 
-	@media (max-width: 26rem) {
+	@media (min-width: 26rem) {
 		.detail {
-			grid-template-columns: 1fr;
-			gap: var(--space-1);
+			grid-template-columns: 7rem 1fr;
+			gap: var(--space-3);
 		}
 	}
 </style>

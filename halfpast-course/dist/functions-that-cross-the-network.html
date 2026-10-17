@@ -63,15 +63,26 @@ export const getBookingPage = query(slugSchema, async (slug): Promise&lt;Booking
 	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
 	// …
 	import { book, getAvailability, getBookingPage } from './booking.remote.ts';
+	import type { PageProps } from './$types';
+
 	// …
-	const shop = $derived(await getBookingPage(data.slug));
+	let { params }: PageProps = $props();
+
+	// …
+	const shop = $derived(await getBookingPage(params.slug));
 	// …
 &lt;/script&gt;
 
 &lt;!-- … --&gt;
 &lt;h1&gt;{shop.business.name}&lt;/h1&gt;</code></pre>
 </figure>
-<p>That is it. No endpoint to name, no <code>fetch</code> to write, no <code>+page.server.ts</code>, no response type to keep in sync. The component imports a function and awaits it. SvelteKit puts an HTTP request in the middle and neither side has to know.</p>
+<p>That is it. No endpoint to name, no <code>fetch</code> to write, no load function at all, no response type to keep in sync. The component imports a function and awaits it. SvelteKit puts an HTTP request in the middle and neither side has to know.</p>
+<p>The slug comes from the page's own props. Every page receives <code>params</code>, the route's parameters, and <code>PageProps</code> from the generated <code>./$types</code> types them from the folder name: this page lives in <code>book/[slug]</code>, so <code>params.slug</code> is a <code>string</code>, and a typo is a compile error. The page hands it to the query as an argument, because a remote function cannot read the URL for itself — more on that in a moment.</p>
+
+<aside class="callout callout--why">
+	<h4>Why params, and not a load function</h4>
+	<p>This page used to have a <code>+page.ts</code> whose whole body was <code>return { slug: params.slug }</code>, and the page typed its props by hand as <code>{ data: { slug: string } }</code>. Both were wrong in a way that compiled. The load was a moving part that renamed a value the router already hands every page — SvelteKit 2.24 added the <code>params</code> prop for exactly this, &quot;particularly useful alongside remote functions&quot; in the docs' words — and the hand-written type was not connected to the load at all: rename the key it returned, and the page still type-checked and rendered <code>undefined</code>. <code>PageProps</code> and <code>LayoutProps</code> are generated from the files that actually feed the component, so they cannot drift. Every page and layout in the app now takes its props that way.</p>
+</aside>
 <aside class="callout callout--note"><p>The server code never reaches the browser. The import is replaced at build time with a small stub that makes the request. Your database credentials, your Drizzle queries and your <code>if (!found)</code> are all server-side, and the bundle is checked to make sure of it.</p></aside>
 <h3 id="security">The security model is inverted</h3>
 <p>This is the part to take seriously, because it is the opposite of a load function.</p>
@@ -138,6 +149,7 @@ const timeZoneSchema = v.pipe(
 });</code></pre>
 </figure>
 <p><code>query</code> reads, <code>command</code> writes. The split is not cosmetic: queries are cached and de-duplicated by their arguments, and commands are not, because &quot;add this shift&quot; twice is two shifts.</p>
+<aside class="callout callout--note"><p>One thing a <code>command</code> cannot do is send the browser somewhere else. The docs allow <code>redirect(...)</code> in <code>query</code>, <code>form</code> and <code>prerender</code> handlers, &quot;It is <em>not</em> possible inside <code>command</code> functions&quot;, and the browser throws if one tries. Anything that ends in a redirect — signing out, for one — is a <code>form</code>. Chapter 21 shows the sign-out button that learned this the hard way.</p></aside>
 <h3 id="single-flight">Single-flight mutations</h3>
 <p>That <code>getHours(...).refresh()</code> line is worth stopping on. It runs <strong>on the server, inside the command</strong>, and it means the response to &quot;add this shift&quot; carries the new list of hours with it.</p>
 <p>The usual pattern is: post the change, wait, then fetch the new state, wait again. Two round trips, and a visible flicker in between where the screen shows the old data. Refreshing inside the handler collapses that into one.</p>
@@ -182,24 +194,49 @@ for (const { query } of requested(getServices, 1)) {
 		<span class="code__file">src/lib/errors.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">export function messageFrom(thrown: unknown, fallback: string): string {
-	if (isHttpErrorShape(thrown) &amp;&amp; typeof thrown.body.message === 'string') {
+	<pre><code class="lang-ts">import { isHttpError } from '@sveltejs/kit';
+
+// …
+
+export function messageFrom(thrown: unknown, fallback: string): string {
+	if (isHttpError(thrown) &amp;&amp; thrown.status &lt; 500) {
 		const message = thrown.body.message.trim();
 		if (message) return message;
-	}
-
-	if (thrown instanceof Error &amp;&amp; thrown.message.trim()) {
-		return thrown.message;
 	}
 
 	return fallback;
 }</code></pre>
 </figure>
-<aside class="callout callout--note"><p>Write it once, in <code>src/lib/errors.ts</code>, and use it in every catch. Seven places in this app catch a remote rejection; all seven had the same bug, because all seven were written from the same reasonable instinct.</p></aside>
+<p><code>isHttpError</code> is SvelteKit's own test, exported from <code>@sveltejs/kit</code> right beside <code>error</code>. What the browser receives is an instance of the very <code>HttpError</code> class that <code>error()</code> throws on the server (strictly, of a subclass SvelteKit uses for errors that have already been through <code>handleError</code>), so the test is an <code>instanceof</code>, and once it passes TypeScript knows that <code>thrown.body</code> is your <code>App.Error</code>.</p>
+<p>The <code>status &lt; 500</code> is there because <code>instanceof</code> is not quite the guarantee it looks like. One more thing arrives as an <code>HttpError</code>: a response that never reached SvelteKit at all, such as a proxy's 502 page. The browser builds it from the same class, with the HTTP status text as its message, so <code>isHttpError</code> cannot tell it apart, and without the status check a customer's alert said &quot;Bad Gateway&quot;. Every sentence this app writes on purpose is a 4xx — the shift that ends before it starts is a 400 — and the only 5xx sentence it ever sends is <code>handleError</code>'s generic apology, which the caller's own fallback says better. So a 5xx gets the fallback, whoever sent it. The <code>trim()</code> is the same idea for the 4xx a proxy might send: over HTTP/2 there is no status text at all, and an alert with nothing in it is worse than the fallback.</p>
+
+<aside class="callout callout--why">
+	<h4>Why not check the shape by hand</h4>
+	<p>An earlier version of this helper did: an object with a numeric <code>status</code> and a <code>body</code>, spelled out longhand, because SvelteKit does not export the <code>HttpError</code> class to test against. It does export the test, though, and the hand-made one is worse in a way that matters. It accepts any object of the right shape, so a unit test built on a literal <code>{ status, body }</code> passes against something the browser never produces, and the helper would put a sentence nobody vetted on a customer's screen. <code>instanceof</code> accepts only what SvelteKit made.</p>
+</aside>
+<p>Notice what else is not there: a second branch for <code>thrown instanceof Error</code>. That branch looks like a kindness, and the earlier version had it too. The other things a remote call rejects with are a dropped connection, which arrives as the browser's own <code>TypeError: Failed to fetch</code>, and a bug in our code, which arrives as whatever the bug said. Neither has been through <code>handleError</code>, so neither is a sentence anybody vetted for a customer's screen. The fallback is for exactly those, so the helper reads a 4xx's <code>body.message</code> and nothing else.</p>
+<p>Both halves are pinned by end-to-end tests in a real browser. One opens the same booking in two windows and cancels it in both, so the second cancellation is refused with &quot;That booking is already cancelled.&quot;; run against the <code>instanceof Error</code> catch at the top of this section, its alert shows the fallback instead. The other switches the network off before pressing Cancel; run against the earlier helper with the extra branch, its alert reads &quot;Failed to fetch&quot;. We ran each test against the bug it names and watched it fail, which is the only way to know a test can.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/booking.e2e.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">await page.context().setOffline(true);
+page.once('dialog', (dialog) =&gt; void dialog.accept());
+await page.getByRole('button', { name: 'Cancel this appointment' }).click();
+
+const alert = page.getByRole('alert');
+await expect(alert.getByText('We could not cancel that.', { exact: true })).toBeVisible();
+await expect(alert).not.toContainText('Failed to fetch');</code></pre>
+</figure>
+<p><code>setOffline</code> is Playwright cutting the browser's network, not a mock, so the command's real <code>fetch</code> really fails, the way it does for a customer on a train. The two assertions together make the test fail for the right reason: the fallback has to be on screen, and the browser's wording has to be absent. Either one alone could pass with the bug still in place.</p>
+<aside class="callout callout--note"><p>Write it once, in <code>src/lib/errors.ts</code>, and use it in every <code>catch</code> around a remote call. Six places in this app catch a remote rejection; all six had the same bug, because all six were written from the same reasonable instinct.</p></aside>
+<aside class="callout callout--warn"><h4>A catch is not a boundary</h4><p>This helper is for the value a <code>catch</code> receives. A <code>&lt;svelte:boundary&gt;</code>'s <code>failed</code> snippet and <code>+error.svelte</code> are handed something else: an <code>App.Error</code>, <code>{ status, message }</code>, with no <code>body</code> at all. Pass one of those to <code>messageFrom</code> and the fallback wins every time. Chapter 23 shows the boundary side, and how this project got it wrong.</p></aside>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>
-	<p>The booking page renders from a <code>query</code>, and a <code>command</code> that calls <code>error(400, …)</code> shows <em>your</em> message in the browser, not a generic one.</p>
+	<p>The booking page renders from a <code>query</code>, and a <code>command</code> that calls <code>error(400, …)</code> shows <em>your</em> message in the browser, not a generic one. Open the same booking in two windows, cancel it in one, then press Cancel in the other: the alert says &quot;That booking is already cancelled.&quot;, the server's sentence. Switch the network off in your browser's developer tools and try again, and you get the fallback, not &quot;Failed to fetch&quot;. <code>pnpm test:e2e</code> checks both on every run.</p>
 </aside>
 		</article>
 

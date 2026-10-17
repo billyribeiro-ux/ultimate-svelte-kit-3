@@ -1,4 +1,14 @@
-import { OWNER, STAFF, expect, signIn, test } from './fixtures.ts';
+import {
+	OWNER,
+	STAFF,
+	chooseAvailableSlot,
+	chooseWho,
+	expect,
+	selectedDay,
+	showDiaryDay,
+	signIn,
+	test
+} from './fixtures.ts';
 
 /**
  * The staff-facing dashboard, and the role boundary it enforces.
@@ -36,6 +46,34 @@ test.describe('getting in', () => {
 		// form into a tool for discovering which customers have accounts.
 		await expect(message).not.toContainText(/password is/i);
 		await expect(message).not.toContainText(/no account/i);
+
+		/*
+		 * And it is an answer on the form, not a failure screen in place of it. The
+		 * refusal is `invalid(…)`, so the sentence arrives through
+		 * `fields.allIssues()` and the email is still there to try again with.
+		 * `error(401, …)` rendered `+error.svelte` here instead, and the form was
+		 * gone.
+		 */
+		await expect(page.getByRole('alert')).toContainText('We could not sign you in');
+		await expect(page.getByLabel('Email')).toHaveValue(OWNER.email);
+	});
+
+	test('says a schema refusal once, beside the field it belongs to', async ({ page }) => {
+		await page.goto('/sign-in');
+		// The browser accepts an address with no dot after the @; the schema does not.
+		await page.getByLabel('Email').fill('ada@willowlane');
+		await page.getByLabel('Password').fill('definitely-not-the-password');
+		await page.getByRole('button', { name: 'Sign in' }).click();
+
+		/*
+		 * One alert, the field's own. The form-level alert is for refusals that
+		 * belong to the whole form, and it once took every issue from
+		 * `allIssues()`, so this sentence was announced twice, in two
+		 * `role="alert"` regions.
+		 */
+		const alerts = page.getByRole('alert');
+		await expect(alerts).toHaveCount(1);
+		await expect(alerts).toHaveText(/Enter the email address you signed up with/);
 	});
 
 	test('an unknown email gets the identical message', async ({ page }) => {
@@ -66,6 +104,64 @@ test.describe('getting in', () => {
 
 		await expect(page).toHaveURL(/localhost:4173\/manage(\/|$)/);
 	});
+
+	test('signs out, and the whole app knows it', async ({ page }) => {
+		await page.goto('/sign-in');
+		await signIn(page, OWNER);
+		await expect(page.getByRole('heading', { name: 'Willow Lane Studio' })).toBeVisible();
+
+		/*
+		 * Sign out was once a `command` that ended in `redirect(303, '/')`. A
+		 * command cannot redirect: the page threw `remote_command_redirect`, the
+		 * URL stayed on the dashboard and the header still named the owner, even
+		 * though the session had gone. It is a `form` now, and a form may
+		 * redirect — and it refreshes the layout's load, so the header changes.
+		 */
+		await page.getByRole('button', { name: 'Sign out' }).click();
+
+		await expect(page).toHaveURL(/localhost:4173\/$/);
+		await expect(page.getByRole('link', { name: 'Sign in', exact: true })).toBeVisible();
+
+		// And the session really is gone, not just the header.
+		await page.goto(MANAGE);
+		await expect(page).toHaveURL(/\/sign-in\?redirectTo=/);
+	});
+});
+
+test.describe('getting in without JavaScript', () => {
+	test.use({ javaScriptEnabled: false });
+
+	test('a refused sign-in comes back with the email and without the password', async ({ page }) => {
+		await page.goto('/sign-in');
+		await page.getByLabel('Email').fill(OWNER.email);
+		await page.getByLabel('Password').fill('definitely-not-the-password');
+		await page.getByRole('button', { name: 'Sign in' }).click();
+
+		/*
+		 * With no script, the form posts and the server renders the page again,
+		 * every field filled back in from what was sent, so nobody retypes their
+		 * email. The password field is named `_password` because SvelteKit never
+		 * sends back a field whose name starts with an underscore. Named
+		 * `password`, the wrong guess went back to the browser in the HTML.
+		 */
+		await expect(page.getByRole('alert')).toContainText(
+			'That email and password do not match an account.'
+		);
+		await expect(page.getByLabel('Email')).toHaveValue(OWNER.email);
+		await expect(page.getByLabel('Password')).toHaveValue('');
+		expect(await page.content()).not.toContain('definitely-not-the-password');
+	});
+
+	test('signs in and out again with no script at all', async ({ page }) => {
+		await page.goto('/sign-in');
+		await signIn(page, OWNER);
+		await expect(page).toHaveURL(new RegExp(`${MANAGE}$`));
+
+		// Sign out is a form too, so it is a POST the browser makes by itself.
+		await page.getByRole('button', { name: 'Sign out' }).click();
+		await expect(page).toHaveURL(/localhost:4173\/$/);
+		await expect(page.getByRole('link', { name: 'Sign in', exact: true })).toBeVisible();
+	});
 });
 
 test.describe('the diary', () => {
@@ -83,30 +179,29 @@ test.describe('the diary', () => {
 	});
 
 	test('a booking made on the public page appears without a reload', async ({ page, browser }) => {
-		await page.goto(MANAGE);
-		await expect(page.getByText('Nothing booked. Enjoy it.')).toBeVisible();
-
 		/*
 		 * The point of the whole live-query machinery: a receptionist has this open
 		 * all day, and a booking from the website has to land on their screen
 		 * without anybody pressing anything.
+		 *
+		 * The customer takes the first time Ada has free, whatever day that is,
+		 * and the diary is stepped to that day before the booking is sent. An
+		 * earlier version always booked today, and skipped itself whenever the
+		 * suite ran after the studio had closed — which is to say, it never ran
+		 * in the evening, when CI does.
 		 */
 		const context = await browser.newContext();
 		const customer = await context.newPage();
 		await customer.goto('/book/willow-lane?service=cut-and-finish');
-		await customer.getByRole('radio', { name: 'Ada' }).click();
+		await chooseWho(customer, 'Ada');
+		await chooseAvailableSlot(customer);
+		const day = await selectedDay(customer);
 
-		// Today, so it lands in the diary the dashboard is currently showing.
-		const today = customer.getByRole('radiogroup', { name: 'Choose a day' }).getByRole('radio');
-		await today.first().click();
+		await page.goto(MANAGE);
+		await showDiaryDay(page, day);
+		await expect(page.getByText('Live', { exact: true })).toBeVisible();
+		await expect(page.getByText('Live Lucy')).toHaveCount(0);
 
-		const slots = customer.locator('label.slot');
-		if ((await slots.count()) === 0) {
-			// Nothing left today — the studio has closed. Not a failure of the app.
-			test.skip(true, 'no slots left today at the demo studio');
-		}
-
-		await slots.first().click();
 		await customer.getByLabel('Your name').fill('Live Lucy');
 		await customer.getByLabel('Email').fill(`lucy+${Date.now()}@example.test`);
 		await customer.getByRole('button', { name: 'Book this time' }).click();
@@ -114,20 +209,18 @@ test.describe('the diary', () => {
 
 		// No reload on the dashboard. The stream pushes it.
 		await expect(page.getByText('Live Lucy')).toBeVisible({ timeout: 15_000 });
-		await expect(page.getByText('Nothing booked. Enjoy it.')).toHaveCount(0);
 
 		await context.close();
 	});
 
 	test('a staff member can cancel from the diary', async ({ page, browser }) => {
+		// Ada's first free time, whatever day it falls on — see the test above.
 		const context = await browser.newContext();
 		const customer = await context.newPage();
 		await customer.goto('/book/willow-lane?service=cut-and-finish');
-		await customer.getByRole('radio', { name: 'Ada' }).click();
-
-		const slots = customer.locator('label.slot');
-		if ((await slots.count()) === 0) test.skip(true, 'no slots left today');
-		await slots.first().click();
+		await chooseWho(customer, 'Ada');
+		await chooseAvailableSlot(customer);
+		const day = await selectedDay(customer);
 		await customer.getByLabel('Your name').fill('Doomed Dora');
 		await customer.getByLabel('Email').fill(`dora+${Date.now()}@example.test`);
 		await customer.getByRole('button', { name: 'Book this time' }).click();
@@ -135,6 +228,7 @@ test.describe('the diary', () => {
 		await context.close();
 
 		await page.goto(MANAGE);
+		await showDiaryDay(page, day);
 		await expect(page.getByText('Doomed Dora')).toBeVisible({ timeout: 15_000 });
 
 		page.once('dialog', (dialog) => void dialog.accept());
@@ -246,7 +340,7 @@ test.describe('what an owner can reach', () => {
 		const context = await browser.newContext();
 		const customer = await context.newPage();
 		await customer.goto('/book/willow-lane?service=restyle');
-		await expect(customer.getByRole('radiogroup', { name: 'Choose who with' })).toBeVisible();
+		await expect(customer.getByRole('list', { name: 'Choose who with' })).toBeVisible();
 		await context.close();
 	});
 
@@ -391,6 +485,8 @@ test.describe('what a member cannot reach', () => {
 			const response = await page.goto(`${MANAGE}/${section}`);
 			expect(response?.status()).toBe(403);
 			await expect(page.getByText(/only an owner/i)).toBeVisible();
+			// A refusal on purpose, so the heading does not claim the app broke.
+			await expect(page.getByRole('heading', { level: 1 })).toHaveText('That did not work');
 		});
 	}
 

@@ -2,20 +2,20 @@
 	import Alert from '#lib/components/Alert.svelte';
 	import { stagger } from '#lib/motion/index.ts';
 	import { getServices, getTeam, setStaffService } from '../studio.remote.ts';
-	import type { LayoutData } from '../$types';
+	import type { PageProps } from './$types';
 	import { messageFrom } from '#lib/errors.ts';
 
-	let { data }: { data: LayoutData } = $props();
+	let { data, params }: PageProps = $props();
 
-	const team = $derived(await getTeam(data.slug));
-	const services = $derived(await getServices(data.slug));
+	const team = $derived(await getTeam(params.slug));
+	const services = $derived(await getServices(params.slug));
 
 	let lastError = $state<string | null>(null);
 
 	async function toggle(staffId: string, serviceId: string, offers: boolean) {
 		lastError = null;
 		try {
-			await setStaffService({ slug: data.slug, staffId, serviceId, offers });
+			await setStaffService({ slug: params.slug, staffId, serviceId, offers });
 		} catch (thrown) {
 			lastError = messageFrom(thrown, 'Could not change that.');
 		}
@@ -42,7 +42,7 @@
 
 	<ul class="list" role="list" {@attach stagger({ y: 8, each: 0.05, onView: false })}>
 		{#each team as member (member.id)}
-			<li class="card" class:inactive={!member.isActive} style="--hue: {member.colourHue}">
+			<li class={['card', { inactive: !member.isActive }]} style="--hue: {member.colourHue}">
 				<div class="head">
 					<div>
 						<h3>{member.displayName}</h3>
@@ -59,7 +59,7 @@
 					<legend>Offers</legend>
 					{#each services as entry (entry.id)}
 						{const offers = $derived(member.serviceIds.includes(entry.id))}
-						<label class="chip" class:on={offers}>
+						<label class={['chip', { on: offers }]}>
 							<input
 								type="checkbox"
 								checked={offers}

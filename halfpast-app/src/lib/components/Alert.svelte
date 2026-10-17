@@ -26,7 +26,7 @@
 </script>
 
 <div
-	class="alert {tone}"
+	class={['alert', tone]}
 	role={assertive ? 'alert' : 'status'}
 	aria-live={assertive ? 'assertive' : 'polite'}
 >

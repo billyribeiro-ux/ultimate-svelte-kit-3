@@ -3,10 +3,12 @@ import {
 	arriveClientSide,
 	chooseAvailableSlot,
 	chooseDay,
+	chooseWho,
 	expect,
 	selectedDay,
 	submitBooking,
-	test
+	test,
+	uniqueEmail
 } from './fixtures.ts';
 
 /**
@@ -49,7 +51,7 @@ test.describe('the booking page', () => {
 
 		await expect(page).toHaveURL(/\?service=cut-and-finish$/);
 
-		await page.getByRole('button', { name: 'All services' }).click();
+		await page.getByRole('link', { name: 'All services' }).click();
 		await expect(page.getByRole('link', { name: /Full colour/ })).toBeVisible();
 	});
 
@@ -57,18 +59,18 @@ test.describe('the booking page', () => {
 		// Only Ada does restyles.
 		await page.goto(`${SHOP}?service=restyle`);
 		await expect(page.getByRole('heading', { name: 'When?' })).toBeVisible();
-		await expect(page.getByRole('radiogroup', { name: 'Choose who with' })).toHaveCount(0);
+		await expect(page.getByRole('list', { name: 'Choose who with' })).toHaveCount(0);
 	});
 
 	test('asks who with when more than one person offers the service', async ({ page }) => {
 		// Ada and Ben both cut.
 		await page.goto(`${SHOP}?service=cut-and-finish`);
-		const who = page.getByRole('radiogroup', { name: 'Choose who with' });
+		const who = page.getByRole('list', { name: 'Choose who with' });
 
 		await expect(who).toBeVisible();
-		await expect(who.getByRole('radio', { name: 'Anyone' })).toBeVisible();
-		await expect(who.getByRole('radio', { name: 'Ada' })).toBeVisible();
-		await expect(who.getByRole('radio', { name: 'Ben' })).toBeVisible();
+		await expect(who.getByRole('link', { name: 'Anyone' })).toHaveAttribute('aria-current', 'true');
+		await expect(who.getByRole('link', { name: 'Ada' })).toBeVisible();
+		await expect(who.getByRole('link', { name: 'Ben' })).toBeVisible();
 	});
 
 	test('hides the details form until a time is chosen', async ({ page }) => {
@@ -80,17 +82,38 @@ test.describe('the booking page', () => {
 		await expect(page.getByRole('button', { name: 'Book this time' })).toBeVisible();
 	});
 
-	test('forgets the chosen time when the day changes', async ({ page }) => {
+	test('puts the details away when the chosen time leaves the screen', async ({ page }) => {
 		await page.goto(`${SHOP}?service=cut-and-finish`);
 		await chooseAvailableSlot(page);
 		await expect(page.getByRole('heading', { name: 'Your details' })).toBeVisible();
 
-		// Move to a different day — the previous selection referred to a time that
-		// is no longer on screen, so it must not survive.
-		const days = page.getByRole('radiogroup', { name: 'Choose a day' }).getByRole('radio');
-		await days.nth(4).click();
+		// Move to a different day — the chosen time is no longer on screen, so the
+		// page must stop asking for details about it. The day is read first and
+		// then chosen by its date: a locator for "a day that is not current" would
+		// stop matching the very link it found the moment that link became current.
+		const otherDay = await page
+			.getByRole('list', { name: 'Choose a day' })
+			.locator('a[data-day]:not([aria-current])')
+			.last()
+			.getAttribute('data-day');
+		if (!otherDay) throw new Error('No other day in the strip to move to.');
+		await chooseDay(page, otherDay);
 
 		await expect(page.getByRole('heading', { name: 'Your details' })).toHaveCount(0);
+	});
+
+	test('keeps the chosen day and person in the URL', async ({ page }) => {
+		await page.goto(`${SHOP}?service=cut-and-finish`);
+		await chooseWho(page, 'Ben');
+		await chooseAvailableSlot(page, 2);
+		const day = await selectedDay(page);
+
+		// A refresh lands on the same person and the same day.
+		await page.reload();
+		await expect(
+			page.getByRole('list', { name: 'Choose who with' }).getByRole('link', { name: 'Ben' })
+		).toHaveAttribute('aria-current', 'true');
+		expect(await selectedDay(page)).toBe(day);
 	});
 });
 
@@ -109,6 +132,32 @@ test.describe('making a booking', () => {
 		await expect(page.getByText("You're booked in")).toBeVisible();
 		await expect(page.getByRole('heading', { level: 1 })).toContainText(chosenTime);
 		await expect(page.getByText(/HP-[0-9A-Z]{8}/)).toBeVisible();
+	});
+
+	test('leaves no live stream running once the booking is made', async ({ page }) => {
+		await page.goto(`${SHOP}?service=cut-and-finish`);
+		await chooseAvailableSlot(page);
+		await page.getByLabel('Your name').fill('Streaming Sam');
+		await page.getByLabel('Email').fill(uniqueEmail('Streaming Sam'));
+
+		/*
+		 * Any request for availability that *starts* after Book is pressed is the
+		 * booking page reopening its live stream on its way out. A form handler
+		 * that refreshes nothing makes SvelteKit refresh every query on the page,
+		 * the live one included, and that stream stayed open on the confirmation
+		 * page. The handler now refreshes the confirmation page's own query
+		 * instead, so nothing on the booking page is asked for again.
+		 */
+		const reopened: string[] = [];
+		page.on('request', (request) => {
+			if (request.url().includes('/getAvailability')) reopened.push(request.url());
+		});
+
+		await page.getByRole('button', { name: 'Book this time' }).click();
+		await expect(page).toHaveURL(/\/booking\/[0-9A-HJKMNP-TV-Z]{26}\?new=1$/);
+		await expect(page.getByText("You're booked in")).toBeVisible();
+
+		expect(reopened, 'the availability stream was reopened on the way out').toEqual([]);
 	});
 
 	test('refuses to submit an invalid email', async ({ page }) => {
@@ -149,7 +198,7 @@ test.describe('making a booking', () => {
 		await second.goto(`${SHOP}?service=cut-and-finish`);
 
 		// The slot may still exist for the *other* stylist, so narrow to one person.
-		await second.getByRole('radio', { name: 'Ada' }).click();
+		await chooseWho(second, 'Ada');
 
 		await chooseDay(second, day);
 
@@ -177,7 +226,7 @@ test.describe('managing a booking', () => {
 
 	test('a cancelled time goes back on offer', async ({ page }) => {
 		await page.goto(`${SHOP}?service=cut-and-finish`);
-		await page.getByRole('radio', { name: 'Ada' }).click();
+		await chooseWho(page, 'Ada');
 		const freedLabel = await chooseAvailableSlot(page, 3);
 
 		const day = await selectedDay(page);
@@ -191,7 +240,7 @@ test.describe('managing a booking', () => {
 
 		// Back to the grid: the slot the cancellation freed is bookable again.
 		await page.goto(`${SHOP}?service=cut-and-finish`);
-		await page.getByRole('radio', { name: 'Ada' }).click();
+		await chooseWho(page, 'Ada');
 
 		await chooseDay(page, day);
 
@@ -231,18 +280,23 @@ test.describe('managing a booking', () => {
 		const response = await page.goto('/booking/ZZZZZZZZZZZZZZZZZZZZZZZZZZ');
 		expect(response?.status()).toBe(404);
 		await expect(page.getByRole('alert')).toContainText('We could not find that booking.');
+		// The heading names the kind of failure: a missing booking is not a broken app.
+		await expect(page.getByRole('heading', { level: 1 })).toHaveText('Not found');
 	});
 
 	test('the same failure after a client-side navigation shows the same sentence', async ({
 		page
 	}) => {
 		/*
-		 * The server-rendered failure goes through the server's `handleError`; this
-		 * one goes through the client's, which is a different hook in a different
-		 * file and could disagree.
+		 * The test above is the boundary catching the rejection while the server
+		 * renders. Here the same boundary catches it in the browser: the query's
+		 * rejection crosses the network as an `HttpError`, and SvelteKit unwraps it
+		 * back into the `App.Error` that `+error.svelte` receives. A different code
+		 * path to the same screen, so it gets its own test.
 		 */
 		await arriveClientSide(page, '/booking/ZZZZZZZZZZZZZZZZZZZZZZZZZZ');
 		await expect(page.getByRole('alert')).toContainText('We could not find that booking.');
+		await expect(page.getByRole('heading', { level: 1 })).toHaveText('Not found');
 	});
 
 	test('cancelling from a stale second window is refused in the server s words', async ({
@@ -275,6 +329,91 @@ test.describe('managing a booking', () => {
 		await otherCancel.click();
 		await expect(other.getByRole('alert')).toContainText('That booking is already cancelled.');
 		await other.close();
+	});
+
+	test('a cancellation that never reaches the server is explained in our words', async ({
+		page
+	}) => {
+		await page.goto(`${SHOP}?service=cut-and-finish`);
+		await chooseAvailableSlot(page, 3);
+		await submitBooking(page, 'Offline Olu');
+		await expect(page).toHaveURL(/\/booking\//);
+
+		/*
+		 * With the network gone, the command's `fetch` rejects with the browser's
+		 * own `TypeError: Failed to fetch`. Nothing on our side wrote that or vetted
+		 * it, so the page shows its fallback. An earlier `messageFrom` also read
+		 * `.message` off any `Error`, and this alert then said "Failed to fetch".
+		 */
+		await page.context().setOffline(true);
+		page.once('dialog', (dialog) => void dialog.accept());
+		await page.getByRole('button', { name: 'Cancel this appointment' }).click();
+
+		const alert = page.getByRole('alert');
+		await expect(alert.getByText('We could not cancel that.', { exact: true })).toBeVisible();
+		await expect(alert).not.toContainText('Failed to fetch');
+		await page.context().setOffline(false);
+	});
+});
+
+test.describe('booking without JavaScript', () => {
+	test.use({ javaScriptEnabled: false });
+
+	test('books end to end, from the service list to the confirmation', async ({ page }) => {
+		/*
+		 * Every step is something the browser does on its own. The service, the
+		 * person and the day are links, so each is a page load with the choice
+		 * in the URL; the time is a native radio; the details appear because a
+		 * CSS `:has()` rule sees it checked; and Book posts a real form, which
+		 * the server answers with a redirect.
+		 */
+		await page.goto(SHOP);
+		await page.getByRole('link', { name: /Cut and finish/ }).click();
+		await chooseWho(page, 'Ada');
+
+		await expect(page.getByRole('button', { name: 'Book this time' })).toHaveCount(0);
+		const chosenTime = await chooseAvailableSlot(page);
+		await submitBooking(page, 'Scriptless Sol');
+
+		await expect(page).toHaveURL(/\/booking\/[0-9A-HJKMNP-TV-Z]{26}\?new=1$/);
+		await expect(page.getByText("You're booked in")).toBeVisible();
+		await expect(page.getByRole('heading', { level: 1 })).toContainText(chosenTime);
+	});
+
+	test('a time lost to somebody else keeps the details filled in', async ({ page, browser }) => {
+		await page.goto(`${SHOP}?service=cut-and-finish`);
+		await chooseWho(page, 'Ada');
+		const lostTime = await chooseAvailableSlot(page);
+		const day = await selectedDay(page);
+		await page.getByLabel('Your name').fill('Second Sasha');
+		await page.getByLabel('Email').fill(uniqueEmail('Second Sasha'));
+
+		// Somebody else, with a normal browser, takes the same time with Ada first.
+		const context = await browser.newContext();
+		const rival = await context.newPage();
+		await rival.goto(`${SHOP}?service=cut-and-finish`);
+		await chooseWho(rival, 'Ada');
+		await chooseDay(rival, day);
+		await rival.locator('label.slot', { hasText: lostTime }).click();
+		await submitBooking(rival, 'First Finn');
+		await expect(rival).toHaveURL(/\/booking\//);
+		await context.close();
+
+		await page.getByRole('button', { name: 'Book this time' }).click();
+
+		/*
+		 * The server refuses the time with `invalid(issue.slot(…))`, so the answer
+		 * is the booking form again, not the failure screen: the sentence beside
+		 * the grid, the lost time gone from it, and the name and email still
+		 * there. It used to be `error(409, …)`, and this was "Back to the start".
+		 */
+		await expect(page).toHaveURL(/\/book\/willow-lane\?/);
+		await expect(page.getByRole('alert')).toContainText('That time is no longer available.');
+		await expect(page.locator('label.slot', { hasText: lostTime })).toHaveCount(0);
+
+		await page.locator('label.slot').first().click();
+		await expect(page.getByLabel('Your name')).toHaveValue('Second Sasha');
+		await expect(page.getByRole('button', { name: 'Book this time' })).toBeVisible();
 	});
 });
 

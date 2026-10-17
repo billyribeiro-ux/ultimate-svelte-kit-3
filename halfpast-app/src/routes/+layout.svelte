@@ -1,13 +1,18 @@
 <script lang="ts">
-	import type { Snippet } from 'svelte';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import Logo from '#lib/components/Logo.svelte';
 	import ThemeToggle from '#lib/components/ThemeToggle.svelte';
 	import '#lib/styles/app.css';
+	import type { LayoutProps } from './$types';
 
-	let { children, data }: { children: Snippet; data: { user?: { name: string } | undefined } } =
-		$props();
+	/*
+	 * `LayoutProps` is generated from this folder's `+layout.server.ts`, so `data`
+	 * is exactly what that load returns — `data.user` included — and `children`
+	 * is the `Snippet` for the page inside. Typing the props by hand would compile
+	 * just as well today and go on compiling after the load changed shape.
+	 */
+	let { children, data }: LayoutProps = $props();
 
 	/*
 	 * `page` from `$app/state` is a rune-powered object, not a store — no `$page`,
@@ -70,12 +75,12 @@
 			With Svelte's async mode, `await` inside a `$derived` — which is how
 			every page in this app reads its data — suspends the nearest
 			`<svelte:boundary>` above it, and a rejection lands in that boundary's
-			failed state. The nearest one is never in this file. SvelteKit 3 wraps
-			every layout and page in a boundary of its own, armed with the nearest
-			`+error.svelte`, so a boundary written around `children` here would sit
-			outside the page's and never see a single error. This project had one,
-			and its friendly failure card never once rendered. The app's failure
-			screen is `src/routes/+error.svelte`.
+			failed state. The nearest one is never in this file. SvelteKit 3 renders
+			`children` inside a boundary of its own, whose failed state is
+			`src/routes/+error.svelte`, so a boundary written around `children` here
+			would sit outside SvelteKit's and never see a single error. This project
+			had one, and its friendly failure card never once rendered. The app's
+			failure screen is `+error.svelte`.
 
 			NO `pending` SNIPPET ABOVE A PAGE, EITHER, and this is the part worth
 			knowing.
@@ -205,10 +210,15 @@
 	}
 
 	/* The brand word is the first thing to go when space is tight; the mark
-	 * carries the identity on its own. */
-	@media (max-width: 22rem) {
+	 * carries the identity on its own. Mobile first: hidden on the narrowest
+	 * phones, shown from the first width that has room for it. */
+	.brand-name {
+		display: none;
+	}
+
+	@media (min-width: 22rem) {
 		.brand-name {
-			display: none;
+			display: inline;
 		}
 	}
 </style>

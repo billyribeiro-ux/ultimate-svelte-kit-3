@@ -14,9 +14,12 @@ import { loadMotion } from './gsap.ts';
  *             homes because the browser has already decided where those are.
  *
  * The trick is that nothing animates layout. Layout happens once, in a single
- * frame; what animates is a `transform`, which the compositor handles without
- * touching the main thread. Animating `top` and `left` directly forces a reflow
- * every frame and drops to roughly 20fps on a phone with forty cells on screen.
+ * frame; what animates is a `transform`, which costs no layout and no repaint
+ * per frame — the browser moves pixels it has already painted. GSAP still
+ * writes that transform from JavaScript on every frame, so the main thread is
+ * not idle; it is just doing almost nothing. Animating `top` and `left`
+ * directly forces a reflow every frame and drops to roughly 20fps on a phone
+ * with forty cells on screen.
  *
  * Why it matters here specifically: when somebody else books the 11:00 slot,
  * that button vanishes and every later slot shifts up. Without FLIP the grid

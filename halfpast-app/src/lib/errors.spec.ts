@@ -6,8 +6,9 @@ import { messageFrom } from './errors.ts';
  * The real thing `error()` throws, rather than an object shaped like it.
  *
  * In the browser a remote call rejects with SvelteKit's `HandledHttpError`, a
- * subclass of this same `HttpError`, so a test built on a hand-written
- * `{ status, body }` would keep passing if SvelteKit ever moved the message.
+ * subclass of this same `HttpError`, and `messageFrom` asks `isHttpError`,
+ * which is an `instanceof`. A hand-written `{ status, body }` is not an
+ * instance of anything, so it would test a shape the browser never produces.
  */
 function thrownBy(status: number, message: string): unknown {
 	try {
@@ -38,6 +39,30 @@ describe('messageFrom', () => {
 	it('falls back for a bug in our own code, whose message is not for customers', () => {
 		const bug = new TypeError("Cannot read properties of undefined (reading 'id')");
 		expect(messageFrom(bug, 'Could not cancel that.')).toBe('Could not cancel that.');
+	});
+
+	it('falls back when the HttpError has no words in it', () => {
+		// What a proxy's 413 over HTTP/2 becomes: an HttpError whose message is
+		// the status text, and HTTP/2 has no status text.
+		const silent = thrownBy(413, '');
+		expect(messageFrom(silent, 'Could not cancel that.')).toBe('Could not cancel that.');
+	});
+
+	it('falls back for a proxy s error page, whose status text nobody wrote for a customer', () => {
+		/*
+		 * The browser builds exactly this for a 502 page that never came from
+		 * SvelteKit: `new HttpError({ status: 502, message: response.statusText })`,
+		 * an instance of the same class `error()` throws, so `isHttpError` cannot
+		 * tell it apart. "Bad Gateway" is not a sentence for a customer.
+		 */
+		const proxyPage = thrownBy(502, 'Bad Gateway');
+		expect(messageFrom(proxyPage, 'Could not cancel that.')).toBe('Could not cancel that.');
+	});
+
+	it('does not trust a lookalike that SvelteKit did not make', () => {
+		// The right shape, the wrong origin: nothing vetted this sentence.
+		const lookalike = { status: 400, body: { status: 400, message: 'Not from us.' } };
+		expect(messageFrom(lookalike, 'Could not cancel that.')).toBe('Could not cancel that.');
 	});
 
 	it('falls back for the App.Error a boundary receives, which has no body', () => {

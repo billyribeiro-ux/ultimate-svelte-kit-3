@@ -60,23 +60,36 @@ pnpm add -D drizzle-kit</code></pre>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">import { drizzle } from 'drizzle-orm/libsql';
-import { createClient } from '@libsql/client';
+import { createClient, type Client } from '@libsql/client';
+import { building } from '$app/env';
 import { DATABASE_URL, DATABASE_AUTH_TOKEN } from '$app/env/private';
 import * as schema from './schema.ts';
 
 // …
-const client = createClient({
-	url: DATABASE_URL,
-	// libSQL rejects `authToken: undefined` on some versions, so only pass the key
-	// when we actually have one. Spreading a conditional object is the tidiest way
-	// to say &quot;this property may not exist at all&quot;.
-	...(DATABASE_AUTH_TOKEN ? { authToken: DATABASE_AUTH_TOKEN } : {})
-});
+function connect(): Client {
+	// …
+	if (building) return createClient({ url: ':memory:' });
+
+	// Unreachable once built: `src/env.ts` refuses to start the server without
+	// it. The check is here to narrow the type, not to catch anything.
+	if (!DATABASE_URL) throw new Error('DATABASE_URL is required to start the server.');
+
+	return createClient({
+		url: DATABASE_URL,
+		// libSQL rejects `authToken: undefined` on some versions, so only pass the key
+		// when we actually have one. Spreading a conditional object is the tidiest way
+		// to say &quot;this property may not exist at all&quot;.
+		...(DATABASE_AUTH_TOKEN ? { authToken: DATABASE_AUTH_TOKEN } : {})
+	});
+}
+
+const client = connect();
 
 // …
 export const db = drizzle(client, { schema });</code></pre>
 </figure>
 <p>Passing <code>{ schema }</code> is what turns on the relational query builder — <code>db.query.booking.findMany({ with: { customer: true } })</code> — and gives every result its proper type. Without it you still get SQL, but you lose the part that makes Drizzle worth using.</p>
+<p>The <code>building</code> check is SvelteKit's own advice, followed literally. The build imports this module to analyse the app, and the docs say: &quot;Any code that should not be executed at this stage must check that <code>building</code> from <code>$app/env</code> is <code>false</code>.&quot; Opening a database is such code — pointed at a <code>file:</code> URL it creates the file, and pointed at a remote database it connects — so while building, <code>drizzle</code> gets an in-memory database that touches nothing and disappears with the build. Chapter 15 explains why <code>DATABASE_URL</code> is allowed to be missing at that stage, and chapter 35 what that buys a deployment.</p>
 <h3 id="pragmas">The two pragmas</h3>
 <p>A fresh SQLite database is configured for a command-line tool, not a website. Two settings need changing, and one of them has a trap in it.</p>
 
@@ -85,7 +98,9 @@ export const db = drizzle(client, { schema });</code></pre>
 		<span class="code__file">src/lib/server/db/index.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">void (async () =&gt; {
+	<pre><code class="lang-ts">if (!building) void applyPragmas();
+
+async function applyPragmas() {
 	try {
 		// Persisted in the database file, so this is idempotent; running it every
 		// boot simply guarantees no deployment is ever missing it.
@@ -95,7 +110,7 @@ export const db = drizzle(client, { schema });</code></pre>
 	} catch (error) {
 		console.warn('[db] could not apply pragmas; continuing with defaults', error);
 	}
-})();</code></pre>
+}</code></pre>
 </figure>
 <ul><li><strong><code>journal_mode = WAL</code></strong> — write-ahead logging. Without it, a single writer blocks every reader for the duration of its transaction. With it, readers carry on against the last committed state while a write is in progress. For a page that streams live availability to visitors, this is the difference between working and not.</li><li><strong><code>busy_timeout = 5000</code></strong> — how long a blocked connection waits before giving up. We will come back to why this alone is not the answer.</li></ul>
 <aside class="callout callout--warn"><p>These are two separate <code>execute</code> calls, and they must be. <code>client.batch()</code> wraps its statements in a transaction, and SQLite refuses to change journal mode inside one: <em>&quot;cannot change into wal mode from within a transaction&quot;</em>. Written as a batch, the <code>catch</code> above swallows the error and WAL silently never applies — the app works, slowly and mysteriously, under any concurrent load. Discovering that took an afternoon.</p></aside>

@@ -110,7 +110,8 @@ async function createBookingNow(input: CreateBookingInput): Promise&lt;Booking&g
 			})
 			.returning();
 
-		if (!created) throw new BookingError('slot_taken', 'That time was just taken.');
+		// …
+		if (!created) throw new Error('Inserting the booking returned no row.');
 
 		/* --- 4. The claim. This is the part that cannot be raced. ------------- */
 
@@ -137,11 +138,11 @@ async function createBookingNow(input: CreateBookingInput): Promise&lt;Booking&g
 	});
 }</code></pre>
 </figure>
-<p>The elided lines are less interesting than they are long. Before step 1 the transaction loads the business, the service and the staff member, and checks that this person actually offers this service, each with its own <code>BookingError</code>. Step 1 then loads that person's working rules and the cells already claimed a day either side, and hands them to the same pure <code>availableSlots</code> from chapter 8. Step 2 finds the customer by business and lowercased email, or inserts one. Step 3's row copies the service name, duration, price, currency and time zone onto the booking, so an owner who changes a price next month does not rewrite what this customer agreed to.</p>
+<p>The elided lines are less interesting than they are long. Before step 1 the transaction loads the business, the service and the staff member, and checks that this person actually offers this service, each with its own <code>BookingError</code>. Step 1 then loads that person's working rules and the cells already claimed a day either side, and hands them to the same pure <code>availableSlots</code> from chapter 8. Step 2 finds the customer by business and lowercased email, or inserts one. Step 3's row copies the service name, duration, price, currency and time zone onto the booking, so an owner who changes a price next month does not rewrite what this customer agreed to. The <code>if (!created)</code> after it is not a race at all: <code>insert … returning</code> either returns the row it wrote or throws, and the check exists only because indexing an array is <code>T | undefined</code> under <code>noUncheckedIndexedAccess</code>. It used to throw a <code>BookingError</code> saying &quot;That time was just taken.&quot; — a sentence that could never actually reach a customer — and now throws a plain <code>Error</code>, because if it ever fires, it is a bug.</p>
 <h3 id="order">Why that order</h3>
 <ol><li><strong>Re-derive availability.</strong> The customer may have had the page open since breakfast. This catches the ordinary case and produces a specific, kind error.</li><li><strong>Upsert the customer.</strong> Before the booking, because the booking references it.</li><li><strong>Insert the booking.</strong> Now we have an ID for the claims to point at.</li><li><strong>Claim the cells.</strong> The step that can lose a race — and the only step that guarantees anything.</li></ol>
 <p>Steps 1 and 4 look redundant. They are not: step 1 exists to produce a <em>good error message</em> in the common case, and step 4 exists to be <em>correct</em> in the rare one. Delete step 1 and the app still cannot double-book, it is just ruder about the ordinary case. Delete step 4 and it double-books.</p>
-<p>Notice how carefully step 1 splits its refusal into three. &quot;No longer available&quot;, &quot;too close to now&quot; and &quot;the diary is not open that far ahead&quot; are the same failure to the code and three different problems to the person reading them — and only one of the three is solved by picking another time.</p>
+<p>Notice how carefully step 1 splits its refusal into three. &quot;No longer available&quot;, &quot;too close to now&quot; and &quot;the diary is not open that far ahead&quot; are the same failure to the code and three different problems to the person reading them, with three different remedies: another time, a later one, an earlier one. Chapter 25 shows where the booking page puts each of them — on the form, beside the grid, with everything the customer typed still there.</p>
 <h3 id="after-commit">Publishing after the commit, not inside it</h3>
 <p><code>publishDiaryChange</code> sits <strong>outside</strong> the transaction — outside the write queue entirely, in the thin wrapper. If it were inside, a dashboard could be woken up, re-read the diary, and see nothing, because the transaction it was told about had not committed yet. Worse, a transaction that then rolled back would have announced a slot as taken that is still free. It is a race that reproduces about one time in fifty and reads as &quot;the live update sometimes misses one&quot;.</p>
 <h3 id="sequential">A trap inside transactions</h3>

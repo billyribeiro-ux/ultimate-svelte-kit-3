@@ -2,6 +2,7 @@ import * as v from 'valibot';
 import { error } from '@sveltejs/kit';
 import { command, query } from '$app/server';
 import { BookingError, cancelBooking, loadBookingByToken } from '#lib/server/scheduling.ts';
+import type { BookingStatus } from '#lib/server/db/schema.ts';
 
 /**
  * The customer's view of their own appointment.
@@ -32,7 +33,8 @@ const tokenSchema = v.pipe(
 
 export interface ManagedBooking {
 	reference: string;
-	status: string;
+	/** Narrowed to the four the schema allows, not any string. */
+	status: BookingStatus;
 	businessName: string;
 	businessSlug: string;
 	businessPhone: string | null;

@@ -1,3 +1,4 @@
+import { building } from '$app/env';
 import { ORIGIN, BETTER_AUTH_SECRET } from '$app/env/private';
 import { betterAuth } from 'better-auth/minimal';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
@@ -22,7 +23,14 @@ import { db } from './db/index.ts';
  */
 export const auth = betterAuth({
 	baseURL: ORIGIN,
-	secret: BETTER_AUTH_SECRET,
+	/*
+	 * The real secret whenever the server is running: `src/env.ts` refuses to
+	 * start without one. While SvelteKit builds, it imports this module to
+	 * analyse the app, the secret is allowed to be missing, and Better Auth
+	 * refuses to initialise without one — so the build gets a random throwaway.
+	 * Nothing is signed while building, and the value dies with the build.
+	 */
+	secret: building ? `build-${crypto.randomUUID()}-${crypto.randomUUID()}` : BETTER_AUTH_SECRET,
 
 	database: drizzleAdapter(db, { provider: 'sqlite' }),
 
@@ -53,8 +61,9 @@ export const auth = betterAuth({
 	},
 
 	advanced: {
-		// `ORIGIN` is https in production, so let the cookie say so.
-		useSecureCookies: ORIGIN.startsWith('https://'),
+		// `ORIGIN` is https in production, so let the cookie say so. (Optional
+		// chaining only for the build, when `ORIGIN` may be absent.)
+		useSecureCookies: ORIGIN?.startsWith('https://') === true,
 		cookiePrefix: 'halfpast'
 	},
 

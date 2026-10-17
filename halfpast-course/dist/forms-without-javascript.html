@@ -42,22 +42,26 @@
 		<span class="code__file">src/routes/book/[slug]/+page.svelte</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">&lt;form {...book} class=&quot;stack stack-lg&quot;&gt;
+	<pre><code class="lang-svelte">&lt;form {...book} class=&quot;booking stack stack-lg&quot;&gt;
 	&lt;!-- … --&gt;
-	&lt;input {...book.fields.slug.as('hidden', data.slug)} /&gt;
+	&lt;input {...book.fields.slug.as('hidden', params.slug)} /&gt;
 	&lt;input {...book.fields.serviceId.as('hidden', service.id)} /&gt;
 	&lt;input {...book.fields.viewerTimeZone.as('hidden', viewerZone)} /&gt;
 
 	&lt;!-- … --&gt;
 
-	&lt;input
-		{...book.fields.name.as('text')}
-		{id}
-		aria-describedby={describedBy}
-		aria-invalid={invalid}
-		autocomplete=&quot;name&quot;
-		placeholder=&quot;Sam Okafor&quot;
-	/&gt;
+	&lt;Field label=&quot;Your name&quot; required error={book.fields.name.issues()?.[0]?.message}&gt;
+		{#snippet children({ id, describedBy, invalid })}
+			&lt;input
+				{...book.fields.name.as('text')}
+				{id}
+				aria-describedby={describedBy}
+				aria-invalid={invalid}
+				autocomplete=&quot;name&quot;
+				placeholder=&quot;Sam Okafor&quot;
+			/&gt;
+		{/snippet}
+	&lt;/Field&gt;
 
 	&lt;!-- … --&gt;
 
@@ -68,6 +72,79 @@
 </figure>
 <p>With JavaScript off this is an ordinary HTML form: it posts, the server validates, and the page comes back with errors filled in. With JavaScript on, SvelteKit intercepts, posts in the background, and updates in place. Same code, same handler, same validation.</p>
 <p>Every input is spread from <code>book.fields</code>, including the three hidden ones that say which studio, which service and which time zone the booking is for. <code>book.pending</code> counts the submissions still in flight, which is what lets the button show it is working without a <code>$state</code> flag of your own.</p>
+<h3 id="field">A field that wires itself</h3>
+<p>The name input sits inside <code>&lt;Field&gt;</code>, and the <code>{id}</code>, <code>describedBy</code> and <code>invalid</code> it uses come from there. <code>Field</code> is this app's one form-field component, and it exists because a usable field needs three invisible things to be right at once: a label joined to its control, an error that is part of the control's description, and the control saying it is invalid.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/components/Field.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;script lang=&quot;ts&quot;&gt;
+	import type { Snippet } from 'svelte';
+
+	// …
+
+	let {
+		label,
+		hint,
+		error,
+		required = false,
+		children
+	}: {
+		label: string;
+		hint?: string;
+		/** A message from the server, or from client-side validation. */
+		error?: string | undefined;
+		required?: boolean;
+		/** Receives the ids to wire onto the control. */
+		children: Snippet&lt;[{ id: string; describedBy: string | undefined; invalid: boolean }]&gt;;
+	} = $props();
+
+	// `$props.id()` gives a stable, hydration-safe unique id — the same string on
+	// the server and in the browser, which `crypto.randomUUID()` would not be.
+	const uid = $props.id();
+	const id = `${uid}-field`;
+	const hintId = `${uid}-hint`;
+	const errorId = `${uid}-error`;
+
+	const describedBy = $derived(
+		[hint ? hintId : null, error ? errorId : null].filter(Boolean).join(' ') || undefined
+	);
+&lt;/script&gt;
+
+&lt;div class=&quot;field&quot;&gt;
+	&lt;label for={id}&gt;
+		{label}
+		{#if !required}&lt;span class=&quot;optional&quot;&gt;(optional)&lt;/span&gt;{/if}
+	&lt;/label&gt;
+
+	{#if hint}
+		&lt;p id={hintId} class=&quot;hint&quot;&gt;{hint}&lt;/p&gt;
+	{/if}
+
+	{@render children({ id, describedBy, invalid: Boolean(error) })}
+
+	{#if error}
+		&lt;!--
+			The mark is a real element with `aria-hidden`, not CSS generated content.
+			Generated text is part of the accessible name, so `content: '!'` had this
+			read out as &quot;exclamation mark, that does not look like an email address&quot;;
+			the component test caught it by reading the field's accessible
+			description.
+		--&gt;
+		&lt;p id={errorId} class=&quot;error&quot; role=&quot;alert&quot;&gt;
+			&lt;span class=&quot;mark&quot; aria-hidden=&quot;true&quot;&gt;!&lt;/span&gt;{error}
+		&lt;/p&gt;
+	{/if}
+&lt;/div&gt;</code></pre>
+</figure>
+<p>The control itself is passed in as a <strong>snippet with parameters</strong>. <code>children</code> is typed <code>Snippet&lt;[{ id; describedBy; invalid }]&gt;</code>, <code>Field</code> renders it with <code>{@render children({ id, describedBy, invalid: Boolean(error) })}</code>, and the page receives those values by destructuring them in <code>{#snippet children({ id, describedBy, invalid })}</code>. So <code>Field</code> decides the ids, and the page decides what the control is: an <code>&lt;input&gt;</code>, a <code>&lt;textarea&gt;</code>, a <code>&lt;select&gt;</code>, each spread from its own <code>fields.&lt;name&gt;.as(...)</code>.</p>
+
+<aside class="callout callout--why">
+	<h4>Why a snippet, and why $props.id()</h4>
+	<p>A snippet with parameters is Svelte 5's replacement for slot props — the <code>let:id</code> directive on a <code>&lt;slot&gt;</code> in Svelte 4 — and it is better in the way that matters here: it is typed. Destructure a name <code>Field</code> does not pass and TypeScript says so. The ids come from <code>$props.id()</code>, which gives each component instance a unique id that is the same on the server and in the browser. <code>crypto.randomUUID()</code> would produce one id in the server's HTML and another during hydration, and the label would end up pointing at nothing; a hard-coded id breaks the moment two fields on one page share it. Chapter 32 has the component test that holds all of this in place.</p>
+</aside>
 <h3 id="the-rule">The rule that catches everybody once</h3>
 <aside class="callout callout--warn"><p>Every control inside a remote form must come from <code>fields.&lt;name&gt;.as(...)</code>. A hand-written <code>&lt;input type=&quot;hidden&quot; name=&quot;slug&quot;&gt;</code> throws <strong>&quot;Form contained a field that wasn't created with form.fields.as(...)&quot;</strong> the moment the form is submitted.</p></aside>
 <p>SvelteKit has to own the name and the value in order to construct the submitted object and match it against your schema. A field it did not create is a field it cannot account for, so it refuses rather than silently dropping it.</p>
@@ -88,9 +165,9 @@
 		<span class="code__file">src/routes/sign-in/+page.svelte</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">{#if signIn.fields.allIssues()?.length}
+	<pre><code class="lang-svelte">{#if formIssues?.length}
 	&lt;Alert tone=&quot;error&quot; title=&quot;We could not sign you in&quot;&gt;
-		&lt;p&gt;{signIn.fields.allIssues()?.[0]?.message}&lt;/p&gt;
+		&lt;p&gt;{formIssues[0]?.message}&lt;/p&gt;
 	&lt;/Alert&gt;
 {/if}
 
@@ -106,7 +183,116 @@
 	{/snippet}
 &lt;/Field&gt;</code></pre>
 </figure>
-<ul><li><code>fields.email.issues()</code> — problems with that one field, shown next to it.</li><li><code>fields.allIssues()</code> — everything, including errors that belong to the form as a whole rather than any single input.</li><li><code>aria-invalid</code> and <code>aria-describedby</code> are what make the error <em>readable</em> rather than merely visible. A screen reader announces &quot;Email, invalid entry, that does not look like an email address&quot; instead of &quot;Email, edit text&quot;.</li></ul>
+<ul><li><code>fields.email.issues()</code> — problems with that one field, shown next to it by <code>Field</code>.</li><li><code>formIssues</code> — the problems that belong to the form as a whole rather than to any single input, such as a refused password. Worked out in the script, below.</li><li><code>aria-invalid</code> and <code>aria-describedby</code> are what make the error <em>readable</em> rather than merely visible. A screen reader announces &quot;Email, invalid entry, that does not look like an email address&quot; instead of &quot;Email, edit text&quot;.</li></ul>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/sign-in/+page.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">const formIssues = $derived(
+	signIn.fields.allIssues()?.filter((issue) =&gt; issue.path.length === 0)
+);</code></pre>
+</figure>
+<p><code>fields.allIssues()</code> is every issue in the form, the email's own included. The alert used to be built straight from it, so an email the schema rejected said &quot;Enter the email address you signed up with&quot; twice — once beside the field, once in the alert — in two <code>role=&quot;alert&quot;</code> regions, both read aloud. Each issue carries a <code>path</code> to the field it belongs to, and an issue for the form as a whole has an empty one, so filtering on <code>path.length === 0</code> leaves exactly the refusals the alert is for.</p>
+<h3 id="refusals">A refusal that belongs to the form</h3>
+<p>Schema issues land in those slots by themselves. A wrong password is different: the schema cannot know it. Only Better Auth can, after the submission has passed validation, so the handler has to report it itself, and the way it reports it decides what the person sees next.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/sign-in/auth.remote.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export const signIn = form(signInSchema, async (data) =&gt; {
+	const { request } = getRequestEvent();
+
+	try {
+		await auth.api.signInEmail({
+			body: { email: data.email, password: data._password },
+			headers: request.headers
+		});
+	} catch (thrown) {
+		// …
+		if (isAPIError(thrown) &amp;&amp; thrown.statusCode === 401) {
+			invalid('That email and password do not match an account.');
+		}
+		throw thrown;
+	}
+
+	redirect(303, data.redirectTo);
+});</code></pre>
+</figure>
+<p><code>invalid</code> comes from <code>@sveltejs/kit</code> and throws, as <code>error</code> and <code>redirect</code> do. Given a plain string, it records an issue for the form as a whole — one with an empty <code>path</code> — which <code>formIssues</code> picks out for the &quot;We could not sign you in&quot; alert above, with the email still filled in. Given <code>issue.email('…')</code>, built from the second argument every form handler receives, it attaches to that one field instead.</p>
+<p>Only one failure is a refusal, though. Better Auth throws an <code>APIError</code> with status 401 for a wrong password and for an unknown email alike — one message for both, which is what stops the form from telling a stranger which addresses have accounts. Everything else is rethrown. An earlier version caught everything with a bare <code>catch {</code>, which turned a database outage into &quot;that password is wrong&quot;: no log line, no reference id, and somebody retyping a correct password at a server that could not read it. Rethrown, the outage reaches <code>handleError</code> as <code>unknown</code>, which logs it and shows the generic sentence.</p>
+
+<aside class="callout callout--why">
+	<h4>Why not error(401, …)</h4>
+	<p>This handler used to call <code>error(401, 'That email and password do not match an account.')</code>, and it looked fine, because the sentence appeared. But <code>error</code> inside a form handler sends the request to the nearest <code>+error.svelte</code>, which replaces the page. The form went, the email went with it, and somebody who had mistyped one character was looking at a failure screen. A wrong password is put right on the same form, a moment later, so the answer belongs on the form. The end-to-end test for a wrong password now checks that the form, and the email in it, are still there.</p>
+</aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/sign-in/auth.remote.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">_password: v.pipe(v.string(), v.minLength(1, 'Enter your password')),</code></pre>
+</figure>
+<p>The underscore is the other half, and it matters most with JavaScript off. A submission that fails comes back as a freshly rendered page with every field filled in again, so nobody retypes their email. For a field called <code>password</code>, that means the wrong guess travels back across the network inside the input's <code>value</code>, in the HTML. SvelteKit never sends back a field whose name begins with <code>_</code>. We tried both with scripting disabled: named <code>password</code>, the guess was in the page source; named <code>_password</code>, the box comes back empty.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/dashboard.e2e.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">test.describe('getting in without JavaScript', () =&gt; {
+	test.use({ javaScriptEnabled: false });
+
+	test('a refused sign-in comes back with the email and without the password', async ({ page }) =&gt; {
+		await page.goto('/sign-in');
+		await page.getByLabel('Email').fill(OWNER.email);
+		await page.getByLabel('Password').fill('definitely-not-the-password');
+		await page.getByRole('button', { name: 'Sign in' }).click();
+
+		// …
+		await expect(page.getByRole('alert')).toContainText(
+			'That email and password do not match an account.'
+		);
+		await expect(page.getByLabel('Email')).toHaveValue(OWNER.email);
+		await expect(page.getByLabel('Password')).toHaveValue('');
+		expect(await page.content()).not.toContain('definitely-not-the-password');
+	});
+
+	// …
+});</code></pre>
+</figure>
+<p><code>javaScriptEnabled: false</code> is the cheapest progressive-enhancement test there is: one line, and the browser behaves like a phone whose script never arrived. The last assertion reads the whole page source, not just the input: the input is only the most obvious place the guess could travel, and reading everything the server sent catches it wherever it went.</p>
+<h3 id="sign-out">Signing out is a form too</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/sign-in/auth.remote.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export const signOut = form(async () =&gt; {
+	const { request } = getRequestEvent();
+	await auth.api.signOut({ headers: request.headers });
+	redirect(303, '/');
+});</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/manage/[slug]/+layout.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;form {...signOut}&gt;
+	&lt;Button type=&quot;submit&quot; variant=&quot;ghost&quot; size=&quot;sm&quot; loading={signOut.pending &gt; 0}&gt;
+		Sign out
+	&lt;/Button&gt;
+&lt;/form&gt;</code></pre>
+</figure>
+<p>A <code>form</code> with no schema, because there is nothing to send: the button is the whole form. It is a real POST, so it signs you out with JavaScript off, and it ends in <code>redirect(303, '/')</code>, which a form is allowed to do. A successful submission with no refreshes of its own also re-runs every load function, so the header's &quot;Ada Willow&quot; turns into &quot;Sign in&quot; without anybody reloading.</p>
+<aside class="callout callout--warn"><h4>A command cannot redirect</h4><p>This was a <code>command</code> — <code>onclick={() =&gt; void signOut()}</code> — and it was broken in a way no test noticed. The SvelteKit docs are plain about it: <code>redirect(...)</code> works inside <code>query</code>, <code>form</code> and <code>prerender</code>, and &quot;It is <em>not</em> possible inside <code>command</code> functions&quot;. In the browser, a command whose response is a redirect throws <code>remote_command_redirect</code>. So the session was deleted and the cookie cleared, and then the page threw, leaving the dashboard on screen with the owner's name still in the header. Two end-to-end tests now press Sign out, with and without JavaScript, and the shared fixture fails any test whose page throws an error nothing caught.</p></aside>
 <h3 id="fusing">Fusing two answers into one field</h3>
 <p>The booking form has an interesting problem. The customer picks a <strong>time</strong>, but a time on its own is not bookable — it belongs to a particular staff member, and when the customer chose &quot;anyone&quot;, the app picked for them.</p>
 <p>The obvious design is a radio group of times plus a hidden <code>staffId</code>, updated by JavaScript when the selection changes. That design <strong>needs</strong> JavaScript. Without it the hidden field keeps whatever the server rendered — for &quot;anyone&quot;, nothing — and the form fails validation for a reason the customer can neither see nor fix.</p>
@@ -153,12 +339,12 @@
 		and a validation error appears on all of them at once.
 	--&gt;
 	{const editForm = $derived(saveService.for(entry.id))}
-	&lt;li class=&quot;card&quot; class:inactive={!entry.isActive}&gt;
+	&lt;li class={['card', { inactive: !entry.isActive }]}&gt;
 		&lt;!-- … --&gt;
 
 		{#if editing === entry.id}
 			&lt;form {...editForm} class=&quot;edit stack&quot;&gt;
-				&lt;input {...editForm.fields.slug.as('hidden', data.slug)} /&gt;
+				&lt;input {...editForm.fields.slug.as('hidden', params.slug)} /&gt;
 				&lt;input {...editForm.fields.serviceId.as('hidden', entry.id)} /&gt;
 
 				&lt;Field label=&quot;Name&quot; required error={editForm.fields.name.issues()?.[0]?.message}&gt;
@@ -186,11 +372,12 @@
 </figure>
 <p><code>form.for(id)</code> gives each row its own instance with its own fields, issues and pending count, all driving the same server handler. It is the difference between one spinner spinning and eleven.</p>
 <aside class="callout callout--note"><p><code>{const editForm = $derived(saveService.for(entry.id))}</code> is a <em>declaration tag</em>: a <code>const</code> written straight into the markup. Declaration tags arrived in Svelte 5.56 and made the older <code>{@const}</code> legacy. The <code>$derived</code> keeps the reactivity <code>{@const}</code> had — the value is worked out again whenever something it reads changes — where a bare <code>{const editForm = saveService.for(entry.id)}</code> is worked out once, when the row is created, like a <code>const</code> in the script. A declaration tag is visible to its siblings and their children in the same lexical scope: here that is the body of the <code>{#each}</code>, so each row has its own <code>editForm</code>, the snippets inside its <code>&lt;Field&gt;</code>s can read it, and nothing outside the loop can.</p></aside>
+<aside class="callout callout--note"><p><code>class={['card', { inactive: !entry.isActive }]}</code> is the other idiom in that block, and every conditional class in this app is written that way. Since Svelte 5.16 the <code>class</code> attribute takes an array or an object and joins it the way the <code>clsx</code> library does: strings are kept, falsy values dropped, and an object contributes each key whose value is truthy. The older spelling, <code>class=&quot;card&quot; class:inactive={!entry.isActive}</code>, still works, and the Svelte docs now steer you away from it — the attribute &quot;is more powerful and composable&quot;. One attribute can mix fixed names, props and conditions, as the <code>Button</code> component does with <code>class={['btn', variant, size, { full, loading }]}</code>, where the directive needed a string template and two directives beside it.</p></aside>
 <p>Notice the second argument again, this time on a text input. <code>as('text', entry.name)</code> renders each row's form already holding that row's current name, and it is also the value the field goes back to if the form is reset. <code>editForm.result</code> is whatever the handler returned, so <code>{ saved: true }</code> from the server becomes the &quot;Saved.&quot; message on that one card and no other.</p>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>
-	<p>Disable JavaScript in your browser, book an appointment end to end, and get a real confirmation page. Then submit a bad email and see the error come back attached to the right input.</p>
+	<p>Disable JavaScript in your browser, book an appointment end to end, and get a real confirmation page — chapter 25 shows how every step before the time became a link, which is what makes that possible. Then submit a bad email and see the error come back attached to the right input. Still without JavaScript, sign in with the wrong password: the sign-in form comes back with the email filled in, the password box empty, and nothing you typed in the page source. Sign in properly and press Sign out: you land on the home page, signed out. <code>pnpm test:e2e</code> does all of it with scripting switched off.</p>
 </aside>
 		</article>
 

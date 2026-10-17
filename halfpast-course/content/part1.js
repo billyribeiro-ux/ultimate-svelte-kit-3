@@ -722,7 +722,7 @@ test: {
 					'The **client** project runs in a real, headless Chromium — `provider: playwright()`, a function imported from `@vitest/browser-playwright` — not a simulated DOM. Component tests that pass in jsdom and fail in a browser are a genuine waste of a morning.',
 					'The **server** project is plain Node and starts instantly. All our time tests live here.',
 					'Neither project says `extends`. Vitest 5 makes an inline project inherit the file that declares it — the SvelteKit plugin, the `ssr.external` list, everything — so the Vitest 4 habit of pointing each project back at `./vite.config.ts` is gone, and repeating it earns a warning about plugins applied twice.',
-					'The naming convention does the routing: `foo.svelte.spec.ts` is a component test, `foo.spec.ts` is a server one.'
+					'The naming convention does the routing: `foo.svelte.spec.ts` is a component test, `foo.spec.ts` is a server one. Every test in this chapter is a server one; chapter 32 writes the app\'s component test, for the form field that wires up its own label and error.'
 				]
 			},
 			{

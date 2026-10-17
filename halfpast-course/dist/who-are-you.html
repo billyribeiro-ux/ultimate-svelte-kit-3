@@ -57,7 +57,8 @@
 		<span class="code__file">src/lib/server/auth.ts</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-ts">import { ORIGIN, BETTER_AUTH_SECRET } from '$app/env/private';
+	<pre><code class="lang-ts">import { building } from '$app/env';
+import { ORIGIN, BETTER_AUTH_SECRET } from '$app/env/private';
 import { betterAuth } from 'better-auth/minimal';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { sveltekitCookies } from 'better-auth/svelte-kit';
@@ -68,7 +69,14 @@ import { db } from './db/index.ts';
 
 export const auth = betterAuth({
 	baseURL: ORIGIN,
-	secret: BETTER_AUTH_SECRET,
+	/*
+	 * The real secret whenever the server is running: `src/env.ts` refuses to
+	 * start without one. While SvelteKit builds, it imports this module to
+	 * analyse the app, the secret is allowed to be missing, and Better Auth
+	 * refuses to initialise without one — so the build gets a random throwaway.
+	 * Nothing is signed while building, and the value dies with the build.
+	 */
+	secret: building ? `build-${crypto.randomUUID()}-${crypto.randomUUID()}` : BETTER_AUTH_SECRET,
 
 	database: drizzleAdapter(db, { provider: 'sqlite' }),
 
@@ -193,7 +201,7 @@ export {};</code></pre>
 };</code></pre>
 </figure>
 <p>Returning a short <code>id</code> and printing the same one server-side is the cheapest support tool there is: the customer reads you eight characters and you find the exact stack trace.</p>
-<aside class="callout callout--note"><p>Write <code>src/hooks.client.ts</code> too, with the same shape and <code>HandleClientError</code>. A remote query that rejects during a client-side navigation renders the error page and writes <strong>nothing</strong> to the server log, because the server was never involved. Without the client hook, that is a blank 500 with no evidence anywhere. This exact tool found two real bugs in this project.</p></aside>
+<aside class="callout callout--note"><p>Write <code>src/hooks.client.ts</code> too, with the same shape and <code>HandleClientError</code>. A bug that throws in the browser after a client-side navigation — a component reading route data that is momentarily absent, say — renders the error page and writes <strong>nothing</strong> to the server log, because the server was never involved. Without the client hook, that is a blank 500 with no evidence anywhere. This exact tool found two real bugs in this project. Remote calls are the subtle part. A rejection SvelteKit's server produced — its own <code>error(404, …)</code>, or an unknown failure its <code>handleError</code> has already logged and reworded — reaches the browser in its final shape and never comes here. A request that never got a SvelteKit answer does: offline, the browser's <code>TypeError: Failed to fetch</code> arrives as <code>kind: 'unknown'</code> and is logged like a bug, and a proxy's 502 page arrives as an <code>HttpError</code> with <code>kind: 'app'</code>. We checked both in a real browser, by aborting a query's request and by answering it with an HTML 502.</p></aside>
 <h3 id="customer-token">The customer’s bearer token</h3>
 
 <figure class="code">

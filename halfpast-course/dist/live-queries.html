@@ -94,7 +94,7 @@
 	<pre><code class="lang-svelte">const availabilityQuery = $derived(
 	service
 		? getAvailability({
-				slug: data.slug,
+				slug: params.slug,
 				serviceId: service.id,
 				staffId: staffId ?? undefined,
 				from: weekFrom,
@@ -106,7 +106,7 @@
 // …
 const availability = $derived(availabilityQuery ? await availabilityQuery : null);</code></pre>
 </figure>
-<p>Two <code>$derived</code>s, on purpose. <code>availabilityQuery</code> is the resource — recreated whenever a different service, week or person is chosen, and it carries <code>.connected</code>, which is how the page knows whether to show its &quot;Live&quot; badge. <code>availability</code> is the value, re-awaited every time the server pushes a new one down the stream. No subscription to manage, no cleanup to write, no <code>onDestroy</code> — the generator on the server and the <code>await</code> in the component are the entire API.</p>
+<p>Two <code>$derived</code>s, on purpose. <code>availabilityQuery</code> is the resource — recreated whenever a different service, week or person is chosen, which on this page means whenever the URL says so — and it carries <code>.connected</code>, which is how the page knows whether to show its &quot;Live&quot; badge. <code>availability</code> is the value, re-awaited every time the server pushes a new one down the stream. No subscription to manage, no cleanup to write, no <code>onDestroy</code> — the generator on the server and the <code>await</code> in the component are the entire API.</p>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>

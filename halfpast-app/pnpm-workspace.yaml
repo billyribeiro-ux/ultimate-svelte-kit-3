@@ -1,3 +1,10 @@
+# Refuse to install under a Node older than `engines.node` in package.json.
+# pnpm 12 reads its settings from this file. `engine-strict=true` in `.npmrc` is
+# npm's spelling, and pnpm 12 ignores it: the install finishes, exit 0, with no
+# warning at all. With this line the same install stops before touching a
+# package, with ERR_PNPM_UNSUPPORTED_ENGINE.
+engineStrict: true
+
 allowBuilds:
   esbuild: true
 

@@ -268,27 +268,34 @@ node --version   # v24.21.0`
 				text: '`engines` says which Node the project needs. `packageManager` does the same job for the package manager: pnpm reads it and switches to exactly 12.10.1 in this folder, whatever version is installed globally.'
 			},
 			{
+				type: 'p',
+				text: 'On its own, `engines` is advisory: a statement of what the project needs, which nothing enforces. Making pnpm enforce it is one line, and it goes in `pnpm-workspace.yaml`, because that is where pnpm 12 reads its settings from:'
+			},
+			{
 				type: 'code',
-				file: '.npmrc',
-				lang: 'ini',
-				code: `engine-strict=true`
+				file: 'pnpm-workspace.yaml',
+				lang: 'yaml',
+				code: `engineStrict: true`
 			},
 			{
 				type: 'p',
-				text: 'On its own, `engines` is advisory. What `engine-strict=true` buys you depends on which tool reads it: **npm** turns the mismatch into a refusal, while **pnpm 12** — what this project actually installs with — still carries on, but complains loudly. Run `pnpm install` under Node 22, the LTS line before this one, and you get:'
+				text: 'Now run `pnpm install` under Node 22, the LTS line before this one, and it stops before touching a single package:'
 			},
 			{
 				type: 'terminal',
-				code: ` WARN  Unsupported engine: wanted: {"node":">=24.21.0"} (current: {"node":"v22.11.0","pnpm":"12.10.1"})`
+				code: `Error: ERR_PNPM_UNSUPPORTED_ENGINE
+
+  × Unsupported engine for /home/you/halfpast-app: wanted:
+  │ {"node":">=24.21.0"} (current: {"node":"22.22.0"})`
 			},
 			{
-				type: 'p',
-				text: 'If you want pnpm to refuse outright rather than warn, set `engineStrict: true` in `pnpm-workspace.yaml`. Then the same install stops dead with `ERR_PNPM_UNSUPPORTED_ENGINE  Unsupported environment (bad pnpm and/or Node.js version)` before touching a single package.'
+				type: 'warn',
+				text: 'You will see `engine-strict=true` in an `.npmrc` in a great many projects, and this one had it too. That is npm\'s spelling of the setting, and pnpm 12 does not read it. We checked rather than assumed: with only the `.npmrc` line, the same install under Node 22 printed `Done in 25ms using pnpm v12.10.1` and exited 0, with no warning of any kind, and `pnpm config get engine-strict` answered `undefined`. A guard that does nothing is worse than no guard, because everybody believes it is there. So the line moved to `pnpm-workspace.yaml` and the `.npmrc` went.'
 			},
 			{
 				type: 'why',
 				title: 'Why this is worth the friction',
-				text: 'Because the alternative is a colleague still on Node 20, which reached end of life in April 2026, everything appearing to work, and a subtly different result appearing in production three weeks later. A loud complaint on day one — or better, a refusal — is cheaper than a quiet failure on day twenty-one.'
+				text: 'Because the alternative is a colleague still on Node 20, which reached end of life in April 2026, everything appearing to work, and a subtly different result appearing in production three weeks later. A refusal on day one is cheaper than a quiet failure on day twenty-one — and it is only a refusal if the tool you install with actually reads the setting, which is why the setting lives where pnpm looks.'
 			},
 			{
 				type: 'p',

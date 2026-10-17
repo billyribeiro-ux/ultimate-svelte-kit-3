@@ -199,6 +199,25 @@ export function daysBetween(from: IsoDate, to: IsoDate): number {
 	return Math.round((b - a) / 86_400_000);
 }
 
+/**
+ * `value` as a local date, or `null` if it is not one.
+ *
+ * For dates that arrive from outside the app — a `?day=` in a link somebody
+ * shared, typed by hand, or truncated by a messaging app. `parseDate` already
+ * refuses anything that is not a real calendar day, `2026-02-30` included, by
+ * throwing; this turns the throw into a `null` the caller can fall back from,
+ * and the round trip refuses any spelling it would accept but print
+ * differently, so what comes out is always the canonical `YYYY-MM-DD`.
+ */
+export function parseIsoDate(value: string | null): IsoDate | null {
+	if (value === null) return null;
+	try {
+		return parseDate(value).toString() === value ? value : null;
+	} catch {
+		return null;
+	}
+}
+
 function isoParts(day: IsoDate): [number, number, number] {
 	const date = parseDate(day);
 	return [date.year, date.month - 1, date.day];

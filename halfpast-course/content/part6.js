@@ -168,6 +168,56 @@ export function reveal(options: RevealOptions = {}): Attachment<HTMLElement> {
 				text: 'Two details in that code are the difference between an animation and a bug. `gsap.from` animates **towards** the DOM\'s real state, so if the tween never runs — blocked script, failed chunk, reduced motion — the element is already where it belongs. The opposite pattern (hide it in CSS, reveal it with JavaScript) means a failed script leaves a blank page. And `clearProps` hands layout back to CSS at the end, rather than leaving the element pinned by an inline matrix that a later resize cannot move.'
 			},
 
+			{ type: 'h3', id: 'once', text: 'An entrance that plays once' },
+			{
+				type: 'code',
+				file: 'src/routes/booking/[token]/+page.svelte',
+				lang: 'svelte',
+				code: `
+<article class={['card', { dim: cancelled }]} {@attach justBooked && celebrate}>`
+			},
+			{
+				type: 'code',
+				file: 'src/routes/booking/[token]/+page.svelte',
+				lang: 'ts',
+				code: `
+const celebrate: Attachment<HTMLElement> = (node) => {
+	let cancelled = false;
+
+	void loadMotion().then((motion) => {
+		if (!motion || cancelled) return;
+		motion.gsap
+			.timeline()
+			.from(node, { y: 24, opacity: 0, duration: 0.6, ease: 'power3.out' })
+			.from(
+				node.querySelectorAll('.detail'),
+				{
+					y: 10,
+					opacity: 0,
+					duration: 0.4,
+					stagger: 0.06,
+					ease: 'power2.out',
+					clearProps: 'all'
+				},
+				'-=0.3'
+			);
+	});
+
+	return () => {
+		cancelled = true;
+	};
+};`
+			},
+			{
+				type: 'p',
+				text: 'The confirmation card lifts into place when a booking is new, and only then. `justBooked && celebrate` is either the attachment or `false`, and a falsy value attaches nothing, which is the "only when new" half. The "only once" half comes from how attachments re-run: when their element mounts, and again only if state *read inside the function* changes. `celebrate` reads none — the element is all it needs — so cancelling the booking, which refreshes the query and dims the card, does not replay the entrance.'
+			},
+			{
+				type: 'why',
+				title: 'Why not bind:this and an effect',
+				text: 'That was the first version: `bind:this={card}` into a `$state`, an `$effect` that waited for the element, and a `celebrated` flag so the effect would not fire twice — three moving parts, justified by a comment saying an attachment "would replay it every time the query refreshed". The Svelte docs say otherwise: an attachment runs "when an element is mounted to the DOM or when state read inside the function updates", and this one reads nothing. Whenever an action, or `bind:this` plus an effect, looks like the answer, an attachment usually is.'
+			},
+
 			{ type: 'h3', id: 'restraint', text: 'What is deliberately not animated' },
 			{
 				type: 'ul',
@@ -289,20 +339,34 @@ export function reveal(options: RevealOptions = {}): Attachment<HTMLElement> {
 				file: 'src/lib/components/booking/DateStrip.svelte',
 				lang: 'css',
 				code: `
-/* On the narrowest phones the weekday initial is enough; the number carries
- * the meaning and seven three-letter labels would wrap. */
-@media (max-width: 26rem) {
-	.weekday {
-		font-size: 0.6rem;
-	}
+.weekday {
+	font-size: 0.6rem;
+	/* … */
+}
+
+/* … */
+
+/* Mobile first. On the narrowest phones the number carries the meaning, so
+ * the weekday is tiny and the days have no side padding; seven three-letter
+ * labels at full size would wrap. From 26rem there is room for both. */
+@media (min-width: 26rem) {
 	.day {
-		padding-inline: 0;
+		padding-inline: var(--space-1);
+	}
+
+	.weekday {
+		font-size: var(--text-xs);
 	}
 }`
 			},
 			{
 				type: 'p',
-				text: 'Six width queries in the entire application: these two, a `min-width: 30rem` that lets the landing page\'s buttons stop being full-width, and three small `max-width` ones that tighten a component on narrow phones — the header drops the brand word at 22rem, a confirmation detail row collapses to one column at 26rem, and the diary\'s cancel button drops onto its own row at 30rem. Not one of them came from a table of phone sizes — each was written at the width where its content visibly stopped fitting. That is the whole method: resize the window slowly, and add a query at the point where you wince.'
+				text: 'Six width queries in the entire application, and every one is `min-width`: these two; one at 30rem that lets the landing page\'s buttons stop being full-width; the header\'s brand word, which appears from 22rem; the confirmation page\'s detail rows, which go side by side from 26rem; and the diary\'s cancel button, which joins its row from 30rem. Not one of them came from a table of phone sizes — each was written at the width where its content visibly stopped fitting. That is the whole method: resize the window slowly, and add a query at the point where you wince.'
+			},
+			{
+				type: 'why',
+				title: 'Why only min-width',
+				text: 'Three of those queries used to be `max-width`: a desktop layout written first, then undone on small screens — the "desktop-first with extra steps" this chapter opened with. They worked, and each one made the phone the special case. Rewritten as `min-width`, the rules outside any query are the phone\'s, and every query only ever adds: a wider screen gains a column, a label, padding. Reading a stylesheet from the top tells you what the smallest screen sees, which is the screen most of this app\'s customers are holding.'
 			},
 
 			{ type: 'h3', id: 'touch', text: 'Thumbs, not cursors' },
@@ -371,7 +435,7 @@ projects: [
 		title: 'Unit tests that earn their keep',
 		summary:
 			'What to test, what not to, and the concurrency test that is the most valuable one in the project.',
-		goal: '118 tests that run in two seconds and would catch every bug this project actually had.',
+		goal: '131 tests that run in a few seconds and would catch every bug this project actually had.',
 		blocks: [
 			{
 				type: 'p',
@@ -505,6 +569,95 @@ expect(compact.format(5600)).toMatch(/^£5\\.60?k$/i);`
 				text: 'Assert the shape, or assert on the *inputs* to formatting. Never on a locale-dependent string you did not construct yourself.'
 			},
 
+			{ type: 'h3', id: 'real-values', text: 'Test with the real thing, not its shape' },
+			{
+				type: 'code',
+				file: 'src/lib/errors.spec.ts',
+				lang: 'ts',
+				code: `
+function thrownBy(status: number, message: string): unknown {
+	try {
+		error(status, message);
+	} catch (thrown) {
+		return thrown;
+	}
+	throw new Error('error() returned instead of throwing');
+}
+
+// …
+
+	it('does not trust a lookalike that SvelteKit did not make', () => {
+		// The right shape, the wrong origin: nothing vetted this sentence.
+		const lookalike = { status: 400, body: { status: 400, message: 'Not from us.' } };
+		expect(messageFrom(lookalike, 'Could not cancel that.')).toBe('Could not cancel that.');
+	});`
+			},
+			{
+				type: 'p',
+				text: 'Chapter 20\'s `messageFrom` is tested against the value SvelteKit\'s own `error()` actually throws, caught and handed over, rather than an object literal typed to look like it. The difference is the whole point. The helper asks `isHttpError`, an `instanceof`, so a literal `{ status, body }` would describe something the browser never produces, and a test built on one would go on passing whatever SvelteKit did. The lookalike test turns that round and pins the decision down: right shape, wrong origin, fallback.'
+			},
+			{
+				type: 'code',
+				file: 'src/lib/errors.spec.ts',
+				lang: 'ts',
+				code: `
+const proxyPage = thrownBy(502, 'Bad Gateway');
+expect(messageFrom(proxyPage, 'Could not cancel that.')).toBe('Could not cancel that.');`
+			},
+			{
+				type: 'p',
+				text: 'The same helper builds the case chapter 20\'s `status < 500` exists for. For a 502 page that never came from SvelteKit, the browser makes `new HttpError({ status: 502, message: response.statusText })` — the very class `error()` throws — so `thrownBy(502, \'Bad Gateway\')` is not an approximation of it but the thing itself. Run against the helper without the status check, this test fails with "Bad Gateway" where the fallback should be.'
+			},
+
+			{ type: 'h3', id: 'component', text: 'A component test, in a real browser' },
+			{
+				type: 'p',
+				text: 'The rule at the top of this chapter says a component that renders a name does not need a test. `Field` from chapter 21 renders a label, and still has one, because everything it is for is invisible: whether the label names the control, whether the error is part of what the control says about itself, whether the control says it is invalid. Get any of that wrong and the page looks exactly the same.'
+			},
+			{
+				type: 'code',
+				file: 'src/lib/components/Field.svelte.spec.ts',
+				lang: 'ts',
+				code: `
+const textInput = createRawSnippet<[Wiring]>((wiring) => ({
+	render: () => {
+		const { id, describedBy, invalid } = wiring();
+		const description = describedBy ? \` aria-describedby="\${describedBy}"\` : '';
+		return \`<input type="email" id="\${id}"\${description} aria-invalid="\${invalid}" />\`;
+	}
+}));
+
+// …
+
+	it('announces an error as invalid, and reads it out with the hint', async () => {
+		const screen = await render(Field, {
+			label: 'Email',
+			required: true,
+			hint: 'We send your confirmation here.',
+			error: 'That does not look like an email address',
+			children: textInput
+		});
+
+		const input = screen.getByRole('textbox', { name: 'Email' });
+		await expect.element(input).toHaveAttribute('aria-invalid', 'true');
+		await expect
+			.element(input)
+			.toHaveAccessibleDescription(
+				'We send your confirmation here. That does not look like an email address'
+			);
+		// …
+	});`
+			},
+			{
+				type: 'p',
+				text: 'The file is called `Field.svelte.spec.ts`, so chapter 9\'s `client` project picks it up and runs it in headless Chromium through `vitest-browser-svelte`. `Field` takes its control as a snippet, and `createRawSnippet` from `svelte` builds one in code: `render` returns the element\'s HTML and receives the snippet\'s parameters as a function, the same `{ id, describedBy, invalid }` a page destructures. Then the assertions ask what assistive technology asks. `getByRole(\'textbox\', { name: \'Email\' })` only finds the input if the label really names it, and `toHaveAccessibleDescription` works the description out from `aria-describedby` and the text it points at.'
+			},
+			{
+				type: 'why',
+				title: 'Why the accessible description, not the attribute',
+				text: 'An `aria-describedby` pointing at an id that is not on the page passes a check for the attribute and announces nothing. Asking for the description checks the whole chain. It also found a bug on its first run: the description came back as "We send your confirmation here. ! That does not look like an email address". The red mark beside the error was CSS generated content, `content: \'!\'`, and generated text is part of what a screen reader reads, so every error began "exclamation mark". The mark is now a `<span aria-hidden="true">`. Removing `errorId` from the description, the mutation we tried, fails the same test.'
+			},
+
 			{ type: 'h3', id: 'require', text: 'One config flag worth turning on' },
 			{
 				type: 'code',
@@ -525,7 +678,7 @@ test: {
 
 			{
 				type: 'checkpoint',
-				text: '`pnpm test:unit -- --run` reports 118 passing in about two seconds, and every one of them would fail if you deleted the behaviour it describes.'
+				text: '`pnpm test:unit -- --run` reports 131 passing — 128 in Node and 3 in the browser — in a few seconds, and every one of them would fail if you deleted the behaviour it describes.'
 			}
 		]
 	},
@@ -610,7 +763,11 @@ export const test = base.extend<{ emptyDiary: void; reportBrowserErrors: void }>
 			 * "empty the bookings" is no longer enough to make a test independent —
 			 * the studio itself has to go back to its known shape.
 			 *
-			 …
+			 * The seed keeps the same business row rather than dropping and
+			 * recreating it, so a live query still streaming to a page the previous
+			 * test has only just closed never finds its business missing. That
+			 * mattered: deleting it produced an intermittent 500 in whichever test
+			 * happened to run next, pointing nowhere near the cause.
 			 */
 			execFileSync('node', ['scripts/seed.ts'], {
 				stdio: 'ignore',
@@ -634,6 +791,10 @@ export const test = base.extend<{ emptyDiary: void; reportBrowserErrors: void }>
 				type: 'note',
 				text: 'The reset is the real seed script, run as a child process with `DATABASE_URL` pointed at `e2e.db` — the same `scripts/seed.ts` you run by hand in chapter 13. So every test starts from exactly the demo studio a developer sees, with no second, test-only idea of what the data looks like to drift away from the first.'
 			},
+			{
+				type: 'p',
+				text: 'The last paragraph of that comment is the expensive lesson. Tests run one after another against one server, and a page a test has just closed can still have a live query streaming from it for a moment. An early seed deleted the business and inserted it again, with a new id, so that last gasp of a stream asked for a business that no longer existed and the *next* test — whichever happened to run — failed with a 500 that pointed nowhere near the cause. Re-seeding in place, keeping the row and its id, made the flake disappear, and the comment is there so nobody "simplifies" it back.'
+			},
 
 			{ type: 'h3', id: 'browser-errors', text: 'The fixture that finds bugs on its own' },
 			{
@@ -643,7 +804,12 @@ export const test = base.extend<{ emptyDiary: void; reportBrowserErrors: void }>
 				code: `
 reportBrowserErrors: [
 	async ({ page }, use) => {
-		page.on('pageerror', (error) => console.error('[browser] uncaught:', error.message));
+		const uncaught: string[] = [];
+
+		page.on('pageerror', (error) => {
+			uncaught.push(error.message);
+			console.error('[browser] uncaught:', error.message);
+		});
 		page.on('console', (message) => {
 			if (message.type() === 'error') console.error('[browser]', message.text());
 		});
@@ -661,17 +827,23 @@ reportBrowserErrors: [
 		});
 
 		await use();
+
+		expect(uncaught, 'the page threw an error nothing caught').toEqual([]);
 	},
 	{ auto: true }
 ],`
 			},
 			{
 				type: 'p',
-				text: 'A remote query that rejects during a client-side navigation renders the error page and writes **nothing** to the server log — the server was never involved. Without this, such a failure appears as "expected a button, found a page saying 500" and the actual message sits in a browser console nobody is reading.'
+				text: 'A bug that throws in the browser during a client-side navigation renders the error page and writes **nothing** to the server log — the server was never involved. Without this, such a failure appears as "expected a button, found a page saying 500" and the actual message sits in a browser console nobody is reading.'
 			},
 			{
 				type: 'p',
 				text: 'This fixture found the sign-in `redirectTo` bug the first time it ran, and it is what turned "the hours page mysteriously fails" into "Cannot read properties of undefined (reading \'weekday\') at hours/+page.svelte:122".'
+			},
+			{
+				type: 'p',
+				text: 'For a long time it only printed, and printing turned out not to be enough. A `pageerror` is an exception nothing in the page caught, and the booking page\'s live stream once threw one in the middle of an unrelated test — "Live query connection was interrupted" — which sat in the log under a green suite. So the fixture now collects them, and after `use()`, once the test body has finished, it asserts the list is empty. A test whose page threw fails, whatever its own assertions thought. Console errors are still only printed: a deliberate 404 logs one, and several tests ask for 404s on purpose.'
 			},
 
 			{ type: 'h3', id: 'selectors', text: 'Selectors that break for the right reasons' },
@@ -724,6 +896,8 @@ for (const section of ['services', 'team', 'settings']) {
 		const response = await page.goto(\`\${MANAGE}/\${section}\`);
 		expect(response?.status()).toBe(403);
 		await expect(page.getByText(/only an owner/i)).toBeVisible();
+		// A refusal on purpose, so the heading does not claim the app broke.
+		await expect(page.getByRole('heading', { level: 1 })).toHaveText('That did not work');
 	});
 }
 
@@ -747,7 +921,7 @@ test('cannot see another studio s diary', async ({ page }) => {
 
 			{
 				type: 'checkpoint',
-				text: '`pnpm test:e2e` runs 82 tests across desktop and Pixel 7 and passes. Run it twice in a row and it passes twice — the second run is the one that catches shared state.'
+				text: '`pnpm test:e2e` runs 106 tests across desktop and Pixel 7 and passes, with none skipped. Run it twice in a row and it passes twice — the second run is the one that catches shared state.'
 			}
 		]
 	},
@@ -972,7 +1146,7 @@ return response;`
 			{ type: 'h3', id: 'origin', text: '2. The adapter setting that ruins your day' },
 			{
 				type: 'warn',
-				text: 'Up to v5, `@sveltejs/adapter-node` read the trusted origin from an `ORIGIN` environment variable at runtime. v6, the adapter for SvelteKit 3, no longer does: the origin is baked in at **build time** from `paths.origin` in the `sveltekit()` options. Leave that unset and the adapter rebuilds the origin from request headers, assuming `https` unless `PROTOCOL_HEADER` says otherwise. Serve the build over plain HTTP — a preview on localhost, a container on a private network — and the server computes `https://…` while the browser sends `http://…`, so every form post and remote call returns 403 "Cross-site remote requests are forbidden", from a perfectly healthy-looking app. Behind a proxy that terminates TLS, setting `PROTOCOL_HEADER=x-forwarded-proto` and `HOST_HEADER=x-forwarded-host` is the other way out.'
+				text: 'Up to v5, `@sveltejs/adapter-node` read the trusted origin from an `ORIGIN` environment variable at runtime. v6, the adapter for SvelteKit 3, no longer does: the origin is baked in at **build time** from `paths.origin` in the `sveltekit()` options. Leave that unset and the adapter rebuilds the origin from request headers, assuming `https` unless `PROTOCOL_HEADER` says otherwise. Serve the built server over plain HTTP — `node build` on localhost, a container on a private network — and it computes `https://…` while the browser sends `http://…`, so every form post and remote call returns 403 "Cross-site remote requests are forbidden", from a perfectly healthy-looking app. Behind a proxy that terminates TLS, setting `PROTOCOL_HEADER=x-forwarded-proto` and `HOST_HEADER=x-forwarded-host` is the other way out.'
 			},
 			{
 				type: 'code',
@@ -991,24 +1165,26 @@ sveltekit({
 			},
 			{
 				type: 'p',
-				text: 'That same CI job has a second surprise waiting. Give the build only the two public variables and it stops at `Analysing routes` with `SvelteKit error: env_invalid`, naming `DATABASE_URL`, `ORIGIN` and `BETTER_AUTH_SECRET`. That `ORIGIN` is the app\'s own variable from `src/env.ts`, the base URL Better Auth signs cookies against, not the adapter setting the warning above retired. The SvelteKit docs explain why in two sentences: "If a value is invalid, the app will fail to start (or build)", and "SvelteKit analyses your app during the `build` step by running it". **Every** variable in `src/env.ts` is validated when you build, static or not.'
+				text: 'And `PUBLIC_ORIGIN` is, with `PUBLIC_DEFAULT_TIME_ZONE`, all the build needs to know. SvelteKit validates every variable in `src/env.ts` when you build, because it analyses the app by running it, and the two `static: true` ones have to be real: "the build time value is inlined into the bundle". The three private, dynamic ones — `DATABASE_URL`, `ORIGIN` and `BETTER_AUTH_SECRET` — are read from the environment when the server starts, and chapter 15 used the docs\' own opt-out, `building` from `$app/env`, so that they may be missing while building and are required the moment the server boots.'
 			},
 			{
 				type: 'p',
-				text: 'What differs is where the value goes next. For the two `static: true` variables "the build time value is inlined into the bundle", so they have to be the real ones. `DATABASE_URL`, `ORIGIN` and `BETTER_AUTH_SECRET` are dynamic, the default, where "the value is read from the environment when the app starts". None of them ends up in `build/`, and the server reads and validates the real values again when it boots. For `ORIGIN` and the secret, a placeholder that passes the schema is all the build needs. (`DATABASE_AUTH_TOKEN` is private and dynamic too, and can be left out entirely, because its schema returns `undefined`.)'
-			},
-			{
-				type: 'p',
-				text: '`DATABASE_URL` is the exception, because the build does more than validate it. Analysing the app imports `src/lib/server/db/index.ts`, which hands the URL to libSQL\'s `createClient` the moment the module loads. Its schema accepts any non-empty string, but the value must also be a URL libSQL can parse: `:memory:`, `file:`, `libsql:`, `http(s):` or `ws(s):`. `DATABASE_URL=placeholder` gets past `env_invalid` and then fails the build with `LibsqlError: URL_INVALID`, from inside a generated chunk. And a URL libSQL can parse gets used, not just checked: a `file:` URL creates the file, and a remote one can be sent the WAL pragma, so a build pointed at production can talk to production. `:memory:` parses and leaves nothing behind, a database that disappears when the build ends:'
+				text: 'The two modules that read them honour the same flag. The database module opens an in-memory database while building and skips its pragmas, and `auth.ts` hands Better Auth a throwaway secret; neither reaches anything real. So the build command names what the build uses, and nothing else:'
 			},
 			{
 				type: 'terminal',
 				code: `PUBLIC_ORIGIN=https://halfpast.example \\
 PUBLIC_DEFAULT_TIME_ZONE=Europe/London \\
-DATABASE_URL=:memory: \\
-ORIGIN=https://halfpast.example \\
-BETTER_AUTH_SECRET=build-time-placeholder-never-read-at-runtime \\
 pnpm run build`
+			},
+			{
+				type: 'p',
+				text: 'We ran exactly that, in a copy of the project with no `.env` and none of the private variables set: the build finished, and no database file appeared. Better Auth prints one warning on the way, that its base URL is not set, which is true while building and stops being true when the server starts with `ORIGIN`. Starting the result the same way, without the private variables, stops at once with SvelteKit\'s `env_invalid` naming all three — the check has moved to where it belongs, not gone.'
+			},
+			{
+				type: 'why',
+				title: 'Why not hand the build placeholders',
+				text: 'That was this chapter\'s first answer, and it is still the one you will find in a great many projects. Without the opt-out, a build given only the public variables stopped at `Analysing routes` with `env_invalid`, so the recipe fed it `DATABASE_URL=:memory:`, a dummy `ORIGIN` and a made-up secret. Each placeholder had a trap. `DATABASE_URL=placeholder` got past validation and then failed the build with `LibsqlError: URL_INVALID` from a generated chunk, because the database module handed it to `createClient` the moment it loaded. And a URL libSQL could parse was used, not merely checked: a `file:` URL created the file, and a remote one was sent the WAL pragma, so a build run with production\'s environment loaded talked to production. Placeholders made the build need to know about variables it has no use for. `building` makes it not need them.'
 			},
 
 			{ type: 'h3', id: 'deps', text: '3. Dependencies versus devDependencies' },

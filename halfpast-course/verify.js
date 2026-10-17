@@ -50,7 +50,10 @@
  *
  * An elision marks a gap *between* lines. `{ /* … *\/ }` inside a line, or
  * ` * …` inside a doc comment, is a line the file does not contain, and it
- * fails like one: quote the whole comment, or cut around it.
+ * fails like one: quote the whole comment, or cut around it. So does a bare
+ * `…` line inside a block comment the excerpt has opened (`/*` or `<!--` at
+ * the start of an earlier line, not yet closed): it would pass for an elision,
+ * but it silently cuts lines out of the middle of somebody's sentence.
  *
  * Run:  node halfpast-course/build.js && node halfpast-course/verify.js
  */
@@ -196,6 +199,30 @@ function classify(code, source) {
 			ok: false,
 			why: 'every line is in the file, but not as one run — mark each gap with an elision line'
 		};
+	}
+
+	// An elision cuts between lines of code, never through the middle of a
+	// comment. Track block comments the excerpt opens at the start of a line
+	// (where every block comment in this project starts), and refuse an elision
+	// while one is still open.
+	let openComment = null;
+	for (const line of lines) {
+		const trimmed = line.trim();
+		if (ELISION.test(line)) {
+			if (openComment) {
+				return {
+					ok: false,
+					why: `an elision inside a ${openComment} comment — quote the whole comment, or cut around it`
+				};
+			}
+			continue;
+		}
+		if (openComment === '/*' && trimmed.includes('*/')) openComment = null;
+		else if (openComment === '<!--' && trimmed.includes('-->')) openComment = null;
+		else if (!openComment && trimmed.startsWith('/*') && !trimmed.includes('*/')) openComment = '/*';
+		else if (!openComment && trimmed.startsWith('<!--') && !trimmed.includes('-->')) {
+			openComment = '<!--';
+		}
 	}
 
 	// Every line is real. An honest excerpt marks each gap, and each run between

@@ -99,7 +99,7 @@
 
 <aside class="callout callout--why">
 	<h4>paths.origin — new in 3.0, and not optional here</h4>
-	<p>It is the origin SvelteKit trusts for cross-site request checks. Up to v5, <code>@sveltejs/adapter-node</code> read that origin from an <code>ORIGIN</code> environment variable at runtime; v6, the adapter for SvelteKit 3, removed it, so the value is baked in at build time from this setting, and the header fallback <strong>assumes https</strong>. (This app still declares an <code>ORIGIN</code> of its own in <code>src/env.ts</code>, for Better Auth in the next chapter; the adapter no longer looks at it.) A plain-HTTP preview server therefore computes <code>https://localhost:4173</code>, the browser sends <code>http://localhost:4173</code>, they disagree, and <em>every</em> form post comes back 403 &quot;Cross-site remote requests are forbidden&quot;. Setting <code>paths.origin</code> fixes it in one line and is genuinely hard to diagnose without knowing.</p>
+	<p>It is the origin SvelteKit trusts for cross-site request checks. Up to v5, <code>@sveltejs/adapter-node</code> read that origin from an <code>ORIGIN</code> environment variable at runtime; v6, the adapter for SvelteKit 3, removed it, so the value is baked in at build time from this setting, and the header fallback <strong>assumes https</strong>. (This app still declares an <code>ORIGIN</code> of its own in <code>src/env.ts</code>, for Better Auth in the next chapter; the adapter no longer looks at it.) So the built server, <code>node build</code>, served over plain HTTP computes <code>https://localhost:4173</code>, the browser sends <code>http://localhost:4173</code>, they disagree, and <em>every</em> form post comes back 403 &quot;Cross-site remote requests are forbidden&quot;. (<code>pnpm preview</code> will not show you this: <code>vite preview</code> takes its protocol from Vite's own <code>preview.https</code> setting and gets <code>http</code> right. It is adapter-node's handler that assumes <code>https</code>, which is why the end-to-end tests, which run <code>node build</code>, were the ones that met it.) Setting <code>paths.origin</code> fixes it in one line and is genuinely hard to diagnose without knowing.</p>
 </aside>
 <h3 id="env">Environment variables, declared</h3>
 <p>In SvelteKit 2, environment variables came from the <code>$env/static/private</code> and <code>$env/dynamic/private</code> modules. SvelteKit 3 deprecates them, and SvelteKit 4 will remove them, in favour of <code>$app/env/private</code> and <code>$app/env/public</code>; this app never imports the old ones. Behind the new modules: a file you write, listing every variable the app reads.</p>
@@ -110,10 +110,16 @@
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">import { defineEnvVars } from '@sveltejs/kit/env';
+import { building } from '$app/env';
 import * as v from 'valibot';
 
 /** A non-empty string, with surrounding whitespace stripped. */
 const required = v.pipe(v.string(), v.trim(), v.minLength(1));
+
+// …
+function neededAtRuntime&lt;Schema extends v.GenericSchema&lt;string, string&gt;&gt;(schema: Schema) {
+	return building ? v.optional(schema) : schema;
+}
 
 // …
 
@@ -122,18 +128,20 @@ export const variables = defineEnvVars({
 
 	DATABASE_URL: {
 		description:
-			'libSQL connection string. `file:local.db` in development, a `libsql://…` Turso URL in production.',
-		schema: required
+			'libSQL connection string. `file:local.db` in development, a `libsql://…` Turso URL in production. Not needed to build.',
+		schema: neededAtRuntime(required)
 	},
 
 	// …
 
 	BETTER_AUTH_SECRET: {
 		description:
-			'Signing key for session tokens. Generate with `openssl rand -base64 32`. See https://www.better-auth.com/docs/installation.',
-		schema: v.pipe(
-			required,
-			v.minLength(32, 'BETTER_AUTH_SECRET must be at least 32 characters of high entropy')
+			'Signing key for session tokens. Generate with `openssl rand -base64 32`. See https://www.better-auth.com/docs/installation. Not needed to build.',
+		schema: neededAtRuntime(
+			v.pipe(
+				required,
+				v.minLength(32, 'BETTER_AUTH_SECRET must be at least 32 characters of high entropy')
+			)
 		)
 	},
 
@@ -154,6 +162,14 @@ export const variables = defineEnvVars({
 });</code></pre>
 </figure>
 <ul><li><strong>Nothing is implicit.</strong> A variable not declared here cannot be imported. That is a <em>type error</em>, not a runtime <code>undefined</code> three weeks later.</li><li><strong>Each one carries a schema.</strong> The app refuses to start with a bad value, rather than failing at 3am when the first request reaches that branch.</li><li><strong><code>public: true</code> is an explicit, reviewable act.</strong> You cannot leak a secret to the browser by accident; you have to type the word <code>public</code> next to it.</li></ul>
+<h3 id="building">Required to run, not to build</h3>
+<p>The schemas run at build time as well as at start-up, because SvelteKit analyses the app during <code>vite build</code> by running it. For the two public variables that is right: <code>static: true</code> inlines them into the bundle, so they have to be the real values when you build. The three private ones are different. Nothing inlines them, the build never uses them, and a CI job that builds the app should not need a database address or a signing secret to do it.</p>
+<p>The SvelteKit docs give the way out in the same paragraph that says a bad value fails the build: &quot;use <code>building</code> from <code>$app/env</code> along with a validator that accepts an optional value: <code>schema: building ? v.optional(v.string()) : v.string()</code>&quot;. <code>neededAtRuntime</code> is that sentence as a function, wrapped round the three private schemas. While building, a missing value is fine; once the server starts, <code>building</code> is <code>false</code> and a missing or malformed one stops it on the spot, exactly as before.</p>
+
+<aside class="callout callout--why">
+	<h4>Why accept a weaker type</h4>
+	<p>Each of the three now imports as <code>string | undefined</code>, because at build time it can be, so the two modules that read them check <code>building</code> themselves — chapter 10 showed the database one, and the next chapter shows Better Auth's. That is a real cost, paid in a few lines, and it buys a build that needs no secret and reaches no database. The alternative is to feed the build placeholder values, which is where this project started; chapter 35 tells how that ended, with a build that could talk to production.</p>
+</aside>
 
 <figure class="code">
 	<figcaption>
