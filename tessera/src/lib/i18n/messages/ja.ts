@@ -31,7 +31,8 @@ export const ja = {
 		open: '開く',
 		empty: 'まだ何もありません。N キーで最初のボックスを追加します。',
 		nodes: (count: number) => `${count} 個の図形`,
-		lastEdited: (when: string) => `${when}に編集`
+		lastEdited: (when: string) => `${when}に編集`,
+		exporting: '書き出し中…'
 	},
 
 	sync: {
@@ -71,6 +72,11 @@ export const ja = {
 		colour: '色'
 	},
 
+	inspector: {
+		heading: 'プロパティ',
+		empty: '図形を選択して編集します。'
+	},
+
 	comments: {
 		heading: 'コメント',
 		placeholder: 'コメントを入力',
@@ -78,7 +84,10 @@ export const ja = {
 		resolve: '解決済みにする',
 		reopen: '再開',
 		resolved: '解決済み',
-		none: 'コメントはありません'
+		none: 'コメントはありません',
+		reply: '返信',
+		replyPlaceholder: '返信…',
+		onShape: '図形について'
 	},
 
 	history: {
@@ -96,7 +105,8 @@ export const ja = {
 		selected: (label: string) => `${label}、選択中`,
 		joined: (name: string) => `${name}が参加しました`,
 		left: (name: string) => `${name}が退出しました`,
-		skip: 'ボードへスキップ'
+		skip: 'ボードへスキップ',
+		panel: 'パネル'
 	},
 
 	embed: {
@@ -107,7 +117,7 @@ export const ja = {
 
 	errors: {
 		notFound: 'そのボードは存在しないか、アクセス権がありません。',
-		forbidden: 'その操作を行う権限がありません。',
-		generic: '問題が発生しました。この端末のボードは変更されていません。'
+		generic: '問題が発生しました。この端末のボードは変更されていません。',
+		retry: 'もう一度表示する'
 	}
 } satisfies Messages;

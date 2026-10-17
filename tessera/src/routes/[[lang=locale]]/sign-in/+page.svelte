@@ -2,18 +2,16 @@
 	import { messages } from '#lib/i18n/index.ts';
 	import { signIn, signUp } from '#lib/remote/auth.remote.ts';
 	import Button from '#lib/components/Button.svelte';
-	import type { PageData } from './$types';
+	import type { PageProps } from './$types';
 	import { page } from '$app/state';
 
-	interface Props {
-		data: PageData;
-	}
-
-	let { data }: Props = $props();
+	let { data }: PageProps = $props();
 	const t = $derived(messages(data.locale));
 
 	let mode = $state<'in' | 'up'>('in');
-	const from = $derived(page.url.searchParams.get('from') ?? '/boards');
+	// Where the visitor was going, if anywhere. Empty sends them to the board list,
+	// which the server builds in their language.
+	const from = $derived(page.url.searchParams.get('from') ?? '');
 </script>
 
 <svelte:head>

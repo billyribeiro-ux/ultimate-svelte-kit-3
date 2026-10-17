@@ -7,7 +7,7 @@
 
 import { error } from '@sveltejs/kit';
 import * as v from 'valibot';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { command, form, query } from '$app/server';
 import { db } from '#lib/server/db/index.ts';
 import { checkpoint } from '#lib/server/db/schema.ts';
@@ -79,12 +79,19 @@ export const restoreTo = command(
 
 /** Delete a checkpoint. The operations it pointed at are untouched. */
 export const forgetCheckpoint = command(
-	v.object({ boardId, id: v.pipe(v.string(), v.minLength(1)) }),
+	v.object({ boardId, id: v.pipe(v.string(), v.minLength(1), v.maxLength(64)) }),
 	async ({ boardId: board, id }) => {
 		const user = requireUser();
 		await requireAccess(board, user.id, 'editor').catch(rethrow);
 
-		await db.delete(checkpoint).where(eq(checkpoint.id, id));
+		// Scoped to the board that was checked, not just the id: see `resolveThread`
+		// in `comments.remote.ts` for what matching on the id alone allows.
+		const result = await db
+			.delete(checkpoint)
+			.where(and(eq(checkpoint.id, id), eq(checkpoint.boardId, board)));
+
+		if (result.rowsAffected === 0) error(404, 'No such checkpoint.');
+
 		await revisions(board).refresh();
 	}
 );

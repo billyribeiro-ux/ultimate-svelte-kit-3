@@ -445,8 +445,8 @@ export function write<T>(current: Lww<T> | undefined, value: T, stamp: Stamp): L
 			{
 				type: 'ul',
 				items: [
-					'**`mergeRegister` returns one of its inputs**, never a fresh object. Merging an unchanged value is free, and reference equality keeps working as a cheap "did this change?" test for the reactive layer in chapter 15.',
-					'**`write` returns `undefined` when nothing changed.** The document uses that to skip reactive invalidation entirely. Redelivery during a reconnect is common enough that "this operation is old news" is a hot path rather than an edge case — and a `$state` write that sets the same value still schedules work.'
+					'**`mergeRegister` returns one of its inputs**, never a fresh object. Merging an unchanged value allocates nothing, and the result can be compared with what was there by reference — the cheap way to ask “did this change?” of a merge.',
+					'**`write` returns `undefined` when nothing changed.** This is the “did this change?” test the reactive layer actually uses: chapter 14’s document skips reactive invalidation entirely when it gets `undefined` back. Redelivery during a reconnect is common enough that "this operation is old news" is a hot path rather than an edge case — and a `$state` write that sets the same value still schedules work.'
 				]
 			},
 
@@ -963,13 +963,15 @@ static from(value: string, stamps: readonly Stamp[]): RgaText {
 				lang: 'ts',
 				code: `
 class Replica {
+	readonly name: string;
 	readonly clock: Clock;
 	readonly #nodes = new OrSet<NodeId>();
 	readonly #fields = new Map<NodeId, Map<string, Lww<number | string>>>();
 	readonly #labels = new Map<NodeId, RgaText>();
 	#version: VersionVector = empty();
 
-	constructor(readonly name: string) {
+	constructor(name: string) {
+		this.name = name;
 		// Every replica shares one physical clock reading, so the ordering under
 		// test is the logical one and not an artefact of who ran first.
 		this.clock = new Clock(actor(name), () => 1_700_000_000_000);

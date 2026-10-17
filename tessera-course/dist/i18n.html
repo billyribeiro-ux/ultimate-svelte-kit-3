@@ -111,7 +111,8 @@ export const en = {
 		open: 'Open',
 		empty: 'Nothing here yet. Press N to add your first box.',
 		nodes: (count: number) =&gt; (count === 1 ? '1 shape' : `${count} shapes`),
-		lastEdited: (when: string) =&gt; `Edited ${when}`
+		lastEdited: (when: string) =&gt; `Edited ${when}`,
+		exporting: 'Exporting…'
 	},</code></pre>
 </figure>
 <aside class="callout callout--warn"><p>The absence of <code>as const</code> is the most important line in that comment. With it, <code>Messages</code> says <code>boards: 'Boards'</code> — the <strong>literal</strong> — and <code>satisfies Messages</code> then demands that the French catalogue also say <code>'Boards'</code>. Every translated line becomes a type error. Without it the strings widen to <code>string</code>, the function signatures are kept, and the *shape* is what is checked. Which is what we wanted to check.</p></aside>
@@ -145,6 +146,19 @@ export type Locale = (typeof LOCALES)[number];
 
 export const DEFAULT_LOCALE: Locale = 'en';
 
+/**
+ * The value of the `[[lang=locale]]` route parameter for a link in this language.
+ *
+ * English is the unprefixed default — `/boards`, not `/en/boards` — and the
+ * segment is *optional*, so `resolve()` leaves it out when the parameter is
+ * `undefined`. One call yields `/boards` for English and `/fr/boards` for French,
+ * and the &quot;is this the default?&quot; question is asked here, once, instead of at
+ * every link and every redirect.
+ */
+export function langParam(locale: Locale): Locale | undefined {
+	return locale === DEFAULT_LOCALE ? undefined : locale;
+}
+
 export function isLocale(value: string | undefined): value is Locale {
 	return value !== undefined &amp;&amp; (LOCALES as readonly string[]).includes(value);
 }
@@ -158,6 +172,7 @@ export const ENDONYM: Record&lt;Locale, string&gt; = { en: 'English', fr: 'Fran�
 </figure>
 <p>Chosen to cover the three shapes that break a naive interface: English as the source, French because its words are reliably longer and burst any layout measured against English, and Japanese because it has no spaces to wrap at and no plural forms at all. A fourth would be a data change — and *that* is the test of an i18n layer.</p>
 <aside class="callout callout--note"><p><code>ENDONYM</code> is never translated. A language picker in a language you cannot read is useless — somebody looking for Japanese is looking for 日本語, not for the word &quot;Japanese&quot; written in French.</p></aside>
+<p><code>langParam</code> is the smallest function in the folder and the one every link uses. English is the unprefixed default — <code>/boards</code>, not <code>/en/boards</code> — so the value of the <code>[[lang=locale]]</code> parameter is <code>undefined</code> for English and the locale for everything else. The next section is why that particular shape is useful.</p>
 
 <figure class="code">
 	<figcaption>
@@ -196,6 +211,118 @@ export function negotiate(header: string | null): Locale {
 }</code></pre>
 </figure>
 <p>Quality values honoured, a bare tag matching a regional one so <code>fr-CA</code> finds <code>fr</code>, and anything unrecognised falling through to the default rather than erroring. A visitor with an exotic locale should get the app in English, not a 406.</p>
+<h3 id="links">Links that know their language</h3>
+<p>Every internal URL in Tessera — every <code>href</code>, and every <code>redirect()</code> on the server — is built with <code>resolve()</code> from <code>$app/paths</code>, never written as a string. The documentation describes it in one line: it will “resolve a pathname by prefixing it with the base path, if any, or resolve a route ID by populating dynamic segments with parameters.” The second half is the one this app leans on.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/[[lang=locale]]/+layout.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/**
+ * The language segment of every link in the chrome, or nothing.
+ *
+ * English is the unprefixed default — `/boards`, not `/en/boards` — and the
+ * route is `[[lang=locale]]`, an *optional* segment. `resolve()` drops an
+ * optional segment whose parameter is `undefined`, which is what `langParam`
+ * returns for English, so one expression yields `/boards` for English and
+ * `/fr/boards` for French.
+ *
+ * Why `resolve()` at all, rather than the string the browser will get? The
+ * route id is checked against the generated `RouteId` union, so renaming a
+ * route breaks these links in `svelte-check` instead of in production as a
+ * 404, and the parameters are checked against the route's own. It also puts
+ * the base path in front, if the app is ever served from one.
+ * `eslint-plugin-svelte` holds the line: `no-navigation-without-resolve`
+ * flags an internal `href` that is not a `resolve()` call, or a value typed
+ * as what one returns.
+ */
+const lang = $derived(langParam(data.locale));</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/[[lang=locale]]/+layout.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;a class=&quot;chrome__home&quot; href={resolve('/[[lang=locale]]', { lang })}&gt;
+	&lt;Logo size={22} wordmark /&gt;
+&lt;/a&gt;
+
+&lt;nav class=&quot;chrome__nav&quot; aria-label=&quot;Main&quot;&gt;
+	{#if data.user}
+		&lt;a href={resolve('/[[lang=locale]]/boards', { lang })}&gt;{t.nav.boards}&lt;/a&gt;
+	{:else}
+		&lt;a href={resolve('/[[lang=locale]]/sign-in', { lang })}&gt;{t.nav.signIn}&lt;/a&gt;
+	{/if}
+&lt;/nav&gt;</code></pre>
+</figure>
+<p>The first argument is a <strong>route id</strong> — the path of the route’s folder, <code>[[lang=locale]]</code> and all — and the second fills in its parameters. Pass <code>lang: undefined</code> and <code>resolve()</code> leaves the optional segment out; pass <code>'fr'</code> and it puts <code>/fr</code> in front. So the one expression gives <code>/boards</code> to an English reader and <code>/fr/boards</code> to a French one, and <code>langParam</code> asks “is this the default?” once, for every link and every redirect in the app.</p>
+
+<aside class="callout callout--why">
+	<h4>Why not just write the string</h4>
+	<p><code>href=&quot;/boards&quot;</code> works today. It stops working the day somebody renames the folder, and nothing tells you until a person clicks it. A route id is checked against the <code>RouteId</code> union SvelteKit generates, so a rename breaks every link to the old route in <code>svelte-check</code>; the parameters are checked against that route’s own, so a missing <code>board</code> is a type error too; and if the app is ever served under a base path, <code>resolve()</code> puts it in front. The lint config enforces the habit: <code>eslint-plugin-svelte</code>’s <code>no-navigation-without-resolve</code> flags an internal <code>href</code> that is not a <code>resolve()</code> call — or a value typed as what one returns — so a hand-built link fails <code>pnpm lint</code> before anybody can click it.</p>
+</aside>
+<aside class="callout callout--note"><p>On the server, <code>resolve()</code> answers with a *relative* path: in the documentation’s words, “during server rendering, the base path is relative and depends on the page currently being rendered.” That is harmless in an <code>href</code> and in a <code>redirect()</code>, which the browser resolves against the same page. It is not harmless where an absolute path is required — which is why the sign-in redirect’s <code>from</code> is the request’s own <code>url.pathname</code>, and why the sign-in form refuses any <code>from</code> that does not start with <code>/</code>.</p></aside>
+<h3 id="the-switcher">The switcher is links</h3>
+<p>Changing language is a navigation, so the control for it is a set of links. The first version was a <code>&lt;select&gt;</code> that navigated when it changed, and that fails WCAG’s “On Input” rule in the way that hurts most: in Chromium on Windows and Linux, arrowing through a closed <code>&lt;select&gt;</code> fires <code>change</code> at every step, so a keyboard user heading for 日本語 was sent to Français on the first key press.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/[[lang=locale]]/+layout.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/**
+ * This page, in another language.
+ *
+ * The same URL with its language segment swapped, query string and hash
+ * included, rather than a link to the site root: a switcher that sends people
+ * home is the reason people stop using switchers.
+ *
+ * The one link here not built from a route id, because it is the one that has
+ * to work on whichever page it is rendered on. It edits the URL it is given,
+ * and `resolve()` takes the result as a pathname — written without its leading
+ * slash, which is how `resolve()` tells a pathname from a route id — so the
+ * value is a `ResolvedPathname` like every other link in the chrome.
+ */
+function inLanguage(locale: Locale) {
+	const { pathname, search, hash } = page.url;
+	const rest = page.params.lang ? pathname.slice(page.params.lang.length + 1) : pathname;
+	const path = [langParam(locale), rest.replace(/^\//, '')].filter(Boolean).join('/');
+	return resolve(`${path}${search}${hash}`);
+}</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/[[lang=locale]]/+layout.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;details class=&quot;chrome__language&quot;&gt;
+	&lt;summary&gt;
+		&lt;TranslateIcon size={18} aria-hidden=&quot;true&quot; /&gt;
+		&lt;span class=&quot;visually-hidden&quot;&gt;{t.nav.language}:&lt;/span&gt;
+		&lt;span lang={HTML_LANG[data.locale]}&gt;{ENDONYM[data.locale]}&lt;/span&gt;
+	&lt;/summary&gt;
+
+	&lt;ul class=&quot;chrome__languages&quot;&gt;
+		{#each LOCALES as locale (locale)}
+			&lt;li&gt;
+				&lt;a
+					href={inLanguage(locale)}
+					hreflang={HTML_LANG[locale]}
+					lang={HTML_LANG[locale]}
+					aria-current={locale === data.locale ? 'page' : undefined}
+					data-sveltekit-reload
+				&gt;
+					{ENDONYM[locale]}
+				&lt;/a&gt;
+			&lt;/li&gt;
+		{/each}
+	&lt;/ul&gt;
+&lt;/details&gt;</code></pre>
+</figure>
+<ul><li><strong>A <code>&lt;details&gt;</code> disclosure</strong>, so the three links take the room of one button in a crowded header, and work with no JavaScript at all.</li><li><strong><code>resolve()</code> with a pathname</strong> rather than a route id, because this one link has to work on whichever page it is rendered on. Written without a leading slash, which is how <code>resolve()</code> tells a pathname from a route id, it still comes back as a <code>ResolvedPathname</code>, and the lint rule is satisfied for a real reason rather than silenced.</li><li><strong><code>data-sveltekit-reload</code></strong>, because the language decides what the server renders, and the client router would keep the old layout data.</li><li><strong><code>lang</code> and <code>hreflang</code></strong>: the first so a screen reader pronounces 日本語 as Japanese, the second to say which language the page at the other end is in.</li><li><strong><code>aria-current=&quot;page&quot;</code></strong> on the language you are already reading, because that link does lead to the current page.</li></ul>
 <h3 id="context"><code>createContext</code>, and the third function it returns</h3>
 <p><code>t</code> was a prop. It was declared on eight components and written out at seventeen call sites, and every one of them said the same thing: *whatever my parent has*. A prop that is only ever forwarded is not a prop — it is a global with extra steps and a rename that touches eight files.</p>
 <p><code>createContext</code> arrived in Svelte 5.40, and it is not sugar for <code>getContext</code>. <code>getContext('messages')</code> is a string key and an <code>any</code>: two components can disagree about what is under it, a typo is a runtime <code>undefined</code>, and the type has to be re-asserted at every call. <code>createContext</code> hands back the accessors instead, so the key is a closure nobody can misspell and the type is written down once.</p>
@@ -351,7 +478,7 @@ export function ago(locale: Locale, when: Date, now: Date = new Date()): string 
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>
-	<ul><li>A key added to English and forgotten in French fails the build.</li><li>Passing a string where a message wants a number fails the build.</li><li>Adding a fourth language touches one folder.</li></ul>
+	<ul><li>A key added to English and forgotten in French fails the build.</li><li>Passing a string where a message wants a number fails the build.</li><li>Adding a fourth language touches one folder.</li><li>Every internal link and redirect is a <code>resolve()</code> call, and <code>pnpm lint</code> says so when one is not.</li><li>Switching language keeps you on the same page, and arrowing through the choices navigates nowhere.</li></ul>
 </aside>
 		</article>
 

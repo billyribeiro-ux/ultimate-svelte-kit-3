@@ -198,7 +198,7 @@ export default defineConfig({
 	testMatch: '**/*.e2e.ts',
 
 	webServer: {
-		command: 'npm run build &amp;&amp; node build/index.js',
+		command: 'pnpm run build &amp;&amp; node build/index.js',
 		port: PORT,
 		env: {
 			DATABASE_URL: 'file:e2e.db',
@@ -226,10 +226,105 @@ export default defineConfig({
 <p>Not the dev server. It has different module resolution, no minification and no adapter, and half the interesting deployment bugs exist only in the built artefact — a native module that cannot be bundled, an environment variable substituted at build time.</p>
 <aside class="callout callout--warn"><p><code>reuseExistingServer: false</code>. Reusing saves fifteen seconds and means a suite can pass against a build from twenty minutes ago while the code under test has changed underneath it. That happened in an earlier project in this series and cost an hour.</p></aside>
 <aside class="callout callout--note"><p>One worker, deliberately. Every test in the other suites shares one seeded board and several assert on its contents; in parallel, one test’s new shape appears in another’s count and the suite fails while the application behaves perfectly. The concurrency that actually matters — two replicas editing at once — is exercised *inside* a single test, which is the right level to test it at.</p></aside>
+<h3 id="around-the-interface">A test that cannot pass for the wrong reason</h3>
+<p>The permission test is the one that goes around the interface: a viewer’s toolbar is disabled, so it posts an operation to <code>pushOps</code> directly, and expects the server to refuse. For a long time it passed without ever reaching the server’s permission check. It posted to <code>/_app/remote/pushOps</code>, which is not where a remote function lives; it sent the argument as plain JSON, which is not how a remote function reads one; it used the <code>request</code> fixture, which carries none of the page’s cookies; and it accepted any of 400, 403 or 404. It got a 404 from the router, and was green.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/permissions.e2e.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">const presence = page.waitForRequest('**/_app/remote/*/announcePresence');
+await openBoard(page);
+const endpoint = (await presence).url().replace(/\/announcePresence$/, '/pushOps');
+
+const before = await page.locator('[data-node]').count();
+
+/*
+ * A well-formed operation, encoded the way the client encodes a command
+ * argument, and sent with the viewer's own session — `page.request` shares
+ * the page's cookies. The stamp has the 26-character shape the clock
+ * produces, so the schema accepts it and the request reaches the permission
+ * check, which is the thing under test: a 403, not a 400 for a malformed
+ * body, a 401 for a missing session or a 404 for a wrong URL.
+ */
+const stamp = `${String(Date.now()).padStart(13, '0')}00000zzzzzzzz`;
+const argument = {
+	boardId: BOARD,
+	actor: 'zzzzzzzz',
+	ops: [{ kind: 'node.remove', stamp, target: stamp, observed: [] }]
+};
+
+const response = await page.request.fetch(endpoint, {
+	method: 'POST',
+	headers: { 'content-type': 'application/json', origin: new URL(page.url()).origin },
+	data: { payload: Buffer.from(flatten(argument)).toString('base64url'), refreshes: [] },
+	failOnStatusCode: false
+});
+
+/*
+ * A remote function's failure travels in the body, as `{ type: 'error',
+ * error }` — the client turns it into the `HttpError` it rejects with — so
+ * the status to check is the one inside: the `App.Error`'s.
+ */
+expect(await response.json()).toMatchObject({
+	type: 'error',
+	error: { status: 403, message: 'You have view-only access to this board.' }
+});</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/permissions.e2e.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * A value in devalue's wire format — the one SvelteKit sends remote function
+ * arguments in: a flat JSON array whose first entry is the value, with every
+ * object and array holding the indexes of its children. This is the plain-data
+ * subset, which is all an operation needs.
+ */
+function flatten(value: unknown): string {
+	const entries: unknown[] = [];
+
+	const add = (item: unknown): number =&gt; {
+		const index = entries.push(null) - 1;
+		entries[index] = Array.isArray(item)
+			? item.map(add)
+			: item !== null &amp;&amp; typeof item === 'object'
+				? Object.fromEntries(Object.entries(item).map(([key, child]) =&gt; [key, add(child)]))
+				: item;
+		return index;
+	};
+
+	add(value);
+	return JSON.stringify(entries);
+}</code></pre>
+</figure>
+<ul><li><strong>The real endpoint.</strong> A remote function is served at <code>/_app/remote/&lt;hash of its file&gt;/&lt;export name&gt;</code>. The page calls <code>announcePresence</code>, from the same file as <code>pushOps</code>, the moment a board opens, so its URL with the name swapped is the address a viewer with devtools would find.</li><li><strong>The real encoding.</strong> SvelteKit sends a command’s argument as devalue — a flat JSON array of values and indexes — base64url-encoded in a <code>payload</code> field. <code>flatten</code> writes the plain-data subset of that format, which is all an operation needs.</li><li><strong>The real session.</strong> <code>page.request</code> shares the page’s cookies; the <code>request</code> fixture is a separate client with none, and would have been answered 401.</li><li><strong>One answer accepted.</strong> A remote function’s failure comes back in the body as <code>{ type: 'error', error }</code>, so the assertion is on the <code>App.Error</code> inside it: status 403, and the server’s sentence.</li></ul>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>$ # let a viewer through both checks: requireAccess(…, 'viewer') in pushOps, mayApply → true
+$ pnpm exec playwright test e2e/permissions.e2e.ts -g bypassed --project desktop
+
+  -   &quot;type&quot;: &quot;error&quot;,
+  +   &quot;type&quot;: &quot;result&quot;,
+
+  1 failed            ← the old version of this test stayed green against the same change</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Break it on purpose</h4>
+	<p>A test is only evidence if it can fail. The way to find out is to break the thing it claims to protect and watch — here, letting a viewer through both the route’s <code>requireAccess</code> and ingest’s per-operation <code>mayApply</code> — and a test that accepts three status codes is usually a test that has never been watched failing. Every new test in this suite was run against the code before its fix, and this one against the code with its check removed, before it was trusted.</p>
+</aside>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>
-	<ul><li>Two contexts, one board, and a shape crossing between them.</li><li>Every destructive test owns its data.</li><li>The suite runs against the artefact you would deploy.</li></ul>
+	<ul><li>Two contexts, one board, and a shape crossing between them.</li><li>Every destructive test owns its data.</li><li>The suite runs against the artefact you would deploy.</li><li>The permission test fails when the permission check is removed.</li></ul>
 </aside>
 		</article>
 

@@ -98,9 +98,10 @@ export const GET: RequestHandler = async ({ params, locals, setHeaders }) => {
 	 * `Response.json`, not SvelteKit's `json()`.
 	 *
 	 * SvelteKit 3 deprecated its `json(...)` and `text(...)` helpers because the
-	 * platform caught up: `Response.json` serialises and sets the content type
-	 * exactly as the wrapper did, so the wrapper was one more import to learn
-	 * for nothing. `setHeaders` above still applies — SvelteKit merges those
+	 * platform caught up. `Response.json` serialises the body and sets the
+	 * content type, which is all this endpoint needs; SvelteKit's own helper
+	 * built its `Response` by hand and added a `content-length`, which nothing
+	 * here relies on. `setHeaders` above still applies — SvelteKit merges those
 	 * onto whatever the handler returns.
 	 */
 	return Response.json(snapshot);

@@ -21,7 +21,8 @@ pnpm run dev
 ```
 
 The seed prints two sign-ins — an owner and a viewer on the same board — and the
-board's short link. Open it in two windows and drag something.
+board's short link. Open it in two windows and drag something. (The viewer also
+owns an empty board of their own, as every account made through sign-up does.)
 
 ## What is interesting in here
 

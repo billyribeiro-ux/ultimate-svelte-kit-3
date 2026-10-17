@@ -165,8 +165,15 @@ export const createBoard = form(
 		 * navigate with. It is what the form does with JavaScript switched off, and
 		 * making the enhanced path do something different is how two code paths
 		 * drift until only one of them is ever exercised.
+		 *
+		 * Built with `resolve()`, like every link: the route id is checked, and the
+		 * new board opens in the language the list was in.
 		 */
-		redirect(303, `/boards/${id}`);
+		const { locale } = getRequestEvent().locals;
+		redirect(
+			303,
+			resolve('/[[lang=locale]]/boards/[board]', { lang: langParam(locale), board: id })
+		);
 	}
 );</code></pre>
 </figure>
@@ -177,6 +184,7 @@ export const createBoard = form(
 <ul><li>The markup is a real <code>&lt;form&gt;</code> with a real submit button, so a browser that has not run — or has failed to run — the client bundle still creates the board and follows the redirect.</li><li>With JavaScript, SvelteKit intercepts the submission and there is no page load.</li><li>Spread it into the element (<code>&lt;form {...createBoard}&gt;</code>) and the action, method and enhancement are all set for you.</li></ul>
 <p>That is not a hypothetical audience. It is every visitor during the seconds before hydration finishes, which on a slow connection is the whole of their first impression.</p>
 <aside class="callout callout--warn"><p>Note the <code>redirect(303, …)</code> from the server rather than returning the id for the client to navigate with. It is what the form does with JavaScript switched off, and making the enhanced path do something *different* is how two code paths drift until only one of them is ever exercised — and it is always the enhanced one, because that is the one you test in.</p></aside>
+<p>The target is built with <code>resolve()</code> from <code>$app/paths</code> rather than as a template string, which is how every internal URL in the app is built, links and redirects alike — chapter 33 explains it. On the server, <code>resolve()</code> answers with a path *relative* to the page the form was submitted from, and the browser resolves a redirect against that same page, with JavaScript or without.</p>
 <h3 id="form-for">One definition, many instances</h3>
 
 <figure class="code">
@@ -184,15 +192,19 @@ export const createBoard = form(
 		<span class="code__file">src/lib/components/Comments.svelte</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-svelte">&lt;form {...reply} class=&quot;thread__reply-form&quot;&gt;
+	<pre><code class="lang-svelte">&lt;form {...reply.enhance((form) =&gt; send(form, thread.id))} class=&quot;thread__reply-form&quot;&gt;
 	&lt;input {...reply.fields.boardId.as('hidden', boardId)} /&gt;
 	&lt;input {...reply.fields.parentId.as('hidden', thread.id)} /&gt;
-	&lt;label class=&quot;visually-hidden&quot; for=&quot;reply-{thread.id}&quot;&gt;Reply&lt;/label&gt;
-	&lt;input id=&quot;reply-{thread.id}&quot; {...reply.fields.body.as('text')} placeholder=&quot;Reply…&quot; /&gt;
+	&lt;label class=&quot;visually-hidden&quot; for=&quot;{uid}-reply-{thread.id}&quot;&gt;{t.comments.reply}&lt;/label&gt;
+	&lt;input
+		id=&quot;{uid}-reply-{thread.id}&quot;
+		{...reply.fields.body.as('text')}
+		placeholder={t.comments.replyPlaceholder}
+	/&gt;
 	&lt;Button size=&quot;sm&quot; type=&quot;submit&quot;&gt;{t.comments.post}&lt;/Button&gt;
 &lt;/form&gt;</code></pre>
 </figure>
-<p>That form sits inside <code>{#each open as thread (thread.id)}</code>, and <code>reply</code> is declared once per thread at the top of the loop as <code>postComment.for(thread.id)</code>. That call gives every thread its own form instance from one definition. Each keeps its own pending state and its own validation issues, so a failed reply in one thread does not put an error message under every other one. Spreading the bare <code>postComment</code> into a loop gives every thread the same instance and exactly that bug — which chapter 36 shows in full.</p>
+<p>That form sits inside <code>{#each open as thread (thread.id)}</code>, and <code>reply</code> is declared once per thread at the top of the loop as <code>postComment.for(thread.id)</code>. That call gives every thread its own form instance from one definition. Each keeps its own pending state and its own validation issues, so a failed reply in one thread does not put an error message under every other one. Spreading the bare <code>postComment</code> into a loop gives every thread the same instance and exactly that bug — which chapter 36 shows in full, along with the <code>enhance</code> callback and the <code>uid</code> in the label’s <code>for</code>.</p>
 <p>And <code>fields.x.as('hidden', value)</code> spreads name, value and type together, so a renamed field is a build error rather than a silently missing parameter. In SvelteKit 3 it is also the only way in: a control whose <code>name</code> was typed by hand instead of spread from a field gets the whole submission rejected.</p>
 
 <aside class="callout callout--check">

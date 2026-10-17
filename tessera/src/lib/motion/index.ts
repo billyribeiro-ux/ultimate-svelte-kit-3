@@ -24,6 +24,7 @@
  */
 
 import type { Attachment } from 'svelte/attachments';
+import { prefersReducedMotion } from 'svelte/motion';
 import { browser } from '$app/env';
 
 /**
@@ -31,11 +32,12 @@ import { browser } from '$app/env';
  *
  * Read at the moment of use rather than cached at import time: the setting can
  * change while the page is open, and somebody who turns it on mid-session should
- * not have to reload to be believed.
+ * not have to reload to be believed. `prefersReducedMotion` is Svelte's own
+ * reading of the media query — the camera asks the same object — and on the
+ * server, where there is no screen to ask, the answer is "no motion".
  */
 export function wantsMotion(): boolean {
-	if (!browser) return false;
-	return !matchMedia('(prefers-reduced-motion: reduce)').matches;
+	return browser && !prefersReducedMotion.current;
 }
 
 export interface RevealOptions {

@@ -15,10 +15,11 @@
 
 import { building } from '$app/env';
 /*
- * SvelteKit 3 moved every hook type into `@sveltejs/kit/hooks`. Importing them
- * from `@sveltejs/kit` compiles to `any` for each destructured argument — which
- * is not an error, so the file keeps working and every parameter silently loses
- * its type.
+ * SvelteKit 3 moved every hook type into `@sveltejs/kit/hooks`. The old import
+ * from `@sveltejs/kit` still builds and runs, because a type import is erased
+ * before anything executes — but `svelte-check` reports that the module has no
+ * such export, and an implicit `any` for every destructured argument after it.
+ * A green build proves nothing about the types; the type checker is the gate.
  */
 import {
 	sequence,
@@ -33,20 +34,17 @@ import { DEFAULT_LOCALE, HTML_LANG, isLocale, negotiate, type Locale } from '#li
 /**
  * Work out the language before anything renders.
  *
- * Order of preference: an explicit prefix in the URL, then the cookie somebody
- * set by using the language switcher, then the browser's own header. The header
- * comes last because it is a guess about a person and the other two are
- * statements by one.
+ * An explicit prefix in the URL first, then the browser's own header. The
+ * header comes second because it is a guess about a person, and the prefix is a
+ * statement by one — the language switcher is a set of links to prefixed URLs,
+ * and every link the app builds carries the language it was rendered in.
  */
 const handleLocale: Handle = async ({ event, resolve }) => {
 	const [, first] = event.url.pathname.split('/');
-	const cookie = event.cookies.get('locale');
 
 	const locale: Locale = isLocale(first)
 		? first
-		: isLocale(cookie)
-			? cookie
-			: negotiate(event.request.headers.get('accept-language'));
+		: negotiate(event.request.headers.get('accept-language'));
 
 	event.locals.locale = locale;
 
@@ -121,11 +119,13 @@ export const handleError: HandleServerError = ({ error, event, kind }) => {
 	/*
 	 * `kind` rather than a status code.
 	 *
-	 * SvelteKit 3 discriminates the three cases that used to be inferred from a
-	 * number: `app` is a deliberate `error(...)` call and already says what it
-	 * means, `framework` is a 404 or a malformed request, and `unknown` is
-	 * something genuinely broken. Only the last is worth a log line and an id —
-	 * writing a correlation id for every 404 buries the one that matters.
+	 * SvelteKit 3 names the cases that used to be inferred from a number. On the
+	 * server there are four: `app` is a deliberate `error(...)` call and already
+	 * says what it means, `framework` is a 404 or a malformed request,
+	 * `validation` is a remote function argument that failed its schema, and
+	 * `unknown` is something genuinely broken. Only the last is worth a log line
+	 * and an id — writing a correlation id for every 404 buries the one that
+	 * matters — so the other three keep SvelteKit's defaults.
 	 */
 	if (kind !== 'unknown') return;
 

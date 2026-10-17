@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
-	import { inflate, intersects, type NodeKind, type Point } from '#lib/board/index.ts';
+	import { inflate, intersects, type Point } from '#lib/board/index.ts';
 	import { isTyping, panZoom, pointOf, viewportSize } from '#lib/canvas/gestures.ts';
-	import type { BoardEditor } from '#lib/canvas/editor.svelte.ts';
+	import type { BoardEditor, Tool } from '#lib/canvas/editor.svelte.ts';
 	import type { SyncClient } from '#lib/sync/client.svelte.ts';
 	import { requireMessages } from '#lib/i18n/context.ts';
 	import NodeShape from './NodeShape.svelte';
@@ -33,8 +33,24 @@
 	// svelte-ignore state_referenced_locally
 	const camera = editor.camera;
 
-	let surface = $state<HTMLElement | null>(null);
-	let pointerDown = $state(false);
+	/*
+	 * A plain `let`, not `$state`.
+	 *
+	 * It is read only by the pointer handlers below and by `panZoom`'s `enabled`
+	 * getter, which that attachment's own listeners call — never by the markup, a
+	 * `$derived` or an `$effect`. State that nothing reacts to is a signal
+	 * written on every press for no reader.
+	 */
+	let pointerDown = false;
+
+	/**
+	 * An event on the canvas element, with `currentTarget` typed as that element.
+	 *
+	 * Every handler below is attached to the canvas itself, so `currentTarget` is
+	 * always the canvas — which is why there is no `bind:this` and no element
+	 * variable that might still be `null` when a handler runs.
+	 */
+	type CanvasEvent<E extends Event> = E & { currentTarget: HTMLDivElement };
 
 	/**
 	 * VIRTUALISATION
@@ -105,9 +121,8 @@
 	const attachViewport = viewportSize(camera);
 	const attachPanZoom = panZoom(camera, { enabled: () => !pointerDown });
 
-	function boardPoint(event: PointerEvent): Point {
-		if (!surface) return { x: 0, y: 0 };
-		return camera.toBoard(pointOf(event, surface));
+	function boardPoint(event: CanvasEvent<PointerEvent>): Point {
+		return camera.toBoard(pointOf(event, event.currentTarget));
 	}
 
 	/* ---- Presence, throttled --------------------------------------- */
@@ -150,11 +165,11 @@
 
 	/* ---- Pointer --------------------------------------------------- */
 
-	function onPointerDown(event: PointerEvent) {
+	function onPointerDown(event: CanvasEvent<PointerEvent>) {
 		// Only the primary button starts an edit; middle and right belong to
 		// panning and to the context menu.
 		if (event.button !== 0) return;
-		if (!surface) return;
+		const surface = event.currentTarget;
 
 		const at = boardPoint(event);
 
@@ -173,7 +188,7 @@
 		 */
 		if (editor.tool !== 'select' && editor.tool !== 'connect') {
 			event.preventDefault();
-			editor.addNode(editor.tool as NodeKind, at);
+			editor.addNode(editor.tool, at);
 			editor.tool = 'select';
 			return;
 		}
@@ -203,7 +218,7 @@
 		pointerDown = true;
 	}
 
-	function onPointerMove(event: PointerEvent) {
+	function onPointerMove(event: CanvasEvent<PointerEvent>) {
 		const at = boardPoint(event);
 		announce(at);
 
@@ -222,7 +237,7 @@
 		editor.updateMarquee(at);
 	}
 
-	function onPointerUp(event: PointerEvent) {
+	function onPointerUp(event: CanvasEvent<PointerEvent>) {
 		if (!pointerDown) return;
 		pointerDown = false;
 
@@ -240,8 +255,8 @@
 			editor.endMarquee();
 		}
 
-		if (surface?.hasPointerCapture(event.pointerId)) {
-			surface.releasePointerCapture(event.pointerId);
+		if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+			event.currentTarget.releasePointerCapture(event.pointerId);
 		}
 	}
 
@@ -266,10 +281,10 @@
 	 * for the press, so opening the editor here needs no `preventDefault` — the
 	 * editor takes focus last and keeps it.
 	 */
-	function onDoubleClick(event: MouseEvent) {
-		if (editor.readOnly || !surface) return;
+	function onDoubleClick(event: CanvasEvent<MouseEvent>) {
+		if (editor.readOnly) return;
 
-		const hit = editor.hitTest(camera.toBoard(pointOf(event, surface)));
+		const hit = editor.hitTest(camera.toBoard(pointOf(event, event.currentTarget)));
 		if (!hit) return;
 
 		editor.selectOnly([hit.id]);
@@ -339,7 +354,7 @@
 		}
 
 		// Single-key tool shortcuts, the way every drawing tool does it.
-		const tools: Record<string, NodeKind | 'select' | 'connect'> = {
+		const tools: Record<string, Tool> = {
 			v: 'select',
 			n: 'service',
 			s: 'datastore',
@@ -388,9 +403,7 @@
 -->
 <!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
 <div
-	bind:this={surface}
-	class="board"
-	class:board--connecting={editor.tool === 'connect'}
+	class={['board', { 'board--connecting': editor.tool === 'connect' }]}
 	data-canvas
 	role="application"
 	aria-label={t.a11y.canvas}
@@ -492,7 +505,7 @@
 			<div class="board__failed">
 				<p><strong>{t.errors.generic}</strong></p>
 				<p class="board__failed-detail">{(error as App.Error).message}</p>
-				<button type="button" onclick={reset}>Try rendering again</button>
+				<button type="button" onclick={reset}>{t.errors.retry}</button>
 			</div>
 		{/snippet}
 	</svelte:boundary>

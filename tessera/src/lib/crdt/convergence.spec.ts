@@ -48,13 +48,15 @@ interface Snapshot {
 }
 
 class Replica {
+	readonly name: string;
 	readonly clock: Clock;
 	readonly #nodes = new OrSet<NodeId>();
 	readonly #fields = new Map<NodeId, Map<string, Lww<number | string>>>();
 	readonly #labels = new Map<NodeId, RgaText>();
 	#version: VersionVector = empty();
 
-	constructor(readonly name: string) {
+	constructor(name: string) {
+		this.name = name;
 		// Every replica shares one physical clock reading, so the ordering under
 		// test is the logical one and not an artefact of who ran first.
 		this.clock = new Clock(actor(name), () => 1_700_000_000_000);

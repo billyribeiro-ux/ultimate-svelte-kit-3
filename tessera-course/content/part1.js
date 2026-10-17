@@ -254,7 +254,7 @@ export class Clock {
 			},
 			{
 				type: 'warn',
-				text: 'That comment about parameter properties is not padding. `constructor(readonly actor: ActorId)` is one of three TypeScript constructs — with `enum` and namespaces — that has to *emit* code rather than be erased. Node strips types without compiling them, so a file using it cannot be run with `node file.ts`, and `scripts/seed.ts` does exactly that with this module in its import graph. The failure is `ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX`, at runtime, from a file that type-checks perfectly.'
+				text: 'That comment about parameter properties is not padding. `constructor(readonly actor: ActorId)` is one of three TypeScript constructs — with `enum` and namespaces — that has to *emit* code rather than be erased. Node strips types without compiling them, so a file using it cannot be run with `node file.ts`, and `scripts/seed.ts` does exactly that with this module in its import graph. The failure is `ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX`, at runtime, from a file that would otherwise type-check perfectly — which is why chapter 03’s `tsconfig.json` sets `erasableSyntaxOnly`, and `pnpm check` refuses all three before Node ever sees them.'
 			},
 			{
 				type: 'code',

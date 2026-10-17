@@ -29,7 +29,14 @@
 		// Unused locals and parameters are errors. Dead code in a merge function is
 		// usually half of a case somebody stopped writing.
 		"noUnusedLocals": true,
-		"noUnusedParameters": true
+		"noUnusedParameters": true,
+
+		// Only TypeScript that can be erased: no `enum`, no namespaces with code in
+		// them, no parameter properties. Node runs `scripts/seed.ts` by stripping
+		// types, which fails at runtime on anything that needs emitting, and the
+		// Svelte compiler strips types the same way. `crdt/clock.ts` explains the
+		// rule; this makes the compiler hold it.
+		"erasableSyntaxOnly": true
 	},
 
 	// SvelteKit 3 requires these to be explicit. Without them `svelte-check` will

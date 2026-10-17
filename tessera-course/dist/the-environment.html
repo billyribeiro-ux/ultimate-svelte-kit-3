@@ -46,7 +46,9 @@
 	<pre><code class="lang-ts">/**
  * Every environment variable this app reads, declared once.
  *
- * SvelteKit 3 replaced the `$env/*` magic modules with this file. A variable not
+ * SvelteKit 3 deprecated the `$env/*` modules in favour of this file — they
+ * still work, and are removed in SvelteKit 4 — and every variable it declares is
+ * imported from `$app/env/private` or `$app/env/public`. A variable not
  * declared here cannot be imported — a type error at build time rather than an
  * `undefined` that surfaces in production three weeks later — and `public: true`
  * is something you have to type, so a secret cannot reach the browser by
@@ -65,7 +67,7 @@ export const variables = defineEnvVars({
 	DATABASE_URL: {</code></pre>
 </figure>
 <p>A variable not in this file <strong>cannot be imported</strong>. Not &quot;imports as nothing&quot; — the import does not typecheck. That single change moves a whole category of production incident to the moment you type the wrong name.</p>
-<aside class="callout callout--note"><p>One word in the comment at the top of <code>src/env.ts</code> is stronger than the documentation. &quot;Replaced&quot; means superseded, not gone: <code>$env/static/private</code> and the other three are deprecated in SvelteKit 3, still work, and are removed in SvelteKit 4. Meeting one in an older project is not a bug. It is a migration still to do.</p></aside>
+<aside class="callout callout--note"><p>The values themselves are imported from <code>$app/env/private</code> and <code>$app/env/public</code> — <code>import { DATABASE_URL } from '$app/env/private'</code> — and only names declared here exist in those modules. An older project will still be full of <code>$env/static/private</code>. That is not a bug: the four old modules are deprecated in SvelteKit 3, still work, and are removed in SvelteKit 4. It is a migration still to do.</p></aside>
 <h3 id="the-flags">What you declare, and why</h3>
 
 <figure class="code">

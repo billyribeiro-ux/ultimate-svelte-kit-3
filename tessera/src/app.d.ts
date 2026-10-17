@@ -38,6 +38,17 @@ declare global {
 			id?: string;
 		}
 
+		/**
+		 * What every page's data carries, because the root layout's load returns it.
+		 *
+		 * Declared here so that `page.data.locale` is a `Locale` wherever it is read —
+		 * the error page above all, which has no `data` prop and, for a URL that
+		 * matched no route, no `params` either.
+		 */
+		interface PageData {
+			locale: Locale;
+		}
+
 		interface PageState {
 			/**
 			 * Shallow routing: which element's inspector is open.

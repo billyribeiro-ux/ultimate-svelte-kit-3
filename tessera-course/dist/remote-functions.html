@@ -163,7 +163,24 @@ export const openBoard = query(boardId, async (id) =&gt; {
 </figure>
 <aside class="callout callout--warn"><p>The alternative — a server that materialises the current state on every open — looks tidier and gives the server an <strong>opinion about the document</strong>, which then has to agree with the client’s opinion forever. When two authorities disagree about a CRDT, the one with the database usually wins, and the user’s unsynced work is what loses.</p></aside>
 <h3 id="awaiting-the-board">Awaiting the board, and what a boundary is handed</h3>
-<p>On the page, the query is called once in the script and <strong>awaited in the markup</strong>, inside a <code>&lt;svelte:boundary&gt;</code>. That one <code>await</code> gives the boundary both of its jobs: until the promise resolves it shows its <code>pending</code> snippet, and if the promise rejects it shows its <code>failed</code> snippet instead. In the documentation’s words, “until the promise resolves — and if it errors — the nearest <code>&lt;svelte:boundary&gt;</code> will be invoked.”</p>
+<p>The page learns which board to open from its props, not from a global. SvelteKit generates a <code>$types</code> module beside every route, and its <code>PageProps</code> types both things a page is given: <code>data</code>, from the load functions above it, and <code>params</code>, from the URL — for this route, <code>{ lang?: Locale; board: string }</code>.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/[[lang=locale]]/boards/[board]/+page@.svelte</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/*
+ * `PageProps`, generated for this route: `data` and `params`, both typed.
+ *
+ * `params.board` is a `string` here — the route is `[board]`, so it is never
+ * missing — where the global `page.params.board` from `$app/state` is
+ * `string | undefined` and needs a `!` to call anything with.
+ */
+let { data, params }: PageProps = $props();</code></pre>
+</figure>
+<p>This page used to read <code>page.params.board!</code> from <code>$app/state</code>. The global <code>page</code> is typed for every route at once, so <code>board</code> is <code>string | undefined</code> there, and calling anything with it took a <code>!</code> — an assertion that can be wrong, about a value this route already guarantees. The props are typed for *this* route. A hand-written <code>interface Props { data: PageData }</code> is the older spelling of half the same thing: the documentation marks it legacy, “before 2.16.0”, and every route component in Tessera now takes <code>PageProps</code> or <code>LayoutProps</code> instead.</p>
+<p>Then the query: <strong>derived</strong> from that parameter in the script, and <strong>awaited</strong> in the markup, inside a <code>&lt;svelte:boundary&gt;</code>.</p>
 
 <figure class="code">
 	<figcaption>
@@ -179,15 +196,37 @@ export const openBoard = query(boardId, async (id) =&gt; {
  * hides itself when the URL looks like a board — is a conditional in a
  * component that has no business knowing about routes.
  *
- * The board is *awaited* in the markup below, not read through
- * `board.current`. `.current` never throws: a query that fails leaves it
- * `undefined` and puts the error on `board.error`, so a boundary around
- * `{#if board.current}` never reaches its `failed` snippet, and a board that
- * does not exist renders as an empty screen. `await` is what hands the
- * rejection — `openBoard`'s &quot;No such board.&quot; — to the boundary.
+ * The query is `$derived`, because SvelteKit reuses this component when the
+ * URL goes from one board to another: same route, new `params`. Called once,
+ * `openBoard(...)` would capture whichever board was open when the component
+ * mounted and go on showing it. Derived, it re-runs when `params.board`
+ * changes — the same reason `Comments.svelte` derives its query.
+ *
+ * And it is *awaited* in the markup below, inside the boundary, rather than
+ * read through `board.current`. `.current` never throws: a query that fails
+ * leaves it `undefined` and puts the error on `board.error`, so a boundary
+ * around `{#if board.current}` never reaches its `failed` snippet, and a
+ * board that does not exist renders as an empty screen. `await` is what hands
+ * the rejection — `openBoard`'s &quot;No such board.&quot; — to the boundary.
  */
-const board = openBoard(page.params.board!);</code></pre>
+const board = $derived(openBoard(params.board));
+
+/**
+ * The headline above the server's own message.
+ *
+ * Only 404 has its own. `openBoard` needs `viewer`, the lowest role, so a
+ * signed-in person either has access or gets &quot;No such board.&quot; — never a 403 —
+ * and a signed-out one never gets this far: `+page.server.ts` sends them to
+ * sign in first.
+ */
+const heading = (status: number) =&gt; (status === 404 ? t.errors.notFound : t.errors.generic);</code></pre>
 </figure>
+
+<aside class="callout callout--why">
+	<h4>Why <code>$derived</code></h4>
+	<p>SvelteKit reuses a page component when the URL changes but the route does not: going from <code>/boards/a</code> to <code>/boards/b</code> keeps this instance and hands it new <code>params</code>. A query called once — <code>const board = openBoard(params.board)</code> — would go on showing board <code>a</code>. <code>$derived</code> re-runs the call when <code>params.board</code> changes, and the compiler agrees: a plain <code>const</code> that reads a prop earns a warning that it “only captures the initial value”. It is the documentation’s own idiom for a query with an argument — <code>let { params } = $props(); const post = $derived(await getPost(params.slug));</code> — with one difference, explained next: the <code>await</code> here is in the markup rather than the script.</p>
+</aside>
+<p>The <code>await</code> lives in the markup because of where its boundary is. An <code>await</code> in the *script* suspends the whole component, so the boundary in its own markup could not catch it; the wait and the failure would belong to whatever is above. Awaited inside the page’s own <code>&lt;svelte:boundary&gt;</code>, it gives that boundary both of its jobs: until the promise resolves it shows its <code>pending</code> snippet, and if the promise rejects it shows its <code>failed</code> snippet instead. In the documentation’s words, “until the promise resolves — and if it errors — the nearest <code>&lt;svelte:boundary&gt;</code> will be invoked.”</p>
 
 <figure class="code">
 	<figcaption>
@@ -217,6 +256,7 @@ const board = openBoard(page.params.board!);</code></pre>
 	{/snippet}
 &lt;/svelte:boundary&gt;</code></pre>
 </figure>
+<aside class="callout callout--note"><p><code>{const caught = $derived(error as App.Error)}</code> is a <strong>declaration tag</strong>: a <code>const</code> (or <code>let</code>) written in markup, which names a value for everything after it in the same scope. Since Svelte 5.56 it is how markup declares a value, and the older <code>{@const}</code> tag is, in the documentation’s words, “considered legacy — use declaration tags instead.” The <code>$derived</code> is not decoration. A bare <code>{const}</code> is evaluated once, when the tag is reached, and the documentation’s rule is that “when values should be reactive, you can use <code>$state</code> and <code>$derived</code>” — which is what keeps <code>caught</code> in step with the <code>error</code> it reads. Chapter 31 uses one to name an awaited list, and chapter 36 one inside an <code>{#each}</code>, where its scope matters.</p></aside>
 
 <aside class="callout callout--why">
 	<h4>Why <code>await</code>, and not <code>.current</code></h4>
@@ -227,7 +267,31 @@ const board = openBoard(page.params.board!);</code></pre>
 <h3 id="when-a-command-says-no">The other shape: a command that says no</h3>
 <p>A command, or a form submission you <code>await</code> yourself, fails differently. It never goes near a boundary: it rejects, at the <code>await</code>, with an <strong><code>HttpError</code></strong> — <code>{ status, body }</code>, where <code>body</code> is the <code>App.Error</code>. An <code>HttpError</code> is not an <code>Error</code>, so it has no <code>message</code> of its own. The server’s words are <code>body.message</code>, and <code>isHttpError</code> from <code>@sveltejs/kit</code> is the type guard that lets TypeScript see it.</p>
 <ul><li>A boundary’s <code>failed</code> snippet or <code>onerror</code> handler, a query’s <code>.error</code>, and <code>page.error</code> on an error page: an <code>App.Error</code>. Read <code>error.message</code>.</li><li>An awaited <code>command()</code>, or <code>form.submit()</code> inside <code>enhance</code>: an <code>HttpError</code>. Read <code>thrown.body.message</code>.</li><li>A <code>form()</code> spread without <code>enhance</code> that fails: SvelteKit renders the nearest <code>+error.svelte</code>, where <code>page.error</code> is an <code>App.Error</code> again.</li></ul>
-<p>Mixing them up fails quietly in both directions. <code>error.body.message</code> in a <code>failed</code> snippet throws inside the snippet; <code>thrown.message</code> in a <code>catch</code> is <code>undefined</code>, and the line meant to explain the refusal is blank. Chapter 36 has the second case, where a viewer presses a button the server will refuse — and chapter 23’s <code>#onPushFailure</code> has been reading <code>body.message</code> all along, for exactly this reason.</p>
+<p>Mixing them up fails quietly in both directions. <code>error.body.message</code> in a <code>failed</code> snippet throws inside the snippet; <code>thrown.message</code> in a <code>catch</code> is <code>undefined</code>, and the line meant to explain the refusal is blank. Chapter 36 has the second case, where a viewer presses a button the server will refuse — and chapter 23’s <code>#onPushFailure</code> reads the same shape through the same <code>isHttpError</code> guard, for exactly this reason.</p>
+<p>One status never reaches this boundary: 401. <code>openBoard</code> would answer it for a visitor who is not signed in, and a heading over “Sign in to continue.” with nothing to click is a dead end — on the one URL in the app that people paste into chat. So the route has a server load whose only job is to send a signed-out visitor to the sign-in page, with <code>from</code> set so they come straight back:</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/[[lang=locale]]/boards/[board]/+page.server.ts</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">import { userOrSignIn } from '#lib/server/session.ts';
+import type { PageServerLoad } from './$types';
+
+/**
+ * Signed out? The sign-in page first, and straight back here afterwards.
+ *
+ * The board itself comes from `openBoard`, a remote query, and a query cannot
+ * redirect a visitor anywhere useful — it can only fail, and a 401 inside the
+ * page's boundary is a heading with nothing to click. A board link is the URL
+ * that gets pasted into chat, so it is the one most often opened by somebody
+ * who is not signed in on that device. The guard lives in the route, where a
+ * redirect means a whole navigation.
+ */
+export const load: PageServerLoad = () =&gt; {
+	userOrSignIn();
+};</code></pre>
+</figure>
 
 <figure class="code code--terminal">
 	<figcaption>
@@ -347,7 +411,7 @@ export const transport: Transport = {
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>
-	<ul><li>You can call the server from a component with no <code>fetch</code>, no route and no manual types.</li><li>Changing a schema breaks the caller at build time.</li><li>A board that does not exist says “No such board.” rather than showing an empty page.</li><li>You can say which of the two error shapes a <code>failed</code> snippet gets, and which one a <code>catch</code> gets.</li><li>You can name the two things a remote function is not for.</li></ul>
+	<ul><li>You can call the server from a component with no <code>fetch</code>, no route and no manual types.</li><li>Changing a schema breaks the caller at build time.</li><li>A board that does not exist says “No such board.” rather than showing an empty page.</li><li>The board page reads its id from <code>PageProps</code>’ typed <code>params</code>, with no <code>!</code>, and derives its query from it.</li><li>A signed-out visitor who opens a board link is sent to sign in, and then back to the board.</li><li>You can say which of the two error shapes a <code>failed</code> snippet gets, and which one a <code>catch</code> gets.</li><li>You can name the two things a remote function is not for.</li></ul>
 </aside>
 		</article>
 

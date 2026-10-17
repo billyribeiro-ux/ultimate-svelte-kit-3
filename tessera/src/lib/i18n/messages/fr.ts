@@ -27,7 +27,8 @@ export const fr = {
 		open: 'Ouvrir',
 		empty: 'Rien pour l’instant. Appuyez sur N pour ajouter une première boîte.',
 		nodes: (count: number) => (count === 1 ? '1 forme' : `${count} formes`),
-		lastEdited: (when: string) => `Modifié ${when}`
+		lastEdited: (when: string) => `Modifié ${when}`,
+		exporting: 'Exportation…'
 	},
 
 	sync: {
@@ -68,6 +69,11 @@ export const fr = {
 		colour: 'Couleur'
 	},
 
+	inspector: {
+		heading: 'Propriétés',
+		empty: 'Sélectionnez une forme pour la modifier.'
+	},
+
 	comments: {
 		heading: 'Commentaires',
 		placeholder: 'Laisser un commentaire',
@@ -75,7 +81,10 @@ export const fr = {
 		resolve: 'Résoudre',
 		reopen: 'Rouvrir',
 		resolved: 'Résolu',
-		none: 'Aucun commentaire'
+		none: 'Aucun commentaire',
+		reply: 'Répondre',
+		replyPlaceholder: 'Répondre…',
+		onShape: 'sur une forme'
 	},
 
 	history: {
@@ -94,7 +103,8 @@ export const fr = {
 		selected: (label: string) => `${label}, sélectionné`,
 		joined: (name: string) => `${name} a rejoint le tableau`,
 		left: (name: string) => `${name} a quitté le tableau`,
-		skip: 'Aller au tableau'
+		skip: 'Aller au tableau',
+		panel: 'Panneau'
 	},
 
 	embed: {
@@ -105,7 +115,7 @@ export const fr = {
 
 	errors: {
 		notFound: 'Ce tableau n’existe pas, ou vous n’y avez pas accès.',
-		forbidden: 'Vous n’avez pas la permission de faire cela.',
-		generic: 'Une erreur est survenue. Le tableau sur cet appareil est intact.'
+		generic: 'Une erreur est survenue. Le tableau sur cet appareil est intact.',
+		retry: 'Réessayer l’affichage'
 	}
 } satisfies Messages;

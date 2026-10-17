@@ -56,8 +56,7 @@
 		{#each tools as { tool, icon: Icon, label, key } (tool)}
 			<button
 				type="button"
-				class="toolbar__button"
-				class:toolbar__button--active={editor.tool === tool}
+				class={['toolbar__button', { 'toolbar__button--active': editor.tool === tool }]}
 				aria-pressed={editor.tool === tool}
 				aria-label={label}
 				title="{label} · {key}"

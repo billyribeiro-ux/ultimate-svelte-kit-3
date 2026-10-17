@@ -32,7 +32,11 @@
 	);
 </script>
 
-<div class="node node--{node.kind}" class:node--selected={selected} data-node={node.id} {style}>
+<div
+	class={['node', `node--${node.kind}`, { 'node--selected': selected }]}
+	data-node={node.id}
+	{style}
+>
 	{#if node.kind === 'datastore'}
 		<!-- The cylinder's top ellipse. A pseudo-element cannot be given its own
 		     border radius independent of the box, so it is a real element. -->
@@ -53,10 +57,10 @@
 
 				It would never fire: the canvas captures the pointer for dragging, and a
 				captured pointer sends its compatibility mouse events to the capturing
-				element rather than to whatever is under it. `Board.svelte` detects the
-				double-click from `event.detail` on the pointer event instead.
+				element rather than to whatever is under it. `Board.svelte` listens for
+				`dblclick` on the canvas instead, and hit-tests the point itself.
 			-->
-			<span class="node__label" class:node__label--empty={node.label === ''}>
+			<span class={['node__label', { 'node__label--empty': node.label === '' }]}>
 				{node.label || 'Untitled'}
 			</span>
 		{/if}

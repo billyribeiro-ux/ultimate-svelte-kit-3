@@ -1,5 +1,22 @@
-import { expect, test } from '@playwright/test';
-import { BOARD, OWNER, VIEWER, draw, newBoard, shape, signIn } from './helpers';
+import { expect, test, type Page } from '@playwright/test';
+import * as v from 'valibot';
+import { BOARD, OWNER, VIEWER, VIEWER_BOARD, draw, newBoard, shape, signIn } from './helpers';
+
+/** The JSON body of a remote command: its argument, devalue-encoded, then base64url. */
+const CommandBody = v.looseObject({ payload: v.string() });
+
+/** The owner starts a thread on a board of their own, and returns the board's URL. */
+async function postThread(page: Page, text: string): Promise<string> {
+	await signIn(page, OWNER);
+	const url = await newBoard(page);
+
+	await page.getByRole('tab', { name: 'Comments' }).click();
+	await page.getByPlaceholder('Leave a comment').fill(text);
+	await page.getByRole('button', { name: 'Post' }).first().click();
+	await page.getByText(text).waitFor();
+
+	return url;
+}
 
 test.describe.configure({ timeout: 90_000 });
 
@@ -67,6 +84,94 @@ test.describe('comments', () => {
 			await viewer.close();
 		}
 	});
+
+	test('tells a viewer who posts why not, and leaves the board where it was', async ({
+		browser
+	}) => {
+		const owner = await browser.newContext();
+		const viewer = await browser.newContext();
+
+		try {
+			const url = await postThread(await owner.newPage(), 'Comments are for commenters');
+
+			const viewerPage = await viewer.newPage();
+			await signIn(viewerPage, VIEWER);
+			await viewerPage.goto(url);
+			await viewerPage.getByRole('tab', { name: 'Comments' }).click();
+
+			/*
+			 * `postComment` answers 403, the same as Resolve. Without `enhance` a
+			 * refused form renders the nearest `+error.svelte`, which for a board
+			 * that resets its layout is the root error page — the whole editor gone,
+			 * to report that one comment could not be posted.
+			 */
+			await viewerPage.getByPlaceholder('Leave a comment').fill('May I?');
+			await viewerPage.getByRole('button', { name: 'Post' }).first().click();
+
+			await expect(
+				viewerPage.getByRole('region', { name: 'Comments' }).getByRole('alert')
+			).toHaveText('You have view-only access to this board.');
+			await expect(viewerPage.getByRole('application')).toBeVisible();
+			await expect(viewerPage.getByPlaceholder('Leave a comment')).toHaveValue('May I?');
+		} finally {
+			await owner.close();
+			await viewer.close();
+		}
+	});
+
+	test('will not let a viewer resolve a thread by naming a board of their own', async ({
+		browser
+	}) => {
+		const owner = await browser.newContext();
+		const viewer = await browser.newContext();
+
+		try {
+			const ownerPage = await owner.newPage();
+			const text = 'Only somebody who may comment here can resolve this';
+			const url = await postThread(ownerPage, text);
+			const board = JSON.stringify(url.slice(url.lastIndexOf('/') + 1));
+
+			const viewerPage = await viewer.newPage();
+			await signIn(viewerPage, VIEWER);
+			await viewerPage.goto(url);
+			await viewerPage.getByRole('tab', { name: 'Comments' }).click();
+
+			/*
+			 * The forgery, done the way anybody with devtools could do it: press the
+			 * real button, and on the way out swap the command's `boardId` for a
+			 * board the viewer owns. The access check then asks about *that* board,
+			 * and passes. Before the fix, the update that followed matched the thread
+			 * on its id alone and resolved it here, on a board where this person can
+			 * only look.
+			 */
+			let forged = false;
+			await viewerPage.route('**/_app/remote/*/resolveThread', async (route) => {
+				const sent = v.parse(CommandBody, JSON.parse(route.request().postData() ?? ''));
+				const argument = Buffer.from(sent.payload, 'base64url').toString('utf8');
+				forged = argument.includes(board);
+
+				const swapped = argument.replace(board, JSON.stringify(VIEWER_BOARD));
+				const payload = Buffer.from(swapped, 'utf8').toString('base64url');
+				await route.continue({ postData: JSON.stringify({ ...sent, payload }) });
+			});
+
+			await viewerPage.getByRole('button', { name: 'Resolve' }).click();
+
+			await expect(
+				viewerPage.getByRole('region', { name: 'Comments' }).getByRole('alert')
+			).toHaveText('No such thread.');
+			expect(forged).toBe(true);
+
+			// And the owner, reloading, still has an open thread and nothing resolved.
+			await ownerPage.reload();
+			await ownerPage.getByRole('tab', { name: 'Comments' }).click();
+			await expect(ownerPage.getByText(text)).toBeVisible();
+			await expect(ownerPage.getByText(/Resolved \(\d+\)/)).toHaveCount(0);
+		} finally {
+			await owner.close();
+			await viewer.close();
+		}
+	});
 });
 
 test.describe('version history', () => {
@@ -109,6 +214,29 @@ test.describe('version history', () => {
 		await page.getByRole('application').waitFor();
 		await expect(shape(page, 'Before')).toBeVisible({ timeout: 20_000 });
 		await expect(shape(page, 'After')).toHaveCount(0);
+	});
+});
+
+test.describe('the language switcher', () => {
+	test('shows the same page in another language, and back', async ({ page }) => {
+		await signIn(page, OWNER);
+
+		/*
+		 * Links, not a `<select>` that navigates on change, so nothing happens until
+		 * a language is actually chosen — and the same page comes back, not the
+		 * home page.
+		 */
+		await page.locator('summary', { hasText: 'English' }).click();
+		await page.getByRole('link', { name: 'Français' }).click();
+
+		await expect(page).toHaveURL('/fr/boards');
+		await expect(page.getByRole('heading', { level: 1 })).toHaveText('Tableaux');
+
+		await page.locator('summary', { hasText: 'Français' }).click();
+		await page.getByRole('link', { name: 'English' }).click();
+
+		await expect(page).toHaveURL('/boards');
+		await expect(page.getByRole('heading', { level: 1 })).toHaveText('Boards');
 	});
 });
 

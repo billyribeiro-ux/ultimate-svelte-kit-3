@@ -16,6 +16,8 @@
 import { error, redirect } from '@sveltejs/kit';
 import * as v from 'valibot';
 import { form, getRequestEvent } from '$app/server';
+import { resolve } from '$app/paths';
+import { langParam } from '#lib/i18n/index.ts';
 import { auth } from '#lib/server/auth.ts';
 import { db } from '#lib/server/db/index.ts';
 import { membership, workspace } from '#lib/server/db/schema.ts';
@@ -24,7 +26,7 @@ const email = v.pipe(v.string(), v.trim(), v.email('That does not look like an e
 const password = v.pipe(v.string(), v.minLength(12, 'Use at least 12 characters.'));
 
 /**
- * Where to go afterwards.
+ * Where to go afterwards, if the page said; empty means the board list.
  *
  * Validated as a *path*, not a URL. Accepting a full URL here is the classic
  * open-redirect: `?from=https://example.invalid/login` sends somebody to a
@@ -35,10 +37,25 @@ const password = v.pipe(v.string(), v.minLength(12, 'Use at least 12 characters.
 const destination = v.optional(
 	v.pipe(
 		v.string(),
-		v.check((value) => value.startsWith('/') && !value.startsWith('//'), 'Invalid destination')
-	),
-	'/boards'
+		v.check(
+			(value) => value === '' || (value.startsWith('/') && !value.startsWith('//')),
+			'Invalid destination'
+		)
+	)
 );
+
+/**
+ * A page of the app, in the language of the request.
+ *
+ * `resolve()` rather than a string, as for every link: the route id is checked
+ * against the routes that exist, and `langParam` keeps a French visitor in
+ * French. During a request `resolve()` answers with a path relative to the page
+ * the form was submitted from, which is what the browser resolves a redirect
+ * against, with JavaScript or without.
+ */
+function boards() {
+	return resolve('/[[lang=locale]]/boards', { lang: langParam(getRequestEvent().locals.locale) });
+}
 
 export const signIn = form(
 	v.object({ email, password, from: destination }),
@@ -61,7 +78,7 @@ export const signIn = form(
 			error(401, 'That email address and password do not match.');
 		}
 
-		redirect(303, from);
+		redirect(303, from || boards());
 	}
 );
 
@@ -107,12 +124,12 @@ export const signUp = form(
 			role: 'owner'
 		});
 
-		redirect(303, '/boards');
+		redirect(303, boards());
 	}
 );
 
 export const signOut = form(async () => {
-	const { request } = getRequestEvent();
+	const { request, locals } = getRequestEvent();
 	await auth.api.signOut({ headers: request.headers });
-	redirect(303, '/');
+	redirect(303, resolve('/[[lang=locale]]', { lang: langParam(locals.locale) }));
 });

@@ -808,13 +808,18 @@ try {
  * would sit in the outbox for the life of the browser profile. Those are
  * surfaced and the queue is left alone for a person to decide about — losing
  * their work silently to tidy up a queue is not an option.
+ *
+ * \`isHttpError\` is what tells the two apart. A command the server answered
+ * rejects with an \`HttpError\` — \`{ status, body }\`, where \`body\` is the
+ * \`App.Error\` and \`body.message\` the server's own sentence — and anything else
+ * is a request that never got an answer. The guard narrows the type, so there
+ * is no cast here to be wrong about the shape, and a rejection that is not an
+ * object at all is simply "not an \`HttpError\`" rather than a \`TypeError\`
+ * thrown from inside the error handler.
  */
 #onPushFailure(thrown: unknown): void {
-	const status = (thrown as { status?: number }).status;
-
-	if (status === 403 || status === 422) {
-		this.refusal =
-			(thrown as { body?: { message?: string } }).body?.message ?? 'The server refused a change.';
+	if (isHttpError(thrown) && (thrown.status === 403 || thrown.status === 422)) {
+		this.refusal = thrown.body.message;
 		this.status = 'refused';
 		return;
 	}
@@ -831,7 +836,7 @@ try {
 
 			{
 				type: 'note',
-				text: 'Why `body?.message`, and not `message`? An awaited command that fails rejects with an `HttpError`: `{ status, body }`, with the server’s `App.Error` as the `body`. It is not an `Error` and has no `message` of its own, so `status` and `body.message` are the two things worth reading — which is exactly what this method reads. Chapter 30 puts this shape next to the other one, the `App.Error` a boundary is handed.'
+				text: 'Why `isHttpError`, and why `body.message` rather than `message`? An awaited command that the server refuses rejects with an `HttpError`: `{ status, body }`, with the server’s `App.Error` as the `body`. It is not an `Error` and has no `message` of its own. `isHttpError(thrown)`, from `@sveltejs/kit`, is the type guard for that shape: inside the `if`, `thrown.status` and `thrown.body.message` are typed, and anything else — a request that never got an answer, or a rejection that is not an object at all — is simply "not an `HttpError`". The tempting alternative, `(thrown as { status?: number }).status`, is a cast that only *claims* the shape, and it throws a `TypeError` from inside the error handler the first time something rejects with `undefined`. Chapters 30 and 36 use the same guard, and chapter 30 puts this shape next to the other one, the `App.Error` a boundary is handed.'
 			},
 
 			{ type: 'h3', id: 'snapshots', text: 'Local snapshots, debounced' },

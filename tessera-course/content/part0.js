@@ -270,7 +270,7 @@ export const part0 = [
 		blocks: [
 			{
 				type: 'p',
-				text: 'Check your Node. This project needs 24.21 or newer, which is the current LTS at the time of writing. pnpm is pinned to 12.10.1 in `packageManager`, so `corepack enable` is enough to get the right one.'
+				text: 'Check your Node. This project needs 24.21 or newer, which is the current LTS at the time of writing. pnpm comes through Corepack, the package-manager manager that ships with Node: `corepack enable` puts a `pnpm` on your path, and `corepack install -g` decides which version it is when you are not inside a project. Outside one, there is nothing to pin the version to — Corepack would otherwise use its own idea of the latest — so ask for this course’s version by name.'
 			},
 			{
 				type: 'terminal',
@@ -279,6 +279,7 @@ node --version
 # v24.21.0
 
 corepack enable
+corepack install -g pnpm@12.10.1
 pnpm --version
 # 12.10.1`
 			},
@@ -293,11 +294,15 @@ pnpm --version
 				code: `
 pnpm dlx sv create --template minimal --types ts --no-add-ons --no-install tessera
 cd tessera
-pnpm install`
+corepack use pnpm@12.10.1`
 			},
 			{
 				type: 'p',
-				text: '`sv` is the Svelte CLI, and `pnpm dlx` runs its latest release without installing it. `--template minimal --types ts` gives a bare SvelteKit 3 project in TypeScript. `--no-add-ons` skips the interactive add-on prompt, because everything else in this project is configured by hand, and `--no-install` leaves the dependencies to the `pnpm install` two lines down, once you are inside the folder.'
+				text: '`sv` is the Svelte CLI, and `pnpm dlx` runs its latest release without installing it. `--template minimal --types ts` gives a bare SvelteKit 3 project in TypeScript. `--no-add-ons` skips the interactive add-on prompt, because everything else in this project is configured by hand, and `--no-install` leaves the dependencies until you are inside the folder.'
+			},
+			{
+				type: 'p',
+				text: '`corepack use pnpm@12.10.1` is the line that pins the project. It writes `"packageManager": "pnpm@12.10.1"` into `package.json` and then installs, so from now on anybody with Corepack enabled who types `pnpm` in this folder gets exactly that version, whatever is installed globally on their machine — which is what makes a lockfile mean the same thing on every machine that reads it.'
 			},
 			{
 				type: 'p',
@@ -537,7 +542,14 @@ prerender: {
 		// Unused locals and parameters are errors. Dead code in a merge function is
 		// usually half of a case somebody stopped writing.
 		"noUnusedLocals": true,
-		"noUnusedParameters": true
+		"noUnusedParameters": true,
+
+		// Only TypeScript that can be erased: no \`enum\`, no namespaces with code in
+		// them, no parameter properties. Node runs \`scripts/seed.ts\` by stripping
+		// types, which fails at runtime on anything that needs emitting, and the
+		// Svelte compiler strips types the same way. \`crdt/clock.ts\` explains the
+		// rule; this makes the compiler hold it.
+		"erasableSyntaxOnly": true
 	},
 
 	// SvelteKit 3 requires these to be explicit. Without them \`svelte-check\` will
@@ -580,7 +592,7 @@ prerender: {
 			},
 			{
 				type: 'warn',
-				text: 'Node’s strip-only TypeScript has a second consequence that will bite you within an hour: **no parameter properties**. `constructor(private readonly db: Client) {}` is a syntax error at runtime, because stripping the types leaves a constructor that assigns nothing. Declare the field and assign it. Relative imports also need their file extensions — `./clock.ts`, not `./clock`.'
+				text: 'Node’s strip-only TypeScript has a second consequence that will bite you within an hour: **no parameter properties**. `constructor(private readonly db: Client) {}` is refused at runtime with `ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX`, because stripping the types would leave a constructor that assigns nothing. Declare the field and assign it. `erasableSyntaxOnly`, the last flag in the file above, is what turns that from a runtime surprise into a `pnpm check` error — it refuses `enum`, namespaces with code in them and parameter properties, the three constructs that need emitting rather than erasing. Relative imports also need their file extensions — `./clock.ts`, not `./clock`.'
 			},
 
 			{
@@ -617,7 +629,9 @@ prerender: {
 /**
  * Every environment variable this app reads, declared once.
  *
- * SvelteKit 3 replaced the \`$env/*\` magic modules with this file. A variable not
+ * SvelteKit 3 deprecated the \`$env/*\` modules in favour of this file — they
+ * still work, and are removed in SvelteKit 4 — and every variable it declares is
+ * imported from \`$app/env/private\` or \`$app/env/public\`. A variable not
  * declared here cannot be imported — a type error at build time rather than an
  * \`undefined\` that surfaces in production three weeks later — and \`public: true\`
  * is something you have to type, so a secret cannot reach the browser by
@@ -641,7 +655,7 @@ export const variables = defineEnvVars({
 			},
 			{
 				type: 'note',
-				text: 'One word in the comment at the top of `src/env.ts` is stronger than the documentation. "Replaced" means superseded, not gone: `$env/static/private` and the other three are deprecated in SvelteKit 3, still work, and are removed in SvelteKit 4. Meeting one in an older project is not a bug. It is a migration still to do.'
+				text: 'The values themselves are imported from `$app/env/private` and `$app/env/public` — `import { DATABASE_URL } from \'$app/env/private\'` — and only names declared here exist in those modules. An older project will still be full of `$env/static/private`. That is not a bug: the four old modules are deprecated in SvelteKit 3, still work, and are removed in SvelteKit 4. It is a migration still to do.'
 			},
 
 			{ type: 'h3', id: 'the-flags', text: 'What you declare, and why' },
@@ -880,7 +894,7 @@ routes/
 			},
 			{
 				type: 'p',
-				text: 'There are exactly two API routes, and both exist because they are *streams or documents*, not function calls. Everything else that would have been an endpoint is a remote function, which we get to in part 7.'
+				text: 'There are exactly two API routes, and both exist because they are *streams or documents*, not function calls. Everything else that would have been an endpoint is a remote function, which we get to in chapter 30.'
 			},
 
 			{

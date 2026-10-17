@@ -31,8 +31,11 @@
  * SvelteKit 3 split the old `$service-worker` module apart: the build manifest
  * is `$app/manifest` (`immutable`, `assets`, `prerendered`, `routes`), the build
  * id is `version` from `$app/env`, and `$app/service-worker` now exports only a
- * correctly-typed `self`. Bringing the SvelteKit 2 import forward gives four
- * "has no exported member" errors at once, which at least says so plainly.
+ * correctly-typed `self`. Bring the SvelteKit 2 import forward unchanged and the
+ * type checker cannot find `$service-worker` at all; repoint the same names at
+ * `$app/service-worker` and it reports four "has no exported member" errors
+ * instead. Either way it says so plainly, and either way the answer is the same:
+ * the names moved, to `$app/manifest` and `$app/env`.
  *
  * WHY THIS IS A DIRECTORY
  * -----------------------
@@ -77,12 +80,13 @@ const CACHE = `tessera-${version}`;
  * hashed asset, which is the kind of regression no test notices and everybody
  * on a slow connection pays for.
  *
- * Typed as `string[]` on purpose. `resolve()` returns SvelteKit's branded
- * `Path` type — good for catching a typo in a route id, and exactly wrong for
- * a list whose only job is to be compared with `url.pathname`, which is a
- * plain string. `Array.prototype.includes` is typed with the element type, so
- * a `Path[]` refuses the comparison below at compile time. Widening here says
- * once what these are: the pathnames the browser will actually request.
+ * Typed as `string[]` on purpose. `resolve()` returns `ResolvedPathname`, a
+ * template-literal type — a `/` followed by one of the app's known paths —
+ * which is what lets a link be checked, and exactly wrong for a list whose only
+ * job is to be compared with `url.pathname`, a plain string.
+ * `Array.prototype.includes` is typed with the element type, so a
+ * `ResolvedPathname[]` refuses a plain string at compile time. Widening here
+ * says once what these are: the pathnames the browser will actually request.
  */
 const PRECACHE: string[] = [...immutable, ...assets].map((entry) => resolve(entry.path));
 

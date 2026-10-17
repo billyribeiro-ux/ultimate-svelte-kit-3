@@ -41,7 +41,7 @@
 	replica before the `edge.remove` that accompanies it.
 -->
 {#if from && to && path}
-	<g class="edge edge--{edge.kind}" class:edge--selected={selected} data-edge={edge.id}>
+	<g class={['edge', `edge--${edge.kind}`, { 'edge--selected': selected }]} data-edge={edge.id}>
 		<!--
 			An invisible fat stroke under the visible one.
 

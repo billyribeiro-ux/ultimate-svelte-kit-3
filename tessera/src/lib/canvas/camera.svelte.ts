@@ -21,7 +21,7 @@
  * first time somebody pans during a fit.
  */
 
-import { Tween } from 'svelte/motion';
+import { Tween, prefersReducedMotion } from 'svelte/motion';
 import { cubicOut } from 'svelte/easing';
 import type { Point, Rect } from '#lib/board/index.ts';
 
@@ -136,12 +136,21 @@ export class Camera {
 		);
 	}
 
-	/** Animate to a specific transform. Resolves when the movement finishes. */
+	/**
+	 * Animate to a specific transform. Resolves when the movement finishes.
+	 *
+	 * Unless the person has asked for less motion, in which case it arrives at
+	 * once. The global `prefers-reduced-motion` rule in `base.css` cannot reach
+	 * this: it shortens CSS animations and transitions, and a `Tween` is
+	 * JavaScript writing a transform every frame. `prefersReducedMotion` is the
+	 * same media query as reactive state, read at the moment of the move, so
+	 * changing the setting takes effect on the next glide without a reload.
+	 */
 	glideTo(transform: Transform): Promise<void> {
-		return this.#motion.set({
-			...transform,
-			scale: clamp(transform.scale, MIN_SCALE, MAX_SCALE)
-		});
+		return this.#motion.set(
+			{ ...transform, scale: clamp(transform.scale, MIN_SCALE, MAX_SCALE) },
+			{ duration: prefersReducedMotion.current ? 0 : GLIDE_MS }
+		);
 	}
 
 	/**

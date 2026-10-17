@@ -2,14 +2,16 @@
 	import { messages } from '#lib/i18n/index.ts';
 	import { openBoard } from '#lib/remote/boards.remote.ts';
 	import Workspace from '#lib/components/Workspace.svelte';
-	import { page } from '$app/state';
-	import type { PageData } from './$types';
+	import type { PageProps } from './$types';
 
-	interface Props {
-		data: PageData;
-	}
-
-	let { data }: Props = $props();
+	/*
+	 * `PageProps`, generated for this route: `data` and `params`, both typed.
+	 *
+	 * `params.board` is a `string` here — the route is `[board]`, so it is never
+	 * missing — where the global `page.params.board` from `$app/state` is
+	 * `string | undefined` and needs a `!` to call anything with.
+	 */
+	let { data, params }: PageProps = $props();
 	const t = $derived(messages(data.locale));
 
 	/**
@@ -21,18 +23,30 @@
 	 * hides itself when the URL looks like a board — is a conditional in a
 	 * component that has no business knowing about routes.
 	 *
-	 * The board is *awaited* in the markup below, not read through
-	 * `board.current`. `.current` never throws: a query that fails leaves it
-	 * `undefined` and puts the error on `board.error`, so a boundary around
-	 * `{#if board.current}` never reaches its `failed` snippet, and a board that
-	 * does not exist renders as an empty screen. `await` is what hands the
-	 * rejection — `openBoard`'s "No such board." — to the boundary.
+	 * The query is `$derived`, because SvelteKit reuses this component when the
+	 * URL goes from one board to another: same route, new `params`. Called once,
+	 * `openBoard(...)` would capture whichever board was open when the component
+	 * mounted and go on showing it. Derived, it re-runs when `params.board`
+	 * changes — the same reason `Comments.svelte` derives its query.
+	 *
+	 * And it is *awaited* in the markup below, inside the boundary, rather than
+	 * read through `board.current`. `.current` never throws: a query that fails
+	 * leaves it `undefined` and puts the error on `board.error`, so a boundary
+	 * around `{#if board.current}` never reaches its `failed` snippet, and a
+	 * board that does not exist renders as an empty screen. `await` is what hands
+	 * the rejection — `openBoard`'s "No such board." — to the boundary.
 	 */
-	const board = openBoard(page.params.board!);
+	const board = $derived(openBoard(params.board));
 
-	/** The headline above the server's own message, by status. */
-	const heading = (status: number) =>
-		status === 404 ? t.errors.notFound : status === 403 ? t.errors.forbidden : t.errors.generic;
+	/**
+	 * The headline above the server's own message.
+	 *
+	 * Only 404 has its own. `openBoard` needs `viewer`, the lowest role, so a
+	 * signed-in person either has access or gets "No such board." — never a 403 —
+	 * and a signed-out one never gets this far: `+page.server.ts` sends them to
+	 * sign in first.
+	 */
+	const heading = (status: number) => (status === 404 ? t.errors.notFound : t.errors.generic);
 </script>
 
 <svelte:head>

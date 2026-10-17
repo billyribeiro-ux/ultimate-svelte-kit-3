@@ -1,20 +1,15 @@
 <script lang="ts">
 	import PlusIcon from 'phosphor-svelte/lib/Plus';
-	import { ago, messages } from '#lib/i18n/index.ts';
+	import { ago, langParam, messages } from '#lib/i18n/index.ts';
 	import { createBoard, myBoards } from '#lib/remote/boards.remote.ts';
 	import Button from '#lib/components/Button.svelte';
-	import type { PageData } from './$types';
+	import type { PageProps } from './$types';
 	import { resolve } from '$app/paths';
 
-	interface Props {
-		data: PageData;
-	}
-
-	let { data }: Props = $props();
+	let { data }: PageProps = $props();
 	const t = $derived(messages(data.locale));
-	// `undefined` for English, so `resolve()` leaves the optional `[[lang]]`
-	// segment out — see the layout for why links are built this way.
-	const lang = $derived(data.locale === 'en' ? undefined : data.locale);
+	// See the layout for why links are built with `resolve()` and `langParam`.
+	const lang = $derived(langParam(data.locale));
 
 	/**
 	 * A live query, so a board created in another tab — or by a colleague in a
@@ -49,13 +44,15 @@
 			<!--
 				Even hidden inputs go through `fields.x.as(...)`.
 
-				An enhanced form refuses a field it did not create: "Form contained a
-				field that wasn't created with form.fields.as(...)". It is a good rule —
-				it is what lets the form know its own shape, report per-field issues and
-				keep values across a failed submission — and it is easy to trip over,
-				because a hand-written `<input type="hidden">` looks like the most
-				harmless markup in the file. Without JavaScript it submits fine, so the
-				failure only appears once hydration has finished.
+				A remote form refuses a field it did not create. A field made by
+				`.as(...)` carries the form's id in its `name`, and a hand-written one
+				does not: with JavaScript the error is "Form contained a field that
+				wasn't created with form.fields.as(...)", and without it the server
+				rejects the whole submission. It is a good rule — it is what lets the
+				form know its own shape, report per-field issues and keep values
+				across a failed submission — and it is easy to trip over, because a
+				hand-written `<input type="hidden">` looks like the most harmless
+				markup in the file.
 			-->
 			<input {...createBoard.fields.workspaceId.as('hidden', data.workspaceId ?? '')} />
 			<input {...createBoard.fields.title.as('hidden', t.board.untitled)} />

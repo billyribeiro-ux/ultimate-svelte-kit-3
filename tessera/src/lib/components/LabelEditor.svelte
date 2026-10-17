@@ -35,8 +35,6 @@
 
 	let { document: board, target, value, readOnly = false, onfinish }: Props = $props();
 
-	let field = $state<HTMLTextAreaElement | null>(null);
-
 	/**
 	 * Take focus, and select what is there.
 	 *
@@ -65,39 +63,82 @@
 	 * person has not committed. Diffing it produces a stream of insertions and
 	 * deletions that other replicas watch flicker, and it breaks the IME's own
 	 * candidate window. So nothing is sent until composition ends.
+	 *
+	 * A plain `let`, like `mirror` and `ids` below: they are read only by the
+	 * event handlers, `commit` and the attachment, never by the markup, a
+	 * `$derived` or an `$effect`, so there is nothing for a signal to notify.
 	 */
-	let composing = $state(false);
+	let composing = false;
 
 	/**
-	 * The last text we know the document holds.
+	 * The last text we know the document holds, and the id of each of its
+	 * characters, in order.
 	 *
 	 * Tracked separately from `value` because the diff must be against what the
 	 * *document* had, not what the textarea last rendered — those differ for one
-	 * frame after a remote edit lands.
+	 * frame after a remote edit lands. The ids are what an offset in the field
+	 * *meant* while the two were in step: by the time a remote edit reaches this
+	 * component the document already holds the new text, so asking it which
+	 * character sits at the caret's old offset would answer about the wrong text.
 	 */
 	// svelte-ignore state_referenced_locally
 	// Intentional. `mirror` is seeded from the current text once and then tracks
 	// what the *document* holds, which is not the same thing as what this prop
 	// last rendered — the two differ for one frame after a remote edit lands, and
 	// that frame is exactly when the diff must not use the newer value.
-	let mirror = $state(value);
+	let mirror = value;
+	let ids: readonly Stamp[] = [];
 
-	$effect(() => {
-		// A remote edit arrived. Update the field without disturbing the caret more
-		// than the change itself requires.
-		if (!field || field.value === value) {
-			mirror = value;
+	/** The field and the document now agree on `text`. */
+	function inStep(text: string) {
+		mirror = text;
+		ids = board
+			.label(target)
+			.visible()
+			.map((item) => item.id);
+	}
+
+	/**
+	 * Put the document's text into the field, keeping the caret on its character.
+	 *
+	 * The field has no `value={value}` in the markup, and that is the point.
+	 * Svelte writes a changed `value` into the textarea before any effect runs,
+	 * and assigning a textarea's value moves its caret to the end — so by the
+	 * time code meant to keep the caret still got to look, the text already
+	 * matched and the caret had already gone. This attachment is the only thing
+	 * that writes the value, and it reads the caret before it does.
+	 *
+	 * An attachment, not `bind:this` and an `$effect`: it is handed the element,
+	 * so there is no variable that is `null` until mount, and it runs in an
+	 * effect of its own — reading `value` is what re-runs it when somebody else's
+	 * edit lands. Like `takeFocus`, it is a `const`, so that read is the only
+	 * thing that does.
+	 */
+	const followDocument: Attachment<HTMLTextAreaElement> = (field) => {
+		if (field.value === value) {
+			inStep(value);
 			return;
 		}
 
-		const anchor = board.label(target).idBefore(field.selectionStart);
+		// Not focused yet — the first run, on mount. Nothing to keep in place.
+		if (field.ownerDocument.activeElement !== field) {
+			field.value = value;
+			inStep(value);
+			return;
+		}
+
+		// The character the caret sat after, by id, read from the text the field
+		// still shows. Chapter 11's `offsetAfter` then says where it is now.
+		const before = field.selectionStart;
+		const anchor = before > 0 ? (ids[before - 1] ?? null) : null;
+
 		field.value = value;
-		mirror = value;
+		inStep(value);
 
 		const offset = board.label(target).offsetAfter(anchor);
-		const caret = offset ?? Math.min(field.selectionStart, value.length);
+		const caret = offset ?? Math.min(before, value.length);
 		field.setSelectionRange(caret, caret);
-	});
+	};
 
 	function commit(next: string) {
 		if (next === mirror) return;
@@ -125,15 +166,18 @@
 		if (removed > 0) board.deleteText(target, start, start + removed);
 		if (added) board.insertText(target, start, added);
 
-		mirror = next;
+		inStep(next);
 	}
 </script>
 
+<!--
+	`followDocument` before `takeFocus`: the text has to be in the field before
+	there is anything to select.
+-->
 <textarea
-	bind:this={field}
+	{@attach followDocument}
 	{@attach takeFocus}
 	class="label-editor"
-	{value}
 	readonly={readOnly}
 	spellcheck="false"
 	rows="1"

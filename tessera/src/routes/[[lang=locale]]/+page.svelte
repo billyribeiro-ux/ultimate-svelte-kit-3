@@ -1,20 +1,15 @@
 <script lang="ts">
-	import { messages } from '#lib/i18n/index.ts';
+	import { langParam, messages } from '#lib/i18n/index.ts';
 	import { reveal } from '#lib/motion/index.ts';
 	import Logo from '#lib/components/Logo.svelte';
 	import Button from '#lib/components/Button.svelte';
-	import type { PageData } from './$types';
+	import type { PageProps } from './$types';
 	import { resolve } from '$app/paths';
 
-	interface Props {
-		data: PageData;
-	}
-
-	let { data }: Props = $props();
+	let { data }: PageProps = $props();
 	const t = $derived(messages(data.locale));
-	// `undefined` for English, so `resolve()` leaves the optional `[[lang]]`
-	// segment out — see the layout for why links are built this way.
-	const lang = $derived(data.locale === 'en' ? undefined : data.locale);
+	// See the layout for why links are built with `resolve()` and `langParam`.
+	const lang = $derived(langParam(data.locale));
 </script>
 
 <svelte:head>

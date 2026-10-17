@@ -41,11 +41,11 @@
 		<span class="code__file">package.json</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-json">&quot;verify&quot;: &quot;npm run check &amp;&amp; npm run lint &amp;&amp; npm run test:unit -- --run &amp;&amp; npm run build &amp;&amp; npm run test:e2e&quot;</code></pre>
+	<pre><code class="lang-json">&quot;verify&quot;: &quot;pnpm run check &amp;&amp; pnpm run lint &amp;&amp; pnpm run test:unit --run &amp;&amp; pnpm run build &amp;&amp; pnpm run test:e2e&quot;</code></pre>
 </figure>
-<p>Five steps, in an order chosen so the fastest thing that can fail fails first. Running it takes about ninety seconds, which is short enough that there is no excuse.</p>
-<aside class="callout callout--note"><p>One oddity in that line: the steps are chained with <code>npm run</code>, in a project pinned to pnpm. It works, because npm comes with Node and <code>npm run</code> only runs another script from this same <code>package.json</code>. But it is a leftover rather than a decision, and so is the <code>npm run build</code> in chapter 42’s Playwright config. In your own scripts, <code>pnpm run</code> is the consistent spelling.</p></aside>
-<ul><li><strong><code>check</code></strong> — <code>svelte-kit sync</code>, then <code>svelte-check</code>, then <code>tsc</code> over the service worker with its own config. The last is separate because a service worker has <code>WebWorker</code> lib and no DOM, and type-checking it with the app’s <code>tsconfig</code> is meaningless in both directions.</li><li><strong><code>lint</code></strong> — <code>prettier --check .</code> and <code>eslint .</code>. Formatting is checked rather than applied, so a badly formatted commit fails rather than silently rewriting somebody’s working tree.</li><li><strong><code>test:unit</code></strong> — 115 tests in about a second and a half, of which the interesting four are a few hundred thousand delivery schedules.</li><li><strong><code>build</code></strong> — the real one, including the service worker’s separate Vite environment and the adapter.</li><li><strong><code>test:e2e</code></strong> — 34 tests across two device profiles, against that build.</li></ul>
+<p>Five steps, in an order chosen so the fastest thing that can fail fails first. Running it takes about two minutes, which is short enough that there is no excuse.</p>
+<aside class="callout callout--note"><p>Every step is <code>pnpm run</code>, like the <code>pnpm run build</code> in chapter 42’s Playwright config. <code>npm run</code> would work too — npm comes with Node — but a project pinned to one package manager should not quietly call another, and <code>pnpm run test:unit --run</code> passes <code>--run</code> straight through to Vitest without npm’s <code>--</code> in between.</p></aside>
+<ul><li><strong><code>check</code></strong> — <code>svelte-kit sync</code>, then <code>svelte-check</code>, then <code>tsc</code> over the service worker with its own config. The last is separate because a service worker has <code>WebWorker</code> lib and no DOM, and type-checking it with the app’s <code>tsconfig</code> is meaningless in both directions.</li><li><strong><code>lint</code></strong> — <code>prettier --check .</code> and <code>eslint .</code>. Formatting is checked rather than applied, so a badly formatted commit fails rather than silently rewriting somebody’s working tree.</li><li><strong><code>test:unit</code></strong> — 117 tests in two Vitest projects. 115 run in plain Node in about a second, and the interesting four of those are a few hundred thousand delivery schedules. The other two are component tests in a real Chromium, for chapter 35’s caret — the one place where a DOM emulator with no selection model would have passed a broken editor.</li><li><strong><code>build</code></strong> — the real one, including the service worker’s separate Vite environment and the adapter.</li><li><strong><code>test:e2e</code></strong> — 42 tests across two device profiles, against that build.</li></ul>
 
 <figure class="code code--terminal">
 	<figcaption>
@@ -54,12 +54,12 @@
 	</figcaption>
 	<pre><code>$ pnpm run verify
 
-  svelte-check   1512 files, 0 errors, 0 warnings
+  svelte-check   1525 files, 0 errors, 0 warnings
   prettier       all matched files use Prettier code style
   eslint         clean
-  vitest         Test Files 9 passed (9) · Tests 115 passed (115)   1.10s
-  vite build     ✓ built in 889ms   (+ service worker, 42ms)
-  playwright     34 passed (43.4s)</code></pre>
+  vitest         Test Files 10 passed (10) · Tests 117 passed (117)   2.95s
+  vite build     ✓ built in 1.26s   (+ service worker, 42ms)
+  playwright     42 passed (60.0s)</code></pre>
 </figure>
 
 <aside class="callout callout--why">
@@ -87,7 +87,7 @@
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>
-	<ul><li>One command, ninety seconds, and a green result you can describe precisely.</li><li>You can name four things the gate does not cover.</li><li>The service worker is type-checked.</li></ul>
+	<ul><li>One command, two minutes, and a green result you can describe precisely.</li><li>You can name four things the gate does not cover.</li><li>The service worker is type-checked.</li></ul>
 </aside>
 		</article>
 

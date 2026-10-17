@@ -709,7 +709,7 @@ return { accepted: ops.length, watermark };`
 			{
 				type: 'why',
 				title: 'The asymmetry that makes the fix obvious',
-				text: 'Echoing an operation somebody already has is **harmless** — every replica is idempotent, that is the entire point of part 2. Dropping a new one is not. So when the two error directions have wildly different costs, pick the algorithm that can only ever fail in the cheap direction. Filtering on the returned stamps costs a `Set` and cannot be wrong.'
+				text: 'Echoing an operation somebody already has is **harmless** — every replica is idempotent, that is the entire point of chapters 09 to 12. Dropping a new one is not. So when the two error directions have wildly different costs, pick the algorithm that can only ever fail in the cheap direction. Filtering on the returned stamps costs a `Set` and cannot be wrong.'
 			},
 
 			{ type: 'h3', id: 'reading', text: 'Reading it back' },

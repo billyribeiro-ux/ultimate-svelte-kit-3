@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { isHttpError } from '@sveltejs/kit';
+	import type { RemoteFormEnhanceInstance } from '$app/server';
 	import { restoreTo, revisions, saveCheckpoint } from '#lib/remote/history.remote.ts';
 	import type { Locale } from '#lib/i18n/index.ts';
 	import { requireMessages } from '#lib/i18n/context.ts';
@@ -15,6 +16,9 @@
 
 	const catalogue = requireMessages();
 	const t = $derived(catalogue());
+
+	/** Unique to this instance, for the label's `for`. */
+	const uid = $props.id();
 
 	// `$derived` so that opening a different board re-runs the query. See the same
 	// note in `Comments.svelte`. It is awaited inside the boundary below, so the
@@ -44,20 +48,41 @@
 			restoring = null;
 		}
 	}
+
+	/**
+	 * Save a checkpoint, via `enhance` — for the reason the comment forms use it.
+	 *
+	 * A refused submission would otherwise render the root error page in place
+	 * of the editor. The form is shown only to people who may save, so a refusal
+	 * here means the role changed while the board was open; it still deserves a
+	 * sentence rather than a lost editor.
+	 */
+	async function save(form: Pick<RemoteFormEnhanceInstance, 'element' | 'submit'>) {
+		refusal = null;
+		try {
+			if (await form.submit()) form.element.reset();
+		} catch (thrown) {
+			refusal = isHttpError(thrown) ? thrown.body.message : t.errors.generic;
+		}
+	}
 </script>
 
 <section class="history" aria-label={t.history.heading}>
 	{#if !readOnly}
-		<form {...saveCheckpoint} class="history__save">
+		<form {...saveCheckpoint.enhance(save)} class="history__save">
 			<input {...saveCheckpoint.fields.boardId.as('hidden', boardId)} />
-			<label class="visually-hidden" for="checkpoint-label">{t.history.checkpoint}</label>
+			<label class="visually-hidden" for="{uid}-checkpoint">{t.history.checkpoint}</label>
 			<input
-				id="checkpoint-label"
+				id="{uid}-checkpoint"
 				{...saveCheckpoint.fields.label.as('text')}
 				placeholder={t.history.checkpoint}
 			/>
 			<Button size="sm" type="submit">{t.history.checkpoint}</Button>
 		</form>
+
+		{#if saveCheckpoint.fields.issues()?.length}
+			<p class="history__error" role="alert">{saveCheckpoint.fields.issues()?.[0]?.message}</p>
+		{/if}
 	{/if}
 
 	{#if refusal}
@@ -67,7 +92,7 @@
 	<svelte:boundary>
 		<ol class="history__list">
 			{#each await list as revision (revision.seq)}
-				<li class="history__item" class:history__item--mark={revision.isCheckpoint}>
+				<li class={['history__item', { 'history__item--mark': revision.isCheckpoint }]}>
 					<!--
 						`revision.describe(...)` — a method on an object that came from the
 						server.

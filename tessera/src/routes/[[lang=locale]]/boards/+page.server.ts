@@ -1,7 +1,7 @@
-import { redirect } from '@sveltejs/kit';
-import { eq } from 'drizzle-orm';
+import { and, asc, eq, inArray } from 'drizzle-orm';
 import { db } from '#lib/server/db/index.ts';
 import { membership } from '#lib/server/db/schema.ts';
+import { userOrSignIn } from '#lib/server/session.ts';
 import type { PageServerLoad } from './$types';
 
 /**
@@ -13,13 +13,20 @@ import type { PageServerLoad } from './$types';
  * alternative is a "smart" default that guesses wrong and creates a board
  * somewhere the person cannot find it.
  */
-export const load: PageServerLoad = async ({ locals, url }) => {
-	if (!locals.user) redirect(303, `/sign-in?from=${encodeURIComponent(url.pathname)}`);
+export const load: PageServerLoad = async () => {
+	const user = userOrSignIn();
 
+	/*
+	 * Only a workspace where this person may create boards, and the oldest of
+	 * those, so the answer does not depend on the order SQLite happens to return
+	 * rows in. A viewer in somebody else's workspace who also owns their own
+	 * must not be handed the one where "New board" can only be refused.
+	 */
 	const rows = await db
 		.select({ workspaceId: membership.workspaceId })
 		.from(membership)
-		.where(eq(membership.userId, locals.user.id))
+		.where(and(eq(membership.userId, user.id), inArray(membership.role, ['owner', 'editor'])))
+		.orderBy(asc(membership.createdAt))
 		.limit(1);
 
 	return { workspaceId: rows[0]?.workspaceId ?? null };
