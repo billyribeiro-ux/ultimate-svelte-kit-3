@@ -63,8 +63,40 @@ function esc(value) {
 		.replace(/"/g, '&quot;');
 }
 
+/* ------------------------------------------------------------------ */
+/* Cross-references                                                    */
+/* ------------------------------------------------------------------ */
+
+/*
+ * The prose names a chapter by its slug — `ch. {{the-trip-page}}` — and the
+ * number is worked out here, from the same order that numbers the pages. A
+ * hand-written "ch. 24" stays 24 when a chapter is inserted before it and
+ * quietly points at the wrong page; a name cannot. `tools/slugify-refs.js`
+ * says how the old numbers were converted, and `verify.js` refuses a bare
+ * number and a name that is not a chapter.
+ */
+const NUMBERS = new Map(chapters.map((c, i) => [c.slug, String(i + 1).padStart(2, '0')]));
+const XREF = /\{\{([A-Za-z0-9-]+)\}\}/g;
+
+/** @param {string} slug */
+function numberOf(slug) {
+	const number = NUMBERS.get(slug);
+	if (!number) throw new Error(`a cross-reference names no chapter: {{${slug}}}`);
+	return number;
+}
+
 /**
- * Inline markup for prose: `code`, **bold**, [text](url).
+ * For text that cannot hold a link — a `<meta>` description, a card that is
+ * itself a link: the reference becomes the chapter's number.
+ * @param {unknown} text
+ */
+function plain(text) {
+	return String(text).replace(XREF, (_, slug) => numberOf(slug));
+}
+
+/**
+ * Inline markup for prose: `code`, **bold**, [text](url), and chapter
+ * references, which become the chapter's number linked to its page.
  * Escaping happens FIRST, so the source text can never inject HTML.
  * @param {string} text
  */
@@ -72,7 +104,8 @@ function inline(text) {
 	return esc(text)
 		.replace(/`([^`]+)`/g, '<code>$1</code>')
 		.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-		.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+		.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+		.replace(XREF, (_, slug) => `<a href="${slug}.html">${numberOf(slug)}</a>`);
 }
 
 /* ------------------------------------------------------------------ */
@@ -113,7 +146,7 @@ function renderBlock(block) {
 		<span class="code__file">terminal</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code>${esc(block.code.replace(/^\n/, ''))}</code></pre>
+	<pre><code>${esc(plain(block.code.replace(/^\n/, '')))}</code></pre>
 </figure>`;
 
 		case 'note':
@@ -193,7 +226,7 @@ function renderPage({ chapter, index, all }) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(chapter.title)} — ${COURSE.name}</title>
-<meta name="description" content="${esc(chapter.summary ?? '')}">
+<meta name="description" content="${esc(plain(chapter.summary ?? ''))}">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -281,7 +314,7 @@ function renderIndex(all) {
 				<span class="card__num">${String(i + 1).padStart(2, '0')}</span>
 				<span class="card__body">
 					<span class="card__title">${esc(c.title)}</span>
-					${c.summary ? `<span class="card__summary">${esc(c.summary)}</span>` : ''}
+					${c.summary ? `<span class="card__summary">${esc(plain(c.summary))}</span>` : ''}
 				</span>
 			</a>
 		</li>`

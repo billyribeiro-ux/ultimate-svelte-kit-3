@@ -135,6 +135,19 @@ export default defineConfig(({ mode }) => {
 				},
 
 				/*
+				 * Not a SvelteKit option: `sveltekit()` passes whatever it does not
+				 * own through to vite-plugin-svelte, and `inspector` is that plugin's.
+				 * In the dev server, Alt+X switches the Svelte inspector on: the
+				 * element under the pointer is outlined with the component file that
+				 * drew it, the arrow keys walk up and down the tree, and Enter opens
+				 * that file in your editor. A build never includes it. The key is the
+				 * default, written out because it is the one thing a person needs to
+				 * know; the floating toggle button is off because its corner is where
+				 * the header keeps its menu button.
+				 */
+				inspector: { toggleKeyCombo: 'alt-x', showToggleButton: 'never' },
+
+				/*
 				 * ADAPTER-NODE
 				 * ============
 				 *
@@ -238,8 +251,8 @@ export default defineConfig(({ mode }) => {
 				 *
 				 * Client-side navigation loads JavaScript by hashed filename. Deploy a
 				 * new build while somebody has a trip open and the next navigation asks
-				 * for a file that no longer exists. `pollInterval` lets SvelteKit notice
-				 * first, so the layout can offer a "reload for the new version" banner.
+				 * for a file that no longer exists. The x-sveltekit-version header and focus
+				 * catch it first; `pollInterval` covers a parked tab, so the banner still shows.
 				 *
 				 * `name` is the commit, because it has to be deterministic.
 				 */
@@ -248,7 +261,19 @@ export default defineConfig(({ mode }) => {
 					pollInterval: 60_000
 				},
 
-				output: { bundleStrategy: 'split' }
+				/*
+				 * `linkHeaderPreload`: a dynamically rendered page announces what it
+				 * will need — its JavaScript, its stylesheets, the two fonts the
+				 * `preload` hook in `hooks.server.ts` picks — in a `Link` response
+				 * header rather than in `<link>` tags inside the HTML, so the browser
+				 * can start fetching before it has parsed a byte of the body.
+				 * Prerendered pages keep their tags: a file on disk has no headers of
+				 * its own. The option's own documentation carries the warning: Nginx
+				 * and Apache limit the size of a response header by default, and the
+				 * trip page's is about 7.5 KB. A proxy put in front of this server has to
+				 * allow for that, or this goes back to `false`.
+				 */
+				output: { bundleStrategy: 'split', linkHeaderPreload: true }
 			}),
 
 			/*

@@ -53,7 +53,7 @@
 	 * on a server-rendered page, the server's input is still there with
 	 * whatever a person typed into it, and hydration would write the empty
 	 * string the server knew about over it — the bug `keepTyped()` fixes for
-	 * the sign-in form (chapter 32), here for a plain `bind:value`. On a
+	 * the sign-in form (course chapter `signing-in-and-up`), here for a plain `bind:value`. On a
 	 * client-side navigation there is no such input yet, and the filter
 	 * starts empty.
 	 */

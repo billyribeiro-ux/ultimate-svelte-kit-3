@@ -192,3 +192,14 @@ test('a URL that matches nothing gets the root error page, with a way home', asy
 	await expect(page.getByText('That page does not exist.')).toBeVisible();
 	await expect(page.getByRole('link', { name: 'Meridian' })).toBeVisible();
 });
+
+test('a dynamically rendered page carries its preloads as a Link header', async ({ request }) => {
+	// `output.linkHeaderPreload`: the preloads leave the HTML for the response header, so the
+	// browser can start on them before it has read the body. The font is the one the `preload`
+	// hook in hooks.server.ts picks by source filename.
+	const response = await request.get('/explore');
+	const link = response.headers()['link'] ?? '';
+	expect(link).toContain('rel="modulepreload"');
+	expect(link).toMatch(/fraunces-latin-standard-normal[^>]*\.woff2>; rel="preload"; as="font"/);
+	expect(await response.text()).not.toContain('rel="modulepreload"');
+});

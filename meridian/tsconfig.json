@@ -26,7 +26,13 @@
 
 		// Unused locals and parameters are errors.
 		"noUnusedLocals": true,
-		"noUnusedParameters": true
+		"noUnusedParameters": true,
+
+		// Only TypeScript that can be deleted to leave JavaScript: no `enum`, no
+		// value `namespace`, no constructor parameter properties. Node runs
+		// `scripts/*.ts` by stripping the types, and Svelte compiles a
+		// `lang="ts"` block the same way; neither can run what this forbids.
+		"erasableSyntaxOnly": true
 	},
 
 	// SvelteKit 3 requires these to be explicit. Without them `svelte-check` will

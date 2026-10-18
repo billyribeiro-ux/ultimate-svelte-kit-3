@@ -7,7 +7,7 @@
 	import EmbedSection from './EmbedSection.svelte';
 	import SettingsForm from './SettingsForm.svelte';
 
-	// The route's own parameters, typed by the matcher in `src/params.ts` (chapter 14 says how).
+	// The route's own parameters, typed by the matcher in `src/params.ts` (the course chapter `environment-and-hooks` says how).
 	let { params }: PageProps = $props();
 </script>
 

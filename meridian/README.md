@@ -33,8 +33,9 @@ answers at `/embed/seedjapan2` and `/api/route/seedjapan2.json`.
 ## Prove it
 
 ```bash
-pnpm run check               # svelte-check, strict
+pnpm run check               # svelte-check, strict, and a warning fails it
 pnpm run lint                # prettier + eslint + every token colour pair against its WCAG floor
+pnpm run lint:svelte         # the Svelte autofixer over every component; see .autofixer-accepted.json
 pnpm run test:unit -- --run  # two Vitest 5 projects: Node for logic, Chromium for components
 pnpm run build               # the custom element, then the app
 node scripts/bundle-guard.ts # GSAP only on the home page; no unbudgeted chunk over 20 KB gzipped

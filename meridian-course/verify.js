@@ -25,11 +25,20 @@
  *      cheap and surprisingly effective proxy for "this is a whole thing";
  *   6. every chapter has at least one code or terminal block, because a chapter
  *      of pure prose in a course about building something is usually a chapter
- *      that lost its code in an edit.
+ *      that lost its code in an edit;
+ *   7. every cross-reference names a chapter that exists — `{{the-trip-page}}`,
+ *      which `build.js` turns into the chapter's number — and no chapter number
+ *      is written by hand ("ch. 24", "chapter 36", "chapters 16–19"), in the
+ *      prose, in the part files' own comments, or in a quoted code comment. A
+ *      hand-written number is right until a chapter is inserted before it, and
+ *      then wrong on every page at once with nothing to say so.
  *
  * Run:  node meridian-course/verify.js
  */
 
+import { readdirSync, readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { chapters } from './content/index.js';
 import { linesOf } from './content/quote.js';
 
@@ -165,9 +174,41 @@ for (const chapter of chapters) {
 	}
 }
 
+/* 7. Cross-references ------------------------------------------------ */
+
+const slugs = new Set(chapters.map((c) => c.slug));
+const XREF = /\{\{([A-Za-z0-9-]+)\}\}/g;
+const BARE = /\b([Cc]h\.|[Cc]hapters?)\s+\d+/g;
+const content = join(dirname(fileURLToPath(import.meta.url)), 'content');
+let xrefs = 0;
+
+for (const name of readdirSync(content).filter((f) => /^part\d+\.js$/.test(f))) {
+	const lines = readFileSync(join(content, name), 'utf8').split('\n');
+	lines.forEach((line, i) => {
+		for (const [, slug] of line.matchAll(XREF)) {
+			xrefs += 1;
+			if (!slugs.has(slug)) problems.push(`${name}:${i + 1}: {{${slug}}} names no chapter`);
+		}
+		for (const [match] of line.matchAll(BARE)) {
+			problems.push(`${name}:${i + 1}: "${match}…" is a chapter number written by hand — name the chapter: {{slug}}`);
+		}
+	});
+}
+
+for (const chapter of chapters) {
+	if (XREF.test(chapter.title)) problems.push(`${chapter.slug}: a title is a name, not a reference`);
+	XREF.lastIndex = 0;
+	for (const block of chapter.blocks) {
+		if (block.type !== 'code' || !block.file) continue;
+		for (const [match] of block.code.matchAll(BARE)) {
+			problems.push(`${chapter.slug} → ${block.file}: "${match}…" in the quoted code — name the chapter instead`);
+		}
+	}
+}
+
 console.log(
 	`${chapters.length} chapters · ${quoted} blocks quoted from meridian/ by line range · ` +
-		`${illustrative} illustrative blocks (no file named)`
+		`${illustrative} illustrative blocks (no file named) · ${xrefs} chapter references by name`
 );
 
 if (problems.length > 0) {
@@ -175,4 +216,6 @@ if (problems.length > 0) {
 	process.exit(1);
 }
 
-console.log('every range is inside its file, whole, and starts somewhere a reader can follow');
+console.log(
+	'every range is inside its file, whole, and starts somewhere a reader can follow; every chapter reference names a chapter'
+);

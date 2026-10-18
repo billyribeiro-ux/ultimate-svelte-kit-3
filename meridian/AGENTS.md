@@ -3,7 +3,7 @@
 - **Language**: TypeScript 6.0 (the newest major SvelteKit 3, svelte-check and typescript-eslint support; 7 is not yet)
 - **Toolchain**: Node 24.21.0 (`.nvmrc`, the current LTS), pnpm 12.10.1 (`packageManager`), SvelteKit 3.0.1, Svelte 5.57, Vite 8.3, Vitest 5, Playwright 1.64 — as of October 2026
 - **Package Manager**: pnpm (a workspace: the app at the root, the `@meridian/waypoint` library in `packages/waypoint`). Two peer warnings are allowed on purpose in `pnpm-workspace.yaml`; the comment there says which and why.
-- **Add-ons**: experimental, prettier, eslint, vitest, playwright, sveltekit-adapter, drizzle, better-auth, mdsvex, paraglide, ai-tools
+- **Add-ons**: experimental, prettier, eslint, vitest, playwright, sveltekit-adapter, drizzle, better-auth, mdsvex, paraglide, ai-tools, enhanced-img
 
 ---
 

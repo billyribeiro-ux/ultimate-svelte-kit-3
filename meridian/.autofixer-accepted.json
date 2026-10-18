@@ -1,0 +1,95 @@
+{
+	"$comment": "Autofixer suggestions that were read and declined. `pnpm run lint:svelte` (scripts/autofix-report.ts) fails on any suggestion not listed here, and on any entry whose count no longer matches. `suggestion` is a piece of the suggestion's text; `count` is how many times the file earns it. Issues are never listed: they are fixed.",
+	"accepted": [
+		{
+			"file": "src/lib/globe/Scene.svelte",
+			"suggestion": "inside an $effect. Please check if the function is reassigning a stateful variable",
+			"count": 7,
+			"reason": "Every call is three.js: `dispose()` on the previous GPU buffers in a cleanup, and `position.copy()` and `lookAt()` on the camera. They write to three.js objects, not to Svelte state; `touched`, `leg` and `progress` are plain variables for the frame loop and are never rendered. The comment above the camera effects says so."
+		},
+		{
+			"file": "src/lib/map/MapView.svelte",
+			"suggestion": "inside an $effect. Please check if the function is reassigning a stateful variable",
+			"count": 18,
+			"reason": "MapLibre's own methods (`fitBounds`, `resize`, `once`, `off`, `jumpTo`, `flyTo`), a ResizeObserver, and `padding()` and `closeEnough()`, which measure and return without assigning anything. `untrack` keeps the stops and the current zoom out of the flight's dependencies. `framed` and `flownTo` are plain variables, a once-only flag and the last stop flown to, never rendered."
+		},
+		{
+			"file": "src/lib/map/MapView.svelte",
+			"suggestion": "The usage of `bind:this` can often be replaced",
+			"count": 1,
+			"reason": "The frame is measured from several places, `padding()` on every fit and every flight and the size watch, so the element is held rather than handed to one attachment once. The comment above `frame` says so."
+		},
+		{
+			"file": "src/lib/trip/Expenses.svelte",
+			"suggestion": "inside an $effect. Please check if the function is reassigning a stateful variable",
+			"count": 4,
+			"reason": "`createElement`, `append`, `getComputedStyle` and `remove`: the effect asks the document what the theme's category colours resolve to, which only a styled page in a browser can answer. See the next entry."
+		},
+		{
+			"file": "src/lib/trip/Expenses.svelte",
+			"suggestion": "The stateful variable \"colours\" is assigned inside an $effect",
+			"count": 1,
+			"reason": "The colours come from `getComputedStyle`. A server render has no document, and a `$derived` must not force style resolution in the middle of drawing, so the server draws the slices in `currentColor` and the effect paints them once the page is in a browser. The comment above `colours` says so."
+		},
+		{
+			"file": "src/lib/trip/Itinerary.svelte",
+			"suggestion": "inside an $effect. Please check if the function is reassigning a stateful variable",
+			"count": 7,
+			"reason": "The effect marks stops that have just arrived: it adds each to the `fresh` SvelteSet and removes it again with `setTimeout` 1.2 s later. Time passing is not something a `$derived` can depend on. The bookkeeping runs inside `untrack`, so the stop ids are the only dependency."
+		},
+		{
+			"file": "src/lib/trip/Notes.svelte",
+			"suggestion": "inside an $effect. Please check if the function is reassigning a stateful variable",
+			"count": 5,
+			"reason": "Tiptap's methods: `setEditable`, `getJSON` and `commands.setContent`. Both effects write into the editor's own document, outside Svelte, and compute nothing that is drawn. The comments above them say so."
+		},
+		{
+			"file": "src/lib/trip/StopDialog.svelte",
+			"suggestion": "The usage of `bind:this` can often be replaced",
+			"count": 1,
+			"reason": "Held for one imperative step: Bits UI's open-focus handler focuses the name field when a stop is being edited. The comment above `nameInput` says so."
+		},
+		{
+			"file": "src/lib/trip/TripView.svelte",
+			"suggestion": "inside an $effect. Please check if the function is reassigning a stateful variable",
+			"count": 27,
+			"reason": "Timers (`setTimeout`, `setInterval` and their clears); layout measurement (`measure`, `edges`, a ResizeObserver, `getBoundingClientRect`), which writes what it measured to the tab indicator's Tween and the two fade flags because only a laid-out page can answer; and the presence commands `heartbeat` and `leave`, sent through `fireAndForget`. `untrack` keeps the selected stop out of the heartbeat timer's dependencies. The two effects that assign state are listed on their own below."
+		},
+		{
+			"file": "src/lib/trip/TripView.svelte",
+			"suggestion": "The stateful variable \"patient\" is assigned inside an $effect",
+			"count": 1,
+			"reason": "Three seconds passing is not something a `$derived` can depend on. The effect's cleanup stops the timer if the page goes first. The comment above `patient` says so."
+		},
+		{
+			"file": "src/lib/trip/TripView.svelte",
+			"suggestion": "The stateful variable \"frameTop\" is assigned inside an $effect",
+			"count": 1,
+			"reason": "A measurement of the laid-out page, taken by a ResizeObserver and on resize. A `$derived` cannot read layout. The comment above `header` says so."
+		},
+		{
+			"file": "src/lib/trip/TripView.svelte",
+			"suggestion": "The usage of `bind:this` can often be replaced",
+			"count": 3,
+			"reason": "The tab strip is measured from three places (two effects and the scroll handler), and one ResizeObserver watches the header and measures the panel. An attachment is handed one element, once. The comments above `strip` and `header` say so."
+		},
+		{
+			"file": "src/lib/ui/Header.svelte",
+			"suggestion": "inside an $effect. Please check if the function is reassigning a stateful variable",
+			"count": 1,
+			"reason": "`querySelectorAll` finds `main` and `footer` so the effect can set `inert` on them while the sheet is open: a write to elements this component does not own, undone by the cleanup."
+		},
+		{
+			"file": "src/lib/ui/Header.svelte",
+			"suggestion": "The usage of `bind:this` can often be replaced",
+			"count": 2,
+			"reason": "`toggle()` moves focus between the nav and the menu button after the sheet opens or closes, an imperative step in a handler that needs the elements themselves. The comment above `wide` says so."
+		},
+		{
+			"file": "src/routes/(site)/explore/+page.svelte",
+			"suggestion": "The usage of `bind:this` can often be replaced",
+			"count": 1,
+			"reason": "Both clear buttons remove themselves, and a button that disappears under keyboard focus drops focus to the top of the document. Clearing therefore puts focus back in the search field, an imperative step in a click handler. The comment above `clear()` says so."
+		}
+	]
+}

@@ -1,6 +1,6 @@
 /**
  * PART 7 — The ecosystem
- * (chapters 37–40)
+ * (chapters {{choosing-libraries}}–{{reactivity-utilities}})
  *
  * The chapters the course was asked for by name: which libraries, why, what
  * was rejected, and the three shapes a library can take when it meets Svelte
@@ -16,14 +16,14 @@ export const part7 = [
 		slug: 'choosing-libraries',
 		title: 'The survey: what was chosen, what was rejected, and why',
 		summary:
-			'Every dependency in the project against the four questions from chapter 01, with its version as of October 2026 and the alternatives it beat — and the packages that did not make it, with the reason: not yet on Svelte 5 or SvelteKit 3, folded into the framework, or too heavy for what it did.',
+			'Every dependency in the project against the four questions from chapter {{what-we-are-building}}, with its version as of October 2026 and the alternatives it beat — and the packages that did not make it, with the reason: not yet on Svelte 5 or SvelteKit 3, folded into the framework, or too heavy for what it did.',
 		goal: 'Have a written, reproducible method for picking a library in the Svelte ecosystem, and know the state of the main candidates as of the day this project was built.',
 		blocks: [
 			{
 				type: 'p',
-				text: 'Chapter 01 gave the four questions: does it work with Svelte 5 and SvelteKit 3 *today*; is it the right shape; does it earn its bytes; could we remove it later. This chapter is the answers, one library at a time, and — more usefully — the ones that failed. A survey that only lists winners is an advertisement.'
+				text: 'Chapter {{what-we-are-building}} gave the four questions: does it work with Svelte 5 and SvelteKit 3 *today*; is it the right shape; does it earn its bytes; could we remove it later. This chapter is the answers, one library at a time, and — more usefully — the ones that failed. A survey that only lists winners is an advertisement.'
 			},
-			code('package.json', 69, 101, { partial: true }),
+			code('package.json', 72, 104, { partial: true }),
 
 			{ type: 'h3', id: 'how', text: 'How each one was checked' },
 			{
@@ -48,11 +48,11 @@ $ pnpm why <package>           # what pulled it in, and whether it pins svelte@4
 					'**Headless — behaviour and accessibility, no pixels.** Bits UI 2.19 (Dialog, Combobox, Command, DateRangePicker, DatePicker); TanStack Table 9.2. Beat: Melt UI (Bits is built on its builders and adds the component layer), shadcn-svelte (a copy-in kit *on top of* Bits — right for a team that wants the styling done, wrong for a course about the primitives), Skeleton (a full framework with its own tokens; the project already has tokens), Flowbite-Svelte (styled, Tailwind, Svelte 4 lineage).',
 					'**Wrappers — components over an imperative library.** svelte-maplibre 2.0 over MapLibre GL 6.13; Threlte 8.6 / extras 9.22 over three.js 0.186; LayerChart 2.6 over d3 scales. Beat: raw MapLibre through an attachment (thirty markers want an `{#each}`), Mapbox GL (a licence, a key and a `connect-src`), Leaflet (raster, no vector styling, no WebGL), raw three.js (a scene graph wants a template), Chart.js and ECharts (canvas charts with their own theming and a `Chart` object to sync).',
 					'**Imperative through an attachment — wants one element and owns it.** Tiptap 3.31 through `{@attach}`, with `@tiptap/extension-placeholder` for the empty page (3KB, and one more extension rather than a hand-rolled decoration); GSAP 3.15 through `{@attach}`. Beat: the Svelte wrappers for Tiptap (nothing to add), ProseMirror directly (Tiptap *is* ProseMirror with a schema and commands), Lexical (React-first), Quill (its own data model).',
-					'**Actions.** svelte-dnd-action 0.9.80. Beat: Atlassian’s pragmatic-drag-and-drop (excellent, framework-agnostic, and needs a hundred lines of adapter for keyboard support that svelte-dnd-action has built in), `svelte-dnd-list` (Svelte 4), the HTML Drag and Drop API alone (no touch, no keyboard). It ships an action — the shape before attachments — and `fromAction` from `svelte/attachments` applies it as one, so choosing it cost no legacy syntax in the app (chapter 25).',
+					'**Actions.** svelte-dnd-action 0.9.80. Beat: Atlassian’s pragmatic-drag-and-drop (excellent, framework-agnostic, and needs a hundred lines of adapter for keyboard support that svelte-dnd-action has built in), `svelte-dnd-list` (Svelte 4), the HTML Drag and Drop API alone (no touch, no keyboard). It ships an action — the shape before attachments — and `fromAction` from `svelte/attachments` applies it as one, so choosing it cost no legacy syntax in the app (chapter {{the-itinerary}}).',
 					'**Compilers and preprocessors.** Paraglide 2.26; mdsvex 0.12.8; `@sveltejs/enhanced-img` 1.0.0; `phosphor-svelte` 3.1 with its Vite plugin. Beat: svelte-i18n (a runtime dictionary), `@inlang/paraglide-sveltekit` (folded into Paraglide 2 — see below), `svelte-markdown` (runtime parsing), `unplugin-icons` (fine; Phosphor’s own package has the weights the design uses), Lucide (also fine; a coin toss the design decided).',
 					'**Server libraries with a SvelteKit adapter.** Better Auth 1.7.7; Drizzle 0.45 with libSQL 0.18; OpenTelemetry’s Node SDK. Beat: Lucia (deprecated itself and recommends rolling your own or Better Auth), Auth.js (session-in-JWT by default, and a SvelteKit adapter that lags), Prisma (a query engine binary the image would carry; Drizzle is SQL with types), Kysely (close second; no relational query API).',
 					'**Utilities.** runed 0.37 (`Debounced`); valibot 1.5 (every schema); svelte-sonner 1.2 (toasts); `@internationalized/date` 3.12 (dates without time zones). Beat: zod (works; twice the bytes for the same validators, and valibot’s functions tree-shake), `svelte-french-toast` (Svelte 4), `dayjs` and `date-fns` (instants, not calendar dates; and `Intl` formats better than either).',
-					'**Packaging and proof.** `@sveltejs/package` 3.0.0, publint 0.3, `@arethetypeswrong/cli` 0.18, `vitest-browser-svelte` 3.1 on Vitest 5, Playwright 1.64, axe-core 4.14 through `@axe-core/playwright` 4.13. Beat: Lighthouse CI for accessibility (it runs axe too, on one URL at a time, without the signed-in states or the open dialogs the matrix reaches), pa11y (the same engine behind a second runner), `tsup` (does not understand `.svelte`), Storybook (chapter 07’s components have tests instead; a Storybook is the right call for a design system with fifty components, and a heavy one for a library with two).'
+					'**Packaging and proof.** `@sveltejs/package` 3.0.0, publint 0.3, `@arethetypeswrong/cli` 0.18, `vitest-browser-svelte` 3.1 on Vitest 5, Playwright 1.64, axe-core 4.14 through `@axe-core/playwright` 4.13. Beat: Lighthouse CI for accessibility (it runs axe too, on one URL at a time, without the signed-in states or the open dialogs the matrix reaches), pa11y (the same engine behind a second runner), `tsup` (does not understand `.svelte`), Storybook (chapter {{two-components-for-any-app}}’s components have tests instead; a Storybook is the right call for a design system with fifty components, and a heavy one for a library with two).'
 				]
 			},
 
@@ -71,7 +71,7 @@ $ pnpm why <package>           # what pulled it in, and whether it pins svelte@4
 					'**`svelte-headless-table`** and **`svelte-table`** — Svelte 4 era, store-based. TanStack v9’s adapter is runes-native and maintained with the core.',
 					'**`svelte-dnd-list`, `svelte-french-toast`, `svelte-select`, `svelte-i18n`** — each pins or assumes Svelte 4, or wraps a store API. All have runes-native successors above.',
 					'**Storybook 9** — works with Svelte 5, and for two components it is a second build system, a second dev server and forty megabytes of devDependencies. Browser tests in Vitest cover the same ground for this library. For a design system, take it.',
-					'**A tile provider** (MapTiler, OpenFreeMap, Protomaps) — not a library, but the same decision: each is one `sources` entry and one `connect-src` line, and the project deliberately ships without one so it works offline and in CI. Chapter 27 says which line to change.'
+					'**A tile provider** (MapTiler, OpenFreeMap, Protomaps) — not a library, but the same decision: each is one `sources` entry and one `connect-src` line, and the project deliberately ships without one so it works offline and in CI. Chapter {{the-map}} says which line to change.'
 				]
 			},
 
@@ -151,7 +151,7 @@ axe-core               4.14.0     + @axe-core/playwright 4.13.0, handed the newe
 			},
 			{
 				type: 'p',
-				text: 'The date segments use the other snippet a Bits part offers, `child`. Where `children` renders *inside* the part’s element, `{#snippet child({ props })}` replaces the element: the library computes every attribute it would have written — the role, the ARIA, the keyboard handlers — and hands them over, and the snippet renders the element itself with `{...props}`. Spreading something *after* them wins. That is how the project replaces the two English words Bits writes into each segment, and the “Previous” and “Next” it writes on the calendar’s month buttons, with the page’s language (chapter 21) without patching the library or fighting it from outside: the escape hatch is a documented part of the component, which is the test of a headless library worth choosing.'
+				text: 'The date segments use the other snippet a Bits part offers, `child`. Where `children` renders *inside* the part’s element, `{#snippet child({ props })}` replaces the element: the library computes every attribute it would have written — the role, the ARIA, the keyboard handlers — and hands them over, and the snippet renders the element itself with `{...props}`. Spreading something *after* them wins. That is how the project replaces the two English words Bits writes into each segment, and the “Previous” and “Next” it writes on the calendar’s month buttons, with the page’s language (chapter {{dates-and-money-in-a-locale}}) without patching the library or fighting it from outside: the escape hatch is a documented part of the component, which is the test of a headless library worth choosing.'
 			},
 
 			{ type: 'h3', id: 'state', text: 'Idiom three: your state, their behaviour' },
@@ -200,7 +200,7 @@ axe-core               4.14.0     + @axe-core/playwright 4.13.0, handed the newe
 				items: [
 					'**The library’s objects form a tree that your template already has** — thirty markers for thirty stops, a mesh per stop, a layer per data set — use a wrapper. `{#each stops}<Marker>` and `{#each markers}<T.Mesh>` are the whole argument: add a stop and a marker exists; remove one and it is disposed; the mapping is the template.',
 					'**The library wants one element and owns everything inside it** — an editor, a tween on a container, a video player, a code editor — write an attachment. Twenty-odd lines, a cleanup, no dependency.',
-					'**The library exposes a value that changes over time** — a position watch, a media query, a resize observer — neither: use `createSubscriber`, which chapter 40 covers.'
+					'**The library exposes a value that changes over time** — a position watch, a media query, a resize observer — neither: use `createSubscriber`, which chapter {{reactivity-utilities}} covers.'
 				]
 			},
 			code('src/lib/map/MapView.svelte', 456, 498, { partial: true }),
@@ -213,7 +213,7 @@ axe-core               4.14.0     + @axe-core/playwright 4.13.0, handed the newe
 			code('src/lib/motion/hero.ts', 37, 63),
 			{
 				type: 'p',
-				text: 'Two attachments, one contract: receive the element, do the setup, return the teardown. Both libraries own their element completely — Tiptap renders the document into it, GSAP times the copy and the image it finds inside by data attribute — and neither has a tree the template could usefully mirror. The attachment version is shorter than any wrapper’s README. It comes with one rule, which chapter 30 learned the hard way: an attachment runs inside an effect, so whatever state it reads while it runs is a reason to tear it down and run it again. A library built once — an editor with a cursor and an undo history — reads its starting values under `untrack` and follows later changes from a child `$effect`, the two moves Svelte’s documentation gives under “Controlling when attachments re-run”. And a library that ships an *action*, the shape this contract had before attachments, is the same thing with an older signature: `{@attach fromAction(dndzone, () => options)}` is how the itinerary applies svelte-dnd-action (chapter 25).'
+				text: 'Two attachments, one contract: receive the element, do the setup, return the teardown. Both libraries own their element completely — Tiptap renders the document into it, GSAP times the copy and the image it finds inside by data attribute — and neither has a tree the template could usefully mirror. The attachment version is shorter than any wrapper’s README. It comes with one rule, which chapter {{notes-with-tiptap-through-an-attachment}} learned the hard way: an attachment runs inside an effect, so whatever state it reads while it runs is a reason to tear it down and run it again. A library built once — an editor with a cursor and an undo history — reads its starting values under `untrack` and follows later changes from a child `$effect`, the two moves Svelte’s documentation gives under “Controlling when attachments re-run”. And a library that ships an *action*, the shape this contract had before attachments, is the same thing with an older signature: `{@attach fromAction(dndzone, () => options)}` is how the itinerary applies svelte-dnd-action (chapter {{the-itinerary}}).'
 			},
 
 			{ type: 'h3', id: 'costs', text: 'What each shape costs' },
@@ -275,7 +275,7 @@ axe-core               4.14.0     + @axe-core/playwright 4.13.0, handed the newe
 			code('src/routes/(site)/explore/+page.svelte', 78, 95),
 			{
 				type: 'p',
-				text: 'runed is a collection of the utilities the framework does not ship, written against runes by the Bits UI maintainers. The project uses one, `Debounced`, and the reason is the one from chapter 35: a debounce is fifteen lines that get a subtle bug, and one import that does not. The others most apps reach for are `useEventListener` (an event with automatic cleanup), `ElementSize` and `useResizeObserver` (an element’s box as state), `PersistedState` (a `$state` mirrored to storage — the theme class in this project is a hand-written one, because it also has to set a data attribute), `IsIdle`, `Previous`, and `FiniteStateMachine`. The line: if the framework ships it, use the framework’s; if runed has it and you would write more than ten lines, use runed’s; otherwise write it.'
+				text: 'runed is a collection of the utilities the framework does not ship, written against runes by the Bits UI maintainers. The project uses one, `Debounced`, and the reason is the one from chapter {{explore-and-diagnostics}}: a debounce is fifteen lines that get a subtle bug, and one import that does not. The others most apps reach for are `useEventListener` (an event with automatic cleanup), `ElementSize` and `useResizeObserver` (an element’s box as state), `PersistedState` (a `$state` mirrored to storage — the theme class in this project is a hand-written one, because it also has to set a data attribute), `IsIdle`, `Previous`, and `FiniteStateMachine`. The line: if the framework ships it, use the framework’s; if runed has it and you would write more than ten lines, use runed’s; otherwise write it.'
 			},
 
 			{ type: 'h3', id: 'plain-map', text: 'When a plain `Map` is right' },
@@ -287,7 +287,7 @@ axe-core               4.14.0     + @axe-core/playwright 4.13.0, handed the newe
 			{
 				type: 'why',
 				title: 'Why not a store',
-				text: 'Every mechanism in this chapter used to be a store: `readable(() => …)` with a start function is `createSubscriber` with worse ergonomics; a `writable` in a module is a `$state` in a `.svelte.ts` file. Stores still work, and Svelte 5 still ships them, and a library that exports a store can be read with `$store` or `fromStore`. But they are a second reactivity system with a subscription API, and everything they did is now a rune or a class in `svelte/reactivity`. No file in this project imports `svelte/store`, and the waypoint library — which could have shipped stores for its `Route` — ships runes in a `.svelte.ts` file instead, which chapter 06 explains.'
+				text: 'Every mechanism in this chapter used to be a store: `readable(() => …)` with a start function is `createSubscriber` with worse ergonomics; a `writable` in a module is a `$state` in a `.svelte.ts` file. Stores still work, and Svelte 5 still ships them, and a library that exports a store can be read with `$store` or `fromStore`. But they are a second reactivity system with a subscription API, and everything they did is now a rune or a class in `svelte/reactivity`. No file in this project imports `svelte/store`, and the waypoint library — which could have shipped stores for its `Route` — ships runes in a `.svelte.ts` file instead, which chapter {{a-route-as-a-class}} explains.'
 			},
 			{
 				type: 'checkpoint',

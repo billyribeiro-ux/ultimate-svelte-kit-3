@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>One file to configure everything — Building Meridian</title>
-<meta name="description" content="SvelteKit 3 keeps its whole configuration inside the Vite plugin. This chapter reads `vite.config.ts` top to bottom: plugin order, mdsvex as a preprocessor, per-file compiler options for the custom element, the adapter, remote functions, tracing, prerendering, the Content Security Policy, versioning, Paraglide, and the two test projects.">
+<meta name="description" content="SvelteKit 3 keeps its whole configuration inside the Vite plugin. This chapter reads `vite.config.ts` top to bottom: plugin order, mdsvex as a preprocessor, per-file compiler options for the custom element, the inspector, the adapter, remote functions and the three namespaces called `experimental`, tracing, prerendering, the Content Security Policy, versioning and preloads in a header, Paraglide, and the two test projects — then `tsconfig.json`, and the options this project leaves at their defaults.">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -17,8 +17,8 @@
 		<span>Building Meridian</span>
 	</a>
 	<div class="topbar__progress" role="group" aria-label="Progress">
-		<span class="topbar__count">03 / 45</span>
-		<div class="topbar__bar"><div class="topbar__fill" style="width: 6.666666666666667%"></div></div>
+		<span class="topbar__count">04 / 46</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 8.695652173913043%"></div></div>
 	</div>
 	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
 </header>
@@ -26,15 +26,15 @@
 <div class="shell">
 	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
 		<p class="sidebar__title">Chapters</p>
-		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-workspace.html"><span class="toc__num">02</span><span>A workspace of two</span></a></li><li><a href="the-config.html" aria-current="page"><span class="toc__num">03</span><span>One file to configure everything</span></a></li><li><a href="the-map-of-features.html"><span class="toc__num">04</span><span>The map: every feature, every library, and where it lives</span></a></li><li><a href="geodesy-for-humans.html"><span class="toc__num">05</span><span>Geodesy for humans</span></a></li><li><a href="a-route-as-a-class.html"><span class="toc__num">06</span><span>A route as a class, in a library</span></a></li><li><a href="two-components-for-any-app.html"><span class="toc__num">07</span><span>Two components for any app</span></a></li><li><a href="packaging-and-proving.html"><span class="toc__num">08</span><span>Packaging a Svelte library, and proving it</span></a></li><li><a href="ids-dates-and-money.html"><span class="toc__num">09</span><span>Ids, dates and money</span></a></li><li><a href="splitting-fairly.html"><span class="toc__num">10</span><span>Splitting fairly, to the cent</span></a></li><li><a href="the-itinerary-as-data.html"><span class="toc__num">11</span><span>The itinerary as data</span></a></li><li><a href="schemas-with-valibot.html"><span class="toc__num">12</span><span>Schemas with valibot, and who may do what</span></a></li><li><a href="the-database.html"><span class="toc__num">13</span><span>The database: seven tables and Better Auth’s four</span></a></li><li><a href="environment-and-hooks.html"><span class="toc__num">14</span><span>Environment and hooks</span></a></li><li><a href="identity-with-better-auth.html"><span class="toc__num">15</span><span>Identity with Better Auth</span></a></li><li><a href="remote-functions-the-reads.html"><span class="toc__num">16</span><span>Remote functions: the reads</span></a></li><li><a href="remote-functions-the-writes.html"><span class="toc__num">17</span><span>Remote functions: the writes</span></a></li><li><a href="live-collaboration.html"><span class="toc__num">18</span><span>Live collaboration: a room, a mailbox and a generator</span></a></li><li><a href="invites-and-membership.html"><span class="toc__num">19</span><span>Invites and membership</span></a></li><li><a href="three-languages-with-paraglide.html"><span class="toc__num">20</span><span>Three languages with Paraglide</span></a></li><li><a href="dates-and-money-in-a-locale.html"><span class="toc__num">21</span><span>Dates, money and distances in a locale</span></a></li><li><a href="the-design-system.html"><span class="toc__num">22</span><span>The design system</span></a></li><li><a href="the-shell.html"><span class="toc__num">23</span><span>The shell: a root that knows nobody</span></a></li><li><a href="the-trip-page.html"><span class="toc__num">24</span><span>The trip page: one await, one state object, one stream</span></a></li><li><a href="the-itinerary.html"><span class="toc__num">25</span><span>The itinerary: days you can drag</span></a></li><li><a href="the-command-palette.html"><span class="toc__num">26</span><span>The command palette</span></a></li><li><a href="the-map.html"><span class="toc__num">27</span><span>The map with no tile server</span></a></li><li><a href="the-globe.html"><span class="toc__num">28</span><span>The globe: Threlte, on demand</span></a></li><li><a href="expenses-with-tanstack-and-layerchart.html"><span class="toc__num">29</span><span>Expenses: a headless table, two charts, and the settle-up</span></a></li><li><a href="notes-with-tiptap-through-an-attachment.html"><span class="toc__num">30</span><span>Notes: Tiptap through an attachment</span></a></li><li><a href="companions-presence-and-settings.html"><span class="toc__num">31</span><span>Companions, presence, the join page and settings</span></a></li><li><a href="signing-in-and-up.html"><span class="toc__num">32</span><span>Signing in and up</span></a></li><li><a href="trips-and-a-new-trip.html"><span class="toc__num">33</span><span>The trips list and a new trip</span></a></li><li><a href="guides-prerendered-with-mdsvex.html"><span class="toc__num">34</span><span>Guides: Markdown, prerendered, no JavaScript</span></a></li><li><a href="explore-and-diagnostics.html"><span class="toc__num">35</span><span>Explore, and diagnostics</span></a></li><li><a href="embedding-a-trip.html"><span class="toc__num">36</span><span>Embedding a trip: a frame and a custom element</span></a></li><li><a href="choosing-libraries.html"><span class="toc__num">37</span><span>The survey: what was chosen, what was rejected, and why</span></a></li><li><a href="the-headless-pattern.html"><span class="toc__num">38</span><span>The headless pattern: Bits UI and TanStack Table</span></a></li><li><a href="the-wrapper-pattern.html"><span class="toc__num">39</span><span>The wrapper pattern, and when to write an attachment instead</span></a></li><li><a href="reactivity-utilities.html"><span class="toc__num">40</span><span>Reactivity utilities: `svelte/reactivity`, runed, and the line between them</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">41</span><span>Unit and browser tests: two Vitest projects, one command</span></a></li><li><a href="end-to-end.html"><span class="toc__num">42</span><span>End to end: the built server, two viewports, two people</span></a></li><li><a href="security-headers-and-csp.html"><span class="toc__num">43</span><span>Security: the policy, the headers, the redirect and the one framed route</span></a></li><li><a href="deploying.html"><span class="toc__num">44</span><span>Deploying: three stages, one process, a health check and a pipeline that runs the container</span></a></li><li><a href="what-i-would-do-next.html"><span class="toc__num">45</span><span>What I would do next, and what you now know</span></a></li></ol>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-workspace.html"><span class="toc__num">02</span><span>A workspace of two</span></a></li><li><a href="the-toolchain.html"><span class="toc__num">03</span><span>The toolchain: sv, the checks, and the agent beside you</span></a></li><li><a href="the-config.html" aria-current="page"><span class="toc__num">04</span><span>One file to configure everything</span></a></li><li><a href="the-map-of-features.html"><span class="toc__num">05</span><span>The map: every feature, every library, and where it lives</span></a></li><li><a href="geodesy-for-humans.html"><span class="toc__num">06</span><span>Geodesy for humans</span></a></li><li><a href="a-route-as-a-class.html"><span class="toc__num">07</span><span>A route as a class, in a library</span></a></li><li><a href="two-components-for-any-app.html"><span class="toc__num">08</span><span>Two components for any app</span></a></li><li><a href="packaging-and-proving.html"><span class="toc__num">09</span><span>Packaging a Svelte library, and proving it</span></a></li><li><a href="ids-dates-and-money.html"><span class="toc__num">10</span><span>Ids, dates and money</span></a></li><li><a href="splitting-fairly.html"><span class="toc__num">11</span><span>Splitting fairly, to the cent</span></a></li><li><a href="the-itinerary-as-data.html"><span class="toc__num">12</span><span>The itinerary as data</span></a></li><li><a href="schemas-with-valibot.html"><span class="toc__num">13</span><span>Schemas with valibot, and who may do what</span></a></li><li><a href="the-database.html"><span class="toc__num">14</span><span>The database: seven tables and Better Auth’s four</span></a></li><li><a href="environment-and-hooks.html"><span class="toc__num">15</span><span>Environment and hooks</span></a></li><li><a href="identity-with-better-auth.html"><span class="toc__num">16</span><span>Identity with Better Auth</span></a></li><li><a href="remote-functions-the-reads.html"><span class="toc__num">17</span><span>Remote functions: the reads</span></a></li><li><a href="remote-functions-the-writes.html"><span class="toc__num">18</span><span>Remote functions: the writes</span></a></li><li><a href="live-collaboration.html"><span class="toc__num">19</span><span>Live collaboration: a room, a mailbox and a generator</span></a></li><li><a href="invites-and-membership.html"><span class="toc__num">20</span><span>Invites and membership</span></a></li><li><a href="three-languages-with-paraglide.html"><span class="toc__num">21</span><span>Three languages with Paraglide</span></a></li><li><a href="dates-and-money-in-a-locale.html"><span class="toc__num">22</span><span>Dates, money and distances in a locale</span></a></li><li><a href="the-design-system.html"><span class="toc__num">23</span><span>The design system</span></a></li><li><a href="the-shell.html"><span class="toc__num">24</span><span>The shell: a root that knows nobody</span></a></li><li><a href="the-trip-page.html"><span class="toc__num">25</span><span>The trip page: one await, one state object, one stream</span></a></li><li><a href="the-itinerary.html"><span class="toc__num">26</span><span>The itinerary: days you can drag</span></a></li><li><a href="the-command-palette.html"><span class="toc__num">27</span><span>The command palette</span></a></li><li><a href="the-map.html"><span class="toc__num">28</span><span>The map with no tile server</span></a></li><li><a href="the-globe.html"><span class="toc__num">29</span><span>The globe: Threlte, on demand</span></a></li><li><a href="expenses-with-tanstack-and-layerchart.html"><span class="toc__num">30</span><span>Expenses: a headless table, two charts, and the settle-up</span></a></li><li><a href="notes-with-tiptap-through-an-attachment.html"><span class="toc__num">31</span><span>Notes: Tiptap through an attachment</span></a></li><li><a href="companions-presence-and-settings.html"><span class="toc__num">32</span><span>Companions, presence, the join page and settings</span></a></li><li><a href="signing-in-and-up.html"><span class="toc__num">33</span><span>Signing in and up</span></a></li><li><a href="trips-and-a-new-trip.html"><span class="toc__num">34</span><span>The trips list and a new trip</span></a></li><li><a href="guides-prerendered-with-mdsvex.html"><span class="toc__num">35</span><span>Guides: Markdown, prerendered, no JavaScript</span></a></li><li><a href="explore-and-diagnostics.html"><span class="toc__num">36</span><span>Explore, and diagnostics</span></a></li><li><a href="embedding-a-trip.html"><span class="toc__num">37</span><span>Embedding a trip: a frame and a custom element</span></a></li><li><a href="choosing-libraries.html"><span class="toc__num">38</span><span>The survey: what was chosen, what was rejected, and why</span></a></li><li><a href="the-headless-pattern.html"><span class="toc__num">39</span><span>The headless pattern: Bits UI and TanStack Table</span></a></li><li><a href="the-wrapper-pattern.html"><span class="toc__num">40</span><span>The wrapper pattern, and when to write an attachment instead</span></a></li><li><a href="reactivity-utilities.html"><span class="toc__num">41</span><span>Reactivity utilities: `svelte/reactivity`, runed, and the line between them</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">42</span><span>Unit and browser tests: two Vitest projects, one command</span></a></li><li><a href="end-to-end.html"><span class="toc__num">43</span><span>End to end: the built server, two viewports, two people</span></a></li><li><a href="security-headers-and-csp.html"><span class="toc__num">44</span><span>Security: the policy, the headers, the redirect and the one framed route</span></a></li><li><a href="deploying.html"><span class="toc__num">45</span><span>Deploying: three stages, one process, a health check and a pipeline that runs the container</span></a></li><li><a href="what-i-would-do-next.html"><span class="toc__num">46</span><span>What I would do next, and what you now know</span></a></li></ol>
 	</nav>
 
 	<main class="content" id="content">
 		<article>
-			<p class="eyebrow">Chapter 03</p>
+			<p class="eyebrow">Chapter 04</p>
 			<h1>One file to configure everything</h1>
-			<p class="lede">SvelteKit 3 keeps its whole configuration inside the Vite plugin. This chapter reads <code>vite.config.ts</code> top to bottom: plugin order, mdsvex as a preprocessor, per-file compiler options for the custom element, the adapter, remote functions, tracing, prerendering, the Content Security Policy, versioning, Paraglide, and the two test projects.</p>
-			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Read a SvelteKit 3 config with three preprocessors and plugins in it and know what every line is for, including why order matters twice.</p></aside>
+			<p class="lede">SvelteKit 3 keeps its whole configuration inside the Vite plugin. This chapter reads <code>vite.config.ts</code> top to bottom: plugin order, mdsvex as a preprocessor, per-file compiler options for the custom element, the inspector, the adapter, remote functions and the three namespaces called <code>experimental</code>, tracing, prerendering, the Content Security Policy, versioning and preloads in a header, Paraglide, and the two test projects — then <code>tsconfig.json</code>, and the options this project leaves at their defaults.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Read a SvelteKit 3 config with three preprocessors and plugins in it and know what every line is for, including why order matters twice, and say which TypeScript options belong to SvelteKit and which to you.</p></aside>
 			<p>There is no <code>svelte.config.js</code>. SvelteKit 3 moved every option into the <code>sveltekit()</code> plugin call, and this project feels that change more than the earlier ones did, because three of the tools it uses *used* to be configured through that file: mdsvex was a preprocessor listed there, <code>@sveltejs/package</code> read it for aliases, and every guide on the internet still says so. Here is where they go now.</p>
 
 <figure class="code">
@@ -80,7 +80,7 @@
 				 */
 				paths: { origin: env.PUBLIC_ORIGIN, relative: false },</code></pre>
 </figure>
-<p><code>defineConfig</code> comes from <code>vitest/config</code> rather than <code>vite</code>, so the <code>test</code> block at the bottom type-checks; <code>loadEnv</code> still comes from Vite because Vitest does not re-export it. The config is a <strong>function</strong> because it reads the environment before the build starts: <code>paths.origin</code> is the value adapter-node bakes into the server, and it is read from <code>PUBLIC_ORIGIN</code> here and validated by <code>src/env.ts</code> (chapter 14) as <code>static: true</code> so the same value reaches Better Auth. <code>relative: false</code> beside it is a link decision, not a deployment one: every internal link goes through <code>href()</code>, and with SvelteKit’s default a server render’s links came out as whole URLs at the build’s origin. Chapter 23 tells that story where the links are written.</p>
+<p><code>defineConfig</code> comes from <code>vitest/config</code> rather than <code>vite</code>, so the <code>test</code> block at the bottom type-checks; <code>loadEnv</code> still comes from Vite because Vitest does not re-export it. The config is a <strong>function</strong> because it reads the environment before the build starts: <code>paths.origin</code> is the value adapter-node bakes into the server, and it is read from <code>PUBLIC_ORIGIN</code> here and validated by <code>src/env.ts</code> (chapter <a href="environment-and-hooks.html">15</a>) as <code>static: true</code> so the same value reaches Better Auth. <code>relative: false</code> beside it is a link decision, not a deployment one: every internal link goes through <code>href()</code>, and with SvelteKit’s default a server render’s links came out as whole URLs at the build’s origin. Chapter <a href="the-shell.html">24</a> tells that story where the links are written.</p>
 <aside class="callout callout--warn"><p><code>enhancedImages()</code> must come before <code>sveltekit()</code>. It is a preprocessor that rewrites <code>&lt;enhanced:img&gt;</code> into a <code>&lt;picture&gt;</code> element, and the Svelte compiler has to see the rewritten markup, not the original. Put it second and the build fails with an unhelpful message about an unknown element. The other ordering rule is at the bottom of the plugin list, and it is the opposite way round.</p></aside>
 <h3 id="markdown-and-elements">Markdown components and a folder of custom elements</h3>
 
@@ -131,8 +131,8 @@ dynamicCompileOptions({ filename, environment }) {
 	return {};
 },</code></pre>
 </figure>
-<p>Two per-file behaviours. <code>preprocess</code> and <code>extensions</code> are what make a <code>.svx</code> file a component: mdsvex runs first, turns Markdown into markup and frontmatter into a <code>metadata</code> export, and the compiler takes it from there; <code>extensions</code> tells SvelteKit that <code>.svx</code> files under <code>src/routes</code> and in imports are components too. Chapter 34 writes the guides that use it.</p>
-<p><code>dynamicCompileOptions</code> is newer and subtler: a function called once per file, returning compiler options for that file only. The custom element in <code>src/lib/embed</code> has to be compiled with <code>customElement: true</code> — a different output altogether, a class the browser can register as an element, with a shadow root — and nothing else in the project may be, which is why the test is the path <code>src/lib/embed</code> and not any folder called <code>embed</code>: the frame page lives in <code>src/routes/embed</code>, and the looser test once compiled it as a custom element too, so its styles went into a shadow root that never existed. The <code>environment.name === &quot;client&quot;</code> guard is the part people miss: the server build compiles the same file, and a custom element has no server-rendered form, so the server gets a plain component it never renders. Chapter 36 builds the element.</p>
+<p>Two per-file behaviours. <code>preprocess</code> and <code>extensions</code> are what make a <code>.svx</code> file a component: mdsvex runs first, turns Markdown into markup and frontmatter into a <code>metadata</code> export, and the compiler takes it from there; <code>extensions</code> tells SvelteKit that <code>.svx</code> files under <code>src/routes</code> and in imports are components too. Chapter <a href="guides-prerendered-with-mdsvex.html">35</a> writes the guides that use it.</p>
+<p><code>dynamicCompileOptions</code> is newer and subtler: a function called once per file, returning compiler options for that file only. The custom element in <code>src/lib/embed</code> has to be compiled with <code>customElement: true</code> — a different output altogether, a class the browser can register as an element, with a shadow root — and nothing else in the project may be, which is why the test is the path <code>src/lib/embed</code> and not any folder called <code>embed</code>: the frame page lives in <code>src/routes/embed</code>, and the looser test once compiled it as a custom element too, so its styles went into a shadow root that never existed. The <code>environment.name === &quot;client&quot;</code> guard is the part people miss: the server build compiles the same file, and a custom element has no server-rendered form, so the server gets a plain component it never renders. Chapter <a href="embedding-a-trip.html">37</a> builds the element.</p>
 <h3 id="compiler">The compiler options</h3>
 
 <figure class="code">
@@ -160,11 +160,32 @@ dynamicCompileOptions({ filename, environment }) {
 },</code></pre>
 </figure>
 <p><code>runes</code> is a function so that a dependency written in Svelte 4 style keeps compiling — several libraries in this project ship <code>.svelte</code> files, and the compiler decides per file. <code>experimental.async</code> is the one that changes how you write components: <code>await</code> at the top level of a <code>&lt;script&gt;</code>, inside <code>$derived</code>, and directly in markup, with <code>&lt;svelte:boundary&gt;</code> and its <code>pending</code> snippet to catch the wait. This project has more of it than any before: the globe is an <code>await import()</code> in markup, the explore page and the new-trip form <code>await places()</code> at the top of their scripts — one prerendered list, waited for once, before the first render — and opening a trip is <code>{const initial = $derived(await tripBySlug(slug))}</code> on the page.</p>
+<aside class="callout callout--note"><p>What the compiled output asks of a browser: Svelte’s own documentation gives Chrome and Edge 87, Firefox 83 and Safari 14 — a Baseline target of 2020 — for Svelte itself, with a few exceptions it lists by feature, two of which this project uses: <code>$state.snapshot</code> needs Chrome 98, Firefox 94 or Safari 15.4 (the library’s <code>toJSON</code>, ch. <a href="a-route-as-a-class.html">07</a>), and <code>flip</code> from <code>svelte/animate</code> needs Firefox 126 (the itinerary’s reordering, ch. <a href="the-itinerary.html">26</a>). The table covers Svelte, not SvelteKit, the libraries or your own code; MapLibre’s WebGL and the CSS this project writes — <code>light-dark()</code> among it — ask for newer browsers than that, and together they set the real floor — in Firefox it is <code>flip</code>, at 126, higher than <code>light-dark()</code>’s 120.</p></aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">vite.config.ts<span class="code__lines">:137-148</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/*
+ * Not a SvelteKit option: `sveltekit()` passes whatever it does not
+ * own through to vite-plugin-svelte, and `inspector` is that plugin's.
+ * In the dev server, Alt+X switches the Svelte inspector on: the
+ * element under the pointer is outlined with the component file that
+ * drew it, the arrow keys walk up and down the tree, and Enter opens
+ * that file in your editor. A build never includes it. The key is the
+ * default, written out because it is the one thing a person needs to
+ * know; the floating toggle button is off because its corner is where
+ * the header keeps its menu button.
+ */
+inspector: { toggleKeyCombo: 'alt-x', showToggleButton: 'never' },</code></pre>
+</figure>
+<p>The comment says it: <code>inspector</code> is not SvelteKit’s. The plugin passes any option it does not own to vite-plugin-svelte — the JSDoc on <code>sveltekit()</code> puts it as “Any options that don’t belong to SvelteKit are passed through to <code>vite-plugin-svelte</code>, so you can set options like <code>inspector</code> here too” — and vite-plugin-svelte documents the inspector as “unset for dev, always false for build”. Setting it switches it on in the dev server and costs a production build nothing. Of its options, <code>toggleKeyCombo</code> defaults to <code>alt-x</code>, and the plugin advises combinations of modifiers alone, so that turning it on can never type into an input. The default is kept anyway: every pair of modifiers is already somebody’s shortcut — Ctrl+Shift and Alt+Shift switch keyboard layouts on Windows — and the inspector only exists in the dev server. <code>showToggleButton</code> is <code>always</code>, <code>active</code> (the default) or <code>never</code>.</p>
 <h3 id="adapter-and-experiments">The adapter, remote functions, and one experiment left off</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:137-164</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:150-177</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/*
@@ -196,11 +217,13 @@ experimental: {
 	forkPreloads: false
 },</code></pre>
 </figure>
-<p><code>precompress</code> matters more here than in any earlier project: MapLibre and three.js are the two largest chunks any of the eight has shipped, and writing <code>.br</code> and <code>.gz</code> beside them at build time means the server never compresses them per request. <code>remoteFunctions</code> is the switch for everything in chapters 16–19. <code>forkPreloads</code> stays off on the evidence of three projects; the comment says what would turn it on, which is how a decision that might change should be recorded.</p>
+<p><code>precompress</code> matters more here than in any earlier project: MapLibre and three.js are the two largest chunks any of the eight has shipped, and writing <code>.br</code> and <code>.gz</code> beside them at build time means the server never compresses them per request. <code>remoteFunctions</code> is the switch for everything in chapters <a href="remote-functions-the-reads.html">17</a>–<a href="invites-and-membership.html">20</a>. <code>forkPreloads</code> stays off on the evidence of three projects; the comment says what would turn it on, which is how a decision that might change should be recorded.</p>
+<p>The word <code>experimental</code> appears twice in this file, and it belongs to three projects. <code>compilerOptions.experimental.async</code> is Svelte’s: <code>await</code> in components, a flag the documentation says “will be removed in Svelte 6”. The top-level <code>experimental</code> is SvelteKit’s — <code>remoteFunctions</code> and <code>forkPreloads</code> — and it is shared: SvelteKit’s types define it as vite-plugin-svelte’s experimental options plus its own, and the JSDoc says “SvelteKit reads its own flags and forwards the rest”. The <code>experimental</code> add-on from ch. <a href="the-toolchain.html">03</a> writes both kinds in one line, <code>sv add experimental=&quot;features:async,remoteFunctions&quot;</code>, which is also its default.</p>
+<p><code>forkPreloads</code> is the one that ties them together. Svelte 5.42 added <code>fork()</code>, which “makes it possible to run <code>await</code> expressions that you *expect* to happen in the near future” — start the work a state change would cause, then <code>commit()</code> it if the change happens or <code>discard()</code> it if it does not. The documentation says it is “mainly intended for frameworks like SvelteKit to implement preloading when (for example) users signal an intent to navigate”, and <code>forkPreloads</code> is SvelteKit doing exactly that on a hovered link. Two caveats come with async mode, both in its documentation: the details “are subject to breaking changes outside of a semver major release”, and effects run in a slightly different order — block effects such as <code>{#if}</code> and <code>{#each}</code> now run before an <code>$effect.pre</code> in the same component. Nothing in this project depends on that order; the end-to-end suite is what would notice if something did.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:166-185</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:179-198</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/*
@@ -224,12 +247,12 @@ prerender: {
 	handleMissingId: 'fail'
 },</code></pre>
 </figure>
-<p><code>tracing.server</code> was experimental in SvelteKit 2 and is not in 3; it makes every <code>handle</code>, <code>load</code>, form action and remote function an OpenTelemetry span, and <code>src/instrumentation.server.ts</code> — loaded before any application code, with nothing to switch on — is where the exporter lives. Chapter 35 reads the spans back on the diagnostics page. The two <code>prerender</code> options turn a broken link on a prerendered page into a failed build, which is the only time you want to find out.</p>
+<p><code>tracing.server</code> was experimental in SvelteKit 2 and is not in 3; it makes every <code>handle</code>, <code>load</code>, form action and remote function an OpenTelemetry span, and <code>src/instrumentation.server.ts</code> — loaded before any application code, with nothing to switch on — is where the exporter lives. Chapter <a href="explore-and-diagnostics.html">36</a> reads the spans back on the diagnostics page. The two explicit <code>'fail'</code> values restate the default, so that the intent is in the file: a broken link or a missing <code>#id</code> on a prerendered page fails the build, which is the only time you want to find out. The other three handlers — <code>handleEntryGeneratorMismatch</code>, <code>handleUnseenRoutes</code> and <code>handleInvalidUrl</code> — also default to <code>'fail'</code>. The options left out keep their defaults too: <code>entries</code> is <code>[&quot;*&quot;]</code>, every route without a required parameter; <code>crawl</code> is <code>true</code>, so the build follows links from there, which is how <code>/de/guides</code> and <code>/pt-br/guides</code> are found — through the language switcher’s links, with no entry of their own; and <code>concurrency</code> is <code>1</code>, which is right for pages whose content is in the repository rather than behind a network.</p>
 <h3 id="csp">The Content Security Policy</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:187-233</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:200-246</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/*
@@ -281,12 +304,12 @@ csp: {
 csrf: { trustedOrigins: [] },</code></pre>
 </figure>
 <p>The comment above the directives is the chapter. Two things to add. <code>mode: &quot;auto&quot;</code> means hashes on prerendered pages and nonces on dynamic ones — and a nonce is filled in per request, which is why the theme boot script in <code>app.html</code> is allowed by its <strong>hash</strong> and carries no nonce attribute: SvelteKit refuses to prerender a template that still contains <code>%sveltekit.nonce%</code>, and the guides are prerendered. <code>themeBootHash()</code> at the bottom of the file reads the script out of <code>app.html</code> and hashes it, so the two cannot drift.</p>
-<p><code>connect-src &quot;self&quot;</code> with no tile server is a real constraint accepted on purpose: the map cannot fetch tiles from anybody, so it is built from a bundled atlas (chapter 27). If you add a tile provider, this is the line that changes, and the CSP will tell you so in the console before anything else does.</p>
-<h3 id="versioning">Versioning, so a deploy does not strand open tabs</h3>
+<p><code>connect-src &quot;self&quot;</code> with no tile server is a real constraint accepted on purpose: the map cannot fetch tiles from anybody, so it is built from a bundled atlas (chapter <a href="the-map.html">28</a>). If you add a tile provider, this is the line that changes, and the CSP will tell you so in the console before anything else does.</p>
+<h3 id="versioning">Versioning, so a deploy does not strand open tabs, and preloads in a header</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:235-251</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:248-276</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/*
@@ -295,8 +318,8 @@ csrf: { trustedOrigins: [] },</code></pre>
  *
  * Client-side navigation loads JavaScript by hashed filename. Deploy a
  * new build while somebody has a trip open and the next navigation asks
- * for a file that no longer exists. `pollInterval` lets SvelteKit notice
- * first, so the layout can offer a &quot;reload for the new version&quot; banner.
+ * for a file that no longer exists. The x-sveltekit-version header and focus
+ * catch it first; `pollInterval` covers a parked tab, so the banner still shows.
  *
  * `name` is the commit, because it has to be deterministic.
  */
@@ -305,14 +328,27 @@ version: {
 	pollInterval: 60_000
 },
 
-output: { bundleStrategy: 'split' }</code></pre>
+/*
+ * `linkHeaderPreload`: a dynamically rendered page announces what it
+ * will need — its JavaScript, its stylesheets, the two fonts the
+ * `preload` hook in `hooks.server.ts` picks — in a `Link` response
+ * header rather than in `&lt;link&gt;` tags inside the HTML, so the browser
+ * can start fetching before it has parsed a byte of the body.
+ * Prerendered pages keep their tags: a file on disk has no headers of
+ * its own. The option's own documentation carries the warning: Nginx
+ * and Apache limit the size of a response header by default, and the
+ * trip page's is about 7.5 KB. A proxy put in front of this server has to
+ * allow for that, or this goes back to `false`.
+ */
+output: { bundleStrategy: 'split', linkHeaderPreload: true }</code></pre>
 </figure>
-<p><code>version.name</code> is the commit hash, computed by <code>commitHash()</code> below with a fallback to the package version, because a Docker build context has no <code>.git</code>. <code>pollInterval</code> makes the client check for a new version once a minute; <code>updated.current</code> in the root layout flips, a banner offers a reload, and the next navigation becomes a full page load so no chunk from the old build is ever requested. <code>bundleStrategy: &quot;split&quot;</code> is the default and is named here because chapter 36 builds the one thing that must *not* be split.</p>
+<p><code>version.name</code> is the commit hash, computed by <code>commitHash()</code> below with a fallback to the package version, because a Docker build context has no <code>.git</code>. SvelteKit 3 notices a new version without asking: the current version rides on every data, remote and form response as an <code>x-sveltekit-version</code> header, and the client checks again whenever the tab regains focus or becomes visible. <code>pollInterval</code> is the fallback for a tab parked on one page, which is exactly what the trip page is — a live query delivers its changes over one long response, so no new headers arrive — and so it is a minute here rather than the default hour. When a new version is seen, <code>updated.current</code> in the root layout flips, a banner offers a reload, and the next navigation becomes a full page load so no chunk from the old build is ever requested. <code>bundleStrategy: &quot;split&quot;</code> is the default and is named here because chapter <a href="embedding-a-trip.html">37</a> builds the one thing that must *not* be split.</p>
+<p><code>linkHeaderPreload</code> moves a dynamically rendered page’s preloads out of the HTML and into a <code>Link</code> response header — the modules, the stylesheet, and the two fonts the <code>preload</code> hook in <code>hooks.server.ts</code> picks by source filename (ch. <a href="security-headers-and-csp.html">44</a>). The browser reads headers before the body, so it starts on them a little sooner; prerendered pages keep their <code>&lt;link&gt;</code> tags, because a file on disk has no headers to carry them. The option has existed since 3.0 and is off by default for the reason its documentation gives and the comment repeats: Nginx and Apache limit header sizes by default, and this header is not small — about 7.5 KB on the trip page, the page with the most to preload. A test in <code>e2e/public.e2e.ts</code> holds the header to its promise: <code>/explore</code> must answer with <code>rel=&quot;modulepreload&quot;</code> and the Fraunces font in its <code>Link</code> header, and with no <code>modulepreload</code> left in its HTML.</p>
 <h3 id="paraglide-and-icons">Three plugins that are not SvelteKit</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:254-291</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:279-316</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/*
@@ -354,12 +390,12 @@ sveltePhosphorOptimize(),
 // What went into each browser chunk, for `scripts/bundle-guard.ts`. See the function below.
 bundleStats()</code></pre>
 </figure>
-<p>Paraglide is a Vite plugin in its own right: it watches <code>messages/*.json</code>, compiles them into <code>src/lib/paraglide</code>, and does so with a <code>strategy</code> list that is the order the locale is decided in. Chapter 20 is entirely about it. The phosphor plugin is the second ordering rule: it rewrites <code>import { PlusIcon } from &quot;phosphor-svelte&quot;</code> into a deep import so the dev server does not crawl a barrel of thousands of icons, and it must run *after* the Svelte compiler because it parses JavaScript. Put it first and it dies on the first <code>&lt;h1&gt;</code>. The third, <code>bundleStats()</code>, is this project’s own and runs only in a build: at the end of the browser build it writes down which modules went into which chunk, so that a script can hold the bundle to a budget afterwards. A chunk’s file name is a hash and changes with every edit; the bundler is the one place that knows what a chunk *is*. Chapter 42 is where that script runs, and why it exists.</p>
+<p>Paraglide is a Vite plugin in its own right: it watches <code>messages/*.json</code>, compiles them into <code>src/lib/paraglide</code>, and does so with a <code>strategy</code> list that is the order the locale is decided in. Chapter <a href="three-languages-with-paraglide.html">21</a> is entirely about it. The phosphor plugin is the second ordering rule: it rewrites <code>import { PlusIcon } from &quot;phosphor-svelte&quot;</code> into a deep import so the dev server does not crawl a barrel of thousands of icons, and it must run *after* the Svelte compiler because it parses JavaScript. Put it first and it dies on the first <code>&lt;h1&gt;</code>. The third, <code>bundleStats()</code>, is this project’s own and runs only in a build: at the end of the browser build it writes down which modules went into which chunk, so that a script can hold the bundle to a budget afterwards. A chunk’s file name is a hash and changes with every edit; the bundler is the one place that knows what a chunk *is*. Chapter <a href="end-to-end.html">43</a> is where that script runs, and why it exists.</p>
 <h3 id="the-rest">The native addon, and the two test projects</h3>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:294-301</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:319-326</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/*
@@ -374,7 +410,7 @@ ssr: { external: ['@libsql/client', 'libsql'] },</code></pre>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:303-377</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:328-402</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">test: {
@@ -453,11 +489,11 @@ ssr: { external: ['@libsql/client', 'libsql'] },</code></pre>
 	]
 }</code></pre>
 </figure>
-<p>Two Vitest projects in one config — and no <code>extends</code> line on either, because since Vitest 5 an inline project inherits the config that declares it, plugins and <code>#lib</code> included, unless it says <code>extends: false</code>: <code>client</code> runs <code>*.svelte.test.ts</code> in a real Chromium through Playwright, because the components under test need WebGL, pointer events and layout; <code>server</code> runs everything else in Node, one file at a time because SQLite has one writer. The <code>optimizeDeps.include</code> list is the fix for a real failure: the phosphor plugin rewrites imports during transform, after Vite’s dependency scan, so on a cold cache Vite discovered the icons mid-test, re-bundled, and reloaded the test inside itself. Naming them is what Vitest’s own warning asks for. Chapter 41 runs both projects.</p>
+<p>Two Vitest projects in one config — and no <code>extends</code> line on either, because since Vitest 5 an inline project inherits the config that declares it, plugins and <code>#lib</code> included, unless it says <code>extends: false</code>: <code>client</code> runs <code>*.svelte.test.ts</code> in a real Chromium through Playwright, because the components under test need WebGL, pointer events and layout; <code>server</code> runs everything else in Node, one file at a time because SQLite has one writer. The <code>optimizeDeps.include</code> list is the fix for a real failure: the phosphor plugin rewrites imports during transform, after Vite’s dependency scan, so on a cold cache Vite discovered the icons mid-test, re-bundled, and reloaded the test inside itself. Naming them is what Vitest’s own warning asks for. Chapter <a href="unit-and-browser-tests.html">42</a> runs both projects.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">vite.config.ts<span class="code__lines">:381-416</span></span>
+		<span class="code__file">vite.config.ts<span class="code__lines">:406-441</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -497,17 +533,89 @@ function commitHash(): string | null {
 	}
 }</code></pre>
 </figure>
+<h3 id="typescript">The other file: <code>tsconfig.json</code></h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">tsconfig.json<span class="code__lines">:1-54</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-json">{
+	// SvelteKit regenerates a base config into `node_modules/$app/tsconfig` on every
+	// `svelte-kit sync`. It sets module resolution, the DOM libs and the generated
+	// route types, so we only add what is specific to this project.
+	&quot;extends&quot;: &quot;$app/tsconfig&quot;,
+	&quot;compilerOptions&quot;: {
+		&quot;sourceMap&quot;: true,
+
+		// strictNullChecks, noImplicitAny and friends.
+		&quot;strict&quot;: true,
+
+		// `array[0]` is typed `T | undefined` rather than `T`. An itinerary is a
+		// list of maybes: a day with no stops, a trip with no days, the stop after
+		// the last stop. Every one of those is a crash at runtime or a red
+		// squiggle now, and this flag picks now.
+		&quot;noUncheckedIndexedAccess&quot;: true,
+
+		// An overriding method must say `override`.
+		&quot;noImplicitOverride&quot;: true,
+
+		// A `case` that falls through must be deliberate.
+		&quot;noFallthroughCasesInSwitch&quot;: true,
+
+		// Every path through a value-returning function must return.
+		&quot;noImplicitReturns&quot;: true,
+
+		// Unused locals and parameters are errors.
+		&quot;noUnusedLocals&quot;: true,
+		&quot;noUnusedParameters&quot;: true,
+
+		// Only TypeScript that can be deleted to leave JavaScript: no `enum`, no
+		// value `namespace`, no constructor parameter properties. Node runs
+		// `scripts/*.ts` by stripping the types, and Svelte compiles a
+		// `lang=&quot;ts&quot;` block the same way; neither can run what this forbids.
+		&quot;erasableSyntaxOnly&quot;: true
+	},
+
+	// SvelteKit 3 requires these to be explicit. Without them `svelte-check` will
+	// happily type-check the minified output in `build/` and report thousands of
+	// meaningless errors — and here it would also walk into `packages/`, which
+	// has a tsconfig of its own.
+	&quot;include&quot;: [
+		&quot;src/**/*.ts&quot;,
+		&quot;src/**/*.js&quot;,
+		&quot;src/**/*.svelte&quot;,
+		&quot;src/**/*.svx&quot;,
+		&quot;e2e/**/*.ts&quot;,
+		&quot;scripts/**/*.js&quot;,
+		&quot;scripts/**/*.ts&quot;,
+		&quot;*.config.ts&quot;,
+		&quot;*.config.js&quot;
+	],
+	&quot;exclude&quot;: [&quot;node_modules&quot;, &quot;build&quot;, &quot;.svelte-kit&quot;, &quot;static&quot;, &quot;drizzle&quot;, &quot;packages&quot;]
+}</code></pre>
+</figure>
+<p><code>&quot;extends&quot;: &quot;$app/tsconfig&quot;</code> is the line SvelteKit owns. <code>svelte-kit sync</code> writes that config into <code>node_modules/$app/tsconfig.json</code> every time it runs, with what a SvelteKit project needs: <code>moduleResolution: &quot;bundler&quot;</code>, the DOM libraries, and <code>rootDirs</code> set to the project and <code>.svelte-kit/types</code> side by side — which is how <code>import type { PageProps } from './$types'</code> beside a route finds a file that lives in a generated folder. Four of its options are SvelteKit’s to set, and its documentation says overriding them “may cause things to break”: <code>paths</code> (derived from subpath imports; here it is empty, because bundler resolution reads <code>imports</code> from <code>package.json</code> itself), <code>types</code> (it must include <code>$app/types</code>, the generated module declarations), <code>isolatedModules</code> (“Vite compiles modules one at a time”) and <code>verbatimModuleSyntax</code> (“so that you can safely use type imports in <code>.svelte</code> files”). Everything in <code>compilerOptions</code> above is this project’s own strictness, each with the reason beside it.</p>
+<p>The explicit <code>include</code> and <code>exclude</code> are required in SvelteKit 3, and the comment says what happens without them. <code>erasableSyntaxOnly</code> is the newest line: TypeScript refuses any syntax that cannot simply be deleted to leave JavaScript — <code>enum</code>, a <code>namespace</code> with values in it, a constructor parameter marked <code>private</code> — because the two places this project runs TypeScript without a compiler cannot run it either. Node 24 runs <code>scripts/*.ts</code> by stripping the types; Svelte 5 compiles a <code>lang=&quot;ts&quot;</code> block the same way. (<code>namespace App</code> in <code>src/app.d.ts</code> is a declaration, types only, and stays.)</p>
+
+<aside class="callout callout--why">
+	<h4>Why not <code>vitePreprocess({ script: true })</code> instead</h4>
+	<p>It is the other answer to the same question: run TypeScript through a real transpiler before Svelte sees it, and enums and parameter properties work in components. The integrations documentation names the cases for it — a project before Svelte 5, or “advanced TypeScript features that emit code” — and adds that otherwise “you probably don’t need to use <code>vitePreprocess</code>”. This project has neither case, and the flag is cheaper than the preprocessor in both directions: nothing extra runs on every component in the build, and the code stays runnable by every tool that strips types, Node’s included. One rule instead of a second compiler.</p>
+</aside>
+<h3 id="left-alone">What this file leaves at its defaults</h3>
+<p>A config is also defined by what it does not say. These are the options a reader of other projects will meet, and why this one does not set them:</p>
+<ul><li>**<code>files.*</code>** — where SvelteKit looks for things, and the defaults are the names: <code>src/routes</code>, <code>src/params</code>, <code>src/hooks.server</code>, <code>src/hooks.client</code>, <code>src/hooks</code> (the universal hooks), <code>src/service-worker</code>, <code>src/app.html</code> and <code>src/error.html</code>. This project uses the defaults for every one it has — <code>src/hooks.client.ts</code> and <code>src/params.ts</code> among them — and a file with one of the other names, a <code>src/service-worker</code> folder or a <code>src/error.html</code>, would be picked up the same way. The option is deprecated in 3.0, with a workspace recommended instead, which is what <code>packages/waypoint</code> is.</li><li><strong><code>moduleExtensions</code></strong> — <code>[&quot;.js&quot;, &quot;.ts&quot;]</code>, the extensions treated as modules; nothing here needs another.</li><li><strong><code>outDir</code></strong> — <code>.svelte-kit</code>, where SvelteKit writes generated types and build output (ch. <a href="the-workspace.html">02</a>).</li><li><strong><code>env.dir</code></strong> — <code>&quot;.&quot;</code>, the folder searched for <code>.env</code> files.</li><li><strong><code>embedded</code></strong> — <code>false</code>. <code>true</code> attaches SvelteKit’s navigation listeners to the element that holds the app instead of <code>window</code>, for an app embedded in a larger page; Meridian’s embed is a frame and a custom element instead (ch. <a href="embedding-a-trip.html">37</a>).</li><li><strong><code>paths.base</code></strong> and <strong><code>paths.assets</code></strong> — empty: the app is served from the root of its origin, and its assets from the same origin. (<code>paths.origin</code> and <code>paths.relative</code> are set, at the top of the file.)</li><li><strong><code>emitCss</code></strong> — vite-plugin-svelte’s, default <code>true</code>: component styles become virtual CSS files that Vite bundles, rather than being injected by JavaScript. Nothing here needs it changed.</li><li><strong><code>prebundleSvelteLibraries</code></strong> — vite-plugin-svelte’s, “true for dev, false for build”: in the dev server, Svelte libraries are prebundled like any other dependency. The <code>optimizeDeps.include</code> list for the browser tests is the one place this project steps in.</li><li><strong><code>hot</code></strong> — older guides set it; vite-plugin-svelte 7 has no such option. Hot reloading is Svelte 5’s own <code>hmr</code> compiler option, which the plugin turns on in the dev server unless Vite’s <code>server.hmr</code> is off.</li></ul>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>
-	<ul><li>You can say which two plugins have ordering rules, which way round each goes, and why.</li><li>You can explain why the boot script is allowed by a hash and not a nonce, and what would break if it were the other way.</li><li>You know what <code>dynamicCompileOptions</code> is for and why it checks <code>environment.name</code>.</li></ul>
+	<ul><li>You can say which two plugins have ordering rules, which way round each goes, and why.</li><li>You can explain why the boot script is allowed by a hash and not a nonce, and what would break if it were the other way.</li><li>You know what <code>dynamicCompileOptions</code> is for and why it checks <code>environment.name</code>.</li><li>You can say which project owns each <code>experimental</code> flag in the file — Svelte, SvelteKit or vite-plugin-svelte.</li><li>You can say which four TypeScript options SvelteKit sets for you, and what <code>erasableSyntaxOnly</code> forbids and why.</li></ul>
 </aside>
 		</article>
 
 		<nav class="pager" aria-label="Chapter navigation">
-			<a class="pager__link pager__link--prev" href="the-workspace.html">
+			<a class="pager__link pager__link--prev" href="the-toolchain.html">
 				<span class="pager__dir">← Previous</span>
-				<span class="pager__title">A workspace of two</span>
+				<span class="pager__title">The toolchain: sv, the checks, and the agent beside you</span>
 			</a>
 			<a class="pager__link pager__link--next" href="the-map-of-features.html">
 				<span class="pager__dir">Next →</span>

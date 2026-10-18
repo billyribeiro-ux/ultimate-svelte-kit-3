@@ -1,6 +1,6 @@
 /**
  * PART 3 — The server
- * (chapters 14–19)
+ * (chapters {{environment-and-hooks}}–{{invites-and-membership}})
  *
  * Environment and hooks, identity, the remote functions that read, the ones
  * that write, the live query that keeps a shared trip shared, and invites.
@@ -28,7 +28,7 @@ export const part3 = [
 			code('src/env.ts', 1, 46, { partial: true }),
 			{
 				type: 'p',
-				text: '`PUBLIC_ORIGIN` is the interesting one: `public`, so the browser may see it, and `static`, so it is inlined at build time. It has to be static, because `vite.config.ts` reads the same variable for `paths.origin` during the build, and a value that could differ between build and run would make the CSRF check compare two different origins. Better Auth reads it too, as its base URL, and the Dockerfile in chapter 44 takes it as a build argument for the same reason.'
+				text: '`PUBLIC_ORIGIN` is the interesting one: `public`, so the browser may see it, and `static`, so it is inlined at build time. It has to be static, because `vite.config.ts` reads the same variable for `paths.origin` during the build, and a value that could differ between build and run would make the CSRF check compare two different origins. Better Auth reads it too, as its base URL, and the Dockerfile in chapter {{deploying}} takes it as a build argument for the same reason.'
 			},
 			code('src/env.ts', 48, 67, { partial: true }),
 			{
@@ -49,7 +49,7 @@ export const part3 = [
 			},
 			{
 				type: 'p',
-				text: 'The third argument records another. A remote form is not posted to its page: the browser sends it to `/_app/remote/…`, a URL with no `/de` in it, and tells the server which page it came from in a header that SvelteKit turns back into `event.url`. The middleware reads the request’s own URL unless it is told otherwise, and the URL strategy does not answer “I cannot tell” for a URL with no prefix — it answers English, the base locale, and the cookie is never asked. So a German sign-in page answered a malformed email in English, because the schema’s message was the one sentence produced inside that request. `effectiveRequestUrl` is Paraglide’s documented option for exactly this, the URL the person is on rather than the one the bytes went to, and `localeUrl()` works out what to give it: the calling page for a form or a command, and for a `query` — which sends no such header, so SvelteKit has no page to put back — the endpoint under the cookie’s language. Chapter 20 quotes it; chapter 42 has the test that types a bad address into `/de/signin` and expects German back.'
+				text: 'The third argument records another. A remote form is not posted to its page: the browser sends it to `/_app/remote/…`, a URL with no `/de` in it, and tells the server which page it came from in a header that SvelteKit turns back into `event.url`. The middleware reads the request’s own URL unless it is told otherwise, and the URL strategy does not answer “I cannot tell” for a URL with no prefix — it answers English, the base locale, and the cookie is never asked. So a German sign-in page answered a malformed email in English, because the schema’s message was the one sentence produced inside that request. `effectiveRequestUrl` is Paraglide’s documented option for exactly this, the URL the person is on rather than the one the bytes went to, and `localeUrl()` works out what to give it: the calling page for a form or a command, and for a `query` — which sends no such header, so SvelteKit has no page to put back — the endpoint under the cookie’s language. Chapter {{three-languages-with-paraglide}} quotes it; chapter {{end-to-end}} has the test that types a bad address into `/de/signin` and expects German back.'
 			},
 			{
 				type: 'why',
@@ -75,21 +75,21 @@ export const part3 = [
 			code('src/hooks.client.ts', 1, 28),
 			{
 				type: 'p',
-				text: 'The browser has a `handleError` of its own, for what goes wrong *in the tab*: a boundary whose content threw, a chunk that never arrived, a component that broke while hydrating. It looks at `kind` the same way, and only `unknown` needs words, because SvelteKit’s default for it is `\'Internal Error\'`, in English, on a page that may be German. A remote function’s refusal never comes here — it went through the server’s hook and arrives finished, in the request’s language — so this file is short on purpose. Short is not the same as untested: chapter 42 drops the globe’s chunk on its way to a German page and expects the German sentence in the boundary, which SvelteKit’s English default would fail.'
+				text: 'The browser has a `handleError` of its own, for what goes wrong *in the tab*: a boundary whose content threw, a chunk that never arrived, a component that broke while hydrating. It looks at `kind` the same way, and only `unknown` needs words, because SvelteKit’s default for it is `\'Internal Error\'`, in English, on a page that may be German. A remote function’s refusal never comes here — it went through the server’s hook and arrives finished, in the request’s language — so this file is short on purpose. Short is not the same as untested: chapter {{end-to-end}} drops the globe’s chunk on its way to a German page and expects the German sentence in the boundary, which SvelteKit’s English default would fail.'
 			},
 			{
 				type: 'why',
-				text: 'Why does the shape matter? Because a `failed` snippet, and `+error.svelte` through `page.error`, are handed the *result* of `handleError`: an `App.Error`, `{ status, message }`, a plain object and not an `Error`. The first versions of four boundaries tested `error instanceof Error`, which is never true here, so they printed the fallback every time — or, in the trips list, `String(error)`, which is `[object Object]`. A boundary reads its `message` — through `boundaryMessage` in `#lib/ui/errors.ts`, a guard rather than a type annotation, for a reason chapter 25 gives — and this hook decides what that says when the failure was nobody’s message. Awaiting a command is the other case, and chapter 25 shows it: there the rejection is an `HttpError`, with the server’s words on `body.message`.'
+				text: 'Why does the shape matter? Because a `failed` snippet, and `+error.svelte` through `page.error`, are handed the *result* of `handleError`: an `App.Error`, `{ status, message }`, a plain object and not an `Error`. The first versions of four boundaries tested `error instanceof Error`, which is never true here, so they printed the fallback every time — or, in the trips list, `String(error)`, which is `[object Object]`. A boundary reads its `message` — through `boundaryMessage` in `#lib/ui/errors.ts`, a guard rather than a type annotation, for a reason chapter {{the-itinerary}} gives — and this hook decides what that says when the failure was nobody’s message. Awaiting a command is the other case, and chapter {{the-itinerary}} shows it: there the rejection is an `HttpError`, with the server’s words on `body.message`.'
 			},
 			code('src/hooks.ts', 1, 35),
 			{
 				type: 'p',
-				text: 'The universal hooks run in the browser too, and both of these have to. `reroute` tells the router that `/de/trips` is served by `src/routes/trips` — on the server for the first request, in the browser for every navigation after it. `transport` teaches devalue about `CalendarDate`, so a date range that leaves the picker as a `CalendarDate` arrives on the server as one; chapter 21 shows the value crossing.'
+				text: 'The universal hooks run in the browser too, and both of these have to. `reroute` tells the router that `/de/trips` is served by `src/routes/trips` — on the server for the first request, in the browser for every navigation after it. `transport` teaches devalue about `CalendarDate`, so a date range that leaves the picker as a `CalendarDate` arrives on the server as one; chapter {{dates-and-money-in-a-locale}} shows the value crossing.'
 			},
 			code('src/params.ts', 1, 21),
 			{
 				type: 'p',
-				text: 'One file rather than a folder of matchers, and each entry is a Standard Schema — so a matcher can transform as well as accept, and `params.slug` arrives typed — in a page, as the `params` prop that `PageProps` describes (chapter 24). Anything that does not look like one of our slugs is a 404 before any route code runs and before the database is asked.'
+				text: 'One file rather than a folder of matchers, and each entry is a Standard Schema — so a matcher can transform as well as accept, and `params.slug` arrives typed — in a page, as the `params` prop that `PageProps` describes (chapter {{the-trip-page}}). Anything that does not look like one of our slugs is a 404 before any route code runs and before the database is asked.'
 			},
 			{
 				type: 'checkpoint',
@@ -135,7 +135,7 @@ export const part3 = [
 			code(`${SERVER}/access.ts`, 74, 110),
 			{
 				type: 'p',
-				text: '`readableTrip` is the read-side question with the `link` case: a member gets their role, and a stranger gets `role: "link"` if and only if the owner made the trip visible by link — otherwise the same 404 a nonexistent trip gives. `bump` is the last line of every write: increment the trip’s version in one `UPDATE … RETURNING` and wake the room. Chapter 18 shows who is listening.'
+				text: '`readableTrip` is the read-side question with the `link` case: a member gets their role, and a stranger gets `role: "link"` if and only if the owner made the trip visible by link — otherwise the same 404 a nonexistent trip gives. `bump` is the last line of every write: increment the trip’s version in one `UPDATE … RETURNING` and wake the room. Chapter {{live-collaboration}} shows who is listening.'
 			},
 			{
 				type: 'checkpoint',
@@ -190,7 +190,7 @@ export const part3 = [
 			},
 			{
 				type: 'warn',
-				text: 'On a page that is *itself* prerendered, `query` cannot be used at all — SvelteKit throws “Cannot call query while prerendering”. The guides in chapter 34 are prerendered and read nothing dynamic; the explore page in chapter 35 is dynamic and reads a `prerender`. Choosing which side of that line a page is on is a design decision, and the root layout in chapter 23 is arranged around it.'
+				text: 'On a page that is *itself* prerendered, `query` cannot be used at all — SvelteKit throws “Cannot call query while prerendering”. The guides in chapter {{guides-prerendered-with-mdsvex}} are prerendered and read nothing dynamic; the explore page in chapter {{explore-and-diagnostics}} is dynamic and reads a `prerender`. Choosing which side of that line a page is on is a design decision, and the root layout in chapter {{the-shell}} is arranged around it.'
 			},
 			code('src/routes/api/world.json/+server.ts', 1, 39),
 			{
@@ -223,17 +223,17 @@ export const part3 = [
 			code(`${REMOTE}/trips.remote.ts`, 39, 64),
 			{
 				type: 'p',
-				text: '`createTrip` and `deleteTrip` redirect, because after them the person should be somewhere else — and a `redirect` thrown inside a `form` is followed by the browser whether or not JavaScript ran. `updateTrip` is a `command`, and its last line is the single-flight idea: the client that sends the command asks, in the same request, for `tripBySlug` to be refreshed, and `requested(tripBySlug, 1).refreshAll()` refreshes exactly the instances that client is holding — at most one here, and the limit is required because the list is client-controlled. The settings form in chapter 31 is the other half: `updateTrip(patch).updates(tripBySlug(slug))`.'
+				text: '`createTrip` and `deleteTrip` redirect, because after them the person should be somewhere else — and a `redirect` thrown inside a `form` is followed by the browser whether or not JavaScript ran. `updateTrip` is a `command`, and its last line is the single-flight idea: the client that sends the command asks, in the same request, for `tripBySlug` to be refreshed, and `requested(tripBySlug, 1).refreshAll()` refreshes exactly the instances that client is holding — at most one here, and the limit is required because the list is client-controlled. The settings form in chapter {{companions-presence-and-settings}} is the other half: `updateTrip(patch).updates(tripBySlug(slug))`.'
 			},
 			code(`${REMOTE}/stops.remote.ts`, 1, 43),
 			{
 				type: 'p',
-				text: '`addStop` reads `STOP_LIMIT` — a number, by chapter 14 — and answers 422 when a trip is full, with a sentence the toast can show as it is: `m.stop_limit({ limit: STOP_LIMIT })` is a Paraglide message with a parameter, so the limit reads “Eine Reise hat höchstens 500 Halte” on a German page. `nextPosition` from the domain puts the new stop after the last one on its day. `returning()` gives the row back so the client can select it immediately. And `bump` wakes the room, so everybody else’s itinerary shows the stop before the person who added it has looked up.'
+				text: '`addStop` reads `STOP_LIMIT` — a number, by chapter {{environment-and-hooks}} — and answers 422 when a trip is full, with a sentence the toast can show as it is: `m.stop_limit({ limit: STOP_LIMIT })` is a Paraglide message with a parameter, so the limit reads “Eine Reise hat höchstens 500 Halte” on a German page. `nextPosition` from the domain puts the new stop after the last one on its day. `returning()` gives the row back so the client can select it immediately. And `bump` wakes the room, so everybody else’s itinerary shows the stop before the person who added it has looked up.'
 			},
 			code(`${REMOTE}/stops.remote.ts`, 45, 85),
 			{
 				type: 'p',
-				text: '`moveStop` is chapter 11 at the wire. It takes where the card was dropped, asks `place()` what has to change, writes exactly those rows in one transaction, and returns the changes — the same list the browser applied optimistically. `updateStop` looks the stop up first because the *trip* is what authorisation is about, and a stop id alone does not say which trip. When the stop is gone — a companion removed it a moment ago — the 404 carries a sentence, `m.error_no_stop()`, and not the words `Not found`, because a toast is going to print it to a person, in their language (chapter 25 shows the toast). `me` is a command with no argument, for the presence chip to tell its own entry apart.'
+				text: '`moveStop` is chapter {{the-itinerary-as-data}} at the wire. It takes where the card was dropped, asks `place()` what has to change, writes exactly those rows in one transaction, and returns the changes — the same list the browser applied optimistically. `updateStop` looks the stop up first because the *trip* is what authorisation is about, and a stop id alone does not say which trip. When the stop is gone — a companion removed it a moment ago — the 404 carries a sentence, `m.error_no_stop()`, and not the words `Not found`, because a toast is going to print it to a person, in their language (chapter {{the-itinerary}} shows the toast). `me` is a command with no argument, for the presence chip to tell its own entry apart.'
 			},
 
 			{ type: 'h3', id: 'forms-and-fields', text: 'A form whose fields carry their types' },
@@ -244,7 +244,7 @@ export const part3 = [
 			},
 			{
 				type: 'p',
-				text: 'The schema itself is not in this file. `ExpenseFormSchema` lives in `domain/schemas.ts` (chapter 12), because the form in the browser runs the very same object as a *preflight* before it sends anything (chapter 29) — and a `.remote.ts` module may export remote functions and nothing else, so a schema defined here could not be imported there. One schema, two places it runs, no copy to drift.'
+				text: 'The schema itself is not in this file. `ExpenseFormSchema` lives in `domain/schemas.ts` (chapter {{schemas-with-valibot}}), because the form in the browser runs the very same object as a *preflight* before it sends anything (chapter {{expenses-with-tanstack-and-layerchart}}) — and a `.remote.ts` module may export remote functions and nothing else, so a schema defined here could not be imported there. One schema, two places it runs, no copy to drift.'
 			},
 			code(`${REMOTE}/expenses.remote.ts`, 32, 67, { partial: true }),
 			{
@@ -260,7 +260,7 @@ export const part3 = [
 			code(`${REMOTE}/auth.remote.ts`, 51, 79),
 			{
 				type: 'p',
-				text: 'The sign-in form is the one to study for error handling. One message for both “no such account” and “wrong password”, on purpose, because distinguishing them turns the form into a tool for discovering which emails have accounts. The redirect target is *sanitised* rather than rejected: it lives in a hidden field the person cannot see, so a crafted link would otherwise strand them at “invalid redirect”, and the regular expression refuses `//evil.example` — a protocol-relative URL that starts with a slash and still leaves the site. The password’s messages are functions, `() => m.issue_password_missing()`, for the reason chapter 12 gave: valibot calls a message function when the check fails, which is inside the request, where Paraglide knows the language.'
+				text: 'The sign-in form is the one to study for error handling. One message for both “no such account” and “wrong password”, on purpose, because distinguishing them turns the form into a tool for discovering which emails have accounts. The redirect target is *sanitised* rather than rejected: it lives in a hidden field the person cannot see, so a crafted link would otherwise strand them at “invalid redirect”, and the regular expression refuses `//evil.example` — a protocol-relative URL that starts with a slash and still leaves the site. The password’s messages are functions, `() => m.issue_password_missing()`, for the reason chapter {{schemas-with-valibot}} gave: valibot calls a message function when the check fails, which is inside the request, where Paraglide knows the language.'
 			},
 			{
 				type: 'checkpoint',
@@ -309,7 +309,7 @@ export const part3 = [
 			code(`${REMOTE}/live.remote.ts`, 66, 76),
 			{
 				type: 'p',
-				text: 'Presence is not data: not stored, not migrated, gone on restart. A `Map` per trip with a thirty-second time-to-live; a browser touches its entry every fifteen seconds and says goodbye from `beforeunload`. `touch` publishes only when something *visible* changed — a new arrival, a pointer on a different stop — because a heartbeat that changes nothing should not wake every watcher. The page-side effects that send these are in chapter 24, along with the loop they must not create.'
+				text: 'Presence is not data: not stored, not migrated, gone on restart. A `Map` per trip with a thirty-second time-to-live; a browser touches its entry every fifteen seconds and says goodbye from `beforeunload`. `touch` publishes only when something *visible* changed — a new arrival, a pointer on a different stop — because a heartbeat that changes nothing should not wake every watcher. The page-side effects that send these are in chapter {{the-trip-page}}, along with the loop they must not create.'
 			},
 			{
 				type: 'checkpoint',
