@@ -2,7 +2,7 @@
  * THE COURSE, IN ORDER
  * ====================
  *
- * Nine parts, forty-six chapters. Each part is a file, each chapter an
+ * Nine parts, forty-eight chapters. Each part is a file, each chapter an
  * object with a slug (the page's file name), a title, a summary, a goal and
  * its blocks. `build.js` numbers them from the order here, so moving a
  * chapter is moving a line — and the prose names chapters by slug
@@ -14,10 +14,10 @@
  *   part2  10–14  The domain: ids, dates, money, fair splits, schemas, the database
  *   part3  15–20  The server: hooks, identity, remote functions, live collaboration
  *   part4  21–22  Three languages
- *   part5  23–32  The interface, tab by tab
- *   part6  33–37  The pages around the trip
- *   part7  38–41  The ecosystem: what was chosen, and the three shapes of a library
- *   part8  42–46  Proof and production: tests, security, the container, what is next
+ *   part5  23–33  The interface, tab by tab, and the motion in it
+ *   part6  34–39  The pages around the trip, and the trip with no network
+ *   part7  40–43  The ecosystem: what was chosen, and the three shapes of a library
+ *   part8  44–48  Proof and production: tests, security, the container, what is next
  */
 
 import { part0 } from './part0.js';

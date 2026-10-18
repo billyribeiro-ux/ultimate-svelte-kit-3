@@ -203,3 +203,28 @@ test('a dynamically rendered page carries its preloads as a Link header', async 
 	expect(link).toMatch(/fraunces-latin-standard-normal[^>]*\.woff2>; rel="preload"; as="font"/);
 	expect(await response.text()).not.toContain('rel="modulepreload"');
 });
+
+test('on a phone the closed menu is not in the accessibility tree, and Escape closes the open one', async ({
+	page
+}, testInfo) => {
+	test.skip(testInfo.project.name !== 'phone', 'the menu is a phone’s; a desktop shows the links');
+	await page.goto('/');
+	await page.locator('html[data-hydrated]').waitFor();
+
+	// The sheet is always in the DOM — `aria-controls` points at it — so "closed" has to mean
+	// more than clipped to nothing: `visibility: hidden` at the end of its motion takes its
+	// links out of the accessibility tree, and a role query cannot find them.
+	const sheet = page.locator('#primary-nav');
+	const explore = sheet.getByRole('link', { name: 'Explore' });
+	const menu = page.getByRole('button', { name: 'Menu' });
+	await expect(explore).toBeHidden();
+
+	await menu.click();
+	await expect(menu).toHaveAttribute('aria-expanded', 'true');
+	await expect(explore).toBeVisible();
+
+	await page.keyboard.press('Escape');
+	await expect(menu).toHaveAttribute('aria-expanded', 'false');
+	await expect(menu).toBeFocused();
+	await expect(explore).toBeHidden();
+});

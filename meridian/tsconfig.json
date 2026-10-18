@@ -38,7 +38,9 @@
 	// SvelteKit 3 requires these to be explicit. Without them `svelte-check` will
 	// happily type-check the minified output in `build/` and report thousands of
 	// meaningless errors — and here it would also walk into `packages/`, which
-	// has a tsconfig of its own.
+	// has a tsconfig of its own. `src/service-worker` has one of its own too: a
+	// worker has no `document`, and is checked against the WebWorker library by
+	// `tsc -p src/service-worker` in `pnpm run check`.
 	"include": [
 		"src/**/*.ts",
 		"src/**/*.js",
@@ -50,5 +52,13 @@
 		"*.config.ts",
 		"*.config.js"
 	],
-	"exclude": ["node_modules", "build", ".svelte-kit", "static", "drizzle", "packages"]
+	"exclude": [
+		"node_modules",
+		"build",
+		".svelte-kit",
+		"static",
+		"drizzle",
+		"packages",
+		"src/service-worker"
+	]
 }

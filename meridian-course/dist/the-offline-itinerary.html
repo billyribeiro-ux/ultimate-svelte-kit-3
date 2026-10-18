@@ -1,0 +1,701 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The offline itinerary — Building Meridian</title>
+<meta name="description" content="A service worker for the one scenario the product names — a trip read in a train tunnel: `self` from `$app/service-worker`, the build from `$app/manifest`, the deploy’s `version` from `$app/env`, three caching rules and the one the server can veto with `no-store`; why a remote query is never cached; a separate type-check for a worker; the copies a shared device must forget; a header that says “Offline”; a new worker after a deploy; and an end-to-end suite that waits for the worker instead of the clock.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Meridian</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">39 / 48</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 81.25%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-workspace.html"><span class="toc__num">02</span><span>A workspace of two</span></a></li><li><a href="the-toolchain.html"><span class="toc__num">03</span><span>The toolchain: sv, the checks, and the agent beside you</span></a></li><li><a href="the-config.html"><span class="toc__num">04</span><span>One file to configure everything</span></a></li><li><a href="the-map-of-features.html"><span class="toc__num">05</span><span>The map: every feature, every library, and where it lives</span></a></li><li><a href="geodesy-for-humans.html"><span class="toc__num">06</span><span>Geodesy for humans</span></a></li><li><a href="a-route-as-a-class.html"><span class="toc__num">07</span><span>A route as a class, in a library</span></a></li><li><a href="two-components-for-any-app.html"><span class="toc__num">08</span><span>Two components for any app</span></a></li><li><a href="packaging-and-proving.html"><span class="toc__num">09</span><span>Packaging a Svelte library, and proving it</span></a></li><li><a href="ids-dates-and-money.html"><span class="toc__num">10</span><span>Ids, dates and money</span></a></li><li><a href="splitting-fairly.html"><span class="toc__num">11</span><span>Splitting fairly, to the cent</span></a></li><li><a href="the-itinerary-as-data.html"><span class="toc__num">12</span><span>The itinerary as data</span></a></li><li><a href="schemas-with-valibot.html"><span class="toc__num">13</span><span>Schemas with valibot, and who may do what</span></a></li><li><a href="the-database.html"><span class="toc__num">14</span><span>The database: seven tables and Better Auth’s four</span></a></li><li><a href="environment-and-hooks.html"><span class="toc__num">15</span><span>Environment and hooks</span></a></li><li><a href="identity-with-better-auth.html"><span class="toc__num">16</span><span>Identity with Better Auth</span></a></li><li><a href="remote-functions-the-reads.html"><span class="toc__num">17</span><span>Remote functions: the reads</span></a></li><li><a href="remote-functions-the-writes.html"><span class="toc__num">18</span><span>Remote functions: the writes</span></a></li><li><a href="live-collaboration.html"><span class="toc__num">19</span><span>Live collaboration: a room, a mailbox and a generator</span></a></li><li><a href="invites-and-membership.html"><span class="toc__num">20</span><span>Invites and membership</span></a></li><li><a href="three-languages-with-paraglide.html"><span class="toc__num">21</span><span>Three languages with Paraglide</span></a></li><li><a href="dates-and-money-in-a-locale.html"><span class="toc__num">22</span><span>Dates, money and distances in a locale</span></a></li><li><a href="the-design-system.html"><span class="toc__num">23</span><span>The design system</span></a></li><li><a href="motion-with-intent.html"><span class="toc__num">24</span><span>Motion with intent</span></a></li><li><a href="the-shell.html"><span class="toc__num">25</span><span>The shell: a root that knows nobody</span></a></li><li><a href="the-trip-page.html"><span class="toc__num">26</span><span>The trip page: one await, one state object, one stream</span></a></li><li><a href="the-itinerary.html"><span class="toc__num">27</span><span>The itinerary: days you can drag</span></a></li><li><a href="the-command-palette.html"><span class="toc__num">28</span><span>The command palette</span></a></li><li><a href="the-map.html"><span class="toc__num">29</span><span>The map with no tile server</span></a></li><li><a href="the-globe.html"><span class="toc__num">30</span><span>The globe: Threlte, on demand</span></a></li><li><a href="expenses-with-tanstack-and-layerchart.html"><span class="toc__num">31</span><span>Expenses: a headless table, two charts, and the settle-up</span></a></li><li><a href="notes-with-tiptap-through-an-attachment.html"><span class="toc__num">32</span><span>Notes: Tiptap through an attachment</span></a></li><li><a href="companions-presence-and-settings.html"><span class="toc__num">33</span><span>Companions, presence, the join page and settings</span></a></li><li><a href="signing-in-and-up.html"><span class="toc__num">34</span><span>Signing in and up</span></a></li><li><a href="trips-and-a-new-trip.html"><span class="toc__num">35</span><span>The trips list and a new trip</span></a></li><li><a href="guides-prerendered-with-mdsvex.html"><span class="toc__num">36</span><span>Guides: Markdown, prerendered, no JavaScript</span></a></li><li><a href="explore-and-diagnostics.html"><span class="toc__num">37</span><span>Explore, and diagnostics</span></a></li><li><a href="embedding-a-trip.html"><span class="toc__num">38</span><span>Embedding a trip: a frame and a custom element</span></a></li><li><a href="the-offline-itinerary.html" aria-current="page"><span class="toc__num">39</span><span>The offline itinerary</span></a></li><li><a href="choosing-libraries.html"><span class="toc__num">40</span><span>The survey: what was chosen, what was rejected, and why</span></a></li><li><a href="the-headless-pattern.html"><span class="toc__num">41</span><span>The headless pattern: Bits UI and TanStack Table</span></a></li><li><a href="the-wrapper-pattern.html"><span class="toc__num">42</span><span>The wrapper pattern, and when to write an attachment instead</span></a></li><li><a href="reactivity-utilities.html"><span class="toc__num">43</span><span>Reactivity utilities: `svelte/reactivity`, runed, and the line between them</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">44</span><span>Unit and browser tests: two Vitest projects, one command</span></a></li><li><a href="end-to-end.html"><span class="toc__num">45</span><span>End to end: the built server, two viewports, two people</span></a></li><li><a href="security-headers-and-csp.html"><span class="toc__num">46</span><span>Security: the policy, the headers, the redirect and the one framed route</span></a></li><li><a href="deploying.html"><span class="toc__num">47</span><span>Deploying: three stages, one process, a health check and a pipeline that runs the container</span></a></li><li><a href="what-i-would-do-next.html"><span class="toc__num">48</span><span>What I would do next, and what you now know</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 39</p>
+			<h1>The offline itinerary</h1>
+			<p class="lede">A service worker for the one scenario the product names — a trip read in a train tunnel: <code>self</code> from <code>$app/service-worker</code>, the build from <code>$app/manifest</code>, the deploy’s <code>version</code> from <code>$app/env</code>, three caching rules and the one the server can veto with <code>no-store</code>; why a remote query is never cached; a separate type-check for a worker; the copies a shared device must forget; a header that says “Offline”; a new worker after a deploy; and an end-to-end suite that waits for the worker instead of the clock.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Add a service worker to a SvelteKit 3 app that makes pages readable offline without ever serving stale data online or one person’s pages to the next, type-check it, register it the way SvelteKit does, and test it without a flaky line.</p></aside>
+			<p>The product names one scenario for this: the train from Lisbon to Porto goes through tunnels, and the person checking which platform the connection leaves from loses the network at exactly that moment. So the promise is narrow and exact — <strong>a trip opened once can be read again with no network</strong> — and everything in this chapter is either that promise or a guard on it. It is not an installable app (there is no web manifest) and it does not take changes offline; chapter <a href="what-we-are-building.html">01</a> lists both under what the project does not build, and why.</p>
+<p>A service worker is a script the browser runs beside the pages of one origin, in its own global scope with no <code>document</code>, and it can answer the pages’ requests itself: every <code>fetch</code> from a page it controls passes through its <code>fetch</code> event first. That makes it a programmable cache in front of the network, which is the whole of offline reading — and also the whole of the danger. A cache that answers a request the server should have answered serves yesterday’s data to somebody who is online, and a cache on a shared laptop serves one person’s pages to the next. Both are worse than no worker at all, so the file is mostly rules about what it will *not* answer.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/service-worker/index.ts<span class="code__lines">:1-29</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * THE OFFLINE ITINERARY
+ * =====================
+ *
+ * A trip opened once can be read again with no network: in a train tunnel,
+ * on a plane, on a ferry between islands. That is the whole promise, and
+ * this file keeps it with two caches and four rules.
+ *
+ *   - The build is copied on install. Vite's hashed output (`immutable`) is
+ *     then served from the copy: a new version of one of those files gets a
+ *     new name, so the copy can never be out of date.
+ *   - The rest of the build — `static/` and everything prerendered — keeps
+ *     its name from one deploy to the next (`guides/…`, `api/world.json`),
+ *     so it is asked of the network first and the install-time copy is only
+ *     the offline answer. Served from the copy, a guide edited in the next
+ *     deploy would stay old *online* until every tab had closed.
+ *   - A page is asked of the network first, every time, and a copy is kept.
+ *     With no network, the copy is served. Online, the page is always
+ *     today's; offline, it is the last one this device saw.
+ *   - Everything else is not touched. A remote function's request — a
+ *     query, a command, the live stream — and a `__data.json` go to the
+ *     network exactly as if there were no worker, and fail as they would
+ *     without one. A query answered from a cache would show yesterday's
+ *     itinerary *online*, and the live stream cannot be cached at all.
+ *
+ * SvelteKit bundles this file for production and registers it itself:
+ * `src/service-worker/index.ts` existing is the whole of the setup. It is
+ * not bundled in development, so `pnpm dev` never runs it.
+ */</code></pre>
+</figure>
+<h3 id="setup">The setup is a file</h3>
+<p>SvelteKit’s documentation puts it in one sentence: “if you have a <code>src/service-worker/index.ts</code> file it will be bundled and automatically registered.” Nothing goes in <code>vite.config.ts</code>. The build compiles the file with Vite into <code>build/client/service-worker.js</code>, at the root of the app’s scope, and every server-rendered page carries a few lines in its inline start-up script that register it once the page has loaded — the registration the documentation prints under “Manual registration”, with <code>navigator.serviceWorker.register(…, { type: 'module' })</code>. A module worker, because the bundle is an ES module. The script is the same inline block that starts the client, so the Content Security Policy already allows it (a nonce on dynamic pages, a hash on prerendered ones), and <code>worker-src 'self'</code> — there for MapLibre’s worker since chapter <a href="the-config.html">04</a> — is what lets the browser fetch <code>/service-worker.js</code> as a worker at all.</p>
+<p>The option behind this is <code>serviceWorker</code> in the SvelteKit config, and the project leaves it alone. <code>register</code> is <code>true</code> by default; <code>options</code> is the <code>RegistrationOptions</code> object handed to <code>register()</code>, and SvelteKit adds <code>type: 'module'</code> to whatever is there. <code>serviceWorker: { register: false }</code> exists for registering by hand — after a consent screen, say, or only for some people — and nothing here needs that. An earlier plan for this chapter registered the worker by hand with <code>{ type: dev ? 'module' : 'classic' }</code>; it is wrong twice over, because the documentation’s registration is a module in every case, and because “the service worker is bundled for production, but not during development” — <code>pnpm dev</code> never runs it, so there is no development case to switch on.</p>
+<p>SvelteKit 2 had a module of its own for this, <code>$service-worker</code>, and SvelteKit 3 removed it; importing it is a build error that names the replacements. Its five exports, and where each went:</p>
+<ul><li><strong><code>base</code></strong> (the base path) → <code>resolve()</code> from <code>$app/paths</code> — and, inside a worker, the registration’s <code>scope</code>, below.</li><li><strong><code>build</code></strong> (Vite’s output) → <code>immutable</code> from <code>$app/manifest</code>.</li><li><strong><code>files</code></strong> (the <code>static/</code> folder) → <code>assets</code> from <code>$app/manifest</code>.</li><li><strong><code>prerendered</code></strong> → <code>prerendered</code> from <code>$app/manifest</code>.</li><li><strong><code>version</code></strong> → <code>version</code> from <code>$app/env</code>.</li></ul>
+<aside class="callout callout--note"><p>Three modules may not be imported into a worker at all: <code>$app/forms</code>, <code>$app/navigation</code> and <code>$app/state</code> belong to a page, and the build refuses them with “Cannot import … into service-worker code”.</p></aside>
+<h3 id="the-build">What the worker knows: the build, and the deploy</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/service-worker/index.ts<span class="code__lines">:31-57</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">import { self } from '$app/service-worker';
+import { version } from '$app/env';
+import { assets, immutable, prerendered } from '$app/manifest';
+import { PAGES } from '#lib/offline/pages.ts';
+
+/*
+ * The deploy's `version` names the build's cache, as it names the pages'.
+ * A new deploy installs a new worker with a new, empty cache beside the
+ * old; when it takes over, `activate` deletes the old.
+ */
+const BUILD = `meridian-build-${version}`;
+
+/*
+ * `$app/manifest` lists the build. Its paths are relative to the base
+ * path — `_app/immutable/…`, `robots.txt`, `guides` — and the worker's
+ * scope *is* the base path (SvelteKit serves the worker from there), so
+ * resolving a path against the scope gives the pathname a request for it
+ * will have, which is what the `fetch` handler compares. Not `resolve()`
+ * from `$app/paths`: its argument is typed as a route or a pathname of
+ * this app, and it refuses a hashed build file at compile time, rightly.
+ * `immutable` and `prerendered` are empty in development, one more
+ * reason the worker only runs in a build.
+ */
+const inScope = (path: string) =&gt; new URL(path, self.registration.scope).pathname;
+
+const FILES = [...immutable, ...assets, ...prerendered].map((file) =&gt; inScope(file.path));
+const IN_BUILD = new Set(FILES);</code></pre>
+</figure>
+<p><code>self</code> from <code>$app/service-worker</code> is <code>globalThis</code>, typed as a <code>ServiceWorkerGlobalScope</code> — the module exists so that <code>self.addEventListener('fetch', …)</code> hands you a <code>FetchEvent</code> and not a DOM event. <code>version</code> from <code>$app/env</code> is <code>config.version.name</code>, which is the commit this build was made from (chapter <a href="the-config.html">04</a>), and it goes into every cache name, so each deploy gets caches of its own. <code>$app/manifest</code> lists the build: <code>immutable</code> is every file Vite wrote — the hashed JavaScript, CSS, fonts, the MapLibre worker, the globe’s chunk — <code>assets</code> is every file in <code>static/</code>, and <code>prerendered</code> is every page and endpoint rendered at build time. In this project that last list is the guides in three languages, <code>/api/world.json</code>, and one entry worth noticing: <code>_app/remote/&lt;hash&gt;/places</code>, the prerendered remote function from chapter <a href="remote-functions-the-reads.html">17</a>, written to disk at build time like a page.</p>
+<p><code>immutable</code> and <code>prerendered</code> are empty in development, says the documentation, which is one more reason the worker only exists in a build. Each <code>path</code> is relative to the base path, and the documentation’s example turns them into absolute pathnames with <code>resolve()</code> from <code>$app/paths</code>. In TypeScript that does not compile, and the compiler is right: <code>resolve()</code> takes one of this app’s routes or pathnames — the same typed union <code>href()</code> is built on (chapter <a href="the-shell.html">25</a>) — and <code>_app/immutable/nodes/0.BaOiqs_e.js</code> is neither. <code>assets</code> is typed more narrowly still: <code>{ path: AssetPath }</code>, where <code>AssetPath</code> is generated from <code>static/</code> and here is exactly <code>&quot;embed/meridian-route.js&quot; | &quot;robots.txt&quot;</code>, so <code>asset('robots.txt')</code> type-checks and <code>asset('robot.txt')</code> does not. The worker sidesteps both with a fact about where it lives: SvelteKit serves it from the root of the app, so its registration’s <code>scope</code> *is* the base path, and resolving a path against the scope gives the pathname a request will have. (<code>%sveltekit.assets%</code>, the placeholder <code>app.html</code> can use for a favicon, is the same idea in the template — “either <code>paths.assets</code>, if specified, or a relative path to <code>paths.base</code>” — and a separate <code>paths.assets</code> host is the one configuration SvelteKit refuses outright with a worker: “Cannot use service worker alongside <code>config.paths.assets</code>”.)</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/service-worker/index.ts<span class="code__lines">:61-77</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">self.addEventListener('install', (event) =&gt; {
+	event.waitUntil(caches.open(BUILD).then((cache) =&gt; cache.addAll(FILES)));
+});
+
+self.addEventListener('activate', (event) =&gt; {
+	event.waitUntil(
+		caches.keys().then((names) =&gt;
+			Promise.all(
+				names
+					// Only this app's caches: SvelteKit keeps one of its own
+					// (`sveltekit:&lt;version&gt;`, for prerendered remote functions).
+					.filter((name) =&gt; name.startsWith('meridian-') &amp;&amp; name !== BUILD &amp;&amp; name !== PAGES)
+					.map((name) =&gt; caches.delete(name))
+			)
+		)
+	);
+});</code></pre>
+</figure>
+<p><code>install</code> copies the build into this deploy’s cache, and <code>waitUntil</code> holds the worker in the installing state until the copy is done — if one file fails, <code>addAll</code> fails, and the worker is discarded rather than activated with half a build. <code>activate</code> runs when the worker takes over and deletes every cache that is not its own, which is how a deploy’s files leave the device. The copy is the whole build, about 8 MB on disk at the time of writing, and most of it is the globe: three.js, and two 3D-model decoders, Draco and Basis, that arrive in the build with the 3D libraries although this globe loads no model. The documentation’s caution applies — “you should also be careful about caching large assets” — and the trade made here is that every tab works in the tunnel, the globe included. If the size ever matters, the decoders are the first thing to leave out of <code>FILES</code>.</p>
+<h3 id="three-rules">Three rules, and the requests it never answers</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/service-worker/index.ts<span class="code__lines">:79-100</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">self.addEventListener('fetch', (event) =&gt; {
+	const { request } = event;
+	if (request.method !== 'GET') return;
+
+	const url = new URL(request.url);
+	if (url.origin !== self.location.origin) return;
+
+	if (HASHED.has(url.pathname)) {
+		event.respondWith(fromBuild(url, request));
+	} else if (IN_BUILD.has(url.pathname)) {
+		event.respondWith(fresh(url, request));
+	} else if (request.mode === 'navigate' &amp;&amp; !url.pathname.startsWith('/api/')) {
+		event.respondWith(page(event));
+	}
+	// Anything else: no `respondWith`, so the browser fetches it itself.
+});
+
+/** A hashed file of the build: from the copy made on install. */
+async function fromBuild(url: URL, request: Request): Promise&lt;Response&gt; {
+	const copy = await caches.match(url.pathname, { cacheName: BUILD });
+	return copy ?? fetch(request);
+}</code></pre>
+</figure>
+<p>The <code>fetch</code> handler sorts every request into one of four kinds. A <strong>hashed</strong> file of the build — <code>immutable</code>, Vite’s output — is answered from the copy, always: <strong>cache first</strong>, because its name contains a hash of its content, so a newer version would have a different name and there is never a reason to ask the network again. The rest of the build — <code>static/</code> and every prerendered page and endpoint — has no hash in its name: <code>guides/lisbon-in-three-days</code> and <code>api/world.json</code> are called the same after the next deploy. Those are <strong>network first</strong>, with the install-time copy as the offline answer; served from the copy, a guide edited in the next deploy would stay old *online* for as long as the old worker held the tab. A page — a navigation, <code>request.mode === 'navigate'</code> — is asked of the network first and kept (below). And everything else gets no <code>respondWith</code> at all, which means the browser fetches it exactly as if there were no worker: <strong>network only</strong>. That last rule is the one that keeps the app honest online.</p>
+
+<aside class="callout callout--why">
+	<h4>Why a remote query is never answered from a cache</h4>
+	<p>Every read in this app is a remote function, and its request is a <code>GET</code> to <code>/_app/remote/…</code> with the arguments in the URL — exactly the kind of request a naive worker caches. Then <code>tripBySlug</code> would answer from the copy *online*: a stop a companion added an hour ago missing, a deleted trip still there, with nothing on screen to say so. The live stream is worse: <code>watchTrip</code> is one long response that never ends, and a cache can only store a response that has. So remote calls and <code>__data.json</code> — which carries a layout’s per-person data — go straight to the network and fail without one, and the page handles the failure as it always has. The exception proves the rule: <code>places()</code> is a <code>prerender</code> function, its answer is fixed at build time, it is listed in <code>prerendered</code>, and so it is a file of the build and comes from the copy, which keeps the place search working in the tunnel.</p>
+</aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/service-worker/index.ts<span class="code__lines">:113-153</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * A page: the network's answer if there is one, and a copy kept for later;
+ * the kept copy if there is not.
+ *
+ * The copy is written with `waitUntil`, beside the response rather than in
+ * front of it, so the page streams to the screen while it is being kept.
+ *
+ * `ignoreVary`: the server sends `Vary: Cookie` on its pages, so that a
+ * shared cache never hands one person's page to another. This cache is not
+ * shared — it is this device's, it holds one person's pages, and the app
+ * empties it when they sign out (`#lib/offline/pages.ts`) — and a worker
+ * never sees the cookie anyway.
+ */
+async function page(event: FetchEvent): Promise&lt;Response&gt; {
+	const { request } = event;
+	try {
+		const response = await fetch(request);
+		if (worthKeeping(response)) {
+			const copy = response.clone();
+			event.waitUntil(caches.open(PAGES).then((cache) =&gt; cache.put(request, copy)));
+		}
+		return response;
+	} catch (offline) {
+		const kept = await caches.match(request, { cacheName: PAGES, ignoreVary: true });
+		if (kept) return kept;
+		throw offline;
+	}
+}
+
+/**
+ * Only a whole page is worth keeping. A redirect reaches the worker as an
+ * opaque response with status 0, so it is never kept under the address it
+ * came from; an error page is not the page; an endpoint answers something
+ * that is not HTML; and `no-store` is the server saying &quot;never write this
+ * down&quot;, which a cache of the server's answers has to obey.
+ */
+function worthKeeping(response: Response): boolean {
+	const type = response.headers.get('content-type') ?? '';
+	const caching = response.headers.get('cache-control') ?? '';
+	return response.status === 200 &amp;&amp; type.startsWith('text/html') &amp;&amp; !caching.includes('no-store');
+}</code></pre>
+</figure>
+<p>A page is <strong>network first</strong>: online, the person always gets today’s page and the worker keeps a copy; offline, the <code>fetch</code> throws and the copy is served, or the error is thrown on if there is none. The copy is written with <code>event.waitUntil</code>, beside the response rather than in front of it, so the page streams to the screen while it is being kept. What is kept is decided by <code>worthKeeping</code>, and each condition is a lesson. A redirect never arrives as a 200 — a navigation’s redirects come to the worker as an opaque response with status 0 — so the sign-in page is never stored under the address of the trip that redirected to it. An error page is not the page. An endpoint answers JSON, not <code>text/html</code>, and the <code>/api/</code> test before it keeps Better Auth’s routes out entirely. And <code>Cache-Control: no-store</code> is the server saying “never write this down”: the health endpoint sends it (chapter <a href="embedding-a-trip.html">38</a>), and any page that ever should not be kept can say so without a change here. <code>ignoreVary</code> is explained in the comment: <code>Vary: Cookie</code> (chapter <a href="security-headers-and-csp.html">46</a>) protects caches shared between people, and this one is not.</p>
+<aside class="callout callout--note"><p>The obvious way to tell a page from an endpoint is to match the URL against the app’s routes — <code>$app/manifest</code> exports <code>routes</code>, each a <code>ManifestRoute</code> with an <code>id</code> and <code>page</code> and <code>endpoint</code> flags, and <code>$app/paths</code> exports <code>match()</code>. It cannot be done in a worker: <code>match()</code> there throws “Cannot use <code>match(...)</code> inside a service worker, as it depends on the SvelteKit client instance”. The response’s own content type is the better test anyway — it is what the server actually sent.</p></aside>
+<h3 id="type-check">A worker has its own types</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/service-worker/tsconfig.json<span class="code__lines">:1-19</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-json">{
+	// A service worker runs in its own global scope — `ServiceWorkerGlobalScope`,
+	// with `caches`, `clients` and `FetchEvent`, and no `document` — so it is
+	// type-checked against the WebWorker library instead of the DOM. SvelteKit
+	// generates that base config; the root `tsconfig.json` excludes this folder,
+	// and `pnpm run check` runs `tsc -p src/service-worker` with this file.
+	&quot;extends&quot;: &quot;$app/tsconfig/service-worker&quot;,
+	&quot;compilerOptions&quot;: {
+		// The same strictness as the rest of the project (see the root tsconfig).
+		&quot;strict&quot;: true,
+		&quot;noUncheckedIndexedAccess&quot;: true,
+		&quot;noImplicitOverride&quot;: true,
+		&quot;noFallthroughCasesInSwitch&quot;: true,
+		&quot;noImplicitReturns&quot;: true,
+		&quot;noUnusedLocals&quot;: true,
+		&quot;noUnusedParameters&quot;: true,
+		&quot;erasableSyntaxOnly&quot;: true
+	}
+}</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">package.json<span class="code__lines">:20-20</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-json">&quot;check&quot;: &quot;pnpm run i18n --silent &amp;&amp; svelte-kit sync &amp;&amp; svelte-check --tsconfig ./tsconfig.json --fail-on-warnings &amp;&amp; tsc -p src/service-worker&quot;,</code></pre>
+</figure>
+<p>A worker’s global scope has <code>caches</code>, <code>clients</code> and <code>FetchEvent</code>, and no <code>window</code> or <code>document</code>, so it cannot be type-checked against the DOM library the rest of the app uses. SvelteKit generates a second base config for it, <code>$app/tsconfig/service-worker</code>, with <code>&quot;lib&quot;: [&quot;ESNext&quot;, &quot;WebWorker&quot;]</code>, and the documentation’s two steps are the two files: the root <code>tsconfig.json</code> excludes <code>src/service-worker</code> (chapter <a href="the-config.html">04</a>), and this one extends the worker’s base with the same strictness as the rest of the project. The catch is that <code>svelte-check</code> only reads one tsconfig per run, so excluding the folder from the root config quietly stops anything from checking it at all. <code>check</code> therefore runs a second program: <code>tsc -p src/service-worker</code>. Not a second <code>svelte-check --tsconfig</code>: given a folder with no <code>.svelte</code> file in it, <code>svelte-check</code> warns that it found nothing to check, and here a warning fails the build (chapter <a href="the-toolchain.html">03</a>). Plain TypeScript is <code>tsc</code>’s job, and <code>tsc</code> follows the worker’s imports, so <code>#lib/offline/pages.ts</code> is checked as worker code too. Both directions of the check have teeth:</p>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>$ echo &quot;self.foo();&quot; &gt;&gt; src/service-worker/index.ts &amp;&amp; pnpm exec tsc -p src/service-worker
+src/service-worker/index.ts(135,6): error TS2339: Property 'foo' does not exist on type 'ServiceWorkerGlobalScope'.
+
+$ echo &quot;document.title;&quot; &gt;&gt; src/service-worker/index.ts &amp;&amp; pnpm exec tsc -p src/service-worker
+src/service-worker/index.ts(135,1): error TS2584: Cannot find name 'document'. Do you need to change your target library? Try changing the 'lib' compiler option to include 'dom'.</code></pre>
+</figure>
+<h3 id="shared-device">The shared device</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/offline/pages.ts<span class="code__lines">:1-52</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">import { version } from '$app/env';
+
+/**
+ * THE PAGES THIS DEVICE KEEPS
+ * ===========================
+ *
+ * The service worker keeps a copy of each page it serves, so a trip opened
+ * once can be read again in a train tunnel (`src/service-worker/index.ts`).
+ * Those copies were rendered on the server *for the person signed in*: a
+ * private trip's itinerary, their name in the header. On a shared device
+ * the next person must not be able to read them offline, so the app empties
+ * this cache when somebody signs out (the header's sign-out form), and
+ * whenever it finds nobody signed in (the `(site)` layout) — which also
+ * covers a session that ended without the button.
+ *
+ * Both sides need the name, which is why it lives in a module of its own
+ * that the worker and the app import: the worker opens the cache by it, the
+ * app deletes by it.
+ *
+ * The deploy's `version` is part of the name. A page refers to the build's
+ * hashed files, so a page from the last deploy is useless with this one's,
+ * and the worker's `activate` drops every cache that is not its own. But
+ * the app deletes by the *prefix*: a tab running this deploy's code can sit
+ * beside a worker that is still the last deploy's — a new worker waits for
+ * the old one's tabs to close — and that worker's pages carry the last
+ * deploy's name. A privacy rule that missed them would not be one.
+ */
+
+const PREFIX = 'meridian-pages-';
+
+/** This deploy's page cache. */
+export const PAGES = `${PREFIX}${version}`;
+
+/** Delete every page cache on this device, whichever deploy made it. */
+export async function forgetPages(): Promise&lt;void&gt; {
+	// Cache Storage only exists on a secure origin: https, or localhost.
+	if (!('caches' in globalThis)) return;
+	/*
+	 * Never rejects. Sign-out awaits this before it submits, and a failed
+	 * purge must not keep a session alive — on a shared device that is worse
+	 * than a copy left behind, which the `(site)` layout retries to delete on
+	 * the next page anyway.
+	 */
+	try {
+		const names = await caches.keys();
+		await Promise.all(
+			names.filter((name) =&gt; name.startsWith(PREFIX)).map((name) =&gt; caches.delete(name))
+		);
+	} catch (error) {
+		console.warn('[meridian] could not empty the offline copies', error);
+	}
+}</code></pre>
+</figure>
+<p>The pages the worker keeps were rendered on the server *for the person signed in*: a private trip’s itinerary, their companions, their name in the header. On a phone that is fine. On the family laptop, the hotel’s lobby computer, a colleague’s machine borrowed for a minute, it means the next person can switch off the Wi-Fi, type the address of a trip they were never invited to, and read it. <code>Vary: Cookie</code> cannot help — it is a header for caches between people, and this cache is inside the one browser profile they share. So the app itself empties the cache, and the cache’s name lives in a module both sides import: the worker opens the cache by it, the app deletes by it. It deletes by the *prefix*, not the full name, and the comment says why: after a deploy, a tab running the new code can sit beside a worker that is still the old one, holding a cache with the old version in its name.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/ui/Header.svelte<span class="code__lines">:163-179</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;!--
+	A form, so signing out works with JavaScript off too. With it
+	on, `enhance` empties the pages this device kept for offline
+	reading *before* the session ends: they were rendered for this
+	person, and the next one on the device must not read them in a
+	tunnel (`#lib/offline/pages.ts`).
+--&gt;
+&lt;form
+	{...signOut.enhance(async (form) =&gt; {
+		await forgetPages();
+		await form.submit();
+	})}
+&gt;
+	&lt;button class=&quot;btn btn--ghost&quot; type=&quot;submit&quot; title={user.name}&gt;
+		{m.auth_sign_out()}
+	&lt;/button&gt;
+&lt;/form&gt;</code></pre>
+</figure>
+<p>The event that matters is signing out, and the header’s form handles it with the remote form’s own hook. <code>signOut.enhance(callback)</code> replaces the default submission with yours; the callback receives a copy of the form, and <code>form.submit()</code> performs the submission without calling the callback again. So the copies are deleted, and only then is the session ended — in that order, so that there is no moment at which a person is signed out and their pages are still on the device. Without JavaScript the form still signs out, and there is nothing to delete: registering a worker is itself a script, so a device that never ran the app’s JavaScript holds no copies. The case in between — a sign-out pressed before the page has hydrated — is the layout’s, next.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(site)/+layout.svelte<span class="code__lines">:20-34</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/*
+ * NOBODY SIGNED IN, NOTHING KEPT
+ * ------------------------------
+ * The service worker keeps a copy of each page for offline reading, and
+ * those copies were rendered for whoever was signed in. The sign-out
+ * button empties them first; this catches every other way a session
+ * ends — it expired, it was signed out before the page had hydrated, it
+ * was revoked from another device. Whenever this layout finds nobody
+ * signed in, the copies go. An effect, because it writes to something
+ * outside the component (the device's Cache Storage) in answer to a
+ * value; it reads `data.user`, so it runs again when that changes.
+ */
+$effect(() =&gt; {
+	if (!data.user) void forgetPages();
+});</code></pre>
+</figure>
+<p>A session can also end without the button: it expires, it is revoked from another device, or the person presses “Sign out” on a slow phone before the page has hydrated and the form submits the plain way, with no callback. Every one of those ends the same way — the next page renders with nobody signed in — so the <code>(site)</code> layout, which knows who is signed in, deletes the copies whenever it finds nobody. It is an effect because it is a write to something outside the component in answer to a value, and it runs again when <code>data.user</code> changes. Its cost is a <code>caches.keys()</code> on a signed-out page load, and its trade is deliberate: a stranger reading a public trip gets no offline copy, because the policy is simple to state and to test — *the device keeps pages only while somebody is signed in*. What it cannot cover is a session that expires and is then opened offline before any page has been loaded online; the copies stay until the next deploy, or the next page load with a network. The sign-out button is the guarantee; the layout is the net.</p>
+<h3 id="honest-header">A header that says “Offline”</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/trip/TripView.svelte<span class="code__lines">:93-142</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/*
+ * THE LIVE CHIP
+ * -------------
+ * Four states, not two. For the first three seconds a stream that is
+ * not up yet is still connecting, and the chip says &quot;Connecting…&quot; in the
+ * quiet grey. After that, a stream that is not up has failed or dropped,
+ * and &quot;Reconnect&quot;, the coral button, offers to try again. Shown the
+ * moment the page hydrated, as it first was, it told everybody on a slow
+ * network that something had failed when nothing had. All of them sit in
+ * one slot as wide as the widest (the `.status` rules say how), so the
+ * palette and the settings button beside it never move.
+ *
+ * And when the device itself has no network — a tunnel, a plane — the
+ * chip says &quot;Offline&quot;, in the same quiet grey, and offers nothing:
+ * a Reconnect button that cannot work is a button that lies. The
+ * itinerary on screen is then the copy the service worker kept
+ * (`src/service-worker/index.ts`). `online` from
+ * `svelte/reactivity/window` is `navigator.onLine` as a reactive value,
+ * `undefined` on the server, so only a browser that knows it is offline
+ * says so.
+ *
+ * `patient` is state written by a timer inside an effect: three seconds
+ * passing is not something a `$derived` can depend on, and the effect's
+ * cleanup stops the timer if the page goes first.
+ */
+let patient = $state(true);
+
+$effect(() =&gt; {
+	const timer = setTimeout(() =&gt; (patient = false), 3000);
+	return () =&gt; clearTimeout(timer);
+});
+
+const status: 'offline' | 'live' | 'connecting' | 'lost' = $derived(
+	online.current === false ? 'offline' : live.connected ? 'live' : patient ? 'connecting' : 'lost'
+);
+
+/*
+ * Back online, SvelteKit reconnects a live query by itself — but only
+ * one that had connected before. A page opened with no network (the
+ * service worker's copy, in a tunnel) never connected, and a live query
+ * whose first connection fails stops for good (`done`). `reconnect()`
+ * restarts either kind: it stops whatever attempt is under way and
+ * starts one on the network that has just come back, so it does not
+ * matter whether the first attempt had finished failing yet. The
+ * `online` event is the moment to ask — an event, so a handler on the
+ * window, not an effect: nothing here is derived.
+ */
+function ononline() {
+	if (!live.connected) fireAndForget(live.reconnect(), 'live reconnect');
+}</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/trip/TripView.svelte<span class="code__lines">:355-386</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;span class=&quot;status&quot;&gt;
+	&lt;span class=&quot;status__sizer&quot; aria-hidden=&quot;true&quot;&gt;
+		&lt;span data-label={m.live_connected()}&gt;&lt;/span&gt;
+		&lt;span data-label={m.live_connecting()}&gt;&lt;/span&gt;
+		&lt;span data-label={m.live_reconnect()}&gt;&lt;/span&gt;
+		&lt;span data-label={m.live_offline()}&gt;&lt;/span&gt;
+	&lt;/span&gt;
+	{#if status === 'offline'}
+		&lt;span class=&quot;chip live live--offline&quot; title={m.live_offline()}&gt;
+			&lt;span class=&quot;live__dot&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;
+			{m.live_offline()}
+		&lt;/span&gt;
+	{:else if status === 'live'}
+		&lt;span class=&quot;chip chip--sea live&quot; title={m.live_connected()}&gt;
+			&lt;span class=&quot;live__dot&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;
+			{m.live_connected()}
+		&lt;/span&gt;
+	{:else if status === 'connecting'}
+		&lt;span class=&quot;chip live live--connecting&quot; title={m.live_connecting()}&gt;
+			&lt;span class=&quot;live__dot&quot; aria-hidden=&quot;true&quot;&gt;&lt;/span&gt;
+			{m.live_connecting()}
+		&lt;/span&gt;
+	{:else}
+		&lt;button
+			class=&quot;btn btn--sm btn--ghost btn--danger&quot;
+			type=&quot;button&quot;
+			onclick={() =&gt; live.reconnect()}
+		&gt;
+			{m.live_reconnect()}
+		&lt;/button&gt;
+	{/if}
+&lt;/span&gt;</code></pre>
+</figure>
+<p>A page served from the copy hydrates from the copied build and runs like any other — and its live stream cannot connect. Before this chapter the chip would have said “Connecting…” for three seconds and then offered the coral “Reconnect”, a button that cannot work in a tunnel. Now the status has a fourth state, first in the derivation: <code>online</code> from <code>svelte/reactivity/window</code> is <code>navigator.onLine</code> as a reactive value, and when it is <code>false</code> the chip says “Offline” in the quiet grey and offers nothing. It is <code>undefined</code> on the server, which is why the test is <code>=== false</code>: a page rendered on a server must not claim to be offline. The sizer gained a fourth label, so the slot stays the width of the widest in every language.</p>
+<p>Coming back online is the subtle half. SvelteKit’s documentation promises that when a live query’s connection drops it “will attempt to reconnect passively, with exponential backoff, and actively if <code>navigator.onLine</code> goes from <code>false</code> to <code>true</code>” — and the client’s source has the condition the sentence leaves out: that applies to a stream that had connected. A live query whose *first* connection fails has never delivered a value, and it fails for good: <code>done</code> becomes <code>true</code>, and only <code>reconnect()</code> starts it again. A page opened in a tunnel is exactly that case. So <code>ononline</code>, a handler on <code>&lt;svelte:window&gt;</code>, asks: if the stream is not connected when the network returns, <code>reconnect()</code> it. <code>reconnect()</code> stops whatever attempt is under way before it starts one, so the handler does not need to know whether the first attempt had finished failing — which is what keeps the end-to-end test free of a race. It is an event, so it is a handler, not an effect watching <code>online.current</code>: nothing is being derived.</p>
+<h3 id="updates">A new worker after a deploy</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/+layout.svelte<span class="code__lines">:89-111</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/*
+ * A NEW SERVICE WORKER AFTER A DEPLOY
+ * -----------------------------------
+ * The browser looks for a new `service-worker.js` on a full page load
+ * within its scope, and a client-side navigation is not one — so a tab
+ * that stays open across a deploy would go on with the old worker, and
+ * the old worker's copies, for as long as it stays open. Asking on every
+ * navigation is the pattern SvelteKit's documentation gives. A new
+ * worker found this way installs in the background and takes over when
+ * every tab the old one controls has closed; it does not swap itself in
+ * under a page that is open.
+ *
+ * Two changes from the documentation's version. With no network there is
+ * nothing to look for, so it does not ask — `afterNavigate` also runs
+ * when a page hydrates, and a page read offline hydrates too. And a
+ * check that fails for any other reason fails quietly: it is a
+ * background chore, and the next navigation asks again.
+ */
+afterNavigate(async () =&gt; {
+	if (!('serviceWorker' in navigator) || !navigator.onLine) return;
+	const registration = await navigator.serviceWorker.getRegistration();
+	if (registration) fireAndForget(registration.update(), 'service worker update check');
+});</code></pre>
+</figure>
+<p>The documentation is precise about when a browser looks for a new worker: “when a full-page navigation happens within its scope, and after functional events such as <code>push</code> and <code>sync</code>. Client-side navigations are neither.” A trip planner is a page people leave open for days, so a deploy could go unnoticed by its worker for as long as the tab lives. The root layout asks on every navigation, which is the documentation’s own pattern, with two changes: no request when there is no network, because <code>afterNavigate</code> also runs when a page hydrates and a page read offline hydrates too; and a failed check is fire-and-forget, a background chore the next navigation repeats. A new worker found this way installs in the background and “take[s] over as soon as the number of tabs managed by the existing service worker drops to zero”. It does not swap itself in under an open page. That is why only hashed files are served from the copy: everything whose name outlives its content — pages, prerendered guides, <code>static/</code> — is asked of the network first, so a waiting worker never serves an old one online, and the deploy banner (chapter <a href="the-shell.html">25</a>) already turns the next navigation into a full reload.</p>
+<aside class="callout callout--note"><p>Two refinements are named and left out. <code>self.skipWaiting()</code> would let a new worker take over open tabs at once, and the pattern that makes it safe is to call it from the deploy banner’s button and reload when <code>navigator.serviceWorker</code> fires <code>controllerchange</code> — a listener on an object outside any component, which is the honest use of <code>on()</code> from <code>svelte/events</code>. Nothing needs it today, for the reason above. And <code>@vite-pwa/sveltekit</code>, the generator most SvelteKit projects reach for, was declined in chapter <a href="choosing-libraries.html">40</a>: its SvelteKit integration reads a <code>svelte.config.js</code> that SvelteKit 3 does not have, and a worker of a few dozen lines written against <code>$app/manifest</code>, each rule with its reason beside it, is easier to read than a generated one.</p></aside>
+<h3 id="proof">Proving it without a clock</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/offline.e2e.ts<span class="code__lines">:1-58</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">import { expect, test, type Page } from '@playwright/test';
+import { openMenu, signIn, TRIPS, USERS } from './helpers.ts';
+
+/**
+ * A TRIP IN A TUNNEL
+ * ==================
+ *
+ * The service worker (`src/service-worker/index.ts`) keeps a copy of every
+ * page it serves, so a trip opened once reads with no network; the app
+ * empties those copies when nobody is signed in, so the next person on the
+ * device cannot read them. Three proofs: the first promise, and the two
+ * ways a session ends.
+ *
+ * The rest of the suite runs with service workers blocked (see
+ * `playwright.config.ts`); this file lets them in.
+ *
+ * NO CLOCKS
+ * ---------
+ * A service worker under test is a classic source of flaky tests, because
+ * so much of it happens in the background: it registers after `load`,
+ * installs by copying the build, controls a page only from that page's
+ * next load, and writes each page's copy beside the response. So every
+ * step here waits for the thing it needs and nothing else — `ready` for
+ * an active worker, `controller` for a controlled page, the copy itself in
+ * Cache Storage — and nothing waits for a number of milliseconds.
+ * `context.setOffline` reaches the worker as well as the page, so offline
+ * means the worker's own `fetch` fails too, and what the page shows came
+ * from the copy.
+ */
+
+test.use({ serviceWorkers: 'allow' });
+
+const TRIP = `/t/${TRIPS.iberia}`;
+
+/** Is a copy of `path` kept on this device? */
+async function kept(page: Page, path: string): Promise&lt;boolean&gt; {
+	const url = new URL(path, page.url()).href;
+	return page.evaluate(
+		async (url) =&gt; (await caches.match(url, { ignoreVary: true })) !== undefined,
+		url
+	);
+}
+
+/** Open the trip as Ana, under a worker that controls the page, and wait for its copy. */
+async function openKept(page: Page): Promise&lt;void&gt; {
+	await signIn(page, USERS.ana, TRIP);
+	await expect(page.getByRole('heading', { level: 1, name: 'Iberia by rail' })).toBeVisible();
+
+	// Registered on `load`; `ready` resolves once a worker is active — the build copied.
+	await page.evaluate(async () =&gt; {
+		await navigator.serviceWorker.ready;
+	});
+	// A worker controls the pages that load after it is active, so this load is the first.
+	await page.reload();
+	expect(await page.evaluate(() =&gt; navigator.serviceWorker.controller !== null)).toBe(true);
+	// The copy is written beside the response: wait for it to exist, not for a clock.
+	await expect.poll(() =&gt; kept(page, TRIP)).toBe(true);
+}</code></pre>
+</figure>
+<p>Service workers are a classic source of flaky tests, because so much of their life happens in the background, and the header of the file says how this suite avoids every one of them: it waits for the thing each step needs, and never for a number of milliseconds. The worker registers on <code>load</code>, so the test waits for <code>navigator.serviceWorker.ready</code>, which resolves when a worker is active — the build copied. A worker controls only the pages that load *after* it is active, so the page is reloaded once and the test asserts there is now a <code>controller</code>. The copy of the page is written beside the response, so <code>expect.poll</code> asks Cache Storage until it is there. Offline is <code>context.setOffline(true)</code>, and in Playwright 1.64 that reaches the worker’s own network as well as the page’s — so with no network the worker’s <code>fetch</code> really fails, and what the page shows really came from the copy. <code>response.fromServiceWorker()</code> says so.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/offline.e2e.ts<span class="code__lines">:60-114</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">test('a trip opened once is readable offline', async ({ page, context }) =&gt; {
+	await openKept(page);
+
+	await context.setOffline(true);
+	const response = await page.reload();
+	expect(response?.fromServiceWorker()).toBe(true);
+	await expect(page.getByRole('heading', { level: 1, name: 'Iberia by rail' })).toBeVisible();
+	await expect(page.getByRole('button', { name: 'Alfama' })).toBeVisible();
+	await expect(page.getByRole('button', { name: 'Train to Porto' })).toBeVisible();
+	// The page hydrated from the copied build, and it is honest about the network.
+	await expect(page.getByText('Offline', { exact: true })).toBeVisible();
+	await expect(page.getByRole('button', { name: 'Reconnect' })).toHaveCount(0);
+
+	// Back online, the live stream comes back by itself.
+	await context.setOffline(false);
+	await expect(page.getByText('Live', { exact: true })).toBeVisible();
+});
+
+test('after signing out, a trip is not readable offline', async ({ page, context }) =&gt; {
+	await openKept(page);
+
+	// The button must empty the copies *before* the session ends, not leave it to
+	// the `(site)` layout on the page that follows: look at the cache at the very
+	// moment the sign-out request leaves.
+	let keptAtSubmit: boolean | undefined;
+	await page.route(/\/_app\/remote\/[^/]+\/signOut/, async (route) =&gt; {
+		keptAtSubmit ??= await kept(page, TRIP);
+		await route.continue();
+	});
+
+	await openMenu(page);
+	await page.getByRole('button', { name: 'Sign out' }).click();
+	await page.waitForURL((url) =&gt; url.pathname === '/');
+	expect(keptAtSubmit).toBe(false);
+	expect(await kept(page, TRIP)).toBe(false);
+
+	await context.setOffline(true);
+	// Nothing kept, no network: the navigation fails as it would with no worker at all.
+	await expect(page.goto(TRIP)).rejects.toThrow(/net::ERR_/);
+	await expect(page.getByRole('button', { name: 'Alfama' })).toHaveCount(0);
+});
+
+test('a session that ends without the button takes the copies with it', async ({
+	page,
+	context
+}) =&gt; {
+	await openKept(page);
+
+	// An expired session, as far as the server can tell: no cookie.
+	await context.clearCookies();
+	await page.goto('/');
+	await openMenu(page);
+	await expect(page.getByRole('link', { name: 'Sign in' })).toBeVisible();
+	await expect.poll(() =&gt; kept(page, TRIP)).toBe(false);
+});</code></pre>
+</figure>
+<p>Three tests, one per promise. The first reads the trip offline — the heading, two seeded stops, “Offline” and no Reconnect — and then goes back online and waits for “Live”, which is the reconnect above working. The second signs out through the header and checks two things: the copy is gone the moment the sign-out has finished, and a navigation to the trip with no network now fails as it would with no worker at all. The third ends the session without the button — <code>clearCookies()</code> is an expired session as far as the server can tell — loads the home page, and waits for the layout to empty the cache. Each was proven against broken code before it was trusted: with the worker’s fallback removed the first fails on its offline reload, with both deletions removed the second fails on its first check, and with the layout’s effect removed the third never sees the copy go. The rest of the suite runs with workers blocked, and chapter <a href="end-to-end.html">45</a> says why.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can say which requests the worker answers from the build, which from a kept page, and which it never answers — and why remote queries are in the last group.</li><li>You can map each export of the removed <code>$service-worker</code> module to its SvelteKit 3 replacement.</li><li>You know why the worker has its own tsconfig, why <code>tsc</code> checks it and not <code>svelte-check</code>, and how you would prove the check has teeth.</li><li>You can explain what the shared-device problem is, which two places delete the copies, and why they delete by prefix.</li><li>You can say why a page opened offline needs <code>reconnect()</code> when the network returns, when SvelteKit already reconnects a dropped stream.</li><li>You can name three things that make a service-worker test flaky, and what this suite waits for instead of each.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="embedding-a-trip.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Embedding a trip: a frame and a custom element</span>
+			</a>
+			<a class="pager__link pager__link--next" href="choosing-libraries.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The survey: what was chosen, what was rejected, and why</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

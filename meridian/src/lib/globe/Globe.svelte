@@ -30,7 +30,8 @@
 	let { stops, selected, onselect }: Props = $props();
 
 	/*
-	 * `reducedMotion` is the app's one `MediaQuery` for the setting (see
+	 * `reducedMotion` is the framework's `prefersReducedMotion`, the one
+	 * `MediaQuery` for the setting in the whole app (see
 	 * `src/lib/motion/prefers.svelte.ts`): a reactive value, so when the
 	 * operating system setting changes, `current` changes, and the scene
 	 * stops animating without a reload.

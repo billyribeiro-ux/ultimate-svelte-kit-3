@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '#lib/paraglide/messages.js';
+	import { forgetPages } from '#lib/offline/pages.ts';
 	import Footer from '#lib/ui/Footer.svelte';
 	import Header from '#lib/ui/Header.svelte';
 	import type { LayoutProps } from './$types';
@@ -15,6 +16,22 @@
 	 * layout says why.
 	 */
 	let { data, children }: LayoutProps = $props();
+
+	/*
+	 * NOBODY SIGNED IN, NOTHING KEPT
+	 * ------------------------------
+	 * The service worker keeps a copy of each page for offline reading, and
+	 * those copies were rendered for whoever was signed in. The sign-out
+	 * button empties them first; this catches every other way a session
+	 * ends — it expired, it was signed out before the page had hydrated, it
+	 * was revoked from another device. Whenever this layout finds nobody
+	 * signed in, the copies go. An effect, because it writes to something
+	 * outside the component (the device's Cache Storage) in answer to a
+	 * value; it reads `data.user`, so it runs again when that changes.
+	 */
+	$effect(() => {
+		if (!data.user) void forgetPages();
+	});
 </script>
 
 <a class="skip" href="#main">{m.nav_skip()}</a>

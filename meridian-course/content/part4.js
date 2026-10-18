@@ -35,7 +35,7 @@ export const part4 = [
 			},
 
 			{ type: 'h3', id: 'compiling', text: 'Compiling, twice' },
-			code('vite.config.ts', 279, 301),
+			code('vite.config.ts', 281, 303),
 			{
 				type: 'terminal',
 				code: `

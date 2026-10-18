@@ -62,20 +62,21 @@ image, and checks the course.
 
 ## Where things are
 
-| Path                                     | What                                                                                             |
-| ---------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `packages/waypoint/`                     | `@meridian/waypoint` — geodesy, a `Route` class with runes, two components, packaged and proven  |
-| `src/lib/domain/`                        | ids, dates, money, fair splits, the itinerary as data, valibot schemas                           |
-| `src/lib/server/`                        | Drizzle schema and queries, Better Auth, live rooms, tracing, geodata                            |
-| `src/lib/remote/`                        | remote functions: queries, live queries, forms, commands, one prerendered query                  |
-| `src/lib/trip/`                          | the trip page: itinerary, palette, dialogs, expenses, notes, companions, presence                |
-| `src/lib/map/`, `src/lib/globe/`         | svelte-maplibre with bundled world geodata; the Threlte flyover                                  |
-| `src/lib/embed/`                         | the `<meridian-route>` custom element and its own Vite config                                    |
-| `src/lib/guides/`, `src/content/guides/` | mdsvex guides, prerendered in three languages                                                    |
-| `src/lib/styles/`, `src/lib/ui/`         | tokens, mobile-first CSS, the shell, the theme                                                   |
-| `src/lib/href.ts`                        | the one way to write an internal link: `resolve()` with a typed route id, then the locale        |
-| `src/hooks.server.ts`, `src/hooks.ts`    | locale, identity, security headers, `reroute`, `transport`                                       |
-| `src/hooks.client.ts`                    | the browser's `handleError`: an unexpected failure is put into the page's language               |
-| `vite.config.ts`                         | every SvelteKit option, commented: CSP, tracing, version, prerender, the test projects           |
-| `e2e/`                                   | seven Playwright suites; `collab.e2e.ts` runs two browsers on one trip, `visual.e2e.ts` runs axe |
-| `Dockerfile`, `compose.yaml`             | three stages, one process, a health check                                                        |
+| Path                                      | What                                                                                                                                            |
+| ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `packages/waypoint/`                      | `@meridian/waypoint` — geodesy, a `Route` class with runes, two components, packaged and proven                                                 |
+| `src/lib/domain/`                         | ids, dates, money, fair splits, the itinerary as data, valibot schemas                                                                          |
+| `src/lib/server/`                         | Drizzle schema and queries, Better Auth, live rooms, tracing, geodata                                                                           |
+| `src/lib/remote/`                         | remote functions: queries, live queries, forms, commands, one prerendered query                                                                 |
+| `src/lib/trip/`                           | the trip page: itinerary, palette, dialogs, expenses, notes, companions, presence                                                               |
+| `src/lib/map/`, `src/lib/globe/`          | svelte-maplibre with bundled world geodata; the Threlte flyover                                                                                 |
+| `src/lib/embed/`                          | the `<meridian-route>` custom element and its own Vite config                                                                                   |
+| `src/lib/guides/`, `src/content/guides/`  | mdsvex guides, prerendered in three languages                                                                                                   |
+| `src/lib/styles/`, `src/lib/ui/`          | tokens, mobile-first CSS, the shell, the theme                                                                                                  |
+| `src/lib/href.ts`                         | the one way to write an internal link: `resolve()` with a typed route id, then the locale                                                       |
+| `src/hooks.server.ts`, `src/hooks.ts`     | locale, identity, security headers, `reroute`, `transport`                                                                                      |
+| `src/hooks.client.ts`                     | the browser's `handleError`: an unexpected failure is put into the page's language                                                              |
+| `src/service-worker/`, `src/lib/offline/` | the offline itinerary: the build and each page kept on the device, emptied when nobody is signed in                                             |
+| `vite.config.ts`                          | every SvelteKit option, commented: CSP, tracing, version, prerender, the test projects                                                          |
+| `e2e/`                                    | eight Playwright suites; `collab.e2e.ts` runs two browsers on one trip, `visual.e2e.ts` runs axe, `offline.e2e.ts` reads a trip with no network |
+| `Dockerfile`, `compose.yaml`              | three stages, one process, a health check                                                                                                       |

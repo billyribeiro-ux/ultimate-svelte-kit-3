@@ -11,11 +11,12 @@
 
 	import { onMount } from 'svelte';
 	import { MediaQuery } from 'svelte/reactivity';
-	import { beforeNavigate, onNavigate } from '$app/navigation';
+	import { afterNavigate, beforeNavigate, onNavigate } from '$app/navigation';
 	import { updated } from '$app/state';
 	import { Toaster } from 'svelte-sonner';
 	import { CheckCircleIcon, WarningCircleIcon } from 'phosphor-svelte';
 	import { reducedMotion } from '#lib/motion/prefers.svelte.ts';
+	import { fireAndForget } from '#lib/remote/fire-and-forget.ts';
 	import UpdateBanner from '#lib/ui/UpdateBanner.svelte';
 	import { theme } from '#lib/ui/theme.svelte.ts';
 	import type { LayoutProps } from './$types';
@@ -33,7 +34,8 @@
 	 * a chrome of their own that does not claim to know who you are.
 	 *
 	 * What is left here is what every page shares: fonts, the stylesheet, the
-	 * theme, the toaster, view transitions, and the deploy banner.
+	 * theme, the toaster, view transitions, the deploy banner, and the check
+	 * for a new service worker.
 	 */
 	let { children }: LayoutProps = $props();
 
@@ -82,6 +84,30 @@
 	beforeNavigate(({ willUnload, to, shallow, type }) => {
 		if (shallow && type === 'goto') return;
 		if (updated.current && !willUnload && to?.url) location.href = to.url.href;
+	});
+
+	/*
+	 * A NEW SERVICE WORKER AFTER A DEPLOY
+	 * -----------------------------------
+	 * The browser looks for a new `service-worker.js` on a full page load
+	 * within its scope, and a client-side navigation is not one — so a tab
+	 * that stays open across a deploy would go on with the old worker, and
+	 * the old worker's copies, for as long as it stays open. Asking on every
+	 * navigation is the pattern SvelteKit's documentation gives. A new
+	 * worker found this way installs in the background and takes over when
+	 * every tab the old one controls has closed; it does not swap itself in
+	 * under a page that is open.
+	 *
+	 * Two changes from the documentation's version. With no network there is
+	 * nothing to look for, so it does not ask — `afterNavigate` also runs
+	 * when a page hydrates, and a page read offline hydrates too. And a
+	 * check that fails for any other reason fails quietly: it is a
+	 * background chore, and the next navigation asks again.
+	 */
+	afterNavigate(async () => {
+		if (!('serviceWorker' in navigator) || !navigator.onLine) return;
+		const registration = await navigator.serviceWorker.getRegistration();
+		if (registration) fireAndForget(registration.update(), 'service worker update check');
 	});
 
 	/*

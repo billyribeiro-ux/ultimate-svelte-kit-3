@@ -23,7 +23,7 @@ export const part8 = [
 			},
 
 			{ type: 'h3', id: 'two-projects', text: 'Two projects in one config' },
-			code('vite.config.ts', 328, 402),
+			code('vite.config.ts', 330, 404),
 			{
 				type: 'p',
 				text: 'Vitest’s `projects` are separate test environments that share one runner and one command. The `server` project is plain Node: it picks up every `*.spec.ts` and `*.test.ts` that is *not* a `.svelte.` test, and runs the domain maths, the schemas, the geodata builder and anything that touches the database. The `client` project is a real Chromium started by Playwright, and it picks up only the `.svelte.test.ts` files. Neither names an `extends`: since Vitest 5 an inline project inherits the config that declares it (naming the file again would load the Svelte plugin twice, and Vitest says so), so the same aliases, the same Svelte plugin and the same Paraglide plugin apply — a component test sees `#lib/…` and `m.some_message()` exactly as the app does.'
@@ -173,14 +173,18 @@ $ pnpm run test:unit -- --run
 				type: 'p',
 				text: 'An end-to-end test is the only kind that can fail because of a **seam**: a cookie the hook did not read, a header the adapter did not send, a prerendered page that baked the wrong user in, a form the CSRF check refused. Those are exactly the failures that unit tests cannot see and that real people hit first. So the suite runs against the *built* application — the adapter’s output, its server, its database — and not against the dev server, and the configuration says why at length.'
 			},
-			code('playwright.config.ts', 41, 104),
+			code('playwright.config.ts', 41, 114),
 			{
 				type: 'p',
 				text: 'Read the `webServer` block as a recipe: rebuild the database from the migrations and the seed, build the app, start the adapter’s server on port 4173. Playwright waits for the port, runs the suite, and stops the process. `reuseExistingServer` is on outside CI, so a developer who already has the built server running skips the three-minute build — and in CI it is off, so the pipeline always tests what it just built. The environment block matters more than it looks: `PUBLIC_ORIGIN` is **baked into the bundle** at build time (chapter {{the-config}}), and the server compares it with each request’s origin; if the build said 5173 and the test hits 4173, every form submission is a 403. It took an afternoon to learn that the same value has to be present in both places, which is why the comment is there.'
 			},
 			{
 				type: 'p',
-				text: '`workers: 1` and `fullyParallel: false` are not timidity. The suite shares one SQLite file and its tests *create* things — a trip, a stop, an expense — and then expect to find them; two workers would race. Serial costs several minutes of wall clock for two hundred and forty-one tests across the three projects — the design suite’s axe runs are most of it — plus the build, the first time, and buys a suite whose failures are always real. The third project is the Pixel 7 narrowed to 360px, with a screen of the same size, and it runs `visual.e2e.ts` alone: a behaviour does not change between 412px and 360px, and a layout does.'
+				text: '`workers: 1` and `fullyParallel: false` are not timidity. The suite shares one SQLite file and its tests *create* things — a trip, a stop, an expense — and then expect to find them; two workers would race. Serial costs several minutes of wall clock for two hundred and fifty-one tests across the three projects — the design suite’s axe runs are most of it — plus the build, the first time, and buys a suite whose failures are always real. The third project is the Pixel 7 narrowed to 360px, with a screen of the same size, and it runs `visual.e2e.ts` alone: a behaviour does not change between 412px and 360px, and a layout does.'
+			},
+			{
+				type: 'p',
+				text: '`serviceWorkers: \'block\'` is the one line in `use` that takes something away, and it is there for the same reason as `workers: 1`. The app registers a service worker on every page load, and a worker that installs copies the whole build in the background (chapter {{the-offline-itinerary}}): in a suite of short tests, each in a fresh browser context, that is one download of the build per test, racing the page under test, with navigations answered by the worker instead of the server. So the suite tests the app without its worker, and `offline.e2e.ts` — the one file about the worker — lets it back in with `test.use({ serviceWorkers: \'allow\' })`.'
 			},
 			code('scripts/prepare-e2e-db.js', 18, 47),
 			{
@@ -371,7 +375,7 @@ $ pnpm run test:unit -- --run
 				type: 'p',
 				text: 'Two rules of the design can break while every test passes: GSAP belongs in the home page’s chunk and nowhere else, and no chunk over 20 KB gzipped may appear without somebody agreeing to it. A build that succeeds says nothing about either. So `pnpm run verify` runs `node scripts/bundle-guard.ts` between the build and the end-to-end suite, and the guard needs to know what is in each chunk — which a hashed file name does not say.'
 			},
-			code('vite.config.ts', 443, 477),
+			code('vite.config.ts', 445, 479),
 			{
 				type: 'p',
 				text: 'The bundler knows. A Vite plugin is an object with hooks, and `generateBundle` is called once per environment with every chunk the build is about to write, including the modules in each and how many bytes of each survived into the output (`renderedLength`). SvelteKit’s build has a client environment and a server one; the plugin writes only the client’s, to `.svelte-kit/bundle-stats.json` — beside the build, never in it, so it is not served.'
@@ -487,7 +491,7 @@ Running 243 tests using 1 worker
 			},
 
 			{ type: 'h3', id: 'csp', text: 'The Content Security Policy' },
-			code('vite.config.ts', 200, 246),
+			code('vite.config.ts', 200, 248),
 			{
 				type: 'p',
 				text: 'A Content Security Policy is a header that tells the browser which sources of script, style, image, font, connection and frame the page is allowed to use; anything else is blocked and reported to the console. Its purpose is to make cross-site scripting *not work*: an attacker who manages to inject `<script>` into a page gains nothing if inline scripts are refused. `default-src \'self\'` is the floor — nothing from anywhere but this origin — and every other directive is a narrow, commented exception.'
@@ -497,7 +501,7 @@ Running 243 tests using 1 worker
 				text: '`mode: \'auto\'` is the interesting setting. SvelteKit’s own scripts are inline (the tiny module that starts the client), so the policy has to allow *those* while refusing everything else. Two mechanisms exist: a **nonce** — a random value generated per request, put on the header and on each allowed `<script>` — and a **hash** of the script’s content. A prerendered page has no request, so it cannot have a nonce; a dynamically rendered one streams `resolve()` scripts after the header has gone, so it cannot know all the hashes. `auto` uses hashes for prerendered pages and nonces for the rest, and the guides (chapter {{guides-prerendered-with-mdsvex}}) are the reason the project needs both.'
 			},
 			code('src/app.html', 44, 57),
-			code('vite.config.ts', 419, 424),
+			code('vite.config.ts', 421, 426),
 			{
 				type: 'p',
 				text: 'The theme boot script — the one that sets `data-theme` before first paint so a dark theme never flashes light, and points the `theme-color` tags and the theme cookie at the same choice (chapter {{the-design-system}}) — is the one inline script the app writes itself, and it appears on *every* page, prerendered or not. So it is allowed by hash, and the hash is computed at build time **from the template**, not kept as a second copy: edit the script and the hash follows. This is the kind of thing that fails silently otherwise — nothing errors at build, the script is simply blocked in production, and the first person to notice is the one with a dark system and a light flash. The regular expression reads the script from `app.html`, which is why the template must not put a `nonce` attribute on it: SvelteKit refuses to prerender a template containing `%sveltekit.nonce%`, and a prerendered page needs this script too.'
@@ -505,7 +509,7 @@ Running 243 tests using 1 worker
 			{
 				type: 'ul',
 				items: [
-					'`worker-src \'self\' blob:` — MapLibre parses vector tiles in a Web Worker. Its URL comes from a Vite asset import, so `\'self\'` covers it; `blob:` is for the fallback MapLibre uses when the worker script is on another origin.',
+					'`worker-src \'self\' blob:` — MapLibre parses vector tiles in a Web Worker. Its URL comes from a Vite asset import, so `\'self\'` covers it; `blob:` is for the fallback MapLibre uses when the worker script is on another origin. The directive governs service workers too, and `\'self\'` is what lets `/service-worker.js` register (chapter {{the-offline-itinerary}}). The worker is also a privacy question on a shared device: the pages it keeps were rendered for the person signed in, so sign-out empties them before the session ends, and a test watches the cache at the moment the sign-out request leaves.',
 					'`img-src \'self\' data: blob:` — MapLibre’s sprite sheet and the canvas exports are `data:` and `blob:` URLs; the enhanced images are `\'self\'`.',
 					'`connect-src \'self\'` — deliberately no tile server. The map style is built from a bundled TopoJSON of the world (chapter {{the-map}}), so the app works offline, in CI, with no keys and no third party learning where people plan to go. Adding a tile provider would mean adding its origin here, and the comment says so, so the change is one line and visible in review.',
 					'`style-src \'self\' \'unsafe-inline\'` — the trade the comment owns up to. Markers and the itinerary position things with `style:` attributes, attributes cannot be hashed, and a nonce does not apply to them. The exposure is CSS injection, which can deface but cannot run code; the alternative is a design without a single inline style, which is a large price for a small gain.',
@@ -522,7 +526,7 @@ Running 243 tests using 1 worker
 			code('src/hooks.server.ts', 114, 165),
 			{
 				type: 'p',
-				text: 'Three headers are always right and cost nothing: `x-content-type-options: nosniff` (the browser trusts our content types and does not guess), `referrer-policy: strict-origin-when-cross-origin` (other sites learn our origin, not our paths — a trip’s slug is not their business), and a `permissions-policy` that turns off the microphone and the camera and keeps geolocation for this origin only, because “where am I” on the map is the one capability the app asks for. `Vary: Cookie` on pages is for shared caches: the header shows the person’s name and the locale cookie changes the language, so a cache must never serve one person’s page to another. API responses and the hashed `/_app/` assets are excluded because they do not depend on the cookie, and a `Vary` there would only defeat the cache.'
+				text: 'Three headers are always right and cost nothing: `x-content-type-options: nosniff` (the browser trusts our content types and does not guess), `referrer-policy: strict-origin-when-cross-origin` (other sites learn our origin, not our paths — a trip’s slug is not their business), and a `permissions-policy` that turns off the microphone and the camera and keeps geolocation for this origin only, because “where am I” on the map is the one capability the app asks for. `Vary: Cookie` on pages is for shared caches: the header shows the person’s name and the locale cookie changes the language, so a cache must never serve one person’s page to another. API responses and the hashed `/_app/` assets are excluded because they do not depend on the cookie, and a `Vary` there would only defeat the cache. One cache cannot be protected by a header, because it is on the device itself: the service worker’s copies of the pages a person opened, kept for reading offline. A shared laptop is a shared cache with one browser profile, so the app deletes those copies before signing anybody out, and again whenever it finds nobody signed in — chapter {{the-offline-itinerary}} has the code and the test that proves the next person reads nothing.'
 			},
 			{
 				type: 'p',
@@ -702,7 +706,7 @@ $ docker compose down     # SIGTERM, in-flight requests finish, exit code 0`
 				items: [
 					'**A real tile server, behind a feature flag.** The bundled world is the right default — offline, no keys, no third party — and it is too coarse for a city. A vector tile source is one origin in `connect-src` (chapter {{security-headers-and-csp}}), one `style` swap in the map (chapter {{the-map}}), and an environment variable in `src/env.ts` so the offline build stays the default. The flag is what keeps CI free of network.',
 					'**Invites by email.** The invite *link* works; a mail with the link in it is a queue and a sender. The clean shape is an outbox table written in the same transaction as the invite (chapter {{invites-and-membership}}) and a worker that drains it — the pattern the third project in this series built in full.',
-					'**Offline notes.** Tiptap already holds the document (chapter {{notes-with-tiptap-through-an-attachment}}); an IndexedDB copy and a queue of `saveNote` commands to replay on reconnect would make the notes tab survive a train tunnel. The fourth project’s service worker chapters are the blueprint, and `query.live`’s reconnect already handles the read side.',
+					'**Offline notes.** Tiptap already holds the document (chapter {{notes-with-tiptap-through-an-attachment}}); an IndexedDB copy and a queue of `saveNote` commands to replay on reconnect would make the notes tab survive a train tunnel. The read side is built: chapter {{the-offline-itinerary}} keeps every page a person opens and brings the live stream back when the network does. What is left is the write side, and the conflict policy it needs against a document somebody else may have changed in the meantime.',
 					'**Photos on stops.** `@sveltejs/enhanced-img` handles the *static* images (chapter {{the-design-system}}); uploads need object storage, a signed upload URL from a `command`, and a thumbnail pipeline. `BODY_SIZE_LIMIT` (chapter {{deploying}}) is the first number to revisit.',
 					'**Rate limiting the public surface.** Sign-in, sign-up, the join page and the route API are reachable by anyone. A token bucket keyed by IP in the security handler (chapter {{security-headers-and-csp}}), backed by the database or memory, is a morning’s work and the first thing a penetration test would flag.',
 					'**A libSQL server instead of a file.** The file is right for one machine; the moment there are two, `DATABASE_URL` becomes a `libsql://` URL (chapter {{the-database}}) and the rooms need a pub/sub that both processes share (chapter {{live-collaboration}}). Drizzle and the migration script do not change.',

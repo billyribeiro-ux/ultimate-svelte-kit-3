@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
 	import { MediaQuery } from 'svelte/reactivity';
+	import { online } from 'svelte/reactivity/window';
 	import { Tween } from 'svelte/motion';
 	import { cubicOut } from 'svelte/easing';
 	import { browser } from '$app/env';
@@ -92,14 +93,23 @@
 	/*
 	 * THE LIVE CHIP
 	 * -------------
-	 * Three states, not two. For the first three seconds a stream that is
+	 * Four states, not two. For the first three seconds a stream that is
 	 * not up yet is still connecting, and the chip says "Connecting…" in the
 	 * quiet grey. After that, a stream that is not up has failed or dropped,
 	 * and "Reconnect", the coral button, offers to try again. Shown the
 	 * moment the page hydrated, as it first was, it told everybody on a slow
-	 * network that something had failed when nothing had. All three sit in
-	 * one slot as wide as the widest of them (the `.status` rules say how),
-	 * so the palette and the settings button beside it never move.
+	 * network that something had failed when nothing had. All of them sit in
+	 * one slot as wide as the widest (the `.status` rules say how), so the
+	 * palette and the settings button beside it never move.
+	 *
+	 * And when the device itself has no network — a tunnel, a plane — the
+	 * chip says "Offline", in the same quiet grey, and offers nothing:
+	 * a Reconnect button that cannot work is a button that lies. The
+	 * itinerary on screen is then the copy the service worker kept
+	 * (`src/service-worker/index.ts`). `online` from
+	 * `svelte/reactivity/window` is `navigator.onLine` as a reactive value,
+	 * `undefined` on the server, so only a browser that knows it is offline
+	 * says so.
 	 *
 	 * `patient` is state written by a timer inside an effect: three seconds
 	 * passing is not something a `$derived` can depend on, and the effect's
@@ -112,9 +122,24 @@
 		return () => clearTimeout(timer);
 	});
 
-	const status: 'live' | 'connecting' | 'lost' = $derived(
-		live.connected ? 'live' : patient ? 'connecting' : 'lost'
+	const status: 'offline' | 'live' | 'connecting' | 'lost' = $derived(
+		online.current === false ? 'offline' : live.connected ? 'live' : patient ? 'connecting' : 'lost'
 	);
+
+	/*
+	 * Back online, SvelteKit reconnects a live query by itself — but only
+	 * one that had connected before. A page opened with no network (the
+	 * service worker's copy, in a tunnel) never connected, and a live query
+	 * whose first connection fails stops for good (`done`). `reconnect()`
+	 * restarts either kind: it stops whatever attempt is under way and
+	 * starts one on the network that has just come back, so it does not
+	 * matter whether the first attempt had finished failing yet. The
+	 * `online` event is the moment to ask — an event, so a handler on the
+	 * window, not an effect: nothing here is derived.
+	 */
+	function ononline() {
+		if (!live.connected) fireAndForget(live.reconnect(), 'live reconnect');
+	}
 
 	/*
 	 * THE TAB INDICATOR
@@ -303,6 +328,8 @@
 	<title>{view.trip.name} — {m.app_name()}</title>
 </svelte:head>
 
+<svelte:window {ononline} />
+
 <article
 	class="trip container"
 	style:--frame-top={frameTop === undefined ? undefined : `${frameTop}px`}
@@ -324,14 +351,20 @@
 		<div class="trip__status cluster">
 			<Presence {view} viewerId={initial.viewerId} />
 			<CommandPalette {view} {editable} onadd={() => (dialog = { kind: 'add', date: null })} />
-			<!-- The sizer is invisible and holds the three labels as generated text, so the slot is as wide as the widest. -->
+			<!-- The sizer is invisible and holds the four labels as generated text, so the slot is as wide as the widest. -->
 			<span class="status">
 				<span class="status__sizer" aria-hidden="true">
 					<span data-label={m.live_connected()}></span>
 					<span data-label={m.live_connecting()}></span>
 					<span data-label={m.live_reconnect()}></span>
+					<span data-label={m.live_offline()}></span>
 				</span>
-				{#if status === 'live'}
+				{#if status === 'offline'}
+					<span class="chip live live--offline" title={m.live_offline()}>
+						<span class="live__dot" aria-hidden="true"></span>
+						{m.live_offline()}
+					</span>
+				{:else if status === 'live'}
 					<span class="chip chip--sea live" title={m.live_connected()}>
 						<span class="live__dot" aria-hidden="true"></span>
 						{m.live_connected()}
@@ -577,7 +610,7 @@
 
 	/*
 	 * The status slot: the visible chip or button, and under it an
-	 * invisible sizer as wide as the widest of the three labels, stacked in
+	 * invisible sizer as wide as the widest of the four labels, stacked in
 	 * one grid cell. The sizer's labels are generated text (`content:
 	 * attr(…)`), so they are in no one's way: not in the accessibility
 	 * tree, not in the page's text, not a second "Live" for a test to trip
@@ -694,8 +727,9 @@
 		}
 	}
 
-	/* Not yet live: the same chip in the quiet grey, its dot still. */
-	.live--connecting .live__dot {
+	/* Not yet live, or no network: the same chip in the quiet grey, its dot still. */
+	.live--connecting .live__dot,
+	.live--offline .live__dot {
 		animation: none;
 		opacity: 0.6;
 	}

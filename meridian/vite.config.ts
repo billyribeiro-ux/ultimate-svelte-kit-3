@@ -210,7 +210,9 @@ export default defineConfig(({ mode }) => {
 				 *                              Its URL is set from a Vite asset import,
 				 *                              so `'self'` is enough; `blob:` is for the
 				 *                              fallback MapLibre uses when the worker
-				 *                              script is on another origin.
+				 *                              script is on another origin. `'self'` is
+				 *                              also what lets the service worker
+				 *                              (`src/service-worker/`) register.
 				 *   `img-src data: blob:`      MapLibre sprites and the canvas exports.
 				 *   `connect-src 'self'`       Deliberately no tile server: the map
 				 *                              style is built from a bundled TopoJSON

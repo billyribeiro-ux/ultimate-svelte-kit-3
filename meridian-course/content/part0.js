@@ -45,6 +45,7 @@ export const part0 = [
 					'**Identity with Better Auth.** Email and password, sessions in SQLite, roles per trip, one-time invite links, an owner-only settings page.',
 					'**Guides in Markdown.** mdsvex compiles `.svx` files into components; the guide pages are prerendered in all three languages and ship no JavaScript at all.',
 					'**A custom element.** `<meridian-route>` renders a trip on any web page from one script tag, built from the same source with `dynamicCompileOptions`.',
+					'**An itinerary that survives a tunnel.** A service worker keeps the build and a copy of every page it serves, so a trip opened once reads again with no network — and the trip header says “Offline” instead of offering a Reconnect that cannot work. The copies were rendered for the person signed in, so they go when nobody is: on a shared device, the next person reads nothing.',
 					'**Everything around it.** Server hooks, a CSP with hashes and nonces, OpenTelemetry tracing into a diagnostics page, typed route ids, `<enhanced:img>`, a health endpoint, a multi-stage Dockerfile, and a CI workflow that builds the image and boots it.'
 				]
 			},
@@ -88,7 +89,8 @@ export const part0 = [
    │ @meridian/waypoint (geo, Route)          │        │ rooms + mailbox · presence     │
    │ Paraglide messages · Intl · theme        │        │ tracing ring · healthz         │
    └──────────────────────────────────────────┘        └────────────────────────────────┘
-        ▲ prerendered: /guides (mdsvex, csr=false), /api/world.json, places()`
+        ▲ prerendered: /guides (mdsvex, csr=false), /api/world.json, places()
+        ▲ service worker: the build and each page opened, kept for reading offline`
 			},
 			{
 				type: 'p',
@@ -116,7 +118,7 @@ export const part0 = [
 				items: [
 					'**A CRDT for the notes.** Two people typing in the same paragraph at the same time get last-writer-wins, and the editor says so by refusing to overwrite a person mid-sentence. Project 4 built the CRDT; this project has the room it would go in.',
 					'**A tile server, or a geocoder.** The map is a bundled atlas of coastlines and a hundred-place gazetteer in a JSON file. It is enough to plan a trip and it is honest about what it is; adding a tile provider is one `sources` entry and a CSP line, and chapter {{the-map}} says which.',
-					'**A service worker.** Project 4 and project 6 built one. The guides here are static files and the app is a live one; an offline itinerary is on the “where next” list with a design, not in the code.'
+					'**An app you install, or one that writes offline.** The service worker in ch. {{the-offline-itinerary}} does one thing, for the one scenario the product names: reading a trip in a train tunnel. There is no web manifest, so there is nothing to install, and a change made with no network fails as it would without a worker — queuing writes against a document two people edit live needs a conflict policy first, and ch. {{what-i-would-do-next}} keeps it on the list.'
 				]
 			},
 			{
@@ -355,7 +357,7 @@ $ pnpm exec sv add ai-tools="ide:claude-code+delivery:plugin" --no-git-check`
 			{
 				type: 'ul',
 				items: [
-					'**`--tsconfig <path>`** — check exactly the files the tsconfig’s `include` and `exclude` select, TypeScript and JavaScript errors included. Used: `./tsconfig.json`, whose explicit lists keep the checker out of `build/` and `packages/` (ch. {{the-config}}).',
+					'**`--tsconfig <path>`** — check exactly the files the tsconfig’s `include` and `exclude` select, TypeScript and JavaScript errors included. Used: `./tsconfig.json`, whose explicit lists keep the checker out of `build/` and `packages/` (ch. {{the-config}}) — and out of `src/service-worker`, which has a tsconfig of its own. That one is checked by the line’s last command, `tsc -p src/service-worker`, rather than by a second `svelte-check --tsconfig`: a folder with no `.svelte` file in it makes `svelte-check` warn that it was given nothing to do, and here a warning fails the check. Plain TypeScript is `tsc`’s job (ch. {{the-offline-itinerary}}).',
 					'**`--fail-on-warnings`** — “Will also exit with error code when there are warnings.” Used on both scripts; the why block below says why.',
 					'**`--compiler-warnings "code:behaviour,…"`** — per compiler warning code, `ignore` or `error`: `"css_unused_selector:ignore,a11y_missing_attribute:error"` in the documentation’s example. Not used. A warning that is wrong for one line is answered on that line or fixed; silencing a code project-wide hides the same mistake everywhere else. The project once carried one of these for its custom element, and ch. {{embedding-a-trip}} says why it no longer needs it.',
 					'**`--diagnostic-sources "js,svelte,css"`** — which of the three checkers run; all three by default. Not used.',
@@ -377,7 +379,7 @@ $ pnpm exec svelte-check --tsconfig ./tsconfig.json --fail-on-warnings --output 
 			{
 				type: 'why',
 				title: 'Why a warning fails the check',
-				text: 'Because a warning that does not fail anything is a warning nobody reads. The project has no `svelte-ignore` comments at all, so every warning the compiler gives is either a mistake or a sign the compiler knows something the author did not, and both are worth stopping for. On `check:watch` the flag changes nothing you can see — a watching process never exits — and it is there so the two scripts differ by `--watch` and nothing else. The one warning a person is most likely to meet by surprise is `bidirectional_control_characters`, and ch. {{the-workspace}} says why that one in particular should stop a build.'
+				text: 'Because a warning that does not fail anything is a warning nobody reads. The project has no `svelte-ignore` comments at all, so every warning the compiler gives is either a mistake or a sign the compiler knows something the author did not, and both are worth stopping for. On `check:watch` the flag changes nothing you can see — a watching process never exits — and it is there so the two `svelte-check` runs differ by `--watch` and nothing else. The one warning a person is most likely to meet by surprise is `bidirectional_control_characters`, and ch. {{the-workspace}} says why that one in particular should stop a build.'
 			},
 
 			{ type: 'h3', id: 'lint-and-format', text: 'Lint and format' },
@@ -581,7 +583,7 @@ src/lib/trip/StopCardScratch.svelte
 			},
 
 			{ type: 'h3', id: 'csp', text: 'The Content Security Policy' },
-			code('vite.config.ts', 200, 246),
+			code('vite.config.ts', 200, 248),
 			{
 				type: 'p',
 				text: 'The comment above the directives is the chapter. Two things to add. `mode: "auto"` means hashes on prerendered pages and nonces on dynamic ones — and a nonce is filled in per request, which is why the theme boot script in `app.html` is allowed by its **hash** and carries no nonce attribute: SvelteKit refuses to prerender a template that still contains `%sveltekit.nonce%`, and the guides are prerendered. `themeBootHash()` at the bottom of the file reads the script out of `app.html` and hashes it, so the two cannot drift.'
@@ -592,7 +594,7 @@ src/lib/trip/StopCardScratch.svelte
 			},
 
 			{ type: 'h3', id: 'versioning', text: 'Versioning, so a deploy does not strand open tabs, and preloads in a header' },
-			code('vite.config.ts', 248, 276),
+			code('vite.config.ts', 250, 278),
 			{
 				type: 'p',
 				text: '`version.name` is the commit hash, computed by `commitHash()` below with a fallback to the package version, because a Docker build context has no `.git`. SvelteKit 3 notices a new version without asking: the current version rides on every data, remote and form response as an `x-sveltekit-version` header, and the client checks again whenever the tab regains focus or becomes visible. `pollInterval` is the fallback for a tab parked on one page, which is exactly what the trip page is — a live query delivers its changes over one long response, so no new headers arrive — and so it is a minute here rather than the default hour. When a new version is seen, `updated.current` in the root layout flips, a banner offers a reload, and the next navigation becomes a full page load so no chunk from the old build is ever requested. `bundleStrategy: "split"` is the default and is named here because chapter {{embedding-a-trip}} builds the one thing that must *not* be split.'
@@ -603,30 +605,30 @@ src/lib/trip/StopCardScratch.svelte
 			},
 
 			{ type: 'h3', id: 'paraglide-and-icons', text: 'Three plugins that are not SvelteKit' },
-			code('vite.config.ts', 279, 316),
+			code('vite.config.ts', 281, 318),
 			{
 				type: 'p',
 				text: 'Paraglide is a Vite plugin in its own right: it watches `messages/*.json`, compiles them into `src/lib/paraglide`, and does so with a `strategy` list that is the order the locale is decided in. Chapter {{three-languages-with-paraglide}} is entirely about it. The phosphor plugin is the second ordering rule: it rewrites `import { PlusIcon } from "phosphor-svelte"` into a deep import so the dev server does not crawl a barrel of thousands of icons, and it must run *after* the Svelte compiler because it parses JavaScript. Put it first and it dies on the first `<h1>`. The third, `bundleStats()`, is this project’s own and runs only in a build: at the end of the browser build it writes down which modules went into which chunk, so that a script can hold the bundle to a budget afterwards. A chunk’s file name is a hash and changes with every edit; the bundler is the one place that knows what a chunk *is*. Chapter {{end-to-end}} is where that script runs, and why it exists.'
 			},
 
 			{ type: 'h3', id: 'the-rest', text: 'The native addon, and the two test projects' },
-			code('vite.config.ts', 319, 326),
-			code('vite.config.ts', 328, 402, { partial: true }),
+			code('vite.config.ts', 321, 328),
+			code('vite.config.ts', 330, 404, { partial: true }),
 			{
 				type: 'p',
 				text: 'Two Vitest projects in one config — and no `extends` line on either, because since Vitest 5 an inline project inherits the config that declares it, plugins and `#lib` included, unless it says `extends: false`: `client` runs `*.svelte.test.ts` in a real Chromium through Playwright, because the components under test need WebGL, pointer events and layout; `server` runs everything else in Node, one file at a time because SQLite has one writer. The `optimizeDeps.include` list is the fix for a real failure: the phosphor plugin rewrites imports during transform, after Vite’s dependency scan, so on a cold cache Vite discovered the icons mid-test, re-bundled, and reloaded the test inside itself. Naming them is what Vitest’s own warning asks for. Chapter {{unit-and-browser-tests}} runs both projects.'
 			},
-			code('vite.config.ts', 406, 441),
+			code('vite.config.ts', 408, 443),
 
 			{ type: 'h3', id: 'typescript', text: 'The other file: `tsconfig.json`' },
-			code('tsconfig.json', 1, 54),
+			code('tsconfig.json', 1, 64),
 			{
 				type: 'p',
 				text: '`"extends": "$app/tsconfig"` is the line SvelteKit owns. `svelte-kit sync` writes that config into `node_modules/$app/tsconfig.json` every time it runs, with what a SvelteKit project needs: `moduleResolution: "bundler"`, the DOM libraries, and `rootDirs` set to the project and `.svelte-kit/types` side by side — which is how `import type { PageProps } from \'./$types\'` beside a route finds a file that lives in a generated folder. Four of its options are SvelteKit’s to set, and its documentation says overriding them “may cause things to break”: `paths` (derived from subpath imports; here it is empty, because bundler resolution reads `imports` from `package.json` itself), `types` (it must include `$app/types`, the generated module declarations), `isolatedModules` (“Vite compiles modules one at a time”) and `verbatimModuleSyntax` (“so that you can safely use type imports in `.svelte` files”). Everything in `compilerOptions` above is this project’s own strictness, each with the reason beside it.'
 			},
 			{
 				type: 'p',
-				text: 'The explicit `include` and `exclude` are required in SvelteKit 3, and the comment says what happens without them. `erasableSyntaxOnly` is the newest line: TypeScript refuses any syntax that cannot simply be deleted to leave JavaScript — `enum`, a `namespace` with values in it, a constructor parameter marked `private` — because the two places this project runs TypeScript without a compiler cannot run it either. Node 24 runs `scripts/*.ts` by stripping the types; Svelte 5 compiles a `lang="ts"` block the same way. (`namespace App` in `src/app.d.ts` is a declaration, types only, and stays.)'
+				text: 'The explicit `include` and `exclude` are required in SvelteKit 3, and the comment says what happens without them. One folder is excluded for a different reason: `src/service-worker` runs in a worker’s global scope, with `caches` and `FetchEvent` and no `document`, so it has a tsconfig of its own that extends `$app/tsconfig/service-worker` — the WebWorker library instead of the DOM — and `pnpm run check` checks it with a second program (ch. {{the-offline-itinerary}}). `erasableSyntaxOnly` is the newest line: TypeScript refuses any syntax that cannot simply be deleted to leave JavaScript — `enum`, a `namespace` with values in it, a constructor parameter marked `private` — because the two places this project runs TypeScript without a compiler cannot run it either. Node 24 runs `scripts/*.ts` by stripping the types; Svelte 5 compiles a `lang="ts"` block the same way. (`namespace App` in `src/app.d.ts` is a declaration, types only, and stays.)'
 			},
 			{
 				type: 'why',
@@ -693,9 +695,10 @@ src/lib/trip/StopCardScratch.svelte
 					'**`await` in markup, in `$derived` and at the top of `<script>`; `<svelte:boundary>` with `pending` and `failed`** — the trip page, the globe, the trips list, the explore page (ch. {{the-trip-page}}, {{the-globe}}, {{trips-and-a-new-trip}}, {{explore-and-diagnostics}}).',
 					'**`{const}` declaration tags, which replaced `{@const}`, bare and with `$derived`** — `{@const x = y}` becomes `{const x = $derived(y)}`, and a bare `{const}` is the different, once-only thing; the header’s link list, the trip page’s initial data, the globe’s import (ch. {{the-design-system}}, {{the-shell}}, {{the-trip-page}}, {{the-globe}}).',
 					'**`class={[…]}` and `class={{…}}`** — every conditional class, in place of the `class:` directive they replaced in Svelte 5.16 (ch. {{the-shell}}).',
-					'**Attachments — `{@attach}`, and `fromAction` for a library that ships an action** — Tiptap (ch. {{notes-with-tiptap-through-an-attachment}}), the GSAP hero timeline (ch. {{the-design-system}}), svelte-dnd-action (ch. {{the-itinerary}}), the expenses table’s overflow (ch. {{expenses-with-tanstack-and-layerchart}}), and the argument for when a wrapper library is *not* worth it (ch. {{the-wrapper-pattern}}).',
-					'**`animate:flip`** with svelte-dnd-action (ch. {{the-itinerary}}).',
-					'**`svelte/reactivity`: `MediaQuery`, `createSubscriber`; `svelte/reactivity/window`: `scrollY`** — the theme, the globe’s motion preference, geolocation, the header (ch. {{the-design-system}}, {{the-map}}, {{the-globe}}, {{reactivity-utilities}}).',
+					'**Attachments — `{@attach}`, and `fromAction` for a library that ships an action** — Tiptap (ch. {{notes-with-tiptap-through-an-attachment}}), the GSAP hero timeline, attached only when motion is wanted (ch. {{the-design-system}}), svelte-dnd-action (ch. {{the-itinerary}}), the expenses table’s overflow (ch. {{expenses-with-tanstack-and-layerchart}}), and the argument for when a wrapper library is *not* worth it (ch. {{the-wrapper-pattern}}).',
+					'**`animate:flip`** with svelte-dnd-action (ch. {{the-itinerary}}, {{motion-with-intent}}).',
+					'**Motion: `transition:`, `in:`, a custom `TransitionConfig` with `css(t, u)`, `svelte/easing`, `Tween` from `svelte/motion`, `prefersReducedMotion`** — the copy button’s check mark, the invite link, the map’s status pill, the tab indicator, and every built-in the design brief keeps out, each with its rule (ch. {{motion-with-intent}}, {{the-trip-page}}).',
+					'**`svelte/reactivity`: `MediaQuery`, `createSubscriber`; `svelte/reactivity/window`: `scrollY`, `online`** — the theme, geolocation, the header, the trip header’s “Offline” (ch. {{the-design-system}}, {{the-map}}, {{the-globe}}, {{reactivity-utilities}}, {{the-offline-itinerary}}).',
 					'**Custom elements — `customElement: true` and the generated `.element` class**, registered with `customElements.define`, with a shadow root and attribute-mapped props (ch. {{embedding-a-trip}}).',
 					'**Runes in a `.svelte.ts` file inside a published library** — the `Route` class (ch. {{a-route-as-a-class}}).'
 				]
@@ -716,7 +719,8 @@ src/lib/trip/StopCardScratch.svelte
 					'**`tracing: { server: true }` and `src/instrumentation.server.ts`** (ch. {{explore-and-diagnostics}}).',
 					'**CSP `mode: "auto"`, `csrf`, `version.pollInterval` and `updated.current`, `preload` by source `filename`** (ch. {{the-config}}, {{the-shell}}, {{security-headers-and-csp}}).',
 					'**`$app/env`: `browser`, `building`, `dev`, `version`** (ch. {{the-shell}}, {{the-globe}}, {{the-trip-page}}, {{embedding-a-trip}}).',
-					'**`onNavigate` view transitions, `beforeNavigate`** (ch. {{the-shell}}).',
+					'**`onNavigate` view transitions, `beforeNavigate`, `afterNavigate`** (ch. {{the-shell}}, {{the-offline-itinerary}}).',
+					'**A service worker: `src/service-worker/index.ts`, `self` from `$app/service-worker`, `immutable`/`assets`/`prerendered` from `$app/manifest`, `version` as the cache name, `$app/tsconfig/service-worker`, automatic registration** — the offline itinerary, and the copies a shared device forgets (ch. {{the-offline-itinerary}}).',
 					'**`<enhanced:img>`** (ch. {{the-design-system}}).',
 					'**adapter-node with `precompress`, `paths.origin`, a health endpoint, graceful shutdown** (ch. {{deploying}}).'
 				]

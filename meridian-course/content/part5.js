@@ -2,10 +2,11 @@
  * PART 5 — The interface
  * (chapters {{the-design-system}}–{{companions-presence-and-settings}})
  *
- * The design system and the shell, then the trip page and each of its
- * tabs: the itinerary, the palette, the map, the globe, the expenses, the
- * notes, the companions. Ten chapters, and every library from the roll-call
- * in chapter {{the-map-of-features}} shows up in one of them with its wiring visible.
+ * The design system, the motion it allows, and the shell, then the trip
+ * page and each of its tabs: the itinerary, the palette, the map, the
+ * globe, the expenses, the notes, the companions. Eleven chapters, and
+ * every library from the roll-call in chapter {{the-map-of-features}} shows
+ * up in one of them with its wiring visible.
  */
 
 import { code } from './quote.js';
@@ -18,7 +19,7 @@ export const part5 = [
 		slug: 'the-design-system',
 		title: 'The design system',
 		summary:
-			'Tokens with `light-dark()`, a theme class on `MediaQuery`, the boot script that stops the flash and tells the browser chrome and the server, fonts from fontsource preloaded by filename, a hero in four prints that downloads one, one GSAP timeline as an attachment, motion tokens that reduced motion zeroes, the short, named list of places a hex code may appear outside the tokens, and a contrast table checked on every lint.',
+			'Tokens with `light-dark()`, a theme class on `MediaQuery`, the boot script that stops the flash and tells the browser chrome and the server, fonts from fontsource preloaded by filename, a hero in four prints that downloads one, one GSAP timeline as a conditional attachment, motion tokens that reduced motion zeroes and the framework’s one query for the scripts, `style:--x` as the bridge from a script to the stylesheet, how a component’s styles are scoped, the short, named list of places a hex code may appear outside the tokens, and a contrast table checked on every lint.',
 		goal: 'Build a light-and-dark design system that never flashes, respects reduced motion, and keeps every colour in one file.',
 		blocks: [
 			{
@@ -66,8 +67,8 @@ export const part5 = [
 			},
 
 			{ type: 'h3', id: 'hero', text: 'A picture in four prints' },
-			code('src/routes/(site)/+page.svelte', 20, 109),
-			code('src/routes/(site)/+page.svelte', 117, 176),
+			code('src/routes/(site)/+page.svelte', 21, 110),
+			code('src/routes/(site)/+page.svelte', 118, 183),
 			{
 				type: 'p',
 				text: 'The hero is a map of the sample trip drawn by `scripts/make-hero.ts` with sharp — coastline, contours clipped to the land, a graticule, the dashed route and its numbered pins — once on cream for the light theme and once on near-black for the dark. Drawn twice rather than filtered once: the first version developed the cream print as a negative in the dark theme, `filter: invert(1) hue-rotate(180deg)`, and a negative is not a night map — the pins’ white numbers went black, and the land and the sea took whatever greys the arithmetic gave them rather than the night tokens’. The script is deterministic, so running it again produces the same bytes and the diff of a commit that touches it is honest.'
@@ -96,22 +97,54 @@ export const part5 = [
 			},
 
 			{ type: 'h3', id: 'motion', text: 'One timeline, four rules' },
-			code('src/lib/motion/hero.ts', 1, 72),
+			code('src/lib/motion/hero.ts', 1, 75),
 			{
 				type: 'p',
-				text: 'The project’s cinematic budget is spent on the globe and on one hero. Everything else moves the way a good editor cuts: rarely, and for a reason — a dialog rises 8px, a bottom sheet slides on the iOS curve, a tab indicator is a `Tween` from `svelte/motion`, the check mark on a copy button pops in with a ten-line custom transition in `src/lib/motion/transitions.ts`, and all of it reads its duration from the `--dur-*` tokens or from the one `MediaQuery` in `src/lib/motion/prefers.svelte.ts`. The hero is the exception that earns GSAP: an attachment — a function that receives an element and returns a cleanup — with four rules the comment states: nothing is hidden until JavaScript runs, nothing that has been seen is taken away, reduced motion means no motion, and it plays once. The second rule is the one a review found. On a first load the server’s hero is painted long before the JavaScript arrives, and the timeline then snapped the title, the lede and the image to nothing and faded them back — the sentence a visitor had started to read blinked out. So `alreadySeen()` asks two questions: is this a hydration (the root layout has not yet set `data-hydrated`), and has the browser painted (a `first-contentful-paint` entry exists)? Both yes, and the hero stays exactly as it is; the timeline plays when the hero arrives with a client-side navigation, as new elements nobody has seen. The copy and the image are found by `data-hero-copy` and `data-hero-image`, so the attachment does not know the markup, and the cleanup kills the timeline and clears the inline styles GSAP wrote. It is imported by the home route alone, so the library ships in that chunk and no other.'
+				text: 'The project’s cinematic budget is spent on the globe and on one hero. Everything else moves the way a good editor cuts: rarely, and for a reason — a dialog rises 8px, a bottom sheet slides on the iOS curve, a tab indicator is a `Tween` from `svelte/motion`, the check mark on a copy button pops in with a ten-line custom transition in `src/lib/motion/transitions.ts`, and all of it reads its duration from the `--dur-*` tokens or from `reducedMotion` in `src/lib/motion/prefers.svelte.ts`, quoted below. The next chapter, {{motion-with-intent}}, goes through every one of those and every built-in the project leaves out. The hero is the exception that earns GSAP: an attachment — a function that receives an element and returns a cleanup — with four rules the comment states: nothing is hidden until JavaScript runs, nothing that has been seen is taken away, reduced motion means no motion, and it plays once. The third is kept by the page rather than by the function — a conditional attachment, below — so `hero()` never has to ask. The second rule is the one a review found. On a first load the server’s hero is painted long before the JavaScript arrives, and the timeline then snapped the title, the lede and the image to nothing and faded them back — the sentence a visitor had started to read blinked out. So `alreadySeen()` asks two questions: is this a hydration (the root layout has not yet set `data-hydrated`), and has the browser painted (a `first-contentful-paint` entry exists)? Both yes, and the hero stays exactly as it is; the timeline plays when the hero arrives with a client-side navigation, as new elements nobody has seen. The copy and the image are found by `data-hero-copy` and `data-hero-image`, so the attachment does not know the markup, and the cleanup kills the timeline and clears the inline styles GSAP wrote. It is imported by the home route alone, so the library ships in that chunk and no other.'
 			},
-			code('src/routes/(site)/+page.svelte', 178, 210),
-			code('src/lib/motion/hero.ts', 74, 104),
-			code('src/routes/(site)/+page.svelte', 312, 335),
+			code('src/routes/(site)/+page.svelte', 185, 221),
+			code('src/lib/motion/hero.ts', 77, 113),
+			code('src/routes/(site)/+page.svelte', 323, 346),
 			{
 				type: 'p',
-				text: 'The feature cards need no timeline, so they get none. `inview` only decides *when*: it sets `data-animate` in the browser while the grid is still below the fold, and `data-inview` the first time it scrolls into view, and then disconnects its observer. The CSS does the motion — a 12px rise on `--dur-5`, each card 70ms after the one before through the `--i` the markup sets — and rule 1 lives in the selector: a card is hidden only under `[data-animate]`, which the server never writes, so with JavaScript off every card is simply there. A grid already on screen when the script arrives skips the hiding step, and under reduced motion the whole block sits inside a media query that does not match. The list itself is a declaration tag — a `{const}` in the markup, beside the one loop that uses it — and the next chapter says what one is in full.'
+				text: 'The feature cards need no timeline, so they get none. `inview` only decides *when*: it sets `data-animate` in the browser while the grid is still below the fold, and `data-inview` the first time it scrolls into view, and then disconnects its observer. The CSS does the motion — a 12px rise on `--dur-5`, each card 70ms after the one before through the `--i` the markup sets — and rule 1 lives in the selector: a card is hidden only under `[data-animate]`, which the server never writes, so with JavaScript off every card is simply there. A grid already on screen when the script arrives skips the hiding step. Under reduced motion there is no `inview` at all — the same conditional attachment as the hero’s — so nothing is ever written, and the CSS sits inside a `no-preference` media query as a second lock. The list itself is a declaration tag — a `{const}` in the markup, beside the one loop that uses it — and the next chapter says what one is in full.'
 			},
 			{
 				type: 'why',
 				title: 'Why the list is a bare `{const}` and the icon a `$derived` one',
 				text: 'A bare declaration tag is worked out once, when its block is created; one that wraps its value in `$derived` is worked out again whenever what it reads changes — the compiler turns the first into a plain `const` and the second into a derived signal. The list reads only messages, and the one thing that could change those is the language. A language switch loads a new page — the switcher’s links carry `data-sveltekit-reload` — and the new page works the list out afresh in the new language, so once is all it needs, and the comment above it says it is bare on purpose. `Icon` reads the loop’s item instead, and an item is like a prop: Svelte’s best practices say to “treat props as though they will change”, and to make a value that depends on one `$derived`. A keyed `{#each}` keeps a card whose key survives a change to the list and hands it the new item; a bare tag there would go on drawing the old icon. This list never changes, so the `$derived` costs nothing today, and it is the form that stays right on the day the list does.'
+			},
+
+			{ type: 'h3', id: 'one-query', text: 'One query for motion, and an attachment that is not there' },
+			code('src/lib/motion/prefers.svelte.ts', 1, 21),
+			{
+				type: 'p',
+				text: 'CSS has its own answer to “does this person want motion?” — the `prefers-reduced-motion` block at the bottom of `tokens.css` — and it reaches everything a stylesheet animates. It does not reach a script. The itinerary’s FLIP, the map’s camera, the globe and the hero are JavaScript, and so are Svelte’s own transitions: the documentation says they “are driven by the Web Animations API rather than by CSS”, so that a stylesheet rule zeroing durations “has no effect on them”. Every one of those reads `reducedMotion` from this module. It used to build its own `new MediaQuery(\'(prefers-reduced-motion: reduce)\')`; `svelte/motion` ships exactly that query as `prefersReducedMotion`, built once, and the module now only gives the framework’s instance the name the app reads. One query, so no two components can disagree about the setting.'
+			},
+			{
+				type: 'p',
+				text: 'The home page uses it in the place it reads best: the attachment itself, in the hero markup quoted above. `{@attach !reducedMotion.current && hero()}` — the documentation’s rule is that “falsy values like `false` or `undefined` are treated as no attachment, enabling conditional usage”. Under reduced motion there is no attachment, so the timeline is never built rather than built and told to stop, and `hero.ts` loses the early return it used to need. And because an attachment’s expression is read inside an effect, it follows the setting live: switch reduced motion on while the timeline plays, and Svelte runs the attachment’s cleanup — the timeline is killed and GSAP’s inline styles are cleared, so the hero is left exactly as the server drew it. `inview()`’s cleanup does the same for the attributes it wrote.'
+			},
+			{
+				type: 'why',
+				title: 'Why `MediaQuery` is not how the page first looks',
+				text: '`MediaQuery` has a second argument, `fallback`, and the documentation calls it the “fallback value for the server”; leave it out and the server sees `false`. Its first sentence of advice is the real lesson: “during server-side rendering, there is no way to know what the correct value should be, potentially causing content to change upon hydration. If you can use the media query in CSS to achieve the same effect, do that.” That is why the first paint of this design never depends on one. The theme’s colours are `light-dark()` in CSS, the boot script sets `data-theme` before the first paint, and the hero’s prints are chosen by `<picture>` with `media` — all of them answered by the browser before any script runs. `MediaQuery` is for what only a script can do, after hydration: start a timeline or not, render a WebGL map beside the list or not (chapter {{the-trip-page}}), pick the toaster’s corner. A value that changes what the server rendered is a value that can make the page jump.'
+			},
+
+			{ type: 'h3', id: 'scoped', text: 'Scoped styles, and the bridge from a script to the stylesheet' },
+			{
+				type: 'p',
+				text: 'A component’s `<style>` applies to that component and nothing else, and the mechanism is plain enough to read in the browser’s inspector. The documentation: Svelte works “by adding a class to affected elements, which is based on a hash of the component styles (e.g. `svelte-123xyz`)”, and adds the same class to each selector. Two consequences follow. Every scoped selector gains “a specificity increase of 0-1-0”, so a component’s `p` beats a global `p` “even if the global stylesheet is loaded later” — which is why a component can restyle a utility class from `utilities.css` without `!important`. And where the class would have to appear twice in one selector, the second time it is written as `:where(.svelte-xyz123)`, which adds nothing, so a long selector does not climb in specificity as it grows. `@keyframes` are scoped by the same hash, so `rise` on the home page and `pulse` in the trip header cannot collide with anybody else’s. What a scoped selector cannot see is an attribute a script writes after the fact, which is why the home page’s card rules are wrapped in `:global(…)` (above): the compiler would otherwise drop a selector it cannot see matching anything in the markup.'
+			},
+			code(`${TRIP}/TripView.svelte`, 430, 436),
+			code(`${TRIP}/TripView.svelte`, 840, 848),
+			{
+				type: 'p',
+				text: 'When a number computed in a script has to reach the stylesheet, the project passes it as a custom property with the `style:` directive — `style:--x`, `style:--w` — and lets the CSS decide what to do with it. The tab indicator’s position is a `Tween` (chapter {{the-trip-page}}), and the markup hands its current value to two properties that one rule turns into a `translate` and a `width`. The same bridge carries the header sheet’s stagger (`style:--i={i}` on each link, read as `calc(var(--i) * var(--stagger))`), the home page’s card delay, the frame height the trip page measures (`--frame-top`), and the trips grid’s minimum column (`style:--grid-min="18rem"` over the `.grid` utility’s `var(--grid-min, 18rem)`). The line between that and a `data-*` attribute is the kind of value. A custom property carries a *quantity* — a length, an index, a duration — that CSS does arithmetic with. An attribute carries a *state* from a short list — `data-kind="food"`, `data-ready`, `data-fresh` — that CSS matches with a selector. The directive also wins over a `style` attribute on the same element, “even over `!important` properties”, so there is never a question of which one applies.'
+			},
+			{
+				type: 'note',
+				text: 'Three styling features the project does not use, each for the same reason as Tailwind (ch. {{the-toolchain}}, ch. {{choosing-libraries}}): one set of tokens, one scope rule, no exceptions to remember. A nested `<style>` inside markup is “inserted as-is into the DOM; no scoping or processing will be done”, which makes it global CSS hidden in a component. `style:color|important` adds `!important` to a directive that already beats the attribute. And `@keyframes -global-name` exports an animation from a component: the keyframes the whole app shares — the dialog’s `panel-in`, the phone sheet’s `sheet-in`, the popovers’ `pop-in` — live in `base.css`, where shared things go.'
 			},
 
 			{ type: 'h3', id: 'checked', text: 'Contrast, checked on every lint' },
@@ -140,8 +173,159 @@ export const part5 = [
 					'You can explain `light-dark()` and why the theme class only sets `color-scheme`.',
 					'You know why the boot script has a hash and no nonce.',
 					'You can state the four rules of the hero timeline, and say why the feature cards animate with CSS instead.',
+					'You can say why a script needs `prefersReducedMotion` when the CSS already zeroes every duration, and what `{@attach cond && fn()}` does when `cond` changes.',
+					'You can say when a value goes to the stylesheet as `style:--x` and when as a `data-*` attribute, and what specificity a scoped selector adds.',
 					'You can say how the hero fetches one print of two, and why the server has to know the theme for that.',
 					'You know which file a contrast ratio in this chapter comes from, and what fails when a token change breaks one.'
+				]
+			}
+		]
+	},
+
+	{
+		slug: 'motion-with-intent',
+		title: 'Motion with intent',
+		summary:
+			'What moves in Meridian and what is not allowed to: the design brief’s two lists as the rules, four mechanisms and when each is the right one, the one custom transition with `css(t, u)`, three Svelte transitions and one `animate:flip`, a `Tween` for the tab bar, CSS keyframes that Bits UI waits for, a phone menu whose motion ends outside the accessibility tree, the `svelte/easing` table — and every built-in the project leaves out, with the rule that keeps it out.',
+		goal: 'Choose between a CSS animation, a Svelte transition, an animation and a motion value for a given movement; write a custom transition; honour reduced motion in each; and say no to the motion a design does not need.',
+		blocks: [
+			{
+				type: 'p',
+				text: 'The design system set the budget; this chapter spends it, and the rules for spending it are not taste. The design brief has two lists. “What animates, exactly” is a table, and it is exhaustive: every movement in the product is a row, with its duration token, its curve and the file it lives in — a dialog rises 8px, a bottom sheet slides on the iOS curve, the tab indicator translates, a new stop gets a highlight that fades, the live dot pulses because the pulse is information. “What never animates” is the other list: text colour, layout (no `height`, `width` or `margin` transitions anywhere), the header’s border, table sorting, presence chips, numbers, anything parallax, and anything at all under reduced motion. A movement that is not in the first list is not built, and a movement in the second is refused even when a library makes it one word. That is what “with intent” means here: motion that explains a change of state — where the dialog came from, which tab you are on now, which card just arrived — and nothing that decorates.'
+			},
+			{
+				type: 'p',
+				text: 'There are four ways to move something in a Svelte app, and each has its own job. **CSS** — a `transition` or `@keyframes` — for anything that stays in the document and changes state: hover, press, open, closed. It reads the `--dur-*` tokens, so reduced motion reaches it for free. A **Svelte transition** (`transition:`, `in:`, `out:`) for an element that enters or leaves the document because of state — the one thing CSS cannot do on its own, because once an element is removed there is nothing left to animate. An **animation** (`animate:`) for an item that moves to a new place in a keyed list. And a **motion value** — `Tween` or `Spring` from `svelte/motion` — for a number that has to glide to its new value while a script reads it every frame. The hero’s GSAP timeline is the fifth, used once, and chapter {{the-design-system}} says why.'
+			},
+
+			{ type: 'h3', id: 'css-first', text: 'CSS first, and a library that waits for it' },
+			code('src/lib/styles/base.css', 556, 594),
+			{
+				type: 'p',
+				text: 'The dialogs are the largest movement in the product, and they have no JavaScript animation at all. Bits UI renders `data-state="open"` while a dialog is up and flips it to `closed` just before unmounting — and, the comment says, waits for any CSS animation on the element to finish first. So the enter and the exit are two keyframe rules each: the scrim fades, the phone’s sheet slides up on `--ease-sheet` and down on `--ease-in`, and from 40em the panel scales from 0.96 and rises 8px. The exit is shorter than the entrance on purpose (`--dur-3` against `--dur-4`): a person who has decided to close something wants it gone. Under reduced motion every token is 0ms, the animation ends the moment it starts, and the dialog simply appears and disappears.'
+			},
+			{
+				type: 'p',
+				text: 'That is the line between CSS and a Svelte transition. CSS can animate an element’s *leaving* only when something keeps the element in the document until the animation ends — Bits UI does it for its own components by waiting. For an element of yours inside an `{#if}`, Svelte is the thing that waits: the documentation’s rule is that when a block is transitioning out, “all elements inside it, including those that do not have their own transitions, are kept in the DOM until every transition in the block has been completed”. An element that never leaves — the update banner, which reloads the page instead of closing, the header’s sheet, the tab indicator — needs no transition at all, and gets CSS.'
+			},
+			code(`${UI}/UpdateBanner.svelte`, 53, 58),
+			{
+				type: 'p',
+				text: 'The update banner is the plainest case: one keyframe rule, `arrive`, from 16px lower and transparent, on `--dur-4` with `--ease-out`, played once when the banner is rendered. It has no exit because it has no way to leave — the button reloads the page — and an `in:fly` would have done the same thing with a JavaScript import and a reduced-motion check of its own.'
+			},
+
+			{ type: 'h3', id: 'custom', text: 'One custom transition' },
+			code('src/lib/motion/transitions.ts', 1, 33),
+			{
+				type: 'p',
+				text: 'A transition is a function of three arguments — the element, the parameters written in the directive, and an `options` object — that returns a `TransitionConfig`: `delay`, `duration`, `easing`, and one of `css` or `tick`. `css(t, u)` returns a string of CSS for a moment of the transition: `t` runs from 0 to 1 on the way in and from 1 back to 0 on the way out, so 1 is always the element as it naturally is, and `u` is `1 - t`. Easing is applied before `css` sees `t`, so `pop` writes a straight line — opacity `t`, scale from 0.6 to 1 — and `cubicOut` bends it. Svelte calls `css` many times *before* the transition starts and turns the answers into keyframes for a Web Animation, which a browser can run off the main thread; `tick(t, u)` is called on every frame instead, for the rare movement that CSS cannot describe (the documentation’s example types a sentence out letter by letter). The rule is theirs: “If it’s possible to use `css` instead of `tick`, do so.”'
+			},
+			{
+				type: 'p',
+				text: 'Two more forms exist and `pop` needs neither. The third argument, `options`, carries `direction` — `in`, `out` or `both` — for a transition that should move differently on the way out. And a transition may return a *function* that returns the config instead of the config itself; that function is called in the next microtask, after every transition starting in the same update has been created, which is how `crossfade` lets a leaving element and an arriving one find each other before either decides how to move.'
+			},
+			{
+				type: 'why',
+				title: 'Why `pop` asks about reduced motion itself',
+				text: 'Because nothing else will. The tokens in `tokens.css` reach CSS animations, and the documentation says plainly that Svelte’s transitions are not those: they “are driven by the Web Animations API rather than by CSS. A global `@media (prefers-reduced-motion: reduce)` rule that zeroes `transition-duration` and `animation-duration` therefore has no effect on them.” So every transition in the project reads `reducedMotion` — `prefersReducedMotion` from `svelte/motion`, under the app’s name (chapter {{the-design-system}}) — and takes a duration of 0 when it is set — `pop` in its own body, so a component that uses it never has to remember, and the built-ins at the place they are used.'
+			},
+			code(`${TRIP}/Companions.svelte`, 172, 193),
+			code('src/routes/(site)/t/[slug=slug]/settings/EmbedSection.svelte', 68, 82),
+			{
+				type: 'p',
+				text: '`in:` is a transition that plays only on the way in. The check mark that replaces a copy icon pops in, and the copy icon it replaced simply goes: an `out:` on it would hold both icons in the button for 160ms, side by side, and the button would grow and shrink — layout, which never animates. The invite link’s block fades in rather than sliding open for the same reason. Both are *local*, which is the default in Svelte 5: “Local transitions only play when the block they belong to is created or destroyed, not when parent blocks are created or destroyed.” The fade belongs to `{#if inviteUrl}`, so it plays at the one moment it explains — the link has just been made — and never because something around it appeared. `|global` is the opt-in for the other behaviour, and a screen built from global transitions animates every piece of itself at once whenever a page or a tab first renders; the project has none.'
+			},
+			code('src/lib/map/MapView.svelte', 530, 543),
+			{
+				type: 'p',
+				text: '`transition:` is the bidirectional kind: the same function on the way in and on the way out, and “it can be smoothly reversed while the transition is in progress” — toggle the locate button twice quickly and the pill turns round where it is rather than finishing and starting again. It is the one Svelte transition on the map, on the one element that comes and goes there: “Finding you…” while the browser looks, “Location is not available.” if it cannot. `role="status"` makes a screen reader say it; the fade is for everybody else.'
+			},
+
+			{ type: 'h3', id: 'flip', text: 'One animation, in the one list that reorders' },
+			code(`${TRIP}/Itinerary.svelte`, 110, 129),
+			code(`${TRIP}/Itinerary.svelte`, 241, 257, { partial: true }),
+			{
+				type: 'p',
+				text: '`animate:` is for a different event from a transition: an item that stays in a keyed `{#each}` but moves to another index. The documentation’s three conditions are the whole contract — it runs “when the contents of a keyed each block are re-ordered”, it does not run “when an element is added or removed”, and the directive must sit on an *immediate* child of the keyed block, which is why it is on the `<li>` and not on the card inside it. `flip` measures where the element was (First) and where it is now (Last), moves it back to the first place with a transform (Invert), and lets it go (Play). svelte-dnd-action does its own FLIP for the card being dragged, and `flipDurationMs` tells it how long Svelte’s will take for the others, so both read one `duration` — 240ms, or 0 under reduced motion. There are no `in:` or `out:` on the items: the library says it does not work with them, and a stop that arrives gets the brief’s “highlight, not a bounce” instead, the `fresh` mark the effect sets for 1.2 seconds.'
+			},
+			{
+				type: 'note',
+				text: 'A custom animation has the same shape as a custom transition, with one difference in its arguments: `(node, { from, to }, params)`, where `from` and `to` are the element’s `DOMRect` before and after the reorder, returning an `AnimationConfig` — `delay`, `duration`, `easing`, `css`, `tick`. The project writes none, because `flip` is the reorder the brief asks for, and the only list that reorders by hand is the itinerary. The expenses table re-sorts in place, with no movement at all: the brief lists table sorting among the things that never animate.'
+			},
+
+			{ type: 'h3', id: 'values', text: 'A value that moves: `Tween`, and the `Spring` beside it' },
+			code(`${TRIP}/TripView.svelte`, 175, 194),
+			{
+				type: 'p',
+				text: 'The tab indicator is one 2px bar that slides between tabs, and its position is a `Tween`: `new Tween(initial, { duration, easing })`, then `set(target)` — which returns a promise for when it arrives — and `.current`, which the markup reads on every frame and hands to the stylesheet as `style:--x` and `style:--w` (chapter {{the-design-system}}). The options given to `set` override the defaults for that one move, and `{ duration: 0 }` is how a tween jumps: the first placement, a resize, and every move under reduced motion. `Tween.of(() => value)` is the other constructor, a tween bound to whatever the function returns, created during component initialisation — and the project does not use it, because the obvious place for it is the trip header’s total distance, and the brief says numbers never count up.'
+			},
+			{
+				type: 'p',
+				text: '`Spring` is the tween’s physical sibling, available since Svelte 5.8: instead of a duration it has `stiffness`, `damping` and `precision`, and a value set while it is moving keeps its momentum. Its `set` takes `{ instant: true }` to jump — where a `Tween` takes `{ duration: 0 }` — and `preserveMomentum` in milliseconds for a fling, and `Spring.of` binds it to a function as `Tween.of` does. The place it belongs is the waypoint library’s compass needle, swinging to a new bearing (chapter {{two-components-for-any-app}}); it is not there because the library promises `svelte ^5.0.0` to anybody who installs it, and a class from 5.8 would break that promise. Both replace the stores `tweened` and `spring`, which Svelte 5 still exports and marks deprecated: they did the same job behind `subscribe` and `$value`.'
+			},
+
+			{ type: 'h3', id: 'sheet', text: 'A menu whose motion ends outside the accessibility tree' },
+			code(`${UI}/Header.svelte`, 266, 306),
+			{
+				type: 'p',
+				text: 'The phone’s menu sheet looks like a textbook `slide`, and the brief chose otherwise for three reasons. The sheet is always in the document, because the menu button’s `aria-controls` must point at something, and a transition only plays when an `{#if}` adds or removes an element. And `slide` animates height, padding and margin — layout, which never animates. (It also measures the element it moves, and Svelte warns at run time, as `transition_slide_display`, when the element’s `display` is `contents`, `inline` or `table`, where that measuring cannot work.) So the sheet is revealed by a `clip-path` from the top — a mask, not a box changing size — and its links fade in 30ms apart through `--i`, the custom property each link is given in the markup.'
+			},
+			{
+				type: 'p',
+				text: 'The part that matters more than the look is the last line of the closed state: `visibility: hidden`, after a delay as long as the clip takes. A clipped element is invisible to the eye and perfectly visible to a screen reader and to the Tab key — a closed menu that a keyboard can still walk into. `visibility: hidden` takes the links out of the accessibility tree and out of the tab order, and the delay lets the clip finish before it does. Opening switches `visibility` at once and runs the clip; closing runs the clip and then switches. The test proves the result rather than the CSS:'
+			},
+			code('e2e/public.e2e.ts', 207, 230),
+			{
+				type: 'p',
+				text: 'On the Pixel 7 profile only, because a desktop has no menu. Before the menu opens, a query by role cannot find the Explore link at all — Playwright’s role queries see what the accessibility tree sees — so `toBeHidden()` passes on an element that is not there for a screen reader either. Opened, it is visible; Escape closes it, the button says `aria-expanded="false"`, focus is back on it, and the link is gone from the tree again. Delete `visibility: hidden` from the closed sheet and the first assertion fails, with the sheet still perfectly clipped on screen.'
+			},
+
+			{ type: 'h3', id: 'easing', text: 'The easing table' },
+			{
+				type: 'p',
+				text: '`svelte/easing` exports thirty-one functions: `linear`, and ten families in three forms each. The form says where the movement is fast. `…Out` starts fast and settles — the curve for something *arriving*, and `cubicOut` is the nearest built-in to the `--ease-out` token, which a JavaScript easing cannot read. `…In` starts slowly and leaves fast — for something going away, the role `--ease-in` plays in CSS, “exits only”. `…InOut` is slow at both ends, for something moving from one place on screen to another, like `--ease-inout`. The family says how strongly:'
+			},
+			{
+				type: 'ul',
+				items: [
+					'**`sine`, `quad`** — the gentlest. A fade that should barely be noticed.',
+					'**`cubic`** — the project’s default: `cubicOut` for the tab indicator and for `pop`.',
+					'**`quart`, `quint`, `expo`** — the same shape, steeper each time: most of the movement in the first moment, then a long settle. GSAP’s `power3.out` on the hero is the quart curve under another name.',
+					'**`circ`** — a quarter circle: abrupt at one end, very soft at the other.',
+					'**`back`, `elastic`, `bounce`** — they overshoot the target and come back, or bounce off it. Declined everywhere: an overshoot is a bounce, and the brief’s word for a new stop is “a highlight, not a bounce”.',
+					'**`linear`** — no easing: for progress and for anything continuous. Nothing here needs it; the live dot’s pulse is CSS.'
+				]
+			},
+
+			{ type: 'h3', id: 'left-out', text: 'What is left out, and the rule that does it' },
+			{
+				type: 'ul',
+				items: [
+					'**`fade|global` or `in:scale out:fade` on presence chips** — “Presence chips entering/leaving — they appear.” A person arriving with a bounce is a slot machine. (`in:` and `out:` together are the non-bidirectional pair: a different movement each way, and no reversing halfway.)',
+					'**`Tween.of` on the total distance** — “Numbers (totals, distances) — no count-up.”',
+					'**`fly` on the update banner** — the CSS `arrive` above does it, with no exit to need a transition.',
+					'**`slide` on the menu sheet** — above: the sheet never leaves the document, and `slide` animates layout.',
+					'**`draw` on a trip card’s route** — `draw` traces an SVG path’s stroke over time, and it is not in the brief’s table: card hover is the only card motion.',
+					'**`crossfade` when a stop moves to another day** — `crossfade({ fallback })` returns a pair, `[send, receive]`, and an element sent with a `key` flies to the element received with the same key. It needs `out:` and `in:` on the items, and items in a dndzone may not have them; the brief says list reorder is FLIP only.',
+					'**`scale` and `blur`** — `scale` grows a thing from a point, which is a bounce by another name; `blur` makes the text being read unreadable mid-movement, and the brief will not move the text you are reading.',
+					'**`unmount(component, { outro: true })`** — plays a component’s outros before it leaves, and its promise resolves when they have finished; `mount` plays intros unless `intro: false` is passed. Both are for a component mounted by hand, and this project mounts none — even the custom element is mounted by the browser.',
+					'**Skeleton loaders** — “Skeletons — None.” Every `await` resolves on the server; a shimmer would invent latency to show off.'
+				]
+			},
+			{
+				type: 'why',
+				title: 'Why reduced motion means none, not less',
+				text: 'Because “less” is a judgement made on somebody else’s behalf, and the setting exists for people for whom motion is not a matter of taste — vestibular disorders, migraine, attention. So in this project the setting turns every duration to 0, turns view transitions off (the root layout starts none, chapter {{the-shell}}), stops the globe’s flight and its camera, makes the map jump instead of fly, sets `flip` to 0, and never attaches the hero timeline at all. The live dot is the only thing that pulses, and under reduced motion it holds still too. Every one of those checks reads the same query, and the visual suite runs with reduced motion on, so a screen that only settles correctly with motion would fail there (chapter {{end-to-end}}).'
+			},
+			{
+				type: 'checkpoint',
+				items: [
+					'Given a movement, you can say whether it is CSS, a transition, an animation or a motion value, and why.',
+					'You can write a custom transition with `css(t, u)`, say what `t` and `u` are on the way in and out, and say when `tick` is the right answer.',
+					'You can say what local means for a transition, and what `|global` would change.',
+					'You know the three conditions under which `animate:` runs, and why the itinerary’s items have no `in:` or `out:`.',
+					'You can say why the phone menu ends on `visibility: hidden`, and what the end-to-end test proves.',
+					'You can name the rule in the brief that keeps each left-out built-in out.'
 				]
 			}
 		]
@@ -158,39 +342,39 @@ export const part5 = [
 				type: 'p',
 				text: 'The layout split is the decision this chapter is about, and it came from a failure. The first version had the header in the root layout, fed by a root `+layout.server.ts` that loaded the signed-in person. Then the guides were prerendered, and a prerendered page is rendered once, at build time, with nobody signed in — and that answer is baked into its data. A signed-in person navigating to a guide would see “Sign in” in the header. So the root knows nobody, and the pages that need to know live in a group.'
 			},
-			code('src/routes/+layout.svelte', 1, 38, { partial: true }),
-			code('src/routes/+layout.svelte', 40, 96, { partial: true }),
+			code('src/routes/+layout.svelte', 1, 40, { partial: true }),
+			code('src/routes/+layout.svelte', 42, 122, { partial: true }),
 			{
 				type: 'p',
-				text: 'The last thing in the script is one line in `onMount`: a `data-hydrated` attribute on the root element. `onMount` in the root layout runs once the whole tree has hydrated, so the attribute is an honest signal that the JavaScript is running — a stylesheet can hide a control that needs it until then, and the end-to-end suite waits for it in the test that proves text typed *before* hydration survives (chapter {{signing-in-and-up}}).'
+				text: 'Two more things in that block belong to every page. `afterNavigate` asks the browser to look for a new service worker on each client-side navigation, because the browser only looks by itself on a full page load, and a tab left open across a deploy would otherwise keep the old worker for as long as it stays open — chapter {{the-offline-itinerary}} explains the worker and why the check is skipped with no network. And the last thing in the script is one line in `onMount`: a `data-hydrated` attribute on the root element. `onMount` in the root layout runs once the whole tree has hydrated, so the attribute is an honest signal that the JavaScript is running — a stylesheet can hide a control that needs it until then, and the end-to-end suite waits for it in the test that proves text typed *before* hydration survives (chapter {{signing-in-and-up}}).'
 			},
 			{
 				type: 'p',
 				text: 'What is left at the root is what every page shares: the fonts and stylesheet, the toaster, the deploy banner, and the two navigation hooks. `onNavigate` wraps the completion of every client-side navigation in `document.startViewTransition`, so the old page cross-fades into the new — and an element with a `view-transition-name`, like the trip title, morphs. Unless the person prefers reduced motion: then no transition is started at all. Turning the CSS off is not enough, because the browser’s own default for a view transition — a 250ms cross-fade, and a position-and-size morph of every named element — runs unless something replaces it; not starting the transition is the one switch that covers all of it. `beforeNavigate` turns the next navigation into a full page load when `updated.current` says a new build was deployed, so no chunk from the old build is ever requested.'
 			},
-			code('src/routes/+layout.svelte', 132, 217),
+			code('src/routes/+layout.svelte', 158, 243),
 			{
 				type: 'p',
 				text: 'Two decisions in that block. The toaster is `unstyled`, with class names that `base.css` dresses as the same tier-3 surface as a dialog, and it moves by screen size: on a phone the bottom of the screen is where the stop sheet opens, so toasts sit under the header instead, offset further when the deploy banner is up there too; on a wide screen they take the free bottom-right corner. svelte-sonner reads a separate `mobileOffset` below 600px and ignores `offset` there, so the same value goes to both — without it a phone’s toast sat 16px from the top, over the brand — and the value names the top alone, because a single string would push the sides in by a header’s height as well. Successes are `toast.success(…)`, so they wear a Phosphor check in `--ok`; errors a warning circle in `--coral`; the list sits on `--z-toast`. `MediaQuery` makes the placement a value the props read rather than a listener. And the cross-fade is CSS on the view-transition pseudo-elements — the old page leaves in 120ms, the new one arrives in 200ms — with the header excluded: it has a `view-transition-name` of its own and its group is told not to animate, so the one element that should feel fixed does not fade with every page. The trip title morphs over `--dur-4`; the trip panel rises 4px. All of it also sits inside `prefers-reduced-motion: no-preference` — the second lock on a door the script has already locked, since under reduced motion there is no transition for the CSS to style, and a navigation is a cut.'
 			},
 			code('src/routes/(site)/+layout.server.ts', 1, 14),
-			code('src/routes/(site)/+layout.svelte', 1, 28),
+			code('src/routes/(site)/+layout.svelte', 1, 45),
 			{
 				type: 'p',
-				text: 'The one `load` that returns data, and what it returns is about the shell, not a page. (There are two more `load`s in the project, and neither carries anything for a component to show: the `(app)` group’s guard, below, and the guide page’s in chapter {{guides-prerendered-with-mdsvex}}, which picks a prerendered file by its slug.) Identity is needed by every page and by the header around them, which is exactly the case a layout `load` exists for; the theme cookie is read here for the one picture with two prints (chapter {{the-design-system}}), because the server has to choose its sources before any script runs. Everything page-specific comes through remote functions. The `(app)` group inside `(site)` adds a second layout load that redirects strangers to sign in — chapter {{signing-in-and-up}} quotes it — so a page under it cannot forget to check. The layout takes its props as `LayoutProps` from `./$types`: the type SvelteKit generates for *this* layout, which knows that `data` has a `user` and a `theme` because the `load` beside it returned them, and that `children` is the snippet of the page inside. Every layout in the project types its props that way, and every page with a `params` or `data` uses its twin, `PageProps` (chapter {{the-trip-page}}).'
+				text: 'The one `load` that returns data, and what it returns is about the shell, not a page. (There are two more `load`s in the project, and neither carries anything for a component to show: the `(app)` group’s guard, below, and the guide page’s in chapter {{guides-prerendered-with-mdsvex}}, which picks a prerendered file by its slug.) Identity is needed by every page and by the header around them, which is exactly the case a layout `load` exists for; the theme cookie is read here for the one picture with two prints (chapter {{the-design-system}}), because the server has to choose its sources before any script runs. Everything page-specific comes through remote functions. The `(app)` group inside `(site)` adds a second layout load that redirects strangers to sign in — chapter {{signing-in-and-up}} quotes it — so a page under it cannot forget to check. The layout takes its props as `LayoutProps` from `./$types`: the type SvelteKit generates for *this* layout, which knows that `data` has a `user` and a `theme` because the `load` beside it returned them, and that `children` is the snippet of the page inside. Every layout in the project types its props that way, and every page with a `params` or `data` uses its twin, `PageProps` (chapter {{the-trip-page}}). The one effect in the layout is about the device, not the page: whenever it finds nobody signed in, it deletes the copies of pages the service worker kept for reading offline, because they were rendered for whoever was signed in before — chapter {{the-offline-itinerary}} says which ways a session can end and why this is the net under all of them.'
 			},
 
 			{ type: 'h3', id: 'header', text: 'The header' },
-			code(`${UI}/Header.svelte`, 1, 103),
-			code(`${UI}/Header.svelte`, 107, 120),
+			code(`${UI}/Header.svelte`, 1, 104),
+			code(`${UI}/Header.svelte`, 108, 121),
 			{
 				type: 'p',
 				text: 'Two small Svelte 5 things. `scrollY` from `svelte/reactivity/window` is the window’s scroll position as a reactive value with the listener managed for us — `undefined` on the server, where there is no window — and one `$derived` turns it into the border that appears when the page has scrolled. `{const}` is a declaration tag: a value computed in the markup and visible to its siblings and their children. It is what Svelte 5.56 put in place of `{@const}`, which still compiles but is legacy. The two are easy to confuse, and the difference is the whole lesson. `{@const}` could only sit directly inside a block, and it was *reactive*: the compiler made it a derived value, worked out again whenever what it read changed. A declaration tag works anywhere in the markup, can be a `let` holding `$state`, and is reactive only when it says so. A bare one is worked out once, when the block is created; to follow what it reads it wraps the value in `$derived`, as a `const` in a `<script>` would. So the one-for-one translation of old code is `{@const x = y}` → `{const x = $derived(y)}`, which is what Svelte’s own documentation gives. Dropping the `@` alone gives you the bare, once-only form — and this project made exactly that slip three times, in the header, the diagnostics page and the settings page, each found by a reader noticing something did not update. The link list depends on whether somebody is signed in, and the header sits in the layout, so it outlives a sign-in. The first version was a bare `{const}`: after signing in there was no “Trips” link until a reload, and after signing out the link stayed. The sign-up test in chapter {{end-to-end}} now looks for it both ways. The header is the only place that needs the list, so it lives where it is used.'
 			},
-			code(`${UI}/Header.svelte`, 122, 204),
+			code(`${UI}/Header.svelte`, 123, 216),
 			{
 				type: 'p',
-				text: 'Mobile first: the nav is a sheet under the header, opened by a button with `aria-expanded` and `aria-controls`, and at forty-eight ems it becomes a row and the button disappears. Below that it behaves like the dialog it is: `inert` on the page behind it, a scrim that dims the page as every other overlay does, focus moved in and back, Escape to close, and `afterNavigate` to close it whatever caused the navigation. The scrim is rendered after the `<header>`, not inside it: the header’s `backdrop-filter` makes it the containing block of anything fixed inside it, so a scrim in there could not reach the bottom of the screen. And `open` is an assignable `$derived` that reads the 48em query: cross the line — an iPad turned to landscape with the sheet open — and it derives afresh, closed, so the page is never left inert behind a menu button that has disappeared. The header is also the same on every page. The first version left out whatever the page already was — no “New trip” on the trips list, no “Sign in” on the sign-in page — and the result was a header whose links, language switcher and theme toggle jumped 130px sideways on the most travelled path in the app, from the trips list into a trip. Now the action is always there, and on its own page it carries `aria-current="page"`, like a nav link: a screen reader says “current page”, and the stylesheet can mark it without a second rule for the same idea. Signing out is a `<form>` spread from a remote `form` with no fields, so it works with JavaScript off. The end-to-end helper in chapter {{end-to-end}} has to know about the sheet, which is the kind of thing a phone project in the test matrix catches. And every `href` in it is a call to `href()` — the next section — so the link list is a list of typed route ids, `/(site)/(app)/trips` and friends, not strings that happen to look like paths.'
+				text: 'Mobile first: the nav is a sheet under the header, opened by a button with `aria-expanded` and `aria-controls`, and at forty-eight ems it becomes a row and the button disappears. Below that it behaves like the dialog it is: `inert` on the page behind it, a scrim that dims the page as every other overlay does, focus moved in and back, Escape to close, and `afterNavigate` to close it whatever caused the navigation. The scrim is rendered after the `<header>`, not inside it: the header’s `backdrop-filter` makes it the containing block of anything fixed inside it, so a scrim in there could not reach the bottom of the screen. And `open` is an assignable `$derived` that reads the 48em query: cross the line — an iPad turned to landscape with the sheet open — and it derives afresh, closed, so the page is never left inert behind a menu button that has disappeared. The header is also the same on every page. The first version left out whatever the page already was — no “New trip” on the trips list, no “Sign in” on the sign-in page — and the result was a header whose links, language switcher and theme toggle jumped 130px sideways on the most travelled path in the app, from the trips list into a trip. Now the action is always there, and on its own page it carries `aria-current="page"`, like a nav link: a screen reader says “current page”, and the stylesheet can mark it without a second rule for the same idea. Signing out is a `<form>` spread from a remote `form` with no fields, so it works with JavaScript off; with it on, the form’s `enhance` empties this device’s offline copies before the submission ends the session (chapter {{the-offline-itinerary}}). The end-to-end helper in chapter {{end-to-end}} has to know about the sheet, which is the kind of thing a phone project in the test matrix catches. And every `href` in it is a call to `href()` — the next section — so the link list is a list of typed route ids, `/(site)/(app)/trips` and friends, not strings that happen to look like paths.'
 			},
 			{
 				type: 'why',
@@ -269,12 +453,12 @@ export const part5 = [
 			},
 
 			{ type: 'h3', id: 'the-view', text: 'The view' },
-			code(`${TRIP}/TripView.svelte`, 40, 72),
+			code(`${TRIP}/TripView.svelte`, 41, 73),
 			{
 				type: 'p',
 				text: '`watchTrip(slug)` is the live query; `.current` is the latest snapshot and `.connected` says whether the stream is up. It is created inside `untrack`, and so is the state object, because the props are read once on purpose — the page keys this component on the slug — and `untrack` both says so and quiets the compiler’s fair question. The tab comes from the URL: `?tab=map` is a link, so it works with the back button, can be shared, and needs no state. What the URL says is a `string | null`, and `isTab` from `state.svelte.ts` is a type guard — `value is Tab` — so the value that passes it is a `Tab` to TypeScript with no cast, and anything else falls back to the itinerary.'
 			},
-			code(`${TRIP}/TripView.svelte`, 232, 273),
+			code(`${TRIP}/TripView.svelte`, 257, 298),
 			{
 				type: 'p',
 				text: 'Read the comment above the effects slowly; it records two bugs the end-to-end suite found, and both are general. First, an effect that read `view.trip` re-ran every time the live query yielded — because `view.trip` is a new object each time — and its cleanup said goodbye, which woke the room, which yielded, which re-ran the effect: a loop through the server. The id is a string that never changes, so it is read once. Second, a remote command keeps a little reactive state of its own and reads it as it starts; called inside an effect, that read becomes a dependency and the write that follows re-runs the effect synchronously until Svelte stops it with `effect_update_depth_exceeded`. `untrack` around the call says: run this, depend on nothing it touches.'
@@ -288,38 +472,38 @@ export const part5 = [
 				type: 'p',
 				text: 'The heartbeat and the goodbye are sent and not awaited, and the first version wrote `.catch(() => {})` after each — reasonable for a heartbeat, whose next attempt is fifteen seconds away, and exactly how a real bug hid for an afternoon: when the seeded ids turned out not to be UUIDs (chapter {{the-database}}), every heartbeat that named a seeded stop failed validation on the server and nobody heard. `fireAndForget()` keeps the production behaviour — nothing a person could act on — and adds a console warning in development, where somebody is looking. Silence is a decision; it should be one you can see in the code.'
 			},
-			code(`${TRIP}/TripView.svelte`, 92, 117),
-			code(`${TRIP}/TripView.svelte`, 302, 366),
+			code(`${TRIP}/TripView.svelte`, 93, 127),
+			code(`${TRIP}/TripView.svelte`, 327, 399),
 			{
 				type: 'p',
-				text: 'The header shows the live status, in three states rather than two: a pulsing chip while the stream is up, a quiet “Connecting…” for the first three seconds while it is not up *yet*, and only after that the coral “Reconnect” button — `live.reconnect()` is the method SvelteKit gives every live query. The first version had two states, and showed “Reconnect” the moment the page hydrated, before the stream had had a chance: everybody on a slow network was told something had failed when nothing had. The three share one slot as wide as the widest label, so the palette and settings beside it never move. The width comes from an invisible sizer in the same grid cell whose labels are generated text — `content: attr(data-label)` — so they are in nobody’s way: not in the accessibility tree, not in the page’s text, not a second “Live” for a test to find. The slot is that wide and the chip is not: a grid item stretches to its cell by default, and “Live” sat in a pill two and a half times its width, crowded to one side. `justify-self` puts the chip at the slot’s leading edge on a phone, where the tools read from the left, and at its trailing edge beside the name, where they are set against the right — so the edge beside the settings button is the one that stays put when the label changes.'
+				text: 'The header shows the live status, in four states rather than two: a pulsing chip while the stream is up, a quiet “Connecting…” for the first three seconds while it is not up *yet*, and only after that the coral “Reconnect” button — `live.reconnect()` is the method SvelteKit gives every live query. The first version had two states, and showed “Reconnect” the moment the page hydrated, before the stream had had a chance: everybody on a slow network was told something had failed when nothing had. The fourth state comes first in the derivation: when the device itself has no network, the chip says “Offline” in the same quiet grey and offers nothing, because a button that cannot work is a button that lies — chapter {{the-offline-itinerary}} is where a page with no network comes from, and why the stream needs asking back. All four share one slot as wide as the widest label, so the palette and settings beside it never move. The width comes from an invisible sizer in the same grid cell whose labels are generated text — `content: attr(data-label)` — so they are in nobody’s way: not in the accessibility tree, not in the page’s text, not a second “Live” for a test to find. The slot is that wide and the chip is not: a grid item stretches to its cell by default, and “Live” sat in a pill two and a half times its width, crowded to one side. `justify-self` puts the chip at the slot’s leading edge on a phone, where the tools read from the left, and at its trailing edge beside the name, where they are set against the right — so the edge beside the settings button is the one that stays put when the label changes.'
 			},
 			{
 				type: 'p',
 				text: 'On a phone the trip’s name has the full width and the status tools are a row of their own under the lede; from 40em they move up beside the name. Sharing the name’s row at every width, as the first version did, left a real trip name 177px of a 328px column, and “A long weekend in the Douro valley with the cousins” ran to five ragged lines of display type. On a phone the palette button is a magnifier and the settings link an icon, its word still its name, visually hidden.'
 			},
-			code(`${TRIP}/TripView.svelte`, 368, 404),
+			code(`${TRIP}/TripView.svelte`, 401, 437),
 			{
 				type: 'p',
 				text: 'The strip itself. The tabs are links to the same route with a different `?tab=` — `href()` with a route id that carries its search string — marked `data-sveltekit-reset="false"` so the scroll position and the focus survive the navigation; SvelteKit 3 folded the old `noscroll` and `keepfocus` attributes into that one `reset`, and only warns about the old names in development, it no longer reads them. The strip is sticky under the header, so the tabs stay in reach down a long itinerary, and it scrolls sideways on a phone, where six tabs do not fit. The frame around it carries the paper and two edge fades, `::before` and `::after` gradients from `--paper` to transparent, each shown only while there is more strip that way. The first version faded the strip with a `mask-image`, which faded whatever was *behind* the strip too — the page scrolling under a sticky element — and faded the current tab whenever it sat at an edge.'
 			},
-			code(`${TRIP}/TripView.svelte`, 119, 194),
+			code(`${TRIP}/TripView.svelte`, 144, 219),
 			{
 				type: 'p',
 				text: 'One bar slides under the current tab instead of each link drawing its own border, and its position is a `Tween` from `svelte/motion`: a value that, when `set`, moves to the new one over a duration, with `.current` read by the markup on every frame. The effect reads `tab` and so re-runs on every switch; the first `set` passes `{ duration: 0 }` so the bar starts under the tab rather than sliding in from the edge, and reduced motion — read with `untrack`, because the effect should not re-run when the setting changes — makes every move instant. The second effect is a `ResizeObserver` on the strip and on every link: a rotation, a resize or a late font changes a tab’s width, and the bar is measured again — moved, not animated, because nothing was chosen. The current tab is also scrolled into view by hand, to a position that leaves 32px clear on either side, because `scrollIntoView({ inline: \'nearest\' })` stops exactly at the strip’s edge, which is where the fade is: “Notes” was left with its last letter and its bar faded out. And there is no scroll snapping — proximity snapping took a tab scrolled into view by hand and re-aligned it to the edge, under the fade again. The bar sits inside the strip — `overflow-y: hidden`, the hairline under the tabs an inset shadow — because a scroll container clips at its padding box: a bar placed on the border was cut to 1px and let the strip scroll a pixel up and down.'
 			},
-			code(`${TRIP}/TripView.svelte`, 196, 230),
+			code(`${TRIP}/TripView.svelte`, 221, 255),
 			{
 				type: 'p',
 				text: 'The map and the globe fill what is left of the screen below the tabs, so their bottom edge — the map’s status pill, the globe’s “Fly the route” — is on screen without a scroll, at 1440×900 and on a phone alike. A fixed `72dvh` did not manage that, because how much is left depends on the header, and the header depends on the trip’s name, the width and the language. So the effect measures the panel’s top in page coordinates whenever the header changes size, writes it to `--frame-top`, and the CSS does the rest: `clamp(20rem, calc(100dvh - var(--frame-top, var(--frame-guess)) - var(--space-4)), 46rem)`. Until the script has measured — on the server, and in the first frame — the top is `--frame-guess`, a guess for the width: 21rem on a phone, where the status tools are a row of their own, 18rem beside them from 40em. A guess that matches the measurement is a frame that does not change height under a map that has already started, which the map in chapter {{the-map}} had to be taught to survive.'
 			},
-			code(`${TRIP}/TripView.svelte`, 406, 446, { partial: true }),
-			code(`${TRIP}/TripView.svelte`, 281, 287),
+			code(`${TRIP}/TripView.svelte`, 439, 479, { partial: true }),
+			code(`${TRIP}/TripView.svelte`, 306, 312),
 			{
 				type: 'p',
 				text: 'The panel has a `view-transition-name` of its own, so a tab switch cross-fades the panel while the header and the strip hold still. The itinerary tab is a split view from 64em, with the map sticky beside the days, and the list alone below that — the Map tab is one tap away. The map is not hidden with CSS on a phone but not rendered at all: `wide` is a `MediaQuery`, and a hidden MapLibre would still be a WebGL context, two of them for one trip on the device least able to afford it. Both components take the same `view` and the same callbacks, and selecting a stop in one highlights it in the other because the selection lives in `view`.'
 			},
-			code(`${TRIP}/TripView.svelte`, 497, 505),
+			code(`${TRIP}/TripView.svelte`, 530, 538),
 			{
 				type: 'checkpoint',
 				items: [
@@ -603,16 +787,16 @@ export const part5 = [
 				type: 'p',
 				text: 'Threlte is Svelte for three.js. `<T.Mesh>` is a `THREE.Mesh`; its attributes are the object’s properties; a geometry and a material as children become that mesh’s geometry and material. The scene is markup, and the two things that are genuinely imperative — building vertex buffers and moving a camera per frame — are the only imperative code in the file.'
 			},
-			code(`${TRIP}/TripView.svelte`, 447, 486, { partial: true }),
+			code(`${TRIP}/TripView.svelte`, 480, 519, { partial: true }),
 			{
 				type: 'p',
 				text: 'Loading first, because it is the decision that matters most. three.js and Threlte are the largest dependency in the project and most visits never open the globe tab, so the import is dynamic, in markup, behind a boundary: `{const { default: Globe } = await import(...)}`. That declaration is bare on purpose — a module is the same module however often it is asked for, so there is nothing to follow — where the page’s `{const initial = $derived(await tripBySlug(slug))}` follows the slug. The `pending` snippet shows until the chunk arrives and the `failed` snippet if the network does not deliver it, with a `reset` that tries again. `failed` prints the `message` of what it is handed, through `boundaryMessage` (chapter {{the-itinerary}}), because that is an `App.Error` — the failure after `handleError` in `src/hooks.client.ts` has put it into words, in the page’s language (chapter {{environment-and-hooks}}) — and not the `Error` the import threw. The first version tested `error instanceof Error`, which an `App.Error` never is, so it showed its fallback whatever had happened. This is the one boundary whose failure never touches the server, so it is the one chapter {{end-to-end}} breaks on purpose: the test drops the chunk on its way to a German page and expects “Etwas ist schiefgelaufen” and a “Neu verbinden” button. `browser` guards the whole thing because a WebGL scene has no server-rendered form; the server renders the loading text and nothing else.'
 			},
-			code('src/lib/globe/Globe.svelte', 1, 52),
-			code('src/lib/globe/Globe.svelte', 54, 108),
+			code('src/lib/globe/Globe.svelte', 1, 53),
+			code('src/lib/globe/Globe.svelte', 55, 109),
 			{
 				type: 'p',
-				text: 'The frame around the scene. It loads the coastlines — the same prerendered file the map reads, so the two agree about where Portugal is — and holds the state the scene does not own: whether the camera is flying, and whether the first frame has been drawn (the canvas fades in on it). Reduced motion comes from the app’s one `MediaQuery` in `src/lib/motion/prefers.svelte.ts`, and it is live: change the operating system setting and the scene stops animating without a reload. The controls are outside the boundary, which is why the end-to-end test can see the button before the chunk has loaded. The hint under them is a second `MediaQuery`, `(pointer: coarse)`: with a mouse a scroll wheel zooms the globe, and on a touch screen a scroll moves the page and a pinch zooms, so the sentence says pinch where a pinch is what works.'
+				text: 'The frame around the scene. It loads the coastlines — the same prerendered file the map reads, so the two agree about where Portugal is — and holds the state the scene does not own: whether the camera is flying, and whether the first frame has been drawn (the canvas fades in on it). Reduced motion comes from `src/lib/motion/prefers.svelte.ts`, which hands on the framework’s own `prefersReducedMotion` from `svelte/motion` — one `MediaQuery` for the whole app — and it is live: change the operating system setting and the scene stops animating without a reload. The controls are outside the boundary, which is why the end-to-end test can see the button before the chunk has loaded. The hint under them is a second `MediaQuery`, `(pointer: coarse)`: with a mouse a scroll wheel zooms the globe, and on a touch screen a scroll moves the page and a pinch zooms, so the sentence says pinch where a pinch is what works.'
 			},
 
 			{ type: 'h3', id: 'the-scene', text: 'The scene' },

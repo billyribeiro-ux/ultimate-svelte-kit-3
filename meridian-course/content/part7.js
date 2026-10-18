@@ -210,7 +210,7 @@ axe-core               4.14.0     + @axe-core/playwright 4.13.0, handed the newe
 				text: 'Two wrappers, one idea: an `{#each}` over the domain produces library objects, keyed so a change to one stop touches one object. Both wrappers hand back the underlying instance when you need it — `bind:map` on the map, `bind:ref` on the camera — for the one or two imperative calls a page genuinely needs. If you find yourself reaching for the instance on every line, the wrapper is the wrong shape for that part.'
 			},
 			code('src/lib/trip/Notes.svelte', 72, 110),
-			code('src/lib/motion/hero.ts', 37, 63),
+			code('src/lib/motion/hero.ts', 42, 66),
 			{
 				type: 'p',
 				text: 'Two attachments, one contract: receive the element, do the setup, return the teardown. Both libraries own their element completely — Tiptap renders the document into it, GSAP times the copy and the image it finds inside by data attribute — and neither has a tree the template could usefully mirror. The attachment version is shorter than any wrapper’s README. It comes with one rule, which chapter {{notes-with-tiptap-through-an-attachment}} learned the hard way: an attachment runs inside an effect, so whatever state it reads while it runs is a reason to tear it down and run it again. A library built once — an editor with a cursor and an undo history — reads its starting values under `untrack` and follows later changes from a child `$effect`, the two moves Svelte’s documentation gives under “Controlling when attachments re-run”. And a library that ships an *action*, the shape this contract had before attachments, is the same thing with an older signature: `{@attach fromAction(dndzone, () => options)}` is how the itinerary applies svelte-dnd-action (chapter {{the-itinerary}}).'
@@ -259,11 +259,11 @@ axe-core               4.14.0     + @axe-core/playwright 4.13.0, handed the newe
 
 			{ type: 'h3', id: 'shipped', text: 'What the framework ships' },
 			code('src/lib/ui/theme.svelte.ts', 37, 44, { partial: true }),
-			code('src/lib/ui/Header.svelte', 20, 26),
-			code('src/lib/motion/prefers.svelte.ts', 1, 19),
+			code('src/lib/ui/Header.svelte', 21, 27),
+			code('src/lib/motion/prefers.svelte.ts', 1, 21),
 			{
 				type: 'p',
-				text: '`MediaQuery` is a media query as a reactive value: construct it once, read `.current` anywhere, and the listener is managed for you. The theme uses it for the system’s colour scheme; `src/lib/motion/prefers.svelte.ts` constructs one for reduced motion that the globe, the itinerary’s FLIP, the map’s `fitBounds`, the hero timeline and the root layout’s view transitions all read. Four components construct one for a width — the trip page’s side map, the toaster’s corner, the header sheet that closes itself when the window widens past it, and the stop dialog’s first focus — each a query the markup or a `$derived` reads, never a resize listener. `svelte/reactivity/window` exports `scrollY`, `innerWidth`, `online` and the rest as reactive values that are `undefined` on the server, which is why `scrollY.current ?? 0`. Both replace an `onMount` with `addEventListener` and a cleanup, which is the code most likely to be forgotten in a component that is written quickly.'
+				text: '`MediaQuery` is a media query as a reactive value: construct it once, read `.current` anywhere, and the listener is managed for you. The theme uses it for the system’s colour scheme. For reduced motion the framework has already built one — `prefersReducedMotion` from `svelte/motion` — so `src/lib/motion/prefers.svelte.ts` builds nothing: it re-exports that instance under the name the globe, the itinerary’s FLIP, the map’s `fitBounds`, the hero timeline and the root layout’s view transitions all read. Four components construct one for a width — the trip page’s side map, the toaster’s corner, the header sheet that closes itself when the window widens past it, and the stop dialog’s first focus — each a query the markup or a `$derived` reads, never a resize listener. `svelte/reactivity/window` exports `scrollY`, `innerWidth`, `online` and the rest as reactive values that are `undefined` on the server, which is why `scrollY.current ?? 0` — and why the trip header’s “Offline” chip tests `online.current === false` rather than `!online.current`: on the server nobody knows, and a page rendered there must not claim to be offline (chapter {{the-offline-itinerary}}). Both replace an `onMount` with `addEventListener` and a cleanup, which is the code most likely to be forgotten in a component that is written quickly.'
 			},
 			code('src/lib/map/geolocation.svelte.ts', 28, 73),
 			{
