@@ -1,6 +1,6 @@
 /**
  * PART 4 — Three languages
- * (chapters 20–21)
+ * (chapters {{three-languages-with-paraglide}}–{{dates-and-money-in-a-locale}})
  *
  * Paraglide compiles the messages; the hooks route the URLs; `Intl` does
  * every date, distance, amount and country name. Two chapters, because
@@ -35,7 +35,7 @@ export const part4 = [
 			},
 
 			{ type: 'h3', id: 'compiling', text: 'Compiling, twice' },
-			code('vite.config.ts', 254, 276),
+			code('vite.config.ts', 281, 303),
 			{
 				type: 'terminal',
 				code: `
@@ -75,7 +75,7 @@ runtime.d.ts  runtime.js  server.d.ts  server.js`
 			},
 			{
 				type: 'p',
-				text: 'Those sentences are messages like any other. A schema’s message is written as a function, `() => m.issue_email()`, so valibot calls it when the check fails — inside the request, where the middleware has stored the locale — rather than once, in English, when the module loaded (chapter 12 has the schemas). So is every sentence in an `error()` that a person can see: `m.stop_limit({ limit })`, a message with a parameter, when a trip is full; `m.error_no_stop()` when a companion removed the stop a moment ago; `m.error_owner_only()` on the settings page; `m.join_expired()` for an invite that ran out. A toast prints `body.message` as it is, and so does the error page, so an English literal there is an English sentence on a German page that looks deliberate. So the rule for this app is short: *no sentence a person reads is a string literal in a `.ts` file*. The one `error()` with English in it is the route API’s 404, and it says why: a program reads it, on somebody else’s page, with no language of ours to answer in (chapter 36). The end-to-end suite holds the rule to account in chapter 42 — a bad address typed into `/de/signin` must come back in German, and a refused save must show the server’s sentence, whole.'
+				text: 'Those sentences are messages like any other. A schema’s message is written as a function, `() => m.issue_email()`, so valibot calls it when the check fails — inside the request, where the middleware has stored the locale — rather than once, in English, when the module loaded (chapter {{schemas-with-valibot}} has the schemas). So is every sentence in an `error()` that a person can see: `m.stop_limit({ limit })`, a message with a parameter, when a trip is full; `m.error_no_stop()` when a companion removed the stop a moment ago; `m.error_owner_only()` on the settings page; `m.join_expired()` for an invite that ran out. A toast prints `body.message` as it is, and so does the error page, so an English literal there is an English sentence on a German page that looks deliberate. So the rule for this app is short: *no sentence a person reads is a string literal in a `.ts` file*. The one `error()` with English in it is the route API’s 404, and it says why: a program reads it, on somebody else’s page, with no language of ours to answer in (chapter {{embedding-a-trip}}). The end-to-end suite holds the rule to account in chapter {{end-to-end}} — a bad address typed into `/de/signin` must come back in German, and a refused save must show the server’s sentence, whole.'
 			},
 			{
 				type: 'why',
@@ -89,7 +89,7 @@ runtime.d.ts  runtime.js  server.d.ts  server.js`
 			code('src/lib/ui/LocaleSwitcher.svelte', 48, 71),
 			{
 				type: 'p',
-				text: 'Links, not a `<select>`. A link to `/de/trips` works before JavaScript loads, opens in a new tab, and is how a crawler finds the German site. `localizeHref(here, { locale })` is Paraglide’s: it prefixes the current path with the locale — or removes the prefix for the base locale. `data-sveltekit-reload` makes the switch a full navigation, so the middleware runs again, sets the cookie, and writes `lang="de"` on the document. A client-side navigation would swap the message functions and leave `<html lang>` saying the wrong thing, which a screen reader would read in the wrong voice. It is also the one link in the app that does not go through `href()` from chapter 23: `here` is a pathname, not a route id, and there is nothing for `resolve()` to check — so the component says that to the linter in a comment around the loop, rather than loosening the rule for everybody.'
+				text: 'Links, not a `<select>`. A link to `/de/trips` works before JavaScript loads, opens in a new tab, and is how a crawler finds the German site. `localizeHref(here, { locale })` is Paraglide’s: it prefixes the current path with the locale — or removes the prefix for the base locale. `data-sveltekit-reload` makes the switch a full navigation, so the middleware runs again, sets the cookie, and writes `lang="de"` on the document. A client-side navigation would swap the message functions and leave `<html lang>` saying the wrong thing, which a screen reader would read in the wrong voice. It is also the one link in the app that does not go through `href()` from chapter {{the-shell}}: `here` is a pathname, not a route id, and there is nothing for `resolve()` to check — so the component says that to the linter in a comment around the loop, rather than loosening the rule for everybody.'
 			},
 			{
 				type: 'p',
@@ -98,7 +98,7 @@ runtime.d.ts  runtime.js  server.d.ts  server.js`
 			{
 				type: 'why',
 				title: 'Why Paraglide and not svelte-i18n, or paraglide-sveltekit',
-				text: 'svelte-i18n is a runtime dictionary with stores; it works, and it ships every string of every loaded language and offers no type for the keys. `@inlang/paraglide-sveltekit` was the framework-specific wrapper, and it has been folded into Paraglide 2’s own `strategy` plus the `reroute` hook — there is nothing left for a SvelteKit-specific package to do, which is why the ecosystem survey in chapter 37 lists it as “not needed” rather than “rejected”. The pieces here are Paraglide 2.26, one universal hook, one server handler, and a component of links.'
+				text: 'svelte-i18n is a runtime dictionary with stores; it works, and it ships every string of every loaded language and offers no type for the keys. `@inlang/paraglide-sveltekit` was the framework-specific wrapper, and it has been folded into Paraglide 2’s own `strategy` plus the `reroute` hook — there is nothing left for a SvelteKit-specific package to do, which is why the ecosystem survey in chapter {{choosing-libraries}} lists it as “not needed” rather than “rejected”. The pieces here are Paraglide 2.26, one universal hook, one server handler, and a component of links.'
 			},
 			{
 				type: 'checkpoint',
@@ -127,7 +127,7 @@ runtime.d.ts  runtime.js  server.d.ts  server.js`
 			code('src/lib/domain/dates.ts', 78, 121),
 			{
 				type: 'p',
-				text: 'Chapter 09 explained the cache and the UTC round trip. What it did not show is the result. `formatDate("2026-05-10", "de", "day")` is “Sa., 10.”; in English it is “Sat 10”; in Portuguese “sáb., 10”. `formatRange` for the tenth to the seventeenth gives “10 – 17 May 2026”, “10.–17. Mai 2026” and “10 – 17 de mai. de 2026”. Nobody wrote any of those; the `DateFormatter` from `@internationalized/date` is `Intl.DateTimeFormat` with a fix for a Safari bug, and it knows.'
+				text: 'Chapter {{ids-dates-and-money}} explained the cache and the UTC round trip. What it did not show is the result. `formatDate("2026-05-10", "de", "day")` is “Sa., 10.”; in English it is “Sat 10”; in Portuguese “sáb., 10”. `formatRange` for the tenth to the seventeenth gives “10 – 17 May 2026”, “10.–17. Mai 2026” and “10 – 17 de mai. de 2026”. Nobody wrote any of those; the `DateFormatter` from `@internationalized/date` is `Intl.DateTimeFormat` with a fix for a Safari bug, and it knows.'
 			},
 			code('src/routes/(site)/(app)/trips/+page.svelte', 113, 121),
 			{
@@ -139,12 +139,12 @@ runtime.d.ts  runtime.js  server.d.ts  server.js`
 			code('src/lib/ui/DateRangeField.svelte', 1, 56),
 			{
 				type: 'p',
-				text: 'Bits UI is headless: it renders the markup, the ARIA and the keyboard model of a date range picker — segmented inputs you can type into, arrow keys between segments, a calendar grid — and nothing visible. Its value is a pair of `CalendarDate`s from `@internationalized/date`, the type chapter 09 chose for the domain, so there is no conversion to get wrong. The `name` on each input renders a hidden `<input>` with the ISO date, which is how the value reaches a remote `form` and how it would reach a plain HTML form with JavaScript off.'
+				text: 'Bits UI is headless: it renders the markup, the ARIA and the keyboard model of a date range picker — segmented inputs you can type into, arrow keys between segments, a calendar grid — and nothing visible. Its value is a pair of `CalendarDate`s from `@internationalized/date`, the type chapter {{ids-dates-and-money}} chose for the domain, so there is no conversion to get wrong. The `name` on each input renders a hidden `<input>` with the ISO date, which is how the value reaches a remote `form` and how it would reach a plain HTML form with JavaScript off.'
 			},
 			code('src/lib/ui/DateRangeField.svelte', 58, 134, { partial: true }),
 			{
 				type: 'p',
-				text: 'The `locale` prop is Paraglide’s current locale, so the segments come out in the locale’s order — month, day, year for English; day, month, year for German — and the weekday names in the calendar follow. `untrack` around the initial value says out loud that the props are the starting point and the picker owns the value from then on; without it, the compiler asks whether you meant to track the prop, and here the answer is no. Every visible pixel — the field’s border, the segments, the popover, the calendar — is in `src/lib/styles/dates.css` rather than the component’s `<style>`, because an expense’s single date (chapter 29) wears the same look through a sibling component, and a component’s CSS ships only with the pages that import it.'
+				text: 'The `locale` prop is Paraglide’s current locale, so the segments come out in the locale’s order — month, day, year for English; day, month, year for German — and the weekday names in the calendar follow. `untrack` around the initial value says out loud that the props are the starting point and the picker owns the value from then on; without it, the compiler asks whether you meant to track the prop, and here the answer is no. Every visible pixel — the field’s border, the segments, the popover, the calendar — is in `src/lib/styles/dates.css` rather than the component’s `<style>`, because an expense’s single date (chapter {{expenses-with-tanstack-and-layerchart}}) wears the same look through a sibling component, and a component’s CSS ships only with the pages that import it.'
 			},
 			{
 				type: 'p',
@@ -158,7 +158,7 @@ runtime.d.ts  runtime.js  server.d.ts  server.js`
 			},
 			{
 				type: 'why',
-				text: 'Why not patch the library, or post-process the DOM? A patch is a fork you maintain at every upgrade, and a script that rewrites attributes after render fights the library’s own updates. The `child` snippet is Bits’ documented extension point: when Bits renders those strings differently, or adds a prop for them, this function is the one place to change. Two tests hold it. `date-segments.spec.ts` pins the function — a German day is “Tag”, a typed value is left alone, the separators are untouched — fed a hand-written stand-in for Bits’ props, which by itself would pass forever: if a Bits release renamed “Empty”, the stub would still say “Empty”. So `DateField.svelte.test.ts` renders both fields in a real browser with Bits doing the computing, on a German and a Brazilian page, and asks the segments and the month buttons what they say (chapter 41).'
+				text: 'Why not patch the library, or post-process the DOM? A patch is a fork you maintain at every upgrade, and a script that rewrites attributes after render fights the library’s own updates. The `child` snippet is Bits’ documented extension point: when Bits renders those strings differently, or adds a prop for them, this function is the one place to change. Two tests hold it. `date-segments.spec.ts` pins the function — a German day is “Tag”, a typed value is left alone, the separators are untouched — fed a hand-written stand-in for Bits’ props, which by itself would pass forever: if a Bits release renamed “Empty”, the stub would still say “Empty”. So `DateField.svelte.test.ts` renders both fields in a real browser with Bits doing the computing, on a German and a Brazilian page, and asks the segments and the month buttons what they say (chapter {{unit-and-browser-tests}}).'
 			},
 
 			{ type: 'h3', id: 'transport', text: 'A `CalendarDate` across the wire' },

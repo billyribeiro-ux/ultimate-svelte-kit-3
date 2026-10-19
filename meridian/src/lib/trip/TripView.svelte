@@ -1,10 +1,12 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
 	import { MediaQuery } from 'svelte/reactivity';
+	import { online } from 'svelte/reactivity/window';
 	import { Tween } from 'svelte/motion';
 	import { cubicOut } from 'svelte/easing';
 	import { browser } from '$app/env';
 	import { reducedMotion } from '#lib/motion/prefers.svelte.ts';
+	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { toast } from 'svelte-sonner';
 	import { boundaryMessage, errorMessage } from '#lib/ui/errors.ts';
@@ -92,14 +94,23 @@
 	/*
 	 * THE LIVE CHIP
 	 * -------------
-	 * Three states, not two. For the first three seconds a stream that is
+	 * Four states, not two. For the first three seconds a stream that is
 	 * not up yet is still connecting, and the chip says "Connecting…" in the
 	 * quiet grey. After that, a stream that is not up has failed or dropped,
 	 * and "Reconnect", the coral button, offers to try again. Shown the
 	 * moment the page hydrated, as it first was, it told everybody on a slow
-	 * network that something had failed when nothing had. All three sit in
-	 * one slot as wide as the widest of them (the `.status` rules say how),
-	 * so the palette and the settings button beside it never move.
+	 * network that something had failed when nothing had. All of them sit in
+	 * one slot as wide as the widest (the `.status` rules say how), so the
+	 * palette and the settings button beside it never move.
+	 *
+	 * And when the device itself has no network — a tunnel, a plane — the
+	 * chip says "Offline", in the same quiet grey, and offers nothing:
+	 * a Reconnect button that cannot work is a button that lies. The
+	 * itinerary on screen is then the copy the service worker kept
+	 * (`src/service-worker/index.ts`). `online` from
+	 * `svelte/reactivity/window` is `navigator.onLine` as a reactive value,
+	 * `undefined` on the server, so only a browser that knows it is offline
+	 * says so.
 	 *
 	 * `patient` is state written by a timer inside an effect: three seconds
 	 * passing is not something a `$derived` can depend on, and the effect's
@@ -112,9 +123,24 @@
 		return () => clearTimeout(timer);
 	});
 
-	const status: 'live' | 'connecting' | 'lost' = $derived(
-		live.connected ? 'live' : patient ? 'connecting' : 'lost'
+	const status: 'offline' | 'live' | 'connecting' | 'lost' = $derived(
+		online.current === false ? 'offline' : live.connected ? 'live' : patient ? 'connecting' : 'lost'
 	);
+
+	/*
+	 * Back online, SvelteKit reconnects a live query by itself — but only
+	 * one that had connected before. A page opened with no network (the
+	 * service worker's copy, in a tunnel) never connected, and a live query
+	 * whose first connection fails stops for good (`done`). `reconnect()`
+	 * restarts either kind: it stops whatever attempt is under way and
+	 * starts one on the network that has just come back, so it does not
+	 * matter whether the first attempt had finished failing yet. The
+	 * `online` event is the moment to ask — an event, so a handler on the
+	 * window, not an effect: nothing here is derived.
+	 */
+	function ononline() {
+		if (!live.connected) fireAndForget(live.reconnect(), 'live reconnect');
+	}
 
 	/*
 	 * THE TAB INDICATOR
@@ -286,8 +312,37 @@
 	 */
 	const wide = new MediaQuery('(min-width: 64em)');
 
-	/** The stop dialog: closed, adding at a day (and maybe a point), or editing a stop. */
-	let dialog: Mode | null = $state(null);
+	/*
+	 * THE STOP DIALOG IS A HISTORY ENTRY
+	 * ----------------------------------
+	 * Closed, adding at a day (and maybe a point), or editing a stop — and
+	 * which of those is not component state but `page.state`, the state of
+	 * the history entry. Opening is a *shallow* navigation: `goto('', {
+	 * shallow: true, state })` pushes an entry for the same URL without
+	 * running a load or rendering another page. So the back button — on a
+	 * phone, a swipe — closes the dialog instead of leaving the trip, and
+	 * closing it any other way is `history.back()`, which leaves the history
+	 * as it was before the dialog opened. A reload starts closed: page state
+	 * is not kept across a reload unless `persistState` asks, and a dialog
+	 * that reopened over a fresh page would be a surprise.
+	 *
+	 * Derived, and read once per change of `page.state` — which changes when
+	 * the entry does, not when a live snapshot arrives — so the stop row it
+	 * hands the dialog stays the one the dialog opened with, and the draft
+	 * derived from it is not reset under somebody's fingers.
+	 */
+	const dialog: Mode | null = $derived.by(() => {
+		const { dialog: open, stop, day, point } = page.state;
+		if (open !== 'stop') return null;
+		return stop ? { kind: 'edit', stop } : { kind: 'add', date: day ?? null, point };
+	});
+
+	function openDialog(state: Omit<App.PageState, 'dialog'>) {
+		// '' is this entry's own URL — the shallow-routing docs' own call. The rule
+		// allows it for the deprecated `pushState` and has not caught up with `goto`.
+		// eslint-disable-next-line svelte/no-navigation-without-resolve
+		void goto('', { shallow: true, state: { dialog: 'stop', ...state } });
+	}
 
 	async function moveTo(id: string, point: { lng: number; lat: number }) {
 		try {
@@ -302,6 +357,8 @@
 <svelte:head>
 	<title>{view.trip.name} — {m.app_name()}</title>
 </svelte:head>
+
+<svelte:window {ononline} />
 
 <article
 	class="trip container"
@@ -323,15 +380,21 @@
 
 		<div class="trip__status cluster">
 			<Presence {view} viewerId={initial.viewerId} />
-			<CommandPalette {view} {editable} onadd={() => (dialog = { kind: 'add', date: null })} />
-			<!-- The sizer is invisible and holds the three labels as generated text, so the slot is as wide as the widest. -->
+			<CommandPalette {view} {editable} onadd={() => openDialog({ day: null })} />
+			<!-- The sizer is invisible and holds the four labels as generated text, so the slot is as wide as the widest. -->
 			<span class="status">
 				<span class="status__sizer" aria-hidden="true">
 					<span data-label={m.live_connected()}></span>
 					<span data-label={m.live_connecting()}></span>
 					<span data-label={m.live_reconnect()}></span>
+					<span data-label={m.live_offline()}></span>
 				</span>
-				{#if status === 'live'}
+				{#if status === 'offline'}
+					<span class="chip live live--offline" title={m.live_offline()}>
+						<span class="live__dot" aria-hidden="true"></span>
+						{m.live_offline()}
+					</span>
+				{:else if status === 'live'}
 					<span class="chip chip--sea live" title={m.live_connected()}>
 						<span class="live__dot" aria-hidden="true"></span>
 						{m.live_connected()}
@@ -417,8 +480,8 @@
 					{view}
 					{editable}
 					viewerId={initial.viewerId}
-					onadd={(date) => (dialog = { kind: 'add', date })}
-					onedit={(stop) => (dialog = { kind: 'edit', stop })}
+					onadd={(day) => openDialog({ day })}
+					onedit={(stop) => openDialog({ stop })}
 				/>
 				{#if wide.current}
 					<div class="split__map">
@@ -427,7 +490,7 @@
 							selected={view.selectedStopId}
 							{editable}
 							onselect={(id) => view.select(id)}
-							onadd={(point) => (dialog = { kind: 'add', date: null, point })}
+							onadd={(point) => openDialog({ day: null, point })}
 							onmove={moveTo}
 						/>
 					</div>
@@ -440,7 +503,7 @@
 					selected={view.selectedStopId}
 					{editable}
 					onselect={(id) => view.select(id)}
-					onadd={(point) => (dialog = { kind: 'add', date: null, point })}
+					onadd={(point) => openDialog({ day: null, point })}
 					onmove={moveTo}
 				/>
 			</div>
@@ -499,7 +562,7 @@
 		mode={dialog}
 		tripId={view.trip.id}
 		days={view.days}
-		onclose={() => (dialog = null)}
+		onclose={() => history.back()}
 		onsaved={(stop) => view.select(stop.id)}
 	/>
 {/if}
@@ -577,7 +640,7 @@
 
 	/*
 	 * The status slot: the visible chip or button, and under it an
-	 * invisible sizer as wide as the widest of the three labels, stacked in
+	 * invisible sizer as wide as the widest of the four labels, stacked in
 	 * one grid cell. The sizer's labels are generated text (`content:
 	 * attr(…)`), so they are in no one's way: not in the accessibility
 	 * tree, not in the page's text, not a second "Live" for a test to trip
@@ -694,8 +757,9 @@
 		}
 	}
 
-	/* Not yet live: the same chip in the quiet grey, its dot still. */
-	.live--connecting .live__dot {
+	/* Not yet live, or no network: the same chip in the quiet grey, its dot still. */
+	.live--connecting .live__dot,
+	.live--offline .live__dot {
 		animation: none;
 		opacity: 0.6;
 	}

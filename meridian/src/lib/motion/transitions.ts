@@ -10,8 +10,11 @@
  *
  * A Svelte transition is a function of the element that returns `duration`,
  * `easing` and a `css` function of `t` (0 → 1 on the way in). Returning
- * `css` rather than `tick` lets Svelte run it as a CSS animation, off the
- * main thread, which is why the built-in ones do the same.
+ * `css` rather than `tick` lets Svelte turn it into keyframes for a Web
+ * Animation, which can run off the main thread, and that is why the
+ * built-in ones do the same. It is also why the 0ms is written here: a
+ * Web Animation is not a CSS animation, so the `--dur-*` tokens and the
+ * reduced-motion block in `tokens.css` never reach it.
  */
 
 import { cubicOut } from 'svelte/easing';

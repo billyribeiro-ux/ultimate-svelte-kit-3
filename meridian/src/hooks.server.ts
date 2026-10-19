@@ -141,8 +141,13 @@ const handleSecurity: Handle = async ({ event, resolve }) => {
 	 * target. `/embed/<slug>` exists to be framed — it is the read-only route
 	 * summary the custom element loads — so for that route, and only that
 	 * route, the directive is replaced after SvelteKit has built the policy.
+	 *
+	 * "That route" is `event.route.id`, not the path in the address bar.
+	 * `reroute` serves `/de/embed/<slug>` from the same route, and a pathname
+	 * test let the German frame keep `frame-ancestors 'none'`. A route id is
+	 * what the router matched, after `reroute`; a pathname is what was typed.
 	 */
-	if (event.url.pathname.startsWith('/embed/')) {
+	if (event.route.id === '/embed/[slug=slug]') {
 		const policy = response.headers.get('content-security-policy');
 		if (policy) {
 			response.headers.set(
@@ -155,9 +160,11 @@ const handleSecurity: Handle = async ({ event, resolve }) => {
 	/*
 	 * `Vary: Cookie` on the pages, because the header shows the person's name
 	 * and the locale cookie changes the language, and a shared cache must not
-	 * serve one person's page to another.
+	 * serve one person's page to another. Not on the machine endpoints, whose
+	 * answers name nobody, and not on remote function calls — by route and by
+	 * request kind, for the reason above: `/de/api/…` is the same endpoint.
 	 */
-	if (!event.url.pathname.startsWith('/api/') && !event.url.pathname.startsWith('/_app/')) {
+	if (!event.isRemoteRequest && !event.route.id?.startsWith('/api/')) {
 		response.headers.append('vary', 'Cookie');
 	}
 

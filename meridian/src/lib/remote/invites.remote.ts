@@ -24,6 +24,7 @@ import { newSlug } from '#lib/domain/ids.ts';
 import { IdSchema, InviteInputSchema } from '#lib/domain/schemas.ts';
 import { bump, requireMember, requireUser } from '#lib/server/access.ts';
 import { db, schema } from '#lib/server/db/index.ts';
+import * as presence from '#lib/server/presence.ts';
 import { membership } from '#lib/server/trips.ts';
 
 const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -126,6 +127,14 @@ export const removeMember = command(
 		await db
 			.delete(schema.member)
 			.where(and(eq(schema.member.tripId, tripId), eq(schema.member.userId, userId)));
+		/*
+		 * Removal is immediate, everywhere. The chip goes now rather than when
+		 * its thirty seconds run out — the removed person's heartbeats are
+		 * refused from here on — and the bump wakes the room, where the live
+		 * query asks each watcher again whether they may read the trip and
+		 * ends the removed person's stream (`live.remote.ts`).
+		 */
+		presence.leave(tripId, userId);
 		await bump(tripId);
 	}
 );
@@ -138,6 +147,8 @@ export const leaveTrip = form(v.object({ tripId: IdSchema }), async ({ tripId })
 	await db
 		.delete(schema.member)
 		.where(and(eq(schema.member.tripId, tripId), eq(schema.member.userId, user.id)));
+	// The goodbye the page sends on its way out is refused now; say it here.
+	presence.leave(tripId, user.id);
 	await bump(tripId);
 	redirect(303, localizeHref('/trips'));
 });

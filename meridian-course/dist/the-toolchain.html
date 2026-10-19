@@ -1,0 +1,520 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The toolchain: sv, the checks, and the agent beside you — Building Meridian</title>
+<meta name="description" content="The tools around the code. The `sv` CLI that scaffolds a project and adds integrations to it, and the one line that reproduces this project’s tooling; `svelte-check` and every flag worth knowing; ESLint and Prettier; and the Svelte AI tools — instructions, an MCP server, skills and a subagent — with a script that runs the autofixer over every component on every build.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Meridian</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">03 / 51</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 5.88235294117647%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-workspace.html"><span class="toc__num">02</span><span>A workspace of two</span></a></li><li><a href="the-toolchain.html" aria-current="page"><span class="toc__num">03</span><span>The toolchain: sv, the checks, and the agent beside you</span></a></li><li><a href="the-config.html"><span class="toc__num">04</span><span>One file to configure everything</span></a></li><li><a href="the-map-of-features.html"><span class="toc__num">05</span><span>The map: every feature, every library, and where it lives</span></a></li><li><a href="geodesy-for-humans.html"><span class="toc__num">06</span><span>Geodesy for humans</span></a></li><li><a href="a-route-as-a-class.html"><span class="toc__num">07</span><span>A route as a class, in a library</span></a></li><li><a href="two-components-for-any-app.html"><span class="toc__num">08</span><span>Two components for any app</span></a></li><li><a href="packaging-and-proving.html"><span class="toc__num">09</span><span>Packaging a Svelte library, and proving it</span></a></li><li><a href="ids-dates-and-money.html"><span class="toc__num">10</span><span>Ids, dates and money</span></a></li><li><a href="splitting-fairly.html"><span class="toc__num">11</span><span>Splitting fairly, to the cent</span></a></li><li><a href="the-itinerary-as-data.html"><span class="toc__num">12</span><span>The itinerary as data</span></a></li><li><a href="schemas-with-valibot.html"><span class="toc__num">13</span><span>Schemas with valibot, and who may do what</span></a></li><li><a href="the-database.html"><span class="toc__num">14</span><span>The database: seven tables and Better Auth’s four</span></a></li><li><a href="environment-and-hooks.html"><span class="toc__num">15</span><span>Environment and hooks</span></a></li><li><a href="identity-with-better-auth.html"><span class="toc__num">16</span><span>Identity with Better Auth</span></a></li><li><a href="remote-functions-the-reads.html"><span class="toc__num">17</span><span>Remote functions: the reads</span></a></li><li><a href="remote-functions-the-writes.html"><span class="toc__num">18</span><span>Remote functions: the writes</span></a></li><li><a href="live-collaboration.html"><span class="toc__num">19</span><span>Live collaboration: a room, a mailbox and a generator</span></a></li><li><a href="invites-and-membership.html"><span class="toc__num">20</span><span>Invites and membership</span></a></li><li><a href="three-languages-with-paraglide.html"><span class="toc__num">21</span><span>Three languages with Paraglide</span></a></li><li><a href="dates-and-money-in-a-locale.html"><span class="toc__num">22</span><span>Dates, money and distances in a locale</span></a></li><li><a href="the-design-system.html"><span class="toc__num">23</span><span>The design system</span></a></li><li><a href="motion-with-intent.html"><span class="toc__num">24</span><span>Motion with intent</span></a></li><li><a href="the-shell.html"><span class="toc__num">25</span><span>The shell: a root that knows nobody</span></a></li><li><a href="the-trip-page.html"><span class="toc__num">26</span><span>The trip page: one await, one state object, one stream</span></a></li><li><a href="the-itinerary.html"><span class="toc__num">27</span><span>The itinerary: days you can drag</span></a></li><li><a href="the-command-palette.html"><span class="toc__num">28</span><span>The command palette</span></a></li><li><a href="the-map.html"><span class="toc__num">29</span><span>The map with no tile server</span></a></li><li><a href="the-globe.html"><span class="toc__num">30</span><span>The globe: Threlte, on demand</span></a></li><li><a href="expenses-with-tanstack-and-layerchart.html"><span class="toc__num">31</span><span>Expenses: a headless table, two charts, and the settle-up</span></a></li><li><a href="notes-with-tiptap-through-an-attachment.html"><span class="toc__num">32</span><span>Notes: Tiptap through an attachment</span></a></li><li><a href="companions-presence-and-settings.html"><span class="toc__num">33</span><span>Companions, presence, the join page and settings</span></a></li><li><a href="signing-in-and-up.html"><span class="toc__num">34</span><span>Signing in and up</span></a></li><li><a href="trips-and-a-new-trip.html"><span class="toc__num">35</span><span>The trips list and a new trip</span></a></li><li><a href="guides-prerendered-with-mdsvex.html"><span class="toc__num">36</span><span>Guides: Markdown, prerendered, no JavaScript</span></a></li><li><a href="explore-and-diagnostics.html"><span class="toc__num">37</span><span>Explore, and diagnostics</span></a></li><li><a href="embedding-a-trip.html"><span class="toc__num">38</span><span>Embedding a trip: a frame and a custom element</span></a></li><li><a href="the-offline-itinerary.html"><span class="toc__num">39</span><span>The offline itinerary</span></a></li><li><a href="choosing-libraries.html"><span class="toc__num">40</span><span>The survey: what was chosen, what was rejected, and why</span></a></li><li><a href="the-headless-pattern.html"><span class="toc__num">41</span><span>The headless pattern: Bits UI and TanStack Table</span></a></li><li><a href="the-wrapper-pattern.html"><span class="toc__num">42</span><span>The wrapper pattern, and when to write an attachment instead</span></a></li><li><a href="reactivity-utilities.html"><span class="toc__num">43</span><span>Reactivity utilities: `svelte/reactivity`, runed, and the line between them</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">44</span><span>Unit and browser tests: two Vitest projects, one command</span></a></li><li><a href="what-the-compiler-says.html"><span class="toc__num">45</span><span>What the compiler says: warnings, errors and the codes that name them</span></a></li><li><a href="end-to-end.html"><span class="toc__num">46</span><span>End to end: the built server, two viewports, two people</span></a></li><li><a href="security-headers-and-csp.html"><span class="toc__num">47</span><span>Security: the policy, the headers, the redirect and the one framed route</span></a></li><li><a href="deploying.html"><span class="toc__num">48</span><span>Deploying: three stages, one process, a health check and a pipeline that runs the container</span></a></li><li><a href="migrating-a-major.html"><span class="toc__num">49</span><span>Migrating a major: the routine, the record, and a dependency still on Svelte 4</span></a></li><li><a href="what-i-would-do-next.html"><span class="toc__num">50</span><span>What I would do next, and what you now know</span></a></li><li><a href="the-exit-criteria.html"><span class="toc__num">51</span><span>The exit criteria: what a DPE 8++ in Svelte can do</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 03</p>
+			<h1>The toolchain: sv, the checks, and the agent beside you</h1>
+			<p class="lede">The tools around the code. The <code>sv</code> CLI that scaffolds a project and adds integrations to it, and the one line that reproduces this project’s tooling; <code>svelte-check</code> and every flag worth knowing; ESLint and Prettier; and the Svelte AI tools — instructions, an MCP server, skills and a subagent — with a script that runs the autofixer over every component on every build.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Know what <code>sv create</code>, <code>sv add</code> and <code>sv check</code> do and which of their flags matter, read the lint, format and check configuration and say why each piece is there, and set up an editor or an agent so that what it writes is checked the way this project checks its own code.</p></aside>
+			<p>The previous chapter walked the workspace; this one walks the tools that work *on* it. None of them is in the app a traveller downloads. All of them decide what reaches it: the CLI that would have written the first version of half these files, the checker that refuses a warning, the linter and formatter that keep every file in one style, and the AI tools that let an agent write Svelte 5 the way this course does rather than the way the internet did in 2022.</p>
+<h3 id="sv"><code>sv</code>, the command line</h3>
+<p><code>sv</code> is Svelte’s CLI: it creates projects, adds integrations to them, runs migrations and checks the code. The documentation’s advice is to run it through your package manager’s runner — <code>npx sv &lt;command&gt;</code>, or <code>pnpm dlx sv &lt;command&gt;</code> for pnpm — and it says what that does: “If you’re inside a project where <code>sv</code> is already installed, this will use the local installation, otherwise it will download the latest version and run it without installing it.” The download is what you want for <code>sv create</code>, before there is a project to install into. Inside a project, the local installation is what you want, which is why <code>sv</code> is one of this project’s devDependencies, beside <code>@sveltejs/mcp</code> (the AI tools, later in this chapter). Everybody who clones it runs the same version, <code>pnpm exec sv</code> runs it without downloading anything, and an upgrade is a line in <code>package.json</code> that a reviewer can see.</p>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>$ pnpm add -D sv @sveltejs/mcp    # exact versions recorded in pnpm-lock.yaml
+$ pnpm exec sv --version
+1.1.1
+$ pnpm exec sv --help             # create · add · migrate · check · help</code></pre>
+</figure>
+<aside class="callout callout--note"><p>When <code>npx sv</code> seems to do nothing, the CLI’s FAQ names the usual causes: some package managers prefer a locally installed tool to the registry, the name <code>sv</code> collides with runit’s <code>sv</code> on some Linux systems, and Windows PowerShell has a built-in alias <code>sv</code> for <code>Set-Variable</code>. <code>pnpm exec sv</code> in a project that has it installed sidesteps all three.</p></aside>
+<h3 id="sv-create"><code>sv create</code></h3>
+<p><code>sv create [options] [path]</code> scaffolds a SvelteKit project. Run it bare and it asks its questions one at a time; every question also has a flag, so the same project can come from one line in a script or a README. The flags, as <code>sv create --help</code> lists them in 1.1.1:</p>
+<ul><li><strong><code>--template &lt;type&gt;</code></strong> — <code>minimal</code> (barebones), <code>demo</code> (a word game that works without JavaScript), <code>library</code> (a package built with <code>svelte-package</code>, the shape <code>packages/waypoint</code> has), or <code>addon</code> (a community add-on for <code>sv</code> itself, ready to test and publish).</li><li><strong><code>--types ts</code></strong>, <strong><code>--types jsdoc</code></strong> or <strong><code>--no-types</code></strong> — TypeScript files and <code>lang=&quot;ts&quot;</code>, JSDoc comments checked by the same compiler, or no type checking at all, which the documentation marks “Not recommended!”.</li><li><strong><code>--add &lt;addon...&gt;</code></strong> and <strong><code>--no-add-ons</code></strong> — add-ons to apply as part of the create, in the same syntax as <code>sv add</code> below, or no add-on prompt at all. The help is explicit that the two “cannot be used together”.</li><li><strong><code>--install &lt;package-manager&gt;</code></strong> and <strong><code>--no-install</code></strong> — install with npm, yarn, pnpm, bun or deno (1.1.1 also lists <code>pnpm-rush</code>, <code>nub</code> and <code>aube</code>), or do not install.</li><li><strong><code>--no-dir-check</code></strong> — scaffold into a folder that is not empty without asking first.</li><li><strong><code>--no-download-check</code></strong> — do not warn before downloading a community add-on. Leave it off; the next section says why.</li><li><strong><code>--addon-name &lt;name&gt;</code></strong> — the package name for <code>--template addon</code>, as <code>@&lt;org&gt;/&lt;pkg&gt;</code> or <code>&lt;pkg&gt;</code>.</li><li><strong><code>--from-playground &lt;url&gt;</code></strong> — create a project from a Svelte playground URL: the CLI downloads its files, detects the dependencies they import, and lays them out as a SvelteKit project.</li></ul>
+<h3 id="the-one-line">The line that reproduces this project’s tooling</h3>
+<p>Meridian was written by hand, file by file, the way the chapters describe. Its *tooling*, though, is exactly what <code>sv</code> would have written, and the two commands below reproduce it — every add-on, with the options this project would have chosen. They were run against <code>sv</code> 1.1.1 while this chapter was written, and the add-on line of the <code>AGENTS.md</code> they produce is the same, character for character, as the one this project carries.</p>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>$ pnpm dlx sv@1.1.1 create meridian --template minimal --types ts \
+    --add experimental=&quot;features:async,remoteFunctions&quot; prettier eslint \
+          vitest=&quot;usages:unit,component&quot; playwright=&quot;demo:no&quot; \
+          sveltekit-adapter=&quot;adapter:node&quot; drizzle=&quot;database:sqlite+client:libsql&quot; \
+          better-auth=&quot;demo:none&quot; mdsvex paraglide=&quot;languageTags:en,de,pt-br+demo:no&quot; \
+          ai-tools=&quot;ide:claude-code+delivery:tools+tools:mcp+mcpSetup:remote&quot; \
+          enhanced-img \
+    --install pnpm
+$ cd meridian
+$ pnpm exec sv add ai-tools=&quot;ide:claude-code+delivery:plugin&quot; --no-git-check</code></pre>
+</figure>
+<p>The options use one small syntax, which <code>sv add --help</code> spells out: <code>&lt;addon&gt;=&lt;opt&gt;:&lt;val&gt;</code> sets one option, <code>+</code> joins several (<code>database:sqlite+client:libsql</code>), a comma separates the values of a multi-select (<code>languageTags:en,de,pt-br</code>), and <code>&lt;opt&gt;:none</code> is an explicit empty choice — <code>better-auth=&quot;demo:none&quot;</code>, because this project writes its own sign-in pages (ch. <a href="signing-in-and-up.html">34</a>). The help adds the rule that makes a line like this one useful in a script: “To skip prompts, explicitly set ALL options”. And when you do answer the prompts by hand, <code>sv</code> prints the equivalent line at the end, under “To skip prompts next time, run:”, so the interactive run can be written down afterwards.</p>
+<p><code>ai-tools</code> appears twice because it takes one <code>delivery</code> per run. The first run writes the individual tools this project keeps as files — the instructions in <code>AGENTS.md</code> and the MCP configuration — and the second adds the Claude Code plugin, which is what <code>.claude/settings.json</code> enables. The first run deliberately leaves out the <code>svelte-file-editor</code> subagent: the plugin brings its own, and <code>sv</code> itself refuses to let both stand quietly — run the plugin delivery over a project that already has <code>.claude/agents/</code> and it prints “Claude Code: the Svelte plugin is enabled and .claude/agents also exists - remove it (or disable the plugin) to avoid duplicate skills/sub-agents.” <code>--no-git-check</code> on the second run, because the first has just written every file and nothing is committed yet: the prompt it skips is there to stop you running an add-on over work you have not saved. The record of what was added is the top of <code>AGENTS.md</code>:</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">AGENTS.md<span class="code__lines">:1-6</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-md">## Project Configuration
+
+- **Language**: TypeScript 6.0 (the newest major SvelteKit 3, svelte-check and typescript-eslint support; 7 is not yet)
+- **Toolchain**: Node 24.21.0 (`.nvmrc`, the current LTS), pnpm 12.10.1 (`packageManager`), SvelteKit 3.0.1, Svelte 5.57, Vite 8.3, Vitest 5, Playwright 1.64 — as of October 2026
+- **Package Manager**: pnpm (a workspace: the app at the root, the `@meridian/waypoint` library in `packages/waypoint`). Two peer warnings are allowed on purpose in `pnpm-workspace.yaml`; the comment there says which and why.
+- **Add-ons**: experimental, prettier, eslint, vitest, playwright, sveltekit-adapter, drizzle, better-auth, mdsvex, paraglide, ai-tools, enhanced-img</code></pre>
+</figure>
+<p>Line 6 is the roll-call <code>sv</code> writes, in its order. Lines 3 to 5 were rewritten by hand, because the scaffold can only know “TypeScript” and the package manager, and an agent reading this file should know the versions this project pins and why two peer warnings are allowed.</p>
+<h3 id="sv-add"><code>sv add</code>, and what each add-on wrote</h3>
+<p><code>sv add</code> applies add-ons to a project that already exists: <code>pnpm exec sv add</code> asks which, <code>pnpm exec sv add prettier eslint</code> does not. Three of its options matter. <strong><code>-C, --cwd &lt;path&gt;</code></strong> points it at another project root — in this workspace, <code>pnpm exec sv add -C packages/waypoint …</code> would apply an add-on to the library rather than the app. <strong><code>--no-git-check</code></strong> skips the prompt about uncommitted changes. <strong><code>--install &lt;package-manager&gt;</code></strong> / <strong><code>--no-install</code></strong> behave as in <code>sv create</code>.</p>
+<p>Every add-on is a set of file edits, and the useful way to know one is to know which files it touches and where in this course those files are read. This is what each of the fourteen add-ons in <code>sv add --help</code> writes into a fresh <code>--template minimal</code> project, recorded by running each one alone:</p>
+<ul><li><strong><code>experimental</code></strong> (<code>features:async,remoteFunctions</code>) — two flags in <code>vite.config.ts</code>: <code>compilerOptions.experimental.async</code> and <code>experimental.remoteFunctions</code>. Ch. <a href="the-config.html">04</a>, and the remote functions from ch. <a href="remote-functions-the-reads.html">17</a>.</li><li><strong><code>prettier</code></strong> — <code>prettier.config.js</code>, <code>.prettierignore</code>, a recommendation in <code>.vscode/extensions.json</code>, and scripts in <code>package.json</code>. Below.</li><li><strong><code>eslint</code></strong> — <code>eslint.config.js</code>, its own editor recommendation, and scripts in <code>package.json</code>. Below.</li><li><strong><code>vitest</code></strong> (<code>usages:unit,component</code>) — the <code>test</code> block with a browser project and a Node project in <code>vite.config.ts</code>, and example specs. Ch. <a href="unit-and-browser-tests.html">44</a>.</li><li><strong><code>playwright</code></strong> (<code>demo:no</code>) — <code>playwright.config.ts</code> and one spec. Ch. <a href="end-to-end.html">46</a>.</li><li><strong><code>sveltekit-adapter</code></strong> (<code>adapter:node</code>) — <code>adapter: adapter()</code> inside <code>sveltekit()</code>. Ch. <a href="deploying.html">48</a>.</li><li><strong><code>drizzle</code></strong> (<code>database:sqlite+client:libsql</code>) — <code>drizzle.config.ts</code>, <code>src/lib/server/db/index.ts</code> and <code>schema.ts</code>, <code>src/env.ts</code>, <code>.env</code> and <code>.env.example</code>. Ch. <a href="the-database.html">14</a> and ch. <a href="environment-and-hooks.html">15</a>.</li><li><strong><code>better-auth</code></strong> (<code>demo:none</code>, and it needs <code>drizzle</code>) — <code>src/lib/server/auth.ts</code>, <code>src/lib/server/db/auth.schema.ts</code>, a <code>handle</code> in <code>src/hooks.server.ts</code>, and its variables in <code>src/env.ts</code>. Ch. <a href="identity-with-better-auth.html">16</a>.</li><li><strong><code>mdsvex</code></strong> — <code>preprocess</code> and <code>extensions</code> inside <code>sveltekit()</code>. Ch. <a href="guides-prerendered-with-mdsvex.html">36</a>.</li><li><strong><code>paraglide</code></strong> (<code>languageTags:en,de,pt-br+demo:no</code>) — <code>project.inlang/settings.json</code>, <code>messages/*.json</code>, the Vite plugin, <code>reroute</code> in <code>src/hooks.ts</code>, a <code>handle</code> in <code>src/hooks.server.ts</code>, and <code>lang</code> in <code>app.html</code>. Ch. <a href="three-languages-with-paraglide.html">21</a>.</li><li><strong><code>enhanced-img</code></strong> — <code>enhancedImages()</code> in the plugin list, before <code>sveltekit()</code>. Ch. <a href="the-design-system.html">23</a>.</li><li><strong><code>ai-tools</code></strong> — with <code>delivery:tools</code>, <code>AGENTS.md</code>, <code>.claude/CLAUDE.md</code>, <code>.mcp.json</code> and <code>.claude/agents/svelte-file-editor.md</code>; with <code>delivery:plugin</code>, <code>.claude/settings.json</code>. The last section of this chapter.</li><li><strong><code>storybook</code></strong> — not added: <code>.storybook/</code>, a <code>src/stories</code> folder of examples and its own scripts. Ch. <a href="choosing-libraries.html">40</a> says why two components do not need a second build system.</li><li><strong><code>tailwindcss</code></strong> — not added: a Vite plugin, <code>src/routes/layout.css</code> and editor settings. Every colour, space and radius here is a token in <code>tokens.css</code> (ch. <a href="the-design-system.html">23</a>), and the styled component kits built on Tailwind were declined in ch. <a href="choosing-libraries.html">40</a> for the same reason.</li></ul>
+<p>One thing the list does not show: an add-on writes the version ranges it was released with. On the day this was checked, the <code>vitest</code> add-on wrote <code>&quot;vitest&quot;: &quot;^4.1.8&quot;</code> into <code>package.json</code>, and this project runs Vitest 5. The add-on gets you a working setup; keeping it current is still your job, and ch. <a href="choosing-libraries.html">40</a> dates every version for that reason.</p>
+<p><strong>Community add-ons</strong> are npm packages that follow the same contract. <code>sv add @supacool</code> installs the package <code>@supacool/sv</code> (a package named <code>sv</code> under a scope can be shortened to the scope), <code>sv add file:../my-addon</code> runs one from a folder, and authors tag them with the keyword <code>sv-add</code> so they can be found. Each comes with a warning the documentation prints in a box: “Svelte maintainers have not reviewed community add-ons for malicious code!” An add-on is code that rewrites your files and adds dependencies, run with your permissions, so the question to ask is the one <code>allowBuilds</code> asks of an install script (ch. <a href="the-workspace.html">02</a>): have you read it? <code>--no-download-check</code> exists to silence the warning in a script whose add-ons you have already reviewed, and for nothing else. Writing your own — <code>sv create --template addon</code>, <code>defineAddon</code> from <code>sv</code>, the <code>sv/testing</code> helpers, publishing with <code>sv</code> as a peer dependency — is how you would give the eight projects in this series one shared setup; it is a project of its own, and this course leaves it there.</p>
+
+<aside class="callout callout--why">
+	<h4>How an add-on can write into <code>sveltekit()</code> at all</h4>
+	<p>SvelteKit 3 keeps its whole configuration in the <code>sveltekit()</code> call in <code>vite.config.ts</code> (ch. <a href="the-config.html">04</a>), and an add-on has to edit that call without breaking whatever is already there. It does not use string replacement. The add-ons are built on <code>@sveltejs/sv-utils</code>, whose <code>svelteConfig.edit</code> parses the config, finds the options wherever they live, and lets the add-on “address options by name” while “the helper writes each one to the right place”: Svelte-level options (<code>compilerOptions</code>, <code>preprocess</code>, <code>extensions</code>) sit on the object, and everything else (<code>adapter</code>, <code>files</code>, <code>typescript</code>, …) is a kit option, flattened onto the same <code>sveltekit()</code> argument. The same package owns the pnpm detail from ch. <a href="the-workspace.html">02</a>: <code>pnpm.allowBuilds</code> asks the project’s own <code>pnpm --version</code> and writes the unified <code>allowBuilds</code> map on version 11 and later, the old <code>onlyBuiltDependencies</code> list before that.</p>
+</aside>
+<h3 id="integrations">Preprocessors and plugins</h3>
+<p>The integrations page of the SvelteKit documentation names three kinds of thing that plug in, and this project has an opinion on each. <strong><code>vitePreprocess</code></strong> handles <code>&lt;style lang=&quot;scss&quot;&gt;</code> and friends (<code>style</code>, on by default) and TypeScript that emits code (<code>script</code>, off by default); this project has neither — vanilla CSS needs no preprocessor, and “TypeScript is supported natively in Svelte 5”, as long as you do not use the features that emit code, which ch. <a href="the-config.html">04</a> makes a compiler error with <code>erasableSyntaxOnly</code>. <strong><code>svelte-preprocess</code></strong> adds Pug, Babel and global styles; nothing here needs them. <strong>Vite plugins</strong> are the third kind, and this project has five, read in order in ch. <a href="the-config.html">04</a>: <code>enhancedImages()</code>, <code>sveltekit()</code> itself, Paraglide, the Phosphor optimiser and the project’s own <code>bundleStats()</code>. mdsvex is not among them: it is a preprocessor, passed to <code>sveltekit()</code> as <code>preprocess</code>.</p>
+<h3 id="sv-check"><code>sv check</code>, which is <code>svelte-check</code></h3>
+<p><code>sv check</code> runs <code>svelte-check</code>, and its help says so in one line: “All svelte-check [options] are available in sv check [options]”. It type-checks the TypeScript in <code>.svelte</code> files, <code>.svelte.ts</code> modules and plain <code>.ts</code> alike, and it reports the Svelte compiler’s warnings — unused CSS, accessibility hints, deprecated syntax — which <code>tsc</code> cannot see. The project calls it directly, as <code>svelte-check</code>, because it is a devDependency and the scripts are the documentation:</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">package.json<span class="code__lines">:20-23</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-json">&quot;check&quot;: &quot;pnpm run i18n --silent &amp;&amp; svelte-kit sync &amp;&amp; svelte-check --tsconfig ./tsconfig.json --fail-on-warnings &amp;&amp; tsc -p src/service-worker&quot;,
+&quot;check:watch&quot;: &quot;svelte-kit sync &amp;&amp; svelte-check --tsconfig ./tsconfig.json --fail-on-warnings --watch&quot;,
+&quot;lint&quot;: &quot;prettier --check . &amp;&amp; eslint . &amp;&amp; node scripts/contrast.ts&quot;,
+&quot;lint:svelte&quot;: &quot;node scripts/autofix-report.ts&quot;,</code></pre>
+</figure>
+<p>The flags <code>svelte-check</code> 4.7.6 accepts, apart from <code>--color</code>, <code>--no-color</code>, <code>--version</code> and <code>--help</code>, and what this project does with each:</p>
+<ul><li><strong><code>--tsconfig &lt;path&gt;</code></strong> — check exactly the files the tsconfig’s <code>include</code> and <code>exclude</code> select, TypeScript and JavaScript errors included. Used: <code>./tsconfig.json</code>, whose explicit lists keep the checker out of <code>build/</code> and <code>packages/</code> (ch. <a href="the-config.html">04</a>) — and out of <code>src/service-worker</code>, which has a tsconfig of its own. That one is checked by the line’s last command, <code>tsc -p src/service-worker</code>, rather than by a second <code>svelte-check --tsconfig</code>: a folder with no <code>.svelte</code> file in it makes <code>svelte-check</code> warn that it was given nothing to do, and here a warning fails the check. Plain TypeScript is <code>tsc</code>’s job (ch. <a href="the-offline-itinerary.html">39</a>).</li><li><strong><code>--fail-on-warnings</code></strong> — “Will also exit with error code when there are warnings.” Used on both scripts; the why block below says why.</li><li><strong><code>--compiler-warnings &quot;code:behaviour,…&quot;</code></strong> — per compiler warning code, <code>ignore</code> or <code>error</code>: <code>&quot;css_unused_selector:ignore,a11y_missing_attribute:error&quot;</code> in the documentation’s example. Not used. A warning that is wrong for one line is answered on that line or fixed; silencing a code project-wide hides the same mistake everywhere else. The project once carried one of these for its custom element, and ch. <a href="embedding-a-trip.html">38</a> says why it no longer needs it.</li><li><strong><code>--diagnostic-sources &quot;js,svelte,css&quot;</code></strong> — which of the three checkers run; all three by default. Not used.</li><li><strong><code>--threshold warning|error</code></strong> — <code>error</code> prints only errors. Not used: every warning fails the check here, so every warning should be on the screen.</li><li><strong><code>--output human|human-verbose|machine|machine-verbose</code></strong> — how to print. <code>machine</code> is one record per line, a timestamp and a type — <code>START</code> with the workspace, an <code>ERROR</code> or <code>WARNING</code> with the file, <code>line:column</code> and the message, <code>COMPLETED</code> with the totals, <code>FAILURE</code> if the checker itself crashed — and <code>machine-verbose</code> makes each diagnostic a line of JSON with its start, end, code and source. That is the format a CI step would turn into annotations on a pull request.</li><li><strong><code>--watch</code></strong> and <strong><code>--preserveWatchOutput</code></strong> — keep running and re-check on every change; do not clear the screen between runs. <code>check:watch</code> uses the first.</li><li><strong><code>--incremental</code></strong> and <strong><code>--tsgo</code></strong> — the two newest: cache the Svelte-to-TypeScript translation on disk between runs (in <code>.svelte-kit</code>), or hand the TypeScript diagnostics to <code>tsgo</code>, the Go port of the compiler that is to become TypeScript 7 (<code>--tsgo-experimental-api</code> is the same through an API the help calls experimental). Not used: a full check of this project takes about thirteen seconds, and <code>AGENTS.md</code> says why this toolchain stays on TypeScript 6 for now.</li><li><strong><code>--config &lt;path&gt;</code></strong> — the Vite config to read, for a project whose config file has another name or place. Not needed: <code>vite.config.ts</code> at the root is where it looks.</li><li><strong><code>--workspace</code></strong>, <strong><code>--ignore</code></strong> and <strong><code>--no-tsconfig</code></strong> — declined. <code>--no-tsconfig</code> checks only <code>.svelte</code> files and skips every <code>.ts</code> file, and <code>--ignore</code> only works together with it; the tsconfig is the better list of what to check, and it is the same list the editor uses.</li></ul>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>$ pnpm exec svelte-check --tsconfig ./tsconfig.json --fail-on-warnings --output machine-verbose
+1792279050921 START &quot;/home/user/ultimate-svelte-kit-3/meridian&quot;
+1792279050946 COMPLETED 7706 FILES 0 ERRORS 0 WARNINGS 0 FILES_WITH_PROBLEMS</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why a warning fails the check</h4>
+	<p>Because a warning that does not fail anything is a warning nobody reads. The project has no <code>svelte-ignore</code> comments at all, so every warning the compiler gives is either a mistake or a sign the compiler knows something the author did not, and both are worth stopping for. On <code>check:watch</code> the flag changes nothing you can see — a watching process never exits — and it is there so the two <code>svelte-check</code> runs differ by <code>--watch</code> and nothing else. The one warning a person is most likely to meet by surprise is <code>bidirectional_control_characters</code>, and ch. <a href="the-workspace.html">02</a> says why that one in particular should stop a build.</p>
+</aside>
+<h3 id="lint-and-format">Lint and format</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">eslint.config.js<span class="code__lines">:1-41</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">import prettier from 'eslint-config-prettier';
+import path from 'node:path';
+import js from '@eslint/js';
+import svelte from 'eslint-plugin-svelte';
+import { defineConfig, includeIgnoreFile } from 'eslint/config';
+import globals from 'globals';
+import ts from 'typescript-eslint';
+
+const gitignorePath = path.resolve(import.meta.dirname, '.gitignore');
+
+export default defineConfig(
+	includeIgnoreFile(gitignorePath),
+	js.configs.recommended,
+	ts.configs.recommended,
+	svelte.configs.recommended,
+	prettier,
+	svelte.configs.prettier,
+	{
+		languageOptions: { globals: { ...globals.browser, ...globals.node } },
+		rules: {
+			// typescript-eslint strongly recommend that you do not use the no-undef lint rule on TypeScript projects.
+			// see: https://typescript-eslint.io/troubleshooting/faqs/eslint/#i-get-errors-from-the-no-undef-rule-about-global-variables-not-being-defined-even-though-there-are-no-typescript-errors
+			'no-undef': 'off'
+		}
+	},
+	{
+		files: ['**/*.svelte', '**/*.svelte.ts', '**/*.svelte.js'],
+		languageOptions: {
+			parserOptions: {
+				projectService: true,
+				extraFileExtensions: ['.svelte'],
+				parser: ts.parser
+			}
+		}
+	},
+	{
+		// Test helpers and specs may reach for whatever is clearest.
+		files: ['**/*.spec.ts', '**/*.test.ts'],
+		rules: { 'svelte/prefer-svelte-reactivity': 'off' }
+	}
+);</code></pre>
+</figure>
+<p>Lines 1 to 35 are what <code>sv add eslint prettier</code> writes, unchanged; the last block is this project’s. Read top to bottom. <code>includeIgnoreFile</code> makes <code>.gitignore</code> the list of what not to lint, so a generated folder is ignored the day it is ignored by git. Then three recommended sets — JavaScript, TypeScript, Svelte — and two that switch rules *off*: <code>eslint-config-prettier</code> turns off every stylistic rule that would fight the formatter, and <code>svelte.configs.prettier</code> does the same for the Svelte plugin’s. <code>no-undef</code> is off on typescript-eslint’s own advice, because the TypeScript compiler already knows which globals exist and the lint rule does not. The block for <code>**/*.svelte</code> and <code>**/*.svelte.ts</code> is the important one: <code>projectService: true</code> gives the parser the project’s real type information, through the same TypeScript language service an editor uses, so type-aware rules work inside <code>&lt;script lang=&quot;ts&quot;&gt;</code> and in rune modules. <code>extraFileExtensions</code> tells it <code>.svelte</code> is a source file, and <code>parser: ts.parser</code> is the parser for the script inside it.</p>
+<p>The last block is a decision. <code>svelte/prefer-svelte-reactivity</code> asks for <code>SvelteMap</code> and <code>SvelteSet</code> wherever it sees <code>new Map()</code> and <code>new Set()</code>, which is right in a component and noise in a test that builds a fixture. Ch. <a href="reactivity-utilities.html">43</a> draws the line for application code.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">prettier.config.js<span class="code__lines">:1-11</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/** @type {import(&quot;prettier&quot;).Config} */
+const config = {
+	useTabs: true,
+	singleQuote: true,
+	trailingComma: 'none',
+	printWidth: 100,
+	plugins: ['prettier-plugin-svelte'],
+	overrides: [{ files: '*.svelte', options: { parser: 'svelte' } }]
+};
+
+export default config;</code></pre>
+</figure>
+<p>This one is exactly what the <code>prettier</code> add-on writes: tabs, single quotes, no trailing commas, a hundred columns, and the Svelte plugin. The values matter less than having them in a file: nobody argues about formatting in a review when a command decides it.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">.prettierignore<span class="code__lines">:1-18</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-text"># Generated or vendored: not ours to format.
+pnpm-lock.yaml
+/build
+/.svelte-kit
+/drizzle
+/test-results
+/playwright-report
+# Paraglide writes these from `messages/` on every build.
+/src/lib/paraglide
+/project.inlang/cache
+# The library's build output and its own generated folders.
+/packages/*/dist
+/packages/*/.svelte-kit
+# The inlang SDK writes these beside the settings; the settings are the source.
+/project.inlang/.meta.json
+/project.inlang/README.md
+# Paraglide 2.26's SDK also drops a lix README and a .gitignore in here.
+/project.inlang/.lix</code></pre>
+</figure>
+<p>The add-on writes a short list of lockfiles and static folders; this one is longer because it doubles as the map of everything in the project that a tool writes — the build, SvelteKit’s generated types, the end-to-end reports, the compiled messages, the library’s output, and the files the inlang SDK drops beside its settings. If a folder is in this list, do not edit it by hand: whatever writes it will write it again. <code>pnpm run lint</code> runs <code>prettier --check</code>, then ESLint, then the contrast check from ch. <a href="the-design-system.html">23</a>; <code>pnpm run format</code> rewrites everything Prettier would complain about.</p>
+<h3 id="the-agent">The agent beside you</h3>
+<p>A language model trained on the public web has read far more Svelte 4 than Svelte 5, and far more SvelteKit 1 than 3. Asked for a component, it reaches for Svelte 4’s <code>export let</code> and <code>on:click</code>, a store where a rune belongs, an effect where a derived belongs. The Svelte team’s answer is four tools, “designed to work together, but each can be used individually”: <strong>instructions</strong> that are always in the agent’s context, an <strong>MCP server</strong> with the documentation and a static analyser, <strong>skills</strong> that load on demand, and a <strong>subagent</strong> that does Svelte work in a context window of its own. This project has all four: the instructions and the MCP configuration as committed files, the skills and the subagent through the plugin.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">AGENTS.md<span class="code__lines">:10-32</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-md">You are able to use the Svelte MCP server, where you have access to comprehensive Svelte 5 and SvelteKit documentation. Here's how to use the available tools effectively:
+
+## Available Svelte MCP Tools:
+
+### 1. list-sections
+
+Use this FIRST to discover all available documentation sections. Returns a structured list with titles, use_cases, and paths.
+When asked about Svelte or SvelteKit topics, ALWAYS use this tool at the start of the chat to find relevant sections.
+
+### 2. get-documentation
+
+Retrieves full documentation content for specific sections. Accepts single or multiple sections.
+After calling the list-sections tool, you MUST analyze the returned documentation sections (especially the use_cases field) and then use the get-documentation tool to fetch ALL documentation sections that are relevant for the user's task.
+
+### 3. svelte-autofixer
+
+Analyzes Svelte code and returns issues and suggestions.
+You MUST use this tool whenever writing Svelte code before sending it to the user. Keep calling it until no issues or suggestions are returned.
+
+### 4. playground-link
+
+Generates a Svelte Playground link with the provided code.
+After completing the code, ask the user if they want a playground link. Only call this tool after user confirmation and NEVER if code was written to files in their project.</code></pre>
+</figure>
+<p>The instructions are the documentation’s recommended prompt, word for word: which tools exist and when to call them. They live in <code>AGENTS.md</code>, the file most agents read, and Claude Code reads them through a one-line import:</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">.claude/CLAUDE.md<span class="code__lines">:1-1</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-md">@../AGENTS.md</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">.mcp.json<span class="code__lines">:1-8</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-json">{
+	&quot;mcpServers&quot;: {
+		&quot;svelte&quot;: {
+			&quot;type&quot;: &quot;http&quot;,
+			&quot;url&quot;: &quot;https://mcp.svelte.dev/mcp&quot;
+		}
+	}
+}</code></pre>
+</figure>
+<p>The <strong>MCP server</strong> comes in two forms. This file names the remote one, <code>https://mcp.svelte.dev/mcp</code>, which needs nothing installed and of which the documentation says “The Svelte team does not log, store, or inspect code sent to the remote server.” The local one is the <code>@sveltejs/mcp</code> package, started as <code>npx -y @sveltejs/mcp</code>, which runs the version your lockfile records — its autofixer works offline, while <code>list-sections</code> and <code>get-documentation</code> still fetch the documentation index from svelte.dev when they run; each client’s setup is a page of the AI documentation. Its four <strong>tools</strong> are the four in <code>AGENTS.md</code>: <code>list-sections</code> and <code>get-documentation</code> for the documentation, <code>svelte-autofixer</code> for static analysis, and <code>playground-link</code> for an ephemeral playground URL. It also offers a <strong>resource</strong>, <code>doc-section</code> — any documentation page attached to a conversation by the person, as <code>svelte://&lt;slug&gt;.md</code> — and a <strong>prompt</strong>, <code>svelte-task</code>, which a person picks to tell the model how to use the rest.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">.claude/settings.json<span class="code__lines">:1-13</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-json">{
+	&quot;extraKnownMarketplaces&quot;: {
+		&quot;svelte&quot;: {
+			&quot;source&quot;: {
+				&quot;source&quot;: &quot;github&quot;,
+				&quot;repo&quot;: &quot;sveltejs/ai-tools&quot;
+			}
+		}
+	},
+	&quot;enabledPlugins&quot;: {
+		&quot;svelte@svelte&quot;: true
+	}
+}</code></pre>
+</figure>
+<p>This file is the <strong>Claude Code plugin</strong>, committed. The <code>ai-tools</code> documentation describes what it does: “the first time you open the project you’ll be asked to trust the workspace, then it installs automatically (no <code>/plugin install</code> needed)”. The plugin brings the local MCP server, the skills and the subagent, and keeps them up to date. Without the committed file, the same plugin is two commands inside Claude Code: <code>/plugin marketplace add sveltejs/ai-tools</code>, then <code>/plugin install svelte</code>. The documentation lists the plugin for Claude Code and OpenCode (<code>@sveltejs/opencode</code>); every other client gets the individual tools. The <code>ai-tools</code> add-on takes four options: <code>ide</code> (<code>claude-code</code>, <code>cursor</code>, <code>gemini</code>, <code>opencode</code>, <code>vscode</code> or <code>other</code>), <code>delivery</code> (<code>plugin</code> or <code>tools</code>), <code>tools</code> (which individual tools, when not using the plugin) and <code>mcpSetup</code> (<code>local</code> or <code>remote</code>).</p>
+<p>The <strong>subagent</strong>, <code>svelte-file-editor</code>, comes with the plugin rather than as a file in the project — the duplicate <code>sv</code> warns about above. One thing remains doubled, and it is worth knowing: in Claude Code the plugin’s local MCP server and the remote one named in <code>.mcp.json</code> both appear. They answer the same questions; the remote entry is kept for the clients the plugin does not cover. Its body tells it to fetch documentation, edit, run the autofixer and repeat until nothing is left. The point of a subagent is the separate context window: the documentation it reads and the autofixer rounds it goes through stay in its own conversation, and the main agent gets back the finished file and a summary.</p>
+<p>The <strong>skills</strong> load when a task needs them. <code>svelte-code-writer</code> teaches the agent the <code>@sveltejs/mcp</code> command line; <code>svelte-core-bestpractices</code> is a page of Svelte 5 guidance. Most of what it says, this course builds:</p>
+<ul><li>“To compute something from state, use <code>$derived</code> rather than <code>$effect</code>” — <code>TripState</code>, a class whose every field is derived from one value (ch. <a href="the-trip-page.html">26</a>).</li><li>“If you need to sync state to an external library such as D3, it is often neater to use <code>{@attach ...}</code>” — Tiptap mounted by an attachment (ch. <a href="notes-with-tiptap-through-an-attachment.html">32</a>).</li><li>“If you need to observe something external to Svelte, use <code>createSubscriber</code>” — the geolocation watch on the map (ch. <a href="the-map.html">29</a>, and ch. <a href="reactivity-utilities.html">43</a> for when a utility library is worth it).</li><li>“use <code>$state.raw</code> instead” for values that are replaced rather than mutated — the Tiptap editor instance in the notes tab, set when the editor mounts and cleared when it goes, never changed through Svelte (ch. <a href="notes-with-tiptap-through-an-attachment.html">32</a>).</li><li>“Prefer to use keyed each blocks … Do not use the index as a key” — keys that name the thing, on the globe and the trips list (ch. <a href="the-globe.html">30</a>, <a href="trips-and-a-new-trip.html">35</a>).</li><li>“use clsx-style arrays and objects in <code>class</code> attributes, instead of the <code>class:</code> directive” — every conditional class (ch. <a href="the-shell.html">25</a>).</li><li><code>svelte-code-writer</code>: “Always validate - Run <code>svelte-autofixer</code> before finalizing any Svelte component” — the next section, which does it for every component on every build.</li></ul>
+<h3 id="lint-svelte">The autofixer, over every component</h3>
+<p>The same package has a command line. Run with a subcommand, <code>svelte-mcp</code> (the binary <code>@sveltejs/mcp</code> installs) prints its answer instead of starting a server: <code>list-sections</code>, <code>get-documentation &lt;sections&gt;</code>, and <code>svelte-autofixer &lt;code_or_path&gt;</code> with <code>--svelte-version 4|5</code> and <code>--async</code>, “Wether the project is using async svelte or not”, in the help’s own spelling. This project compiles with <code>experimental.async</code>, so the flag belongs on every run.</p>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>$ pnpm exec svelte-mcp svelte-autofixer src/lib/trip/StopCard.svelte --async
+Detected file path, reading file...
+{
+  issues: [],
+  suggestions: [],
+  require_another_tool_call_after_fixing: false
+}</code></pre>
+</figure>
+<p>An agent runs that on what it writes. The project runs it on everything it has, as a step of <code>verify</code>, with one rule: every <strong>issue</strong> is fixed, and every <strong>suggestion</strong> is either followed or answered in writing.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">package.json<span class="code__lines">:23-23</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-json">&quot;lint:svelte&quot;: &quot;node scripts/autofix-report.ts&quot;,</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">scripts/autofix-report.ts<span class="code__lines">:46-73</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * The app compiles with `experimental.async` (`vite.config.ts`); the library
+ * does not (its own `vite.config.ts`), because a published component cannot
+ * assume its consumer turned it on. The autofixer has to be told which.
+ */
+const SOURCES = [
+	{ dir: 'src', async: true },
+	{ dir: 'packages/waypoint/src', async: false }
+] as const;
+
+const Acceptance = v.strictObject({
+	file: v.pipe(v.string(), v.minLength(1)),
+	suggestion: v.pipe(v.string(), v.minLength(1)),
+	count: v.pipe(v.number(), v.integer(), v.minValue(1)),
+	reason: v.pipe(v.string(), v.minLength(20))
+});
+
+const AcceptedFile = v.strictObject({
+	$comment: v.optional(v.string()),
+	accepted: v.array(Acceptance)
+});
+
+type Acceptance = v.InferOutput&lt;typeof Acceptance&gt;;
+
+const { accepted } = v.parse(
+	AcceptedFile,
+	JSON.parse(readFileSync(join(root, '.autofixer-accepted.json'), 'utf8'))
+);</code></pre>
+</figure>
+<p>Two sources, because the app compiles with <code>experimental.async</code> and the library does not. The list of answered suggestions is data, so it is parsed with a valibot schema like every other input in this project: <code>strictObject</code> rejects a misspelt key, so an entry cannot quietly stop matching because somebody typed <code>reasons</code>.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">scripts/autofix-report.ts<span class="code__lines">:75-92</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">const files = SOURCES.flatMap(({ dir, async }) =&gt;
+	globSync([`${dir}/**/*.svelte`, `${dir}/**/*.svelte.ts`], { cwd: root })
+		.map((file) =&gt; file.replaceAll('\\', '/'))
+		.sort()
+		.map((file) =&gt; ({ file, async }))
+);
+
+const results = await Promise.all(
+	files.map(async ({ file, async }) =&gt; ({
+		file,
+		...(await svelteAutofixer({
+			code: await readFile(join(root, file), 'utf8'),
+			desired_svelte_version: 5,
+			async,
+			filename: file
+		}))
+	}))
+);</code></pre>
+</figure>
+<p>The script imports <code>svelteAutofixer</code> — the function the <code>svelte-autofixer</code> command calls — instead of spawning the command fifty-five times. The command prints its result with <code>console.log</code>, which is Node’s inspect format and not JSON, so parsing it would mean parsing a debugging format; the package exports the function itself, with its types. All the files are analysed at once and the whole run takes a few seconds. One import comes before it, <code>./offline-docs.ts</code>, for a reason that is easy to miss: importing the package also starts its MCP server, which fetches the docs index from svelte.dev and never handles a refusal. From a network svelte.dev turns away, that unhandled rejection exits the process with code 1 after a clean report. The small module answers that one request locally, because a lint step must not depend on a website.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">scripts/autofix-report.ts<span class="code__lines">:94-119</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">const problems: string[] = [];
+const claimed = new Map&lt;Acceptance, number&gt;();
+let suggestions = 0;
+
+for (const { file, issues, suggestions: advice } of results) {
+	for (const issue of issues) problems.push(`${file}\n  issue: ${issue}`);
+
+	for (const text of advice) {
+		suggestions += 1;
+		const entry = accepted.find((a) =&gt; a.file === file &amp;&amp; text.includes(a.suggestion));
+		if (entry) claimed.set(entry, (claimed.get(entry) ?? 0) + 1);
+		else problems.push(`${file}\n  suggestion nobody has answered: ${text}`);
+	}
+}
+
+for (const entry of accepted) {
+	const found = claimed.get(entry) ?? 0;
+	if (found !== entry.count) {
+		problems.push(
+			`${entry.file}\n  accepted ${entry.count} × &quot;${entry.suggestion}&quot;, found ${found}: ` +
+				(found &gt; entry.count
+					? 'read the new one, then follow it or raise the count with a reason'
+					: 'lower the count, or delete the entry if none are left')
+		);
+	}
+}</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">.autofixer-accepted.json<span class="code__lines">:58-63</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-json">{
+	&quot;file&quot;: &quot;src/lib/trip/TripView.svelte&quot;,
+	&quot;suggestion&quot;: &quot;The stateful variable \&quot;patient\&quot; is assigned inside an $effect&quot;,
+	&quot;count&quot;: 1,
+	&quot;reason&quot;: &quot;Three seconds passing is not something a `$derived` can depend on. The effect's cleanup stops the timer if the page goes first. The comment above `patient` says so.&quot;
+},</code></pre>
+</figure>
+<p>An entry names a file, a piece of the suggestion’s text, how many times that file earns it, and the reason — which points at the comment in the code that already made the argument where one exists, so the list and the code cannot tell two stories, and otherwise states the reason itself. The count is exact in both directions. One more than accepted is a new effect nobody has looked at, and the script asks for it to be read; one fewer means the code improved and the entry outlived it, and the script asks for the entry to shrink. A list of exceptions that only ever grows stops meaning anything.</p>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>$ pnpm run lint:svelte
+autofixer: 55 files, 0 issues, 80 suggestions, 15 accepted entries
+every suggestion is either followed or answered in .autofixer-accepted.json
+
+# a copy of StopCard.svelte with one effect added: doubled = stop.day * 2
+$ pnpm run lint:svelte
+autofixer: 56 files, 0 issues, 82 suggestions, 15 accepted entries
+src/lib/trip/StopCardScratch.svelte
+  suggestion nobody has answered: The stateful variable &quot;doubled&quot; is assigned inside an $effect …
+src/lib/trip/StopCardScratch.svelte
+  suggestion nobody has answered: Prefer using writable $derived instead of $state and $effect at line 42, column 6</code></pre>
+</figure>
+
+<aside class="callout callout--why">
+	<h4>Why most of the eighty suggestions are declined, and why that is fine</h4>
+	<p>Sixty-nine of them are one sentence: “You are calling a function inside an $effect. Please check if the function is reassigning a stateful variable … Ignore this suggestion if you are sure this function is not assigning any stateful variable.” It is a question, not a verdict, because the analyser cannot see inside the function. In this project the functions are MapLibre’s, three.js’s, Tiptap’s, timers and layout measurements — exactly what effects are for — and the entries say so file by file. The other eleven are three effects that assign state on purpose (a timer, a measurement, a colour only a styled page can answer) and eight <code>bind:this</code> that an attachment cannot replace because the element is used from more than one place. What the gate guarantees is not zero suggestions; it is that the next one gets read.</p>
+</aside>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can write the <code>sv create</code> line for a new project with the add-ons you need, without answering a prompt.</li><li>You can say which files each of the add-ons this project uses wrote, and where in the course each file is read.</li><li>You know what <code>--fail-on-warnings</code>, <code>--compiler-warnings</code> and <code>--output machine-verbose</code> do, and why this project uses only the first.</li><li>You can say what the four Svelte AI tools are, which files configure them here, and what <code>pnpm run lint:svelte</code> adds to <code>verify</code>.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-workspace.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">A workspace of two</span>
+			</a>
+			<a class="pager__link pager__link--next" href="the-config.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">One file to configure everything</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

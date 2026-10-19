@@ -24,8 +24,13 @@
  *      exists), the timeline does not run. It plays when the hero arrives
  *      with a navigation — a click on the brand from another page — where
  *      the elements are new and nobody has seen them yet.
- *   3. Reduced motion means no motion. Not "less" — none. The function
- *      returns before touching a style.
+ *   3. Reduced motion means no motion. Not "less" — none. That rule is
+ *      kept by the page, not here: the home page writes
+ *      `{@attach !reducedMotion.current && hero()}`, and an attachment
+ *      that is `false` is no attachment at all. So under reduced motion
+ *      this function never runs, and if the setting is switched on while
+ *      the timeline plays, Svelte calls the cleanup below, which stops it
+ *      and puts every style back.
  *   4. It runs once, on mount. Scrolling back up does not replay it; that
  *      is a slot machine, not a page.
  *
@@ -36,11 +41,9 @@
 
 import type { Attachment } from 'svelte/attachments';
 import { gsap } from 'gsap';
-import { reducedMotion } from './prefers.svelte.ts';
 
 export function hero(): Attachment<HTMLElement> {
 	return (node) => {
-		if (reducedMotion.current) return;
 		if (alreadySeen()) return;
 
 		const copy = Array.from(node.querySelectorAll<HTMLElement>('[data-hero-copy] > *'));
@@ -77,17 +80,19 @@ function alreadySeen(): boolean {
  * `data-inview` is set and the observer is done. Rule 1 still holds: the
  * CSS that hides a card is scoped to `[data-inview]`'s absence *and* to
  * JavaScript having run, so a page without JavaScript shows every card.
+ * Rule 3 is the page's, as for the hero: under reduced motion this is
+ * never attached, nothing is written, and every card is simply there.
+ * The cleanup takes back what it wrote, so an attachment torn down
+ * because the setting changed leaves the grid as the server sent it.
  */
 export function inview(): Attachment<HTMLElement> {
 	return (node) => {
-		if (reducedMotion.current) {
-			node.dataset.inview = '';
-			return;
-		}
 		// Already on screen when the script arrives: there is nothing to wait for.
 		if (node.getBoundingClientRect().top < innerHeight * 0.9) {
 			node.dataset.inview = '';
-			return;
+			return () => {
+				delete node.dataset.inview;
+			};
 		}
 		node.dataset.animate = '';
 		const observer = new IntersectionObserver(
@@ -99,6 +104,10 @@ export function inview(): Attachment<HTMLElement> {
 			{ rootMargin: '0px 0px -10% 0px' }
 		);
 		observer.observe(node);
-		return () => observer.disconnect();
+		return () => {
+			observer.disconnect();
+			delete node.dataset.animate;
+			delete node.dataset.inview;
+		};
 	};
 }

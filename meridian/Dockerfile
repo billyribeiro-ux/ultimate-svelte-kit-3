@@ -41,10 +41,9 @@ RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
 FROM deps AS build
 ARG PUBLIC_ORIGIN
 ENV PUBLIC_ORIGIN=${PUBLIC_ORIGIN}
-# The build needs *a* value for every variable in `src/env.ts`; these two are
-# never read at build time and never make it into the image.
-ENV DATABASE_URL=file:build-time-unused.db
-ENV BETTER_AUTH_SECRET=build-time-only-value-that-is-never-used-at-runtime
+# The one variable the build needs: it is inlined. The database URL and the
+# auth secret are not — `src/env.ts` lets them be missing while SvelteKit
+# builds — so nothing secret, and nothing invented, is in this stage.
 
 COPY . .
 RUN test -n "$PUBLIC_ORIGIN" || (echo "PUBLIC_ORIGIN build argument is required" && exit 1)

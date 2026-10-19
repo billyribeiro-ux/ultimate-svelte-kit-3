@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { signIn, TRIPS, USERS } from './helpers.ts';
+import { openTab, PASSWORD, signIn, TRIPS, USERS } from './helpers.ts';
 
 /**
  * TWO PEOPLE, ONE TRIP
@@ -149,4 +149,121 @@ test('a note keeps its editor through a save and a companion arriving', async ({
 
 	await anaContext.close();
 	await benContext.close();
+});
+
+/*
+ * ACCESS IS ASKED AGAIN ON EVERY WAKE
+ * ===================================
+ *
+ * The live query used to check access once, when the stream opened. A
+ * companion removed while their tab stayed open, or somebody reading a trip
+ * by its link after the owner made it private, went on receiving every
+ * snapshot for as long as the tab lived. Now the generator asks again each
+ * time the room wakes it, and a refusal ends the stream: the chip leaves
+ * "Live", and nothing written after the refusal reaches the page.
+ *
+ * A new companion each run, joined through an invite link: the desktop and
+ * phone projects share one database, and removing a seeded person would
+ * leave the other suites a different trip.
+ */
+test('a companion who is removed stops receiving the trip', async ({ browser }) => {
+	const anaContext = await browser.newContext();
+	const guestContext = await browser.newContext();
+	const ana = await anaContext.newPage();
+	const guest = await guestContext.newPage();
+
+	await signIn(ana, USERS.ana, `/t/${TRIPS.iberia}`);
+	await openTab(ana, 'Companions');
+	await ana.getByLabel('They may').selectOption('viewer');
+	await ana.getByRole('button', { name: 'Make a link' }).click();
+	const link = await ana.locator('.invite__url').textContent();
+	const joinPath = new URL(link ?? '').pathname;
+
+	const stamp = Date.now().toString(36);
+	const name = `Fay ${stamp}`;
+	await guest.goto(`/signup?redirectTo=${encodeURIComponent(joinPath)}`);
+	await guest.getByLabel('Your name').fill(name);
+	await guest.getByLabel('Email').fill(`fay-${stamp}@meridian.test`);
+	await guest.getByLabel('Password').fill(PASSWORD);
+	await guest.getByRole('button', { name: 'Create an account' }).click();
+	await guest.getByRole('button', { name: 'Join the trip' }).click();
+	await expect(guest).toHaveURL(new RegExp(`/t/${TRIPS.iberia}$`));
+	await expect(guest.getByText('Live')).toBeVisible();
+	await expect(ana.getByRole('list', { name: 'here now' })).toContainText(name);
+
+	await ana.getByRole('button', { name: `Remove ${name}` }).click();
+	await expect(ana.locator('.members').getByText(name)).toHaveCount(0);
+
+	// The removal woke the room; asked again, the server refused, and the stream ended.
+	await expect(guest.getByRole('button', { name: 'Reconnect' })).toBeVisible();
+	// Removal is immediate everywhere: off the chips at once, not in thirty seconds.
+	await expect(ana.getByRole('list', { name: 'here now' })).not.toContainText(name);
+
+	// Something written afterwards reaches the owner and not the person removed.
+	await openTab(ana, 'Itinerary');
+	await ana.getByRole('button', { name: 'Add a stop' }).first().click();
+	const dialog = ana.getByRole('dialog');
+	await dialog.getByPlaceholder('Search a place').pressSequentially('Granada');
+	await ana.getByRole('option', { name: 'Granada' }).click();
+	await dialog.getByRole('button', { name: 'Save stop' }).click();
+	await expect(ana.getByText('Stop added')).toBeVisible();
+	await expect(ana.getByRole('button', { name: 'Granada', exact: true })).toBeVisible();
+	await expect(guest.getByRole('button', { name: 'Granada', exact: true })).toHaveCount(0);
+	await expect(guest.getByText('Live')).toHaveCount(0);
+
+	// Tidy up, so the other suites start from the seed.
+	await ana
+		.locator('article.stop', { hasText: 'Granada' })
+		.getByRole('button', { name: 'Remove' })
+		.click();
+	await expect(ana.getByText('Stop removed')).toBeVisible();
+
+	await anaContext.close();
+	await guestContext.close();
+});
+
+test('a trip made private stops the stream of somebody reading it by link', async ({ browser }) => {
+	const benContext = await browser.newContext();
+	const strangerContext = await browser.newContext();
+	const ben = await benContext.newPage();
+	const stranger = await strangerContext.newPage();
+
+	// Nobody signed in: a reader with the link and nothing else.
+	await stranger.goto(`/t/${TRIPS.japan}`);
+	await expect(stranger.getByText('Live')).toBeVisible();
+
+	await signIn(ben, USERS.ben, `/t/${TRIPS.japan}/settings`);
+	try {
+		await ben.getByLabel('Companions only').check();
+		await ben.getByRole('button', { name: 'Save', exact: true }).click();
+		await expect(ben.getByText('Saved', { exact: true })).toBeVisible();
+
+		// The save woke the room; asked again, the server refused the stranger.
+		await expect(stranger.getByRole('button', { name: 'Reconnect' })).toBeVisible();
+
+		await ben.goto(`/t/${TRIPS.japan}`);
+		await ben.getByRole('button', { name: 'Add a stop' }).first().click();
+		const dialog = ben.getByRole('dialog');
+		await dialog.getByPlaceholder('Search a place').pressSequentially('Osaka');
+		await ben.getByRole('option', { name: 'Osaka' }).click();
+		await dialog.getByRole('button', { name: 'Save stop' }).click();
+		await expect(ben.getByText('Stop added')).toBeVisible();
+		await expect(ben.getByRole('button', { name: 'Osaka', exact: true })).toBeVisible();
+		await expect(stranger.getByRole('button', { name: 'Osaka', exact: true })).toHaveCount(0);
+
+		await ben
+			.locator('article.stop', { hasText: 'Osaka' })
+			.getByRole('button', { name: 'Remove' })
+			.click();
+		await expect(ben.getByText('Stop removed')).toBeVisible();
+	} finally {
+		// Visible by link again whatever happened above: the public suite reads this trip.
+		await ben.goto(`/t/${TRIPS.japan}/settings`);
+		await ben.getByLabel('Anyone with the link').check();
+		await ben.getByRole('button', { name: 'Save', exact: true }).click();
+		await expect(ben.getByText('Saved', { exact: true })).toBeVisible();
+	}
+
+	await benContext.close();
+	await strangerContext.close();
 });

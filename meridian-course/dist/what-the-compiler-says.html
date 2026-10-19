@@ -1,0 +1,385 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>What the compiler says: warnings, errors and the codes that name them — Building Meridian</title>
+<meta name="description" content="Every message Svelte prints has a code, and the code is the handle for everything you can do about it. Zero `svelte-ignore` comments, a `check` that fails on a warning, and the autofixer in `verify`; the warnings the code answers by its shape, the errors that explain why it is written the way it is, the runtime errors and warnings worth recognising on sight — and the one warning the build still prints, and why it stays.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Meridian</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">45 / 51</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 88.23529411764706%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-workspace.html"><span class="toc__num">02</span><span>A workspace of two</span></a></li><li><a href="the-toolchain.html"><span class="toc__num">03</span><span>The toolchain: sv, the checks, and the agent beside you</span></a></li><li><a href="the-config.html"><span class="toc__num">04</span><span>One file to configure everything</span></a></li><li><a href="the-map-of-features.html"><span class="toc__num">05</span><span>The map: every feature, every library, and where it lives</span></a></li><li><a href="geodesy-for-humans.html"><span class="toc__num">06</span><span>Geodesy for humans</span></a></li><li><a href="a-route-as-a-class.html"><span class="toc__num">07</span><span>A route as a class, in a library</span></a></li><li><a href="two-components-for-any-app.html"><span class="toc__num">08</span><span>Two components for any app</span></a></li><li><a href="packaging-and-proving.html"><span class="toc__num">09</span><span>Packaging a Svelte library, and proving it</span></a></li><li><a href="ids-dates-and-money.html"><span class="toc__num">10</span><span>Ids, dates and money</span></a></li><li><a href="splitting-fairly.html"><span class="toc__num">11</span><span>Splitting fairly, to the cent</span></a></li><li><a href="the-itinerary-as-data.html"><span class="toc__num">12</span><span>The itinerary as data</span></a></li><li><a href="schemas-with-valibot.html"><span class="toc__num">13</span><span>Schemas with valibot, and who may do what</span></a></li><li><a href="the-database.html"><span class="toc__num">14</span><span>The database: seven tables and Better Auth’s four</span></a></li><li><a href="environment-and-hooks.html"><span class="toc__num">15</span><span>Environment and hooks</span></a></li><li><a href="identity-with-better-auth.html"><span class="toc__num">16</span><span>Identity with Better Auth</span></a></li><li><a href="remote-functions-the-reads.html"><span class="toc__num">17</span><span>Remote functions: the reads</span></a></li><li><a href="remote-functions-the-writes.html"><span class="toc__num">18</span><span>Remote functions: the writes</span></a></li><li><a href="live-collaboration.html"><span class="toc__num">19</span><span>Live collaboration: a room, a mailbox and a generator</span></a></li><li><a href="invites-and-membership.html"><span class="toc__num">20</span><span>Invites and membership</span></a></li><li><a href="three-languages-with-paraglide.html"><span class="toc__num">21</span><span>Three languages with Paraglide</span></a></li><li><a href="dates-and-money-in-a-locale.html"><span class="toc__num">22</span><span>Dates, money and distances in a locale</span></a></li><li><a href="the-design-system.html"><span class="toc__num">23</span><span>The design system</span></a></li><li><a href="motion-with-intent.html"><span class="toc__num">24</span><span>Motion with intent</span></a></li><li><a href="the-shell.html"><span class="toc__num">25</span><span>The shell: a root that knows nobody</span></a></li><li><a href="the-trip-page.html"><span class="toc__num">26</span><span>The trip page: one await, one state object, one stream</span></a></li><li><a href="the-itinerary.html"><span class="toc__num">27</span><span>The itinerary: days you can drag</span></a></li><li><a href="the-command-palette.html"><span class="toc__num">28</span><span>The command palette</span></a></li><li><a href="the-map.html"><span class="toc__num">29</span><span>The map with no tile server</span></a></li><li><a href="the-globe.html"><span class="toc__num">30</span><span>The globe: Threlte, on demand</span></a></li><li><a href="expenses-with-tanstack-and-layerchart.html"><span class="toc__num">31</span><span>Expenses: a headless table, two charts, and the settle-up</span></a></li><li><a href="notes-with-tiptap-through-an-attachment.html"><span class="toc__num">32</span><span>Notes: Tiptap through an attachment</span></a></li><li><a href="companions-presence-and-settings.html"><span class="toc__num">33</span><span>Companions, presence, the join page and settings</span></a></li><li><a href="signing-in-and-up.html"><span class="toc__num">34</span><span>Signing in and up</span></a></li><li><a href="trips-and-a-new-trip.html"><span class="toc__num">35</span><span>The trips list and a new trip</span></a></li><li><a href="guides-prerendered-with-mdsvex.html"><span class="toc__num">36</span><span>Guides: Markdown, prerendered, no JavaScript</span></a></li><li><a href="explore-and-diagnostics.html"><span class="toc__num">37</span><span>Explore, and diagnostics</span></a></li><li><a href="embedding-a-trip.html"><span class="toc__num">38</span><span>Embedding a trip: a frame and a custom element</span></a></li><li><a href="the-offline-itinerary.html"><span class="toc__num">39</span><span>The offline itinerary</span></a></li><li><a href="choosing-libraries.html"><span class="toc__num">40</span><span>The survey: what was chosen, what was rejected, and why</span></a></li><li><a href="the-headless-pattern.html"><span class="toc__num">41</span><span>The headless pattern: Bits UI and TanStack Table</span></a></li><li><a href="the-wrapper-pattern.html"><span class="toc__num">42</span><span>The wrapper pattern, and when to write an attachment instead</span></a></li><li><a href="reactivity-utilities.html"><span class="toc__num">43</span><span>Reactivity utilities: `svelte/reactivity`, runed, and the line between them</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">44</span><span>Unit and browser tests: two Vitest projects, one command</span></a></li><li><a href="what-the-compiler-says.html" aria-current="page"><span class="toc__num">45</span><span>What the compiler says: warnings, errors and the codes that name them</span></a></li><li><a href="end-to-end.html"><span class="toc__num">46</span><span>End to end: the built server, two viewports, two people</span></a></li><li><a href="security-headers-and-csp.html"><span class="toc__num">47</span><span>Security: the policy, the headers, the redirect and the one framed route</span></a></li><li><a href="deploying.html"><span class="toc__num">48</span><span>Deploying: three stages, one process, a health check and a pipeline that runs the container</span></a></li><li><a href="migrating-a-major.html"><span class="toc__num">49</span><span>Migrating a major: the routine, the record, and a dependency still on Svelte 4</span></a></li><li><a href="what-i-would-do-next.html"><span class="toc__num">50</span><span>What I would do next, and what you now know</span></a></li><li><a href="the-exit-criteria.html"><span class="toc__num">51</span><span>The exit criteria: what a DPE 8++ in Svelte can do</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 45</p>
+			<h1>What the compiler says: warnings, errors and the codes that name them</h1>
+			<p class="lede">Every message Svelte prints has a code, and the code is the handle for everything you can do about it. Zero <code>svelte-ignore</code> comments, a <code>check</code> that fails on a warning, and the autofixer in <code>verify</code>; the warnings the code answers by its shape, the errors that explain why it is written the way it is, the runtime errors and warnings worth recognising on sight — and the one warning the build still prints, and why it stays.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Read any Svelte diagnostic by its code, know the three places that code can be named, and fix the cause rather than the message.</p></aside>
+			<p>Svelte talks to you in four voices. <strong>Compiler warnings</strong> — markup that will probably hurt somebody, like a clickable <code>&lt;div&gt;</code> — and <strong>compiler errors</strong>, code it refuses to compile. Then, once the code runs, <strong>runtime errors</strong>, which stop it, and <strong>runtime warnings</strong>, which the development build prints to the console. Each message carries a short <code>snake_case</code> code: <code>state_referenced_locally</code>, <code>each_key_duplicate</code>, <code>await_waterfall</code>. Svelte’s documentation lists every one under four pages with those names, and the codes are the handle for everything else in this chapter.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">package.json<span class="code__lines">:20-20</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-json">&quot;check&quot;: &quot;pnpm run i18n --silent &amp;&amp; svelte-kit sync &amp;&amp; svelte-check --tsconfig ./tsconfig.json --fail-on-warnings &amp;&amp; tsc -p src/service-worker&quot;,</code></pre>
+</figure>
+<p>The bar this project keeps is simple to say. <code>pnpm run check</code> runs <code>svelte-check</code> with <code>--fail-on-warnings</code> (chapter <a href="the-toolchain.html">03</a>), so a compiler warning fails <code>verify</code> and CI as surely as a type error does; and there is not one <code>&lt;!-- svelte-ignore --&gt;</code> comment anywhere in <code>src</code> — <code>grep -rn svelte-ignore src</code> finds nothing. Every warning the compiler could give was answered by changing the code, and the sections below show the answers. That is not because suppressing is wrong. It is because a suppression is a decision that outlives the reason for it, and a project with none has nothing to re-check when the reason goes away.</p>
+<h3 id="one-code">One code, three places to name it</h3>
+<p>A warning’s <code>code</code> is the same string in every tool that can act on it. In a component, <code>&lt;!-- svelte-ignore a11y_autofocus (because of reasons) --&gt;</code> above the line silences that one occurrence — the parenthesised reason is part of the syntax, and Svelte’s documentation shows it. For the whole project, <code>svelte-check --compiler-warnings &quot;css_unused_selector:error&quot;</code> turns a warning into an error or <code>:ignore</code> drops it; the flag’s own help text still spells codes the Svelte 4 way, with dashes, and Svelte 5’s have underscores — an old spelling in an ignore comment earns you <code>legacy_code</code>, and an unknown one <code>unknown_code</code>. And for the compiler itself, <code>compilerOptions.warningFilter</code> is a function that receives each <code>Warning</code> and returns <code>true</code> to keep it — vite-plugin-svelte’s <code>onwarn</code> is the bundler’s older hook for the same job. Three places, one string. This project uses none of them.</p>
+<h3 id="warnings-answered">Warnings the code answers</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/embed/element.ts<span class="code__lines">:1-36</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * `&lt;meridian-route&gt;`, DEFINED
+ * ===========================
+ *
+ * `MeridianRoute.element` is the custom element class Svelte generates for a
+ * component compiled with `customElement: true` — which this folder is, in
+ * both builds that load this file: the app's browser build
+ * (`dynamicCompileOptions` in `vite.config.ts`) and the standalone one
+ * (`vite.element.config.ts`). This module is the one entry for both places
+ * that need the element: the settings page, which imports it on mount to
+ * show a preview, and the standalone file a host page includes with a
+ * `&lt;script&gt;` tag.
+ *
+ * WHY HERE, AND NOT `&lt;svelte:options customElement={{ tag }}&gt;`
+ * ------------------------------------------------------------
+ * The tag in the component would define the element as a side effect of
+ * importing it, and it is what Svelte's docs show. It also makes the
+ * component claim to be an element in every compile that does not set the
+ * option — the server build, `svelte-check`, the Svelte autofixer — and
+ * each of those warned `options_missing_custom_element`, which the `check`
+ * script used to silence for the whole project. Naming the tag here keeps
+ * the component an ordinary one everywhere, and nothing is silenced.
+ *
+ * `customElements.get` first, because defining one name twice throws, and a
+ * dev server re-running this module on a change would do exactly that.
+ */
+
+import MeridianRoute from './MeridianRoute.svelte';
+
+const TAG = 'meridian-route';
+
+const element = MeridianRoute.element;
+if (!element) throw new Error(`${TAG}: compiled without customElement: true`);
+if (!customElements.get(TAG)) customElements.define(TAG, element);
+
+export { MeridianRoute };</code></pre>
+</figure>
+<p><code>options_missing_custom_element</code> — “The <code>customElement</code> option is used when generating a custom element. Did you forget the <code>customElement: true</code> compile option?” — is what the embed component used to earn in every compile that was not the custom-element one: the server build, <code>svelte-check</code>, the autofixer. The component named its tag in <code>&lt;svelte:options customElement={{ tag }}&gt;</code>, which is what Svelte’s docs show, and the <code>check</code> script once silenced the warning for the whole project. The answer was to move the one thing the option did — define the tag — into this module, which only the two builds that compile the folder as a custom element ever load. The component became an ordinary component everywhere, the warning had nothing left to say, and the project-wide silence went (chapter <a href="embedding-a-trip.html">38</a>).</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/trip/TripView.svelte<span class="code__lines">:58-68</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/*
+ * The props are read once, on purpose: the page keys this component on
+ * the slug, so a different trip is a different instance. `untrack` says
+ * so, and keeps the compiler from asking whether that was meant.
+ */
+const live = untrack(() =&gt; watchTrip(slug));
+const view = untrack(() =&gt; new TripState(initial.document, () =&gt; live.current));
+
+const editable = untrack(() =&gt; canEdit(initial.role));
+const owner = untrack(() =&gt; isOwner(initial.role));
+const member = untrack(() =&gt; initial.viewerId !== null &amp;&amp; initial.role !== 'link');</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/ui/DateRangeField.svelte<span class="code__lines">:66-68</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">// The props are the *initial* value only — after that the picker owns it.
+// `untrack` says so out loud, and quiets the compiler's fair question.
+let value = $state(untrack(() =&gt; ({ start: parse(start), end: parse(end) })));</code></pre>
+</figure>
+<p><code>state_referenced_locally</code> — “This reference only captures the initial value of <code>%name%</code>. Did you mean to reference it inside a %type% instead?” — fires when a component reads a prop at the top of its script, because a prop can change and that read will not see it. Usually that is a bug, and the docs’ example is one: state passed into <code>setContext</code> by value, which the child then reads forever as its first value. Twice in this project it is the intent. The trip page is keyed on its slug, so a different trip is a different <code>TripView</code>, and its props are read once; the date picker takes its start and end as the *initial* value and owns the range after that. <code>untrack(() =&gt; …)</code> says “read this without subscribing”, which is exactly the claim, and the compiler takes it as an answer. A comment beside each says the same thing to a person.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(site)/+page.svelte<span class="code__lines">:323-339</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/*
+ * Rule 1 of the hero: nothing is hidden until JavaScript runs. The
+ * attachment sets `data-animate` only in the browser, and is attached
+ * only when motion is wanted; without it, this rule never matches and
+ * every card is simply there. `:global` because the attributes are written by the
+ * attachment, not the template, and the compiler would otherwise drop
+ * a selector it cannot see matching.
+ */
+@media (prefers-reduced-motion: no-preference) {
+	:global(.features[data-animate]:not([data-inview]) .feature) {
+		opacity: 0;
+	}
+	:global(.features[data-inview] .feature) {
+		animation: rise var(--dur-5) var(--ease-out) both;
+		animation-delay: calc(var(--i) * 70ms);
+	}
+}</code></pre>
+</figure>
+<p><code>css_unused_selector</code> — “Unused CSS selector” — is the compiler noticing that a scoped rule matches nothing in the template, and removing it from the output. Here the rule matches attributes an attachment writes at run time, which the compiler cannot see. The docs give the answer in the warning’s own entry: “use <code>:global</code> to preserve the selector as-is” — and wrapping it in the parent element’s class keeps it from leaking beyond this page. This is the warning to treat with the most suspicion, because it is usually right: a selector the compiler cannot see matching is, nine times out of ten, a selector nothing matches.</p>
+
+<div class="table" role="region" aria-label="Other compiler warnings, and why this code does not earn them" tabindex="0">
+	<table>
+		<caption>Other compiler warnings, and why this code does not earn them</caption>
+		<thead><tr><th scope="col">Warning</th><th scope="col">What it catches</th><th scope="col">Why it stays quiet here</th></tr></thead>
+		<tbody><tr><td><code>non_reactive_update</code></td><td>a plain <code>let</code> that is reassigned and read in the markup</td><td>everything that changes and is rendered is <code>$state</code> or <code>$derived</code></td></tr><tr><td><code>store_rune_conflict</code></td><td>a local variable named like a rune, so <code>$state</code> would read a store</td><td>no variable shares a rune’s name, and app code has no stores</td></tr><tr><td><code>custom_element_props_identifier</code></td><td><code>$props()</code> not destructured in a custom element, so its attributes cannot be inferred</td><td>the embed destructures <code>let { slug = '', origin = '' }: Props = $props()</code></td></tr><tr><td><code>perf_avoid_inline_class</code>, <code>perf_avoid_nested_class</code></td><td>a class declared inside a function or created with <code>new class</code></td><td><code>TripState</code> and <code>ThemeState</code> are declared at the top of their modules</td></tr><tr><td><code>node_invalid_placement_ssr</code></td><td>markup the browser will repair, which then fails to hydrate</td><td>the markup nests as HTML allows; in runes mode the worst cases are the error <code>node_invalid_placement</code></td></tr><tr><td><code>element_invalid_self_closing_tag</code></td><td><code>&lt;div /&gt;</code> — HTML has no self-closing tags for non-void elements</td><td>none in the code; <code>npx sv migrate self-closing-tags</code> exists for code that has them</td></tr><tr><td><code>block_empty</code></td><td>an empty <code>{#if}</code> or <code>{#each}</code></td><td>none</td></tr><tr><td><code>bidirectional_control_characters</code></td><td>invisible characters that reorder how code reads</td><td>the compiler’s own supply-chain guard (chapter <a href="the-workspace.html">02</a>)</td></tr></tbody>
+	</table>
+</div>
+<p>The accessibility warnings are about half of the compiler’s list — forty-two of its eighty-one in Svelte 5.57 — and each is a question about an element. The table is the project’s answers, element by element — the point being that every one is answered by markup a screen reader understands, never by an <code>aria-*</code> attribute that papers over the wrong element.</p>
+
+<div class="table" role="region" aria-label="Accessibility warnings and the elements that answer them in Meridian" tabindex="0">
+	<table>
+		<caption>Accessibility warnings and the elements that answer them in Meridian</caption>
+		<thead><tr><th scope="col">Warning</th><th scope="col">What it asks</th><th scope="col">Meridian’s answer</th></tr></thead>
+		<tbody><tr><td><code>a11y_click_events_have_key_events</code>, <code>a11y_no_static_element_interactions</code></td><td>a clickable <code>&lt;div&gt;</code> needs a role and a keyboard handler</td><td>nothing clickable is a <code>&lt;div&gt;</code>: a stop’s name is a <code>&lt;button aria-pressed&gt;</code> (<code>StopCard.svelte</code>), a tab is a link, the palette’s rows are Bits UI options</td></tr><tr><td><code>a11y_consider_explicit_label</code></td><td>an icon-only button or link needs a name</td><td><code>aria-label</code> on every icon button — “Edit stop”, “Remove”, “Remove Ben Okafor” (<code>Companions.svelte</code>) — and a visually hidden word on the settings link</td></tr><tr><td><code>a11y_label_has_associated_control</code></td><td>a <code>&lt;label&gt;</code> needs a control</td><td>every field is a <code>&lt;label class=&quot;field&quot;&gt;</code> wrapping its input (<code>trips/new/+page.svelte</code>); the kind picker is a <code>&lt;fieldset&gt;</code> with a <code>&lt;legend&gt;</code> (<code>StopDialog.svelte</code>)</td></tr><tr><td><code>a11y_missing_attribute</code></td><td><code>&lt;img&gt;</code> needs <code>alt</code>, <code>&lt;a&gt;</code> an <code>href</code></td><td>the hero’s <code>&lt;enhanced:img&gt;</code> carries <code>alt=&quot;&quot;</code>, the empty alt that tells a screen reader a decorative picture is decorative; every link has a resolved <code>href</code></td></tr><tr><td><code>a11y_no_redundant_roles</code></td><td><code>role=&quot;list&quot;</code> on a <code>&lt;ul&gt;</code> repeats its role</td><td>allowed, deliberately: Svelte’s own source says “<code>&lt;ul role=&quot;list&quot;&gt;</code> is ok because CSS list-style:none removes the semantics and this is a way to bring them back” — Safari does exactly that, so the members, presence and balances lists say it</td></tr><tr><td><code>a11y_role_has_required_aria_props</code>, <code>a11y_interactive_supports_focus</code></td><td>a custom role needs its states and a tab stop</td><td>none written by hand: the combobox, the dialogs and the date picker are Bits UI’s, and the map’s pins are MapLibre’s, outside the compiler’s view</td></tr><tr><td><code>a11y_media_has_caption</code>, <code>a11y_autofocus</code>, <code>a11y_positive_tabindex</code></td><td>captions; no autofocus; no tab order of your own</td><td>no video, no <code>autofocus</code>, no <code>tabindex</code> above zero — the dialog moves focus through Bits UI’s focus trap instead</td></tr></tbody>
+	</table>
+</div>
+<h3 id="errors-answered">Errors the shape of the code answers</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/ui/theme.svelte.ts<span class="code__lines">:37-44</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">class ThemeState {
+	choice: Theme = $state('system');
+
+	#systemDark = new MediaQuery('(prefers-color-scheme: dark)');
+
+	readonly resolved: 'light' | 'dark' = $derived(
+		this.choice === 'system' ? (this.#systemDark.current ? 'dark' : 'light') : this.choice
+	);</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/ui/theme.svelte.ts<span class="code__lines">:89-89</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">export const theme = new ThemeState();</code></pre>
+</figure>
+<p>A module that wanted to share a theme would naturally write <code>export let choice = $state('system')</code>, and the compiler refuses: <code>state_invalid_export</code> — “Cannot export state from a module if it is reassigned. Either export a function returning the state value or only mutate the state value’s properties”. Its sibling <code>derived_invalid_export</code> says the same of <code>$derived</code>. The reason is mechanical: an importer receives the binding’s value at import time, and a rune’s reactivity lives in the variable, not the value, so a reassigned export would be a snapshot. The shape that answers it is a class with <code>$state</code> fields and one exported instance — <code>theme.choice</code> is a property read, which stays reactive. The module’s header says why one module-level instance is safe on a server here, against Svelte’s general advice to prefer context (chapter <a href="the-design-system.html">23</a>).</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/trip/StopDialog.svelte<span class="code__lines">:266-284</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;fieldset class=&quot;field&quot;&gt;
+	&lt;legend class=&quot;label&quot;&gt;{m.stop_kind()}&lt;/legend&gt;
+	&lt;div class=&quot;kinds&quot;&gt;
+		{#each STOP_KINDS as k (k)}
+			{const Icon = $derived(KIND_ICONS[k])}
+			&lt;label class=&quot;kinds__option&quot; data-kind={k}&gt;
+				&lt;input
+					class=&quot;visually-hidden&quot;
+					type=&quot;radio&quot;
+					name=&quot;kind&quot;
+					value={k}
+					bind:group={kind}
+				/&gt;
+				&lt;Icon size={16} aria-hidden=&quot;true&quot; /&gt;
+				&lt;span&gt;{KIND_LABELS[k]()}&lt;/span&gt;
+			&lt;/label&gt;
+		{/each}
+	&lt;/div&gt;
+&lt;/fieldset&gt;</code></pre>
+</figure>
+<p><code>{const Icon = $derived(KIND_ICONS[k])}</code> is a *declaration tag*, and it replaced <code>{@const}</code> in this project. The old tag had a placement rule — <code>const_tag_invalid_placement</code>: “<code>{@const}</code> must be the immediate child of <code>{#snippet}</code>, <code>{#if}</code>, <code>{:else if}</code>, <code>{:else}</code>, <code>{#each}</code> …” — and a value that was worked out once. A declaration tag is an ordinary <code>const</code> or <code>let</code>, its value is a rune like anywhere else (<code>$derived</code> here, so it follows <code>k</code>), and the only things it refuses are legacy mode (<code>declaration_tag_no_legacy_mode</code>) and anything that is not a <code>let</code> or <code>const</code> (<code>declaration_tag_invalid_type</code>). Chapter <a href="migrating-a-major.html">49</a> counts the migration.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">tsconfig.json<span class="code__lines">:31-35</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-json">// Only TypeScript that can be deleted to leave JavaScript: no `enum`, no
+// value `namespace`, no constructor parameter properties. Node runs
+// `scripts/*.ts` by stripping the types, and Svelte compiles a
+// `lang=&quot;ts&quot;` block the same way; neither can run what this forbids.
+&quot;erasableSyntaxOnly&quot;: true</code></pre>
+</figure>
+<p><code>erasableSyntaxOnly</code> is a TypeScript option answering a Svelte error before it can happen. Svelte strips the types from a <code>lang=&quot;ts&quot;</code> block rather than compiling TypeScript, so a feature that *emits* JavaScript — an <code>enum</code>, a value <code>namespace</code>, a constructor parameter property — is <code>typescript_invalid_feature</code>: “TypeScript language features like %feature% are not natively supported … you will need to use a preprocessor”, with a pointer to <code>vitePreprocess({ script: true })</code>. That preprocessor would work, at the cost of running TypeScript over every component. Forbidding the features costs nothing — this codebase never wanted an <code>enum</code> — and Node’s type stripping for <code>scripts/*.ts</code> needs the same rule, so one option serves both.</p>
+
+<div class="table" role="region" aria-label="More compiler errors, and the habit in this codebase that never meets them" tabindex="0">
+	<table>
+		<caption>More compiler errors, and the habit in this codebase that never meets them</caption>
+		<thead><tr><th scope="col">Error</th><th scope="col">What triggers it</th><th scope="col">Why Meridian does not</th></tr></thead>
+		<tbody><tr><td><code>rune_renamed</code>, <code>rune_removed</code></td><td>a rune from a prerelease spelling — “<code>%name%</code> is now <code>%replacement%</code>”</td><td>the code was written against 5.57; the autofixer catches old spellings in review</td></tr><tr><td><code>props_duplicate</code></td><td><code>$props()</code> called twice</td><td>one destructured <code>$props()</code> per component, typed by an <code>interface Props</code></td></tr><tr><td><code>illegal_await_expression</code></td><td><code>await</code> inside <code>use:</code>, <code>transition:</code>, <code>animate:</code>, an attachment or a binding</td><td>awaits live in <code>{const x = $derived(await …)}</code> and markup, never in a directive</td></tr><tr><td><code>attribute_invalid_sequence_expression</code></td><td><code>class={a, b}</code> — a comma is not an array</td><td><code>class={['chip', { active }]}</code> arrays everywhere (chapter <a href="the-design-system.html">23</a>)</td></tr><tr><td><code>mixed_event_handler_syntaxes</code></td><td><code>on:click</code> and <code>onclick</code> in one component</td><td>no <code>on:</code> anywhere; handlers are attributes</td></tr><tr><td><code>store_invalid_subscription_module</code></td><td><code>$store</code> read outside a <code>.svelte</code> file</td><td>no stores in app code: <code>$app/state</code>, reactive classes and remote functions instead</td></tr><tr><td><code>snippet_invalid_export</code></td><td>an exported snippet that reaches into instance state</td><td>no module snippets yet; the kinds map icons to components</td></tr><tr><td><code>experimental_async</code></td><td><code>await</code> in markup or a derived without the option</td><td><code>compilerOptions.experimental.async</code> is on (chapter <a href="the-config.html">04</a>)</td></tr><tr><td><code>each_item_invalid_assignment</code></td><td>writing to an <code>{#each}</code> item in runes mode</td><td>edits go through the array or, here, a command and the next snapshot</td></tr><tr><td><code>import_svelte_internal_forbidden</code></td><td>importing <code>svelte/internal/*</code></td><td>never; the public modules cover everything this app does</td></tr><tr><td><code>state_field_duplicate</code></td><td>a class field declared twice, once as <code>$state</code></td><td>each <code>$state</code> field of <code>TripState</code> is declared once, at the top of the class</td></tr><tr><td><code>node_invalid_placement</code></td><td>HTML the browser would repair — a <code>&lt;div&gt;</code> in a <code>&lt;p&gt;</code> — which runes mode refuses</td><td>the markup is valid HTML; the compiler is the first reviewer of that</td></tr><tr><td><code>host_invalid_placement</code></td><td><code>$host()</code> outside a custom element</td><td>not used: the embed dispatches no events yet (the backlog has it)</td></tr><tr><td><code>slot_snippet_conflict</code></td><td><code>&lt;slot&gt;</code> and <code>{@render}</code> in one component</td><td>no <code>&lt;slot&gt;</code> anywhere: content is passed as snippets</td></tr></tbody>
+	</table>
+</div>
+<h3 id="runtime-errors">Runtime errors worth recognising on sight</h3>
+
+<div class="table" role="region" aria-label="Runtime errors, what they mean, and where this project met or avoids them" tabindex="0">
+	<table>
+		<caption>Runtime errors, what they mean, and where this project met or avoids them</caption>
+		<thead><tr><th scope="col">Error</th><th scope="col">Meaning</th><th scope="col">In Meridian</th></tr></thead>
+		<tbody><tr><td><code>effect_update_depth_exceeded</code></td><td>“an effect reads and writes the same piece of state”, in a loop</td><td>met once: the presence heartbeat read its own command’s <code>pending</code> — the trip page was a 500 until <code>untrack</code> (chapter <a href="the-trip-page.html">26</a>)</td></tr><tr><td><code>state_unsafe_mutation</code></td><td>state written inside <code>$derived</code>, <code>$inspect</code> or a template expression</td><td>everything that could be derived is <code>$derived</code>; writes happen in handlers and commands</td></tr><tr><td><code>lifecycle_outside_component</code></td><td>“<code>%name%(...)</code> can only be used during component initialisation”</td><td><code>snapshot()</code> registers with <code>onMount</code>, so the new-trip page calls it above its <code>await</code> (chapter <a href="trips-and-a-new-trip.html">35</a>)</td></tr><tr><td><code>set_context_after_init</code>, <code>effect_orphan</code></td><td>context set, or an effect created, after an <code>await</code> or in a handler</td><td>contexts and effects are created at the top of the script, before anything waits</td></tr><tr><td><code>each_key_duplicate</code>, <code>each_key_volatile</code></td><td>two items with one key; a key that is a new value each time</td><td>keys are ids — <code>(stop.id)</code>, <code>(member.userId)</code> — never indexes or arrays</td></tr><tr><td><code>hydration_failed</code></td><td>the server’s HTML and the client’s first render disagree beyond repair</td><td>one source of truth for the first paint: the server’s document, handed to the live query as its fallback</td></tr><tr><td><code>svelte_boundary_reset_onerror</code></td><td><code>reset()</code> called while the boundary is still handling the error</td><td>the failed snippets reset from a button, never synchronously in <code>onerror</code></td></tr><tr><td><code>fork_discarded</code>, <code>fork_timing</code></td><td>committing a discarded <code>fork()</code>; forking inside an effect</td><td><code>forkPreloads</code> is off on evidence (chapter <a href="the-config.html">04</a>)</td></tr><tr><td><code>await_invalid</code> (server)</td><td>“asynchronous work while rendering synchronously” — a synchronous <code>render()</code> of a component that awaits</td><td>SvelteKit awaits its own renders; the project never calls <code>render()</code> itself</td></tr><tr><td>the rest</td><td><code>async_derived_orphan</code>, <code>bind_not_bindable</code>, <code>component_api_changed</code>, <code>component_api_invalid_new</code>, <code>derived_references_self</code>, <code>effect_in_teardown</code>, <code>effect_in_unowned_derived</code>, <code>effect_pending_outside_reaction</code>, <code>flush_sync_in_effect</code>, <code>get_abort_signal_outside_reaction</code>, <code>invalid_snippet</code>, <code>props_rest_readonly</code>, <code>rune_outside_svelte</code>, <code>state_descriptors_fixed</code>, <code>state_prototype_fixed</code>, <code>invariant_violation</code> (that one is Svelte’s bug, and says so)</td><td>read the code, then the documentation’s entry for it: each names its own fix</td></tr></tbody>
+	</table>
+</div>
+<h3 id="runtime-warnings">Runtime warnings, in the console</h3>
+<p>The development build prints these; production does not. One of them is the one an async-first codebase meets first. <code>await_waterfall</code> — “An async derived, <code>%name%</code> was not read immediately after it resolved. This often indicates an unnecessary waterfall” — is two independent <code>$derived(await …)</code> in a row: the second is not even created until the first resolves. The documentation’s fix is to start both promises first, each in its own <code>$derived</code>, and await them after. The trip page has one <code>await</code> and the new-trip page one, which is the cheapest way to stay out of this warning’s way.</p>
+
+<div class="table" role="region" aria-label="Every runtime warning in Svelte 5.57, in one line each" tabindex="0">
+	<table>
+		<caption>Every runtime warning in Svelte 5.57, in one line each</caption>
+		<thead><tr><th scope="col">Warning</th><th scope="col">What it is telling you</th></tr></thead>
+		<tbody><tr><td><code>assignment_value_stale</code></td><td><code>(obj.array ??= []).push(…)</code> pushed to the plain array, not the proxy that was stored</td></tr><tr><td><code>await_reactivity_loss</code></td><td>state read after an <code>await</code> inside a function is not tracked; pass it in as an argument</td></tr><tr><td><code>await_waterfall</code></td><td>two async deriveds that could have started together ran one after the other</td></tr><tr><td><code>binding_property_non_reactive</code></td><td><code>bind:</code> to a property that is not reactive state</td></tr><tr><td><code>console_log_state</code></td><td>a <code>$state</code> proxy was logged; use <code>$inspect</code> or <code>$state.snapshot</code></td></tr><tr><td><code>derived_inert</code></td><td>a derived created inside an effect that has been destroyed</td></tr><tr><td><code>event_handler_invalid</code></td><td>a handler that is not a function — usually a call where a reference was meant</td></tr><tr><td><code>hydratable_missing_but_expected</code></td><td>a <code>hydratable</code> rendered on the client that the server never sent</td></tr><tr><td><code>hydration_attribute_changed</code>, <code>hydration_html_changed</code></td><td>an attribute or <code>{@html}</code> differed between server and client; the server’s value is kept</td></tr><tr><td><code>hydration_mismatch</code></td><td>the DOM was not what the server sent — often HTML the browser repaired</td></tr><tr><td><code>invalid_raw_snippet_render</code></td><td><code>createRawSnippet</code> returned more than one element</td></tr><tr><td><code>legacy_recursive_reactive_block</code></td><td>a migrated <code>$:</code> block reads and writes the same value</td></tr><tr><td><code>lifecycle_double_unmount</code></td><td><code>unmount</code> on a component that was not mounted</td></tr><tr><td><code>ownership_invalid_binding</code>, <code>ownership_invalid_mutation</code></td><td>a child mutating or binding state its parent never handed it with <code>bind:</code></td></tr><tr><td><code>select_multiple_invalid_value</code></td><td><code>&lt;select multiple&gt;</code> given a value that is not an array</td></tr><tr><td><code>state_proxy_equality_mismatch</code></td><td>a proxy compared with <code>===</code> to the object it proxies</td></tr><tr><td><code>svelte_boundary_reset_noop</code></td><td>a boundary’s <code>reset</code> called a second time</td></tr><tr><td><code>transition_slide_display</code></td><td><code>slide</code> on an inline or table element, which has no height to animate</td></tr><tr><td><code>dynamic_void_element_content</code></td><td><code>&lt;svelte:element this=&quot;input&quot;&gt;</code> given children</td></tr><tr><td><code>state_snapshot_uncloneable</code></td><td><code>$state.snapshot</code> met a value it cannot clone, and returned the original</td></tr><tr><td><code>unresolved_hydratable</code> (server)</td><td>a <code>hydratable</code> value was created but at least part of it was not used during the render, so the response waited for content nothing read — printed by the server, not the browser</td></tr></tbody>
+	</table>
+</div>
+<h3 id="autofixer">The autofixer as a gate</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">scripts/autofix-report.ts<span class="code__lines">:82-132</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">const results = await Promise.all(
+	files.map(async ({ file, async }) =&gt; ({
+		file,
+		...(await svelteAutofixer({
+			code: await readFile(join(root, file), 'utf8'),
+			desired_svelte_version: 5,
+			async,
+			filename: file
+		}))
+	}))
+);
+
+const problems: string[] = [];
+const claimed = new Map&lt;Acceptance, number&gt;();
+let suggestions = 0;
+
+for (const { file, issues, suggestions: advice } of results) {
+	for (const issue of issues) problems.push(`${file}\n  issue: ${issue}`);
+
+	for (const text of advice) {
+		suggestions += 1;
+		const entry = accepted.find((a) =&gt; a.file === file &amp;&amp; text.includes(a.suggestion));
+		if (entry) claimed.set(entry, (claimed.get(entry) ?? 0) + 1);
+		else problems.push(`${file}\n  suggestion nobody has answered: ${text}`);
+	}
+}
+
+for (const entry of accepted) {
+	const found = claimed.get(entry) ?? 0;
+	if (found !== entry.count) {
+		problems.push(
+			`${entry.file}\n  accepted ${entry.count} × &quot;${entry.suggestion}&quot;, found ${found}: ` +
+				(found &gt; entry.count
+					? 'read the new one, then follow it or raise the count with a reason'
+					: 'lower the count, or delete the entry if none are left')
+		);
+	}
+}
+
+console.log(
+	`autofixer: ${files.length} files, ` +
+		`${results.reduce((n, r) =&gt; n + r.issues.length, 0)} issues, ` +
+		`${suggestions} suggestions, ${accepted.length} accepted entries`
+);
+
+if (problems.length &gt; 0) {
+	console.error(problems.join('\n'));
+	process.exit(1);
+}
+
+console.log('every suggestion is either followed or answered in .autofixer-accepted.json');</code></pre>
+</figure>
+<p>The compiler’s warnings are about what the code *does*; the Svelte autofixer’s suggestions are about how it is *written* — an <code>$effect</code> that assigns state another rune could derive, a <code>bind:this</code> an attachment would replace. <code>pnpm run lint:svelte</code> runs it over every component (chapter <a href="the-toolchain.html">03</a> builds the script) and fails on any suggestion that is neither followed nor answered in <code>.autofixer-accepted.json</code>, where each declined suggestion is recorded with the file, a piece of its text, how many times the file earns it, and a reason. The count is the teeth: a new occurrence of an accepted suggestion still fails, because it has not been read yet.</p>
+<h3 id="the-one-left">The one warning the build still prints</h3>
+
+<figure class="code code--terminal">
+	<figcaption>
+		<span class="code__file">terminal</span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code>$ pnpm run build
+[vite-plugin-svelte] src/content/guides/porto-and-the-douro.svx:1:8 `context=&quot;module&quot;` is deprecated, use the `module` attribute instead
+https://svelte.dev/e/script_context_deprecated
+1: &lt;script context=&quot;module&quot;&gt;
+            ^
+…the same for the other three guides</code></pre>
+</figure>
+<p><code>script_context_deprecated</code> is real, and it is not this project’s code. mdsvex turns a guide’s front matter into a module script, and the latest stable release, 0.12.8, writes it as <code>&lt;script context=&quot;module&quot;&gt;</code> — there is no option to change that, and its regular expression for “reuse an existing module script” only matches the old spelling, so a guide cannot pre-empt it with a <code>&lt;script module&gt;</code> of its own. The 1.0 line writes <code>&lt;script module&gt;</code>, and it is a prerelease. A <code>warningFilter</code> would make the build quiet, and it would also make it lie: the deprecation is true, and the day it becomes an error, the line will be the first thing to read. So it stays printed, and the upgrade is on the backlog in chapter <a href="what-i-would-do-next.html">50</a>. <code>svelte-check</code> never sees it, because it does not check <code>.svx</code> files — which is the one place <code>--fail-on-warnings</code> has a gap, and now you know where it is.</p>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>You can name the four kinds of diagnostic and where Svelte documents each.</li><li>You know the three places a warning’s code can be named, and why this project uses none of them.</li><li>You can say how <code>untrack</code>, <code>:global</code> and a module-level <code>customElements.define</code> each answer a warning without silencing it.</li><li>You can explain <code>state_invalid_export</code> and the class-and-instance shape that answers it, and what <code>erasableSyntaxOnly</code> has to do with <code>typescript_invalid_feature</code>.</li><li>You can read <code>effect_update_depth_exceeded</code> and <code>await_waterfall</code> and say what to change.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="unit-and-browser-tests.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">Unit and browser tests: two Vitest projects, one command</span>
+			</a>
+			<a class="pager__link pager__link--next" href="end-to-end.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">End to end: the built server, two viewports, two people</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>

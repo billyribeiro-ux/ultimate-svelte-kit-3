@@ -1,6 +1,6 @@
 /**
  * PART 2 — The domain
- * (chapters 09–13)
+ * (chapters {{ids-dates-and-money}}–{{the-database}})
  *
  * Everything the trip planner *knows* with no framework in it: identifiers,
  * dates, money, fair splits, the itinerary, the schemas that every input is
@@ -56,7 +56,7 @@ export const part2 = [
 			code(`${DOMAIN}/money.ts`, 39, 71),
 			{
 				type: 'p',
-				text: '`parseAmount` is the other direction, and it is the part that usually gets a regular expression and a bug report from Germany. The separators are *discovered* by formatting a known number in the locale and reading the parts back — `formatToParts` says which character is the group separator and which the decimal — so `1.234,50` parses in German and `1,234.50` in English with no table of locales. Chapter 21 shows both directions in the interface.'
+				text: '`parseAmount` is the other direction, and it is the part that usually gets a regular expression and a bug report from Germany. The separators are *discovered* by formatting a known number in the locale and reading the parts back — `formatToParts` says which character is the group separator and which the decimal — so `1.234,50` parses in German and `1,234.50` in English with no table of locales. Chapter {{dates-and-money-in-a-locale}} shows both directions in the interface.'
 			},
 			{
 				type: 'why',
@@ -141,7 +141,7 @@ export const part2 = [
 			code(`${DOMAIN}/itinerary.ts`, 54, 95),
 			{
 				type: 'p',
-				text: 'The shape of `place` is the lesson. It returns **the placements that changed**, not the new list. On the server, `moveStop` writes exactly those rows in one transaction and nothing else. In the browser, chapter 25 applies the same list optimistically before the server answers, so the card lands where it was dropped and lands in the same spot when the answer arrives — because both sides ran this function on the same input. A move onto its own spot returns `[]` and nothing is written, which the itinerary relies on when a drag ends where it began.'
+				text: 'The shape of `place` is the lesson. It returns **the placements that changed**, not the new list. On the server, `moveStop` writes exactly those rows in one transaction and nothing else. In the browser, chapter {{the-itinerary}} applies the same list optimistically before the server answers, so the card lands where it was dropped and lands in the same spot when the answer arrives — because both sides ran this function on the same input. A move onto its own spot returns `[]` and nothing is written, which the itinerary relies on when a drag ends where it began.'
 			},
 			code(`${DOMAIN}/itinerary.ts`, 97, 102),
 			{
@@ -177,12 +177,12 @@ export const part2 = [
 			},
 			{
 				type: 'p',
-				text: 'Now look at the second argument of almost every validator: not a string but a function, `() => m.issue_date()`. That is how a schema speaks three languages. valibot accepts a message as either, and calls the function only when the issue actually happens. By then the request is being handled, Paraglide’s middleware has stored that request’s locale (chapter 14 shows where), and `m.issue_date()` reads it — so the one schema object, created once when the module loaded, answers “Wähle ein Datum” to a form on `/de/trips/new` and “Pick a date” to one on `/trips/new`. A plain string would have been decided at import time, in English, for everybody; that is what this file did until a German sign-in page answered “Enter an email address”.'
+				text: 'Now look at the second argument of almost every validator: not a string but a function, `() => m.issue_date()`. That is how a schema speaks three languages. valibot accepts a message as either, and calls the function only when the issue actually happens. By then the request is being handled, Paraglide’s middleware has stored that request’s locale (chapter {{environment-and-hooks}} shows where), and `m.issue_date()` reads it — so the one schema object, created once when the module loaded, answers “Wähle ein Datum” to a form on `/de/trips/new` and “Pick a date” to one on `/trips/new`. A plain string would have been decided at import time, in English, for everybody; that is what this file did until a German sign-in page answered “Enter an email address”.'
 			},
 			{
 				type: 'why',
 				title: 'Why not translate on the client instead?',
-				text: 'Because the message is decided where the check runs, and the check runs on the server for every form, with JavaScript or without. A form that posts with JavaScript off gets its issues back in the HTML the server renders; there is no client code to do any translating. Putting the locale-aware message in the schema makes the server’s answer right first time, and the browser, when it runs the same schema as a preflight (chapter 29), gets the same words for free. The messages that stay plain strings — “Expected an id” — are the ones no person should ever see: they mean a bug or somebody probing the endpoint, and `handleError` replaces them with a sentence of its own anyway.'
+				text: 'Because the message is decided where the check runs, and the check runs on the server for every form, with JavaScript or without. A form that posts with JavaScript off gets its issues back in the HTML the server renders; there is no client code to do any translating. Putting the locale-aware message in the schema makes the server’s answer right first time, and the browser, when it runs the same schema as a preflight (chapter {{expenses-with-tanstack-and-layerchart}}), gets the same words for free. The messages that stay plain strings — “Expected an id” — are the ones no person should ever see: they mean a bug or somebody probing the endpoint, and `handleError` replaces them with a sentence of its own anyway.'
 			},
 			code(`${DOMAIN}/schemas.ts`, 65, 95),
 			{
@@ -192,17 +192,17 @@ export const part2 = [
 			code(`${DOMAIN}/schemas.ts`, 97, 147),
 			{
 				type: 'p',
-				text: 'Look at `STOP_KINDS`: an `as const` array, a `picklist` built from it, and a type inferred from the picklist. One list drives the validation, the TypeScript union, the `<select>` options and the icon table in `kinds.ts`. Add a kind and every one of those follows or fails to compile. `PlacementSchema` and `MoveStopSchema` are chapter 11’s `place()` at the wire: what a drop sends is a day and an index, and what comes back is a list of placements.'
+				text: 'Look at `STOP_KINDS`: an `as const` array, a `picklist` built from it, and a type inferred from the picklist. One list drives the validation, the TypeScript union, the `<select>` options and the icon table in `kinds.ts`. Add a kind and every one of those follows or fails to compile. `PlacementSchema` and `MoveStopSchema` are chapter {{the-itinerary-as-data}}’s `place()` at the wire: what a drop sends is a day and an index, and what comes back is a list of placements.'
 			},
 			code(`${DOMAIN}/schemas.ts`, 149, 216),
 			{
 				type: 'p',
-				text: 'The expense has two schemas, and the difference is the boundary. `ExpenseInputSchema` is the stored shape, in whole minor units. `ExpenseFormSchema` is what the “Add an expense” form sends — an amount in euros, the fields as the form names them — and it lives here rather than in `expenses.remote.ts` because the browser runs it too, as the form’s *preflight* (chapter 29): a remote module may export nothing but remote functions. Its messages are the ones a person sees, “Enter an amount”, “Somebody has to share it”, each a Paraglide function like the rest. `NoteDocSchema` is deliberately loose: Tiptap validates its own document tree when it loads, so this only insists on the root node and on a size, because a note is a page and not a book and two hundred kilobytes of JSON is where a page stops.'
+				text: 'The expense has two schemas, and the difference is the boundary. `ExpenseInputSchema` is the stored shape, in whole minor units. `ExpenseFormSchema` is what the “Add an expense” form sends — an amount in euros, the fields as the form names them — and it lives here rather than in `expenses.remote.ts` because the browser runs it too, as the form’s *preflight* (chapter {{expenses-with-tanstack-and-layerchart}}): a remote module may export nothing but remote functions. Its messages are the ones a person sees, “Enter an amount”, “Somebody has to share it”, each a Paraglide function like the rest. `NoteDocSchema` is deliberately loose: Tiptap validates its own document tree when it loads, so this only insists on the root node and on a size, because a note is a page and not a book and two hundred kilobytes of JSON is where a page stops.'
 			},
 			code(`${DOMAIN}/schemas.ts`, 218, 280),
 			{
 				type: 'p',
-				text: '`EmailSchema` lowercases and trims before it validates, so `Ana@Example.com ` and `ana@example.com` are one account. `PasswordSchema` has a minimum and a maximum and no rule about symbols, because length is the one password rule that reliably helps — Better Auth is configured to agree in chapter 15. `TripPatchSchema` is the update shape: every field optional, and the cross-field check written so it only fires when both dates are present.'
+				text: '`EmailSchema` lowercases and trims before it validates, so `Ana@Example.com ` and `ana@example.com` are one account. `PasswordSchema` has a minimum and a maximum and no rule about symbols, because length is the one password rule that reliably helps — Better Auth is configured to agree in chapter {{identity-with-better-auth}}. `TripPatchSchema` is the update shape: every field optional, and the cross-field check written so it only fires when both dates are present.'
 			},
 			code(`${DOMAIN}/roles.ts`, 1, 12),
 			{
@@ -229,7 +229,7 @@ export const part2 = [
 		blocks: [
 			{
 				type: 'p',
-				text: 'Seven tables around one idea: a trip that several people plan together. The doc comment at the top of the schema is the map, and the three conventions under it are the decisions of chapters 09 and 10 written into column types.'
+				text: 'Seven tables around one idea: a trip that several people plan together. The doc comment at the top of the schema is the map, and the three conventions under it are the decisions of chapters {{ids-dates-and-money}} and {{splitting-fairly}} written into column types.'
 			},
 			code('src/lib/server/db/schema.ts', 1, 25),
 			code('src/lib/server/db/schema.ts', 42, 62),
@@ -240,7 +240,7 @@ export const part2 = [
 			code('src/lib/server/db/schema.ts', 68, 132),
 			{
 				type: 'p',
-				text: 'The `trip` row carries a `version` that goes up by one on every change to anything under it; chapter 18 shows the live query watching that one number. `member` has a composite primary key — one row per person per trip — and `invite` is keyed by its token, which is the secret in the link: unguessable, single-use through `usedAt`, expiring through `expiresAt`, so a link pasted into the wrong chat is a bounded mistake.'
+				text: 'The `trip` row carries a `version` that goes up by one on every change to anything under it; chapter {{live-collaboration}} shows the live query watching that one number. `member` has a composite primary key — one row per person per trip — and `invite` is keyed by its token, which is the secret in the link: unguessable, single-use through `usedAt`, expiring through `expiresAt`, so a link pasted into the wrong chat is a bounded mistake.'
 			},
 			code('src/lib/server/db/schema.ts', 138, 160),
 			code('src/lib/server/db/schema.ts', 166, 214),
@@ -251,7 +251,7 @@ export const part2 = [
 			code('src/lib/server/db/schema.ts', 220, 259),
 			{
 				type: 'p',
-				text: 'Relations are what make `db.query.trip.findFirst({ with: { stops: true } })` possible, and `loadDocument` in chapter 16 uses every one of them. The `$inferSelect` types at the bottom are the row types the whole app uses — `Stop`, `Trip`, `Expense` — so a column added here changes a type everywhere it is read.'
+				text: 'Relations are what make `db.query.trip.findFirst({ with: { stops: true } })` possible, and `loadDocument` in chapter {{remote-functions-the-reads}} uses every one of them. The `$inferSelect` types at the bottom are the row types the whole app uses — `Stop`, `Trip`, `Expense` — so a column added here changes a type everywhere it is read.'
 			},
 
 			{ type: 'h3', id: 'auth-tables', text: 'Better Auth’s tables, kept by hand' },
@@ -264,10 +264,10 @@ export const part2 = [
 			},
 
 			{ type: 'h3', id: 'connection', text: 'One connection, two pragmas' },
-			code('src/lib/server/db/index.ts', 1, 33),
+			code('src/lib/server/db/index.ts', 1, 50),
 			{
 				type: 'p',
-				text: '`DATABASE_URL` comes from `$app/env/private`, a module that exists only on the server — a component that imported this file by mistake fails to build rather than shipping a connection string. `intMode: "number"` stops libSQL handing back `BigInt`s for columns that hold timestamps and cents. And the two pragmas are the difference between a shared trip working and not: WAL lets readers proceed while a writer appends, and the busy timeout makes a second writer wait five seconds instead of failing at once. This file has top-level `await`, which is why it is imported and never re-exported by a `.svelte` file.'
+				text: '`DATABASE_URL` comes from `$app/env/private`, a module that exists only on the server — a component that imported this file by mistake fails to build rather than shipping a connection string. `intMode: "number"` stops libSQL handing back `BigInt`s for columns that hold timestamps and cents. While SvelteKit builds, `building` is `true` and there is no URL to need — `src/env.ts` lets `DATABASE_URL` be missing then (chapter {{environment-and-hooks}}) — so `databaseUrl()` answers `:memory:`, the pragmas are skipped, and the build’s analysis gets a database that dies with it. And the two pragmas are the difference between a shared trip working and not: WAL lets readers proceed while a writer appends, and the busy timeout makes a second writer wait five seconds instead of failing at once. This file has top-level `await`, which is why it is imported and never re-exported by a `.svelte` file.'
 			},
 			code('drizzle.config.ts', 1, 20),
 			code('scripts/migrate.ts', 1, 39),
@@ -278,7 +278,7 @@ export const part2 = [
 			code('scripts/seed.ts', 1, 52),
 			{
 				type: 'p',
-				text: '`seedId()` deserves its comment. Fixed ids make the seed idempotent and the tests readable, and the first version wrote them by hand, one character short of a UUID in the last group. Nothing complained: the database does not check the format, the pages rendered, and every *command* that named a seeded row — remove this stop, edit that expense, “I am looking at Alfama” — failed the `IdSchema` check on the server, where a fire-and-forget `.catch(() => {})` swallowed it (it warns in development now — `fireAndForget()` in chapter 31). Building the ids *through* the schema the app validates with turns that into a throw at seed time. The rule generalises: the data you seed must pass the validation you run, and the cheapest way to guarantee it is to run the validation on the seed.'
+				text: '`seedId()` deserves its comment. Fixed ids make the seed idempotent and the tests readable, and the first version wrote them by hand, one character short of a UUID in the last group. Nothing complained: the database does not check the format, the pages rendered, and every *command* that named a seeded row — remove this stop, edit that expense, “I am looking at Alfama” — failed the `IdSchema` check on the server, where a fire-and-forget `.catch(() => {})` swallowed it (it warns in development now — `fireAndForget()` in chapter {{companions-presence-and-settings}}). Building the ids *through* the schema the app validates with turns that into a throw at seed time. The rule generalises: the data you seed must pass the validation you run, and the cheapest way to guarantee it is to run the validation on the seed.'
 			},
 			code('scripts/seed.ts', 95, 119),
 			{

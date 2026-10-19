@@ -10,6 +10,7 @@
 	import { m } from '#lib/paraglide/messages.js';
 	import { href } from '#lib/href.ts';
 	import { hero, inview } from '#lib/motion/hero.ts';
+	import { reducedMotion } from '#lib/motion/prefers.svelte.ts';
 	import { theme } from '#lib/ui/theme.svelte.ts';
 	import day from '#lib/assets/hero.png?w=640;960;1280;1600&enhanced';
 	import night from '#lib/assets/hero-night.png?w=640;960;1280;1600&enhanced';
@@ -123,8 +124,14 @@
 	somebody has already seen (`hero.ts` says how it knows); the copy and the
 	image are marked with data attributes so the attachment finds them
 	without knowing the markup.
+
+	The attachment is conditional. `false` is no attachment, so under
+	reduced motion the timeline is never set up rather than set up and told
+	to stop; and because the expression is read in an effect, switching the
+	setting on mid-timeline runs the attachment's cleanup, which puts the
+	hero back as the server drew it.
 -->
-<section class="hero" {@attach hero()}>
+<section class="hero" {@attach !reducedMotion.current && hero()}>
 	<div class="container hero__grid">
 		<div class="hero__copy stack" data-hero-copy>
 			<p class="overline">{m.app_tagline()}</p>
@@ -195,8 +202,12 @@
 	{ icon: UsersThreeIcon, title: m.home_feature_live_title(), text: m.home_feature_live_text() }
 ]}
 
-<!-- The cards rise in 70ms apart the first time they scroll into view; CSS does the motion, `inview` says when. -->
-<section class="container features grid" {@attach inview()}>
+<!--
+	The cards rise in 70ms apart the first time they scroll into view; CSS
+	does the motion, `inview` says when — and under reduced motion there is
+	no `inview` at all, the same conditional attachment as the hero's.
+-->
+<section class="container features grid" {@attach !reducedMotion.current && inview()}>
 	{#each features as feature, i (feature.title)}
 		{const Icon = $derived(feature.icon)}
 		<article class="card card--pad feature stack stack--sm" style:--i={i}>
@@ -311,9 +322,9 @@
 
 	/*
 	 * Rule 1 of the hero: nothing is hidden until JavaScript runs. The
-	 * attachment sets `data-animate` only in the browser, and only when
-	 * motion is wanted; without it, this rule never matches and every card
-	 * is simply there. `:global` because the attributes are written by the
+	 * attachment sets `data-animate` only in the browser, and is attached
+	 * only when motion is wanted; without it, this rule never matches and
+	 * every card is simply there. `:global` because the attributes are written by the
 	 * attachment, not the template, and the compiler would otherwise drop
 	 * a selector it cannot see matching.
 	 */

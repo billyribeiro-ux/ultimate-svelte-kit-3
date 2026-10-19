@@ -15,7 +15,7 @@
 
 import * as v from 'valibot';
 import { error } from '@sveltejs/kit';
-import { command, getRequestEvent } from '$app/server';
+import { command } from '$app/server';
 import { STOP_LIMIT } from '$app/env/private';
 import { and, eq } from 'drizzle-orm';
 import { nextPosition, place } from '#lib/domain/itinerary.ts';
@@ -80,6 +80,3 @@ export const removeStop = command(
 		await bump(tripId);
 	}
 );
-
-/** The person's own id, for the client to tell its own presence chip apart. */
-export const me = command(async () => getRequestEvent().locals.user?.id ?? null);

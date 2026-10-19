@@ -58,7 +58,17 @@ export default defineConfig({
 	use: {
 		baseURL: 'http://localhost:4173',
 		trace: 'retain-on-failure',
-		screenshot: 'only-on-failure'
+		screenshot: 'only-on-failure',
+		/*
+		 * The app registers a service worker on every page load, and a worker
+		 * that installs copies the whole build in the background. In a suite of
+		 * a hundred short tests, each in a fresh context, that is a hundred
+		 * downloads of the build racing the page under test, and navigations
+		 * answered by a worker instead of the server. So workers are blocked
+		 * here, and `offline.e2e.ts` — the suite about the worker — lets them
+		 * in with `test.use({ serviceWorkers: 'allow' })`.
+		 */
+		serviceWorkers: 'block'
 	},
 
 	projects: [

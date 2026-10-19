@@ -7,6 +7,7 @@
 	import { CompassRoseIcon, ListIcon, PlusIcon, XIcon } from 'phosphor-svelte';
 	import { m } from '#lib/paraglide/messages.js';
 	import { href } from '#lib/href.ts';
+	import { forgetPages } from '#lib/offline/pages.ts';
 	import { signOut } from '#lib/remote/auth.remote.ts';
 	import LocaleSwitcher from './LocaleSwitcher.svelte';
 	import ThemeToggle from './ThemeToggle.svelte';
@@ -159,8 +160,19 @@
 						<PlusIcon size={16} aria-hidden="true" />
 						{m.nav_new_trip()}
 					</a>
-					<!-- A form, so signing out works with JavaScript off too. -->
-					<form {...signOut}>
+					<!--
+						A form, so signing out works with JavaScript off too. With it
+						on, `enhance` empties the pages this device kept for offline
+						reading *before* the session ends: they were rendered for this
+						person, and the next one on the device must not read them in a
+						tunnel (`#lib/offline/pages.ts`).
+					-->
+					<form
+						{...signOut.enhance(async (form) => {
+							await forgetPages();
+							await form.submit();
+						})}
+					>
 						<button class="btn btn--ghost" type="submit" title={user.name}>
 							{m.auth_sign_out()}
 						</button>

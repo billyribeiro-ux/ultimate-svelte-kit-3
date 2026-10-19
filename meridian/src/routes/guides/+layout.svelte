@@ -67,7 +67,7 @@
 		top: var(--space-2);
 	}
 
-	/* Styled like the site header (chapter 23) minus what needs JavaScript: no sheet, no theme toggle. */
+	/* Styled like the site header (course chapter `the-shell`) minus what needs JavaScript: no sheet, no theme toggle. */
 	.guides-header {
 		min-height: var(--header-h);
 		display: flex;

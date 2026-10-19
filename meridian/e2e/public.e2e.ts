@@ -184,6 +184,27 @@ test('health, the route API and the embed frame answer for machines', async ({ p
 
 	const framedPrivate = await page.goto(`/embed/${TRIPS.iberia}`);
 	expect(framedPrivate?.status()).toBe(404);
+
+	// The same route under a locale prefix: `reroute` serves `/de/embed/…` from
+	// `/embed/[slug=slug]`, so the rule that lets it be framed keys on the route, not on
+	// the path in the address bar. Keyed on the path, the German frame refused every frame.
+	const localised = await page.goto(`/de/embed/${TRIPS.japan}`);
+	expect(localised?.status()).toBe(200);
+	expect(localised?.headers()['content-security-policy']).toContain('frame-ancestors *');
+
+	// The other half of the rule: the exception stays an exception. Every other page keeps
+	// `frame-ancestors 'none'` — a trip planner inside somebody else's frame is a clickjacking
+	// target — and `Vary: Cookie`, because its header names the person looking at it. A change
+	// that framed every route, or dropped the header from every page, would pass everything above.
+	const home = await request.get('/');
+	expect(home.headers()['content-security-policy']).toContain("frame-ancestors 'none'");
+	expect(home.headers()['vary']).toContain('Cookie');
+
+	// The machine endpoints carry no `Vary: Cookie`, and a locale prefix does not change that:
+	// `reroute` serves `/de/api/…` from `/api/…`, so the rule keys on the route id.
+	const localisedRoute = await request.get(`/de/api/route/${TRIPS.japan}.json`);
+	expect(localisedRoute.status()).toBe(200);
+	expect(localisedRoute.headers()['vary'] ?? '').not.toContain('Cookie');
 });
 
 test('a URL that matches nothing gets the root error page, with a way home', async ({ page }) => {
@@ -191,4 +212,40 @@ test('a URL that matches nothing gets the root error page, with a way home', asy
 	expect(response?.status()).toBe(404);
 	await expect(page.getByText('That page does not exist.')).toBeVisible();
 	await expect(page.getByRole('link', { name: 'Meridian' })).toBeVisible();
+});
+
+test('a dynamically rendered page carries its preloads as a Link header', async ({ request }) => {
+	// `output.linkHeaderPreload`: the preloads leave the HTML for the response header, so the
+	// browser can start on them before it has read the body. The font is the one the `preload`
+	// hook in hooks.server.ts picks by source filename.
+	const response = await request.get('/explore');
+	const link = response.headers()['link'] ?? '';
+	expect(link).toContain('rel="modulepreload"');
+	expect(link).toMatch(/fraunces-latin-standard-normal[^>]*\.woff2>; rel="preload"; as="font"/);
+	expect(await response.text()).not.toContain('rel="modulepreload"');
+});
+
+test('on a phone the closed menu is not in the accessibility tree, and Escape closes the open one', async ({
+	page
+}, testInfo) => {
+	test.skip(testInfo.project.name !== 'phone', 'the menu is a phone’s; a desktop shows the links');
+	await page.goto('/');
+	await page.locator('html[data-hydrated]').waitFor();
+
+	// The sheet is always in the DOM — `aria-controls` points at it — so "closed" has to mean
+	// more than clipped to nothing: `visibility: hidden` at the end of its motion takes its
+	// links out of the accessibility tree, and a role query cannot find them.
+	const sheet = page.locator('#primary-nav');
+	const explore = sheet.getByRole('link', { name: 'Explore' });
+	const menu = page.getByRole('button', { name: 'Menu' });
+	await expect(explore).toBeHidden();
+
+	await menu.click();
+	await expect(menu).toHaveAttribute('aria-expanded', 'true');
+	await expect(explore).toBeVisible();
+
+	await page.keyboard.press('Escape');
+	await expect(menu).toHaveAttribute('aria-expanded', 'false');
+	await expect(menu).toBeFocused();
+	await expect(explore).toBeHidden();
 });

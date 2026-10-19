@@ -1,6 +1,6 @@
 /**
  * PART 1 — The library
- * (chapters 05–08)
+ * (chapters {{geodesy-for-humans}}–{{packaging-and-proving}})
  *
  * `@meridian/waypoint` comes first because it is the purest thing in the
  * project and because everything geographic — the map, the globe, the
@@ -71,13 +71,13 @@ export const part1 = [
 			code(GEO, 279, 330),
 			{
 				type: 'p',
-				text: 'The last thing that happens to a distance is formatting, and it happens with `Intl.NumberFormat` and `style: "unit"`. That is not a convenience; it is the only correct way to do it. German writes `343 km` with a non-breaking space, Portuguese writes `343 km` the same way, English writes `343 km` too but `2.5 mi` with a point where German uses a comma — and the library never carries a table of any of that. Each formatter is built once per locale, unit and precision, and kept in a map: building one loads the locale’s data, and an app may format a distance per card on every render. Chapter 21 makes the same argument for dates and money.'
+				text: 'The last thing that happens to a distance is formatting, and it happens with `Intl.NumberFormat` and `style: "unit"`. That is not a convenience; it is the only correct way to do it. German writes `343 km` with a non-breaking space, Portuguese writes `343 km` the same way, English writes `343 km` too but `2.5 mi` with a point where German uses a comma — and the library never carries a table of any of that. Each formatter is built once per locale, unit and precision, and kept in a map: building one loads the locale’s data, and an app may format a distance per card on every render. Chapter {{dates-and-money-in-a-locale}} makes the same argument for dates and money.'
 			},
 			code('packages/waypoint/src/lib/geo/geo.spec.ts', 19, 45),
 			{
 				type: 'why',
 				title: 'Why the library has no Svelte in it',
-				text: 'The `./geo` entry point is plain functions. Anybody — a Node script, a React app, a worker — can import `@meridian/waypoint/geo` and pay for nothing they do not use. The Svelte parts live behind the package root, which has a `svelte` export condition; chapter 08 shows the `exports` map that draws the line. Keeping the pure part pure also makes it trivially testable: the `server` Vitest project runs these in plain Node in under a second.'
+				text: 'The `./geo` entry point is plain functions. Anybody — a Node script, a React app, a worker — can import `@meridian/waypoint/geo` and pay for nothing they do not use. The Svelte parts live behind the package root, which has a `svelte` export condition; chapter {{packaging-and-proving}} shows the `exports` map that draws the line. Keeping the pure part pure also makes it trivially testable: the `server` Vitest project runs these in plain Node in under a second.'
 			},
 			{
 				type: 'checkpoint',
@@ -150,7 +150,7 @@ export const part1 = [
 			code('packages/waypoint/src/lib/Compass.svelte', 1, 19),
 			{
 				type: 'p',
-				text: '`class` is a reserved word, so the prop is renamed on the way in — `class: className` — and forwarded onto the root element beside the library’s own class, which is namespaced `waypoint-compass` so it cannot collide with anything the consumer has. Both derived values are cheap and pure; the point of deriving them rather than computing in the markup is that `point` is used twice — once as data, once in the accessible name — and must be the same value both times. The class is a string, `class="waypoint-compass {className}"`, and not the `class={[…]}` array an app in this course would write — the comment above the `<svg>` says why, and chapter 08 explains the promise behind it.'
+				text: '`class` is a reserved word, so the prop is renamed on the way in — `class: className` — and forwarded onto the root element beside the library’s own class, which is namespaced `waypoint-compass` so it cannot collide with anything the consumer has. Both derived values are cheap and pure; the point of deriving them rather than computing in the markup is that `point` is used twice — once as data, once in the accessible name — and must be the same value both times. The class is a string, `class="waypoint-compass {className}"`, and not the `class={[…]}` array an app in this course would write — the comment above the `<svg>` says why, and chapter {{packaging-and-proving}} explains the promise behind it.'
 			},
 			code('packages/waypoint/src/lib/Compass.svelte', 27, 50),
 			{
@@ -214,7 +214,7 @@ export const part1 = [
 			code('packages/waypoint/tsconfig.json', 1, 24),
 			{
 				type: 'p',
-				text: '`declaration` and `declarationMap` together let a consumer’s editor “Go to Definition” land in the real `.ts` or `.svelte` source rather than a generated `.d.ts`, because the map points back at the source and `files` ships it beside `dist`. The rest is the strictest TypeScript there is, and `noUncheckedIndexedAccess` is the one that changes how you write loops — chapter 06 showed the `!` it forces you to justify.'
+				text: '`declaration` and `declarationMap` together let a consumer’s editor “Go to Definition” land in the real `.ts` or `.svelte` source rather than a generated `.d.ts`, because the map points back at the source and `files` ships it beside `dist`. The rest is the strictest TypeScript there is, and `noUncheckedIndexedAccess` is the one that changes how you write loops — chapter {{a-route-as-a-class}} showed the `!` it forces you to justify.'
 			},
 			code('packages/waypoint/src/lib/index.ts', 1, 23),
 			{
@@ -239,7 +239,7 @@ attw --entrypoints .     ... 🟢 (internal-resolution-error ignored for .svelte
 			{
 				type: 'why',
 				title: 'Why the app consumes the library as a package and not by path',
-				text: 'Because a path import bypasses every one of these checks. `import { distance } from "../../packages/waypoint/src/lib/geo"` would work today and tell you nothing about whether the package works for anybody else. `workspace:*` makes the app resolve `@meridian/waypoint` through `exports`, through `dist`, through the declarations — the same path a stranger takes — on every `pnpm run build`. When chapter 27 imports `arc` for the map and chapter 34 imports `formatDistance` inside a Markdown guide, both are proving the package.'
+				text: 'Because a path import bypasses every one of these checks. `import { distance } from "../../packages/waypoint/src/lib/geo"` would work today and tell you nothing about whether the package works for anybody else. `workspace:*` makes the app resolve `@meridian/waypoint` through `exports`, through `dist`, through the declarations — the same path a stranger takes — on every `pnpm run build`. When chapter {{the-map}} imports `arc` for the map and chapter {{guides-prerendered-with-mdsvex}} imports `formatDistance` inside a Markdown guide, both are proving the package.'
 			},
 			{
 				type: 'checkpoint',

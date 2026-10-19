@@ -1,0 +1,454 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Motion with intent — Building Meridian</title>
+<meta name="description" content="What moves in Meridian and what is not allowed to: the design brief’s two lists as the rules, four mechanisms and when each is the right one, the one custom transition with `css(t, u)`, three Svelte transitions and one `animate:flip`, a `Tween` for the tab bar, CSS keyframes that Bits UI waits for, a phone menu whose motion ends outside the accessibility tree, the `svelte/easing` table — and every built-in the project leaves out, with the rule that keeps it out.">
+<link rel="stylesheet" href="course.css">
+</head>
+<body>
+
+<a class="skip" href="#content">Skip to content</a>
+
+<header class="topbar">
+	<a class="topbar__home" href="index.html">
+		<span class="topbar__mark" aria-hidden="true"></span>
+		<span>Building Meridian</span>
+	</a>
+	<div class="topbar__progress" role="group" aria-label="Progress">
+		<span class="topbar__count">24 / 51</span>
+		<div class="topbar__bar"><div class="topbar__fill" style="width: 47.05882352941176%"></div></div>
+	</div>
+	<button class="topbar__menu" type="button" data-toggle-nav aria-expanded="false" aria-controls="chapter-nav">Chapters</button>
+</header>
+
+<div class="shell">
+	<nav class="sidebar" id="chapter-nav" aria-label="Chapters">
+		<p class="sidebar__title">Chapters</p>
+		<ol class="toc"><li><a href="what-we-are-building.html"><span class="toc__num">01</span><span>What we are building</span></a></li><li><a href="the-workspace.html"><span class="toc__num">02</span><span>A workspace of two</span></a></li><li><a href="the-toolchain.html"><span class="toc__num">03</span><span>The toolchain: sv, the checks, and the agent beside you</span></a></li><li><a href="the-config.html"><span class="toc__num">04</span><span>One file to configure everything</span></a></li><li><a href="the-map-of-features.html"><span class="toc__num">05</span><span>The map: every feature, every library, and where it lives</span></a></li><li><a href="geodesy-for-humans.html"><span class="toc__num">06</span><span>Geodesy for humans</span></a></li><li><a href="a-route-as-a-class.html"><span class="toc__num">07</span><span>A route as a class, in a library</span></a></li><li><a href="two-components-for-any-app.html"><span class="toc__num">08</span><span>Two components for any app</span></a></li><li><a href="packaging-and-proving.html"><span class="toc__num">09</span><span>Packaging a Svelte library, and proving it</span></a></li><li><a href="ids-dates-and-money.html"><span class="toc__num">10</span><span>Ids, dates and money</span></a></li><li><a href="splitting-fairly.html"><span class="toc__num">11</span><span>Splitting fairly, to the cent</span></a></li><li><a href="the-itinerary-as-data.html"><span class="toc__num">12</span><span>The itinerary as data</span></a></li><li><a href="schemas-with-valibot.html"><span class="toc__num">13</span><span>Schemas with valibot, and who may do what</span></a></li><li><a href="the-database.html"><span class="toc__num">14</span><span>The database: seven tables and Better Auth’s four</span></a></li><li><a href="environment-and-hooks.html"><span class="toc__num">15</span><span>Environment and hooks</span></a></li><li><a href="identity-with-better-auth.html"><span class="toc__num">16</span><span>Identity with Better Auth</span></a></li><li><a href="remote-functions-the-reads.html"><span class="toc__num">17</span><span>Remote functions: the reads</span></a></li><li><a href="remote-functions-the-writes.html"><span class="toc__num">18</span><span>Remote functions: the writes</span></a></li><li><a href="live-collaboration.html"><span class="toc__num">19</span><span>Live collaboration: a room, a mailbox and a generator</span></a></li><li><a href="invites-and-membership.html"><span class="toc__num">20</span><span>Invites and membership</span></a></li><li><a href="three-languages-with-paraglide.html"><span class="toc__num">21</span><span>Three languages with Paraglide</span></a></li><li><a href="dates-and-money-in-a-locale.html"><span class="toc__num">22</span><span>Dates, money and distances in a locale</span></a></li><li><a href="the-design-system.html"><span class="toc__num">23</span><span>The design system</span></a></li><li><a href="motion-with-intent.html" aria-current="page"><span class="toc__num">24</span><span>Motion with intent</span></a></li><li><a href="the-shell.html"><span class="toc__num">25</span><span>The shell: a root that knows nobody</span></a></li><li><a href="the-trip-page.html"><span class="toc__num">26</span><span>The trip page: one await, one state object, one stream</span></a></li><li><a href="the-itinerary.html"><span class="toc__num">27</span><span>The itinerary: days you can drag</span></a></li><li><a href="the-command-palette.html"><span class="toc__num">28</span><span>The command palette</span></a></li><li><a href="the-map.html"><span class="toc__num">29</span><span>The map with no tile server</span></a></li><li><a href="the-globe.html"><span class="toc__num">30</span><span>The globe: Threlte, on demand</span></a></li><li><a href="expenses-with-tanstack-and-layerchart.html"><span class="toc__num">31</span><span>Expenses: a headless table, two charts, and the settle-up</span></a></li><li><a href="notes-with-tiptap-through-an-attachment.html"><span class="toc__num">32</span><span>Notes: Tiptap through an attachment</span></a></li><li><a href="companions-presence-and-settings.html"><span class="toc__num">33</span><span>Companions, presence, the join page and settings</span></a></li><li><a href="signing-in-and-up.html"><span class="toc__num">34</span><span>Signing in and up</span></a></li><li><a href="trips-and-a-new-trip.html"><span class="toc__num">35</span><span>The trips list and a new trip</span></a></li><li><a href="guides-prerendered-with-mdsvex.html"><span class="toc__num">36</span><span>Guides: Markdown, prerendered, no JavaScript</span></a></li><li><a href="explore-and-diagnostics.html"><span class="toc__num">37</span><span>Explore, and diagnostics</span></a></li><li><a href="embedding-a-trip.html"><span class="toc__num">38</span><span>Embedding a trip: a frame and a custom element</span></a></li><li><a href="the-offline-itinerary.html"><span class="toc__num">39</span><span>The offline itinerary</span></a></li><li><a href="choosing-libraries.html"><span class="toc__num">40</span><span>The survey: what was chosen, what was rejected, and why</span></a></li><li><a href="the-headless-pattern.html"><span class="toc__num">41</span><span>The headless pattern: Bits UI and TanStack Table</span></a></li><li><a href="the-wrapper-pattern.html"><span class="toc__num">42</span><span>The wrapper pattern, and when to write an attachment instead</span></a></li><li><a href="reactivity-utilities.html"><span class="toc__num">43</span><span>Reactivity utilities: `svelte/reactivity`, runed, and the line between them</span></a></li><li><a href="unit-and-browser-tests.html"><span class="toc__num">44</span><span>Unit and browser tests: two Vitest projects, one command</span></a></li><li><a href="what-the-compiler-says.html"><span class="toc__num">45</span><span>What the compiler says: warnings, errors and the codes that name them</span></a></li><li><a href="end-to-end.html"><span class="toc__num">46</span><span>End to end: the built server, two viewports, two people</span></a></li><li><a href="security-headers-and-csp.html"><span class="toc__num">47</span><span>Security: the policy, the headers, the redirect and the one framed route</span></a></li><li><a href="deploying.html"><span class="toc__num">48</span><span>Deploying: three stages, one process, a health check and a pipeline that runs the container</span></a></li><li><a href="migrating-a-major.html"><span class="toc__num">49</span><span>Migrating a major: the routine, the record, and a dependency still on Svelte 4</span></a></li><li><a href="what-i-would-do-next.html"><span class="toc__num">50</span><span>What I would do next, and what you now know</span></a></li><li><a href="the-exit-criteria.html"><span class="toc__num">51</span><span>The exit criteria: what a DPE 8++ in Svelte can do</span></a></li></ol>
+	</nav>
+
+	<main class="content" id="content">
+		<article>
+			<p class="eyebrow">Chapter 24</p>
+			<h1>Motion with intent</h1>
+			<p class="lede">What moves in Meridian and what is not allowed to: the design brief’s two lists as the rules, four mechanisms and when each is the right one, the one custom transition with <code>css(t, u)</code>, three Svelte transitions and one <code>animate:flip</code>, a <code>Tween</code> for the tab bar, CSS keyframes that Bits UI waits for, a phone menu whose motion ends outside the accessibility tree, the <code>svelte/easing</code> table — and every built-in the project leaves out, with the rule that keeps it out.</p>
+			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Choose between a CSS animation, a Svelte transition, an animation and a motion value for a given movement; write a custom transition; honour reduced motion in each; and say no to the motion a design does not need.</p></aside>
+			<p>The design system set the budget; this chapter spends it, and the rules for spending it are not taste. The design brief has two lists. “What animates, exactly” is a table, and it is exhaustive: every movement in the product is a row, with its duration token, its curve and the file it lives in — a dialog rises 8px, a bottom sheet slides on the iOS curve, the tab indicator translates, a new stop gets a highlight that fades, the live dot pulses because the pulse is information. “What never animates” is the other list: text colour, layout (no <code>height</code>, <code>width</code> or <code>margin</code> transitions anywhere), the header’s border, table sorting, presence chips, numbers, anything parallax, and anything at all under reduced motion. A movement that is not in the first list is not built, and a movement in the second is refused even when a library makes it one word. That is what “with intent” means here: motion that explains a change of state — where the dialog came from, which tab you are on now, which card just arrived — and nothing that decorates.</p>
+<p>There are four ways to move something in a Svelte app, and each has its own job. <strong>CSS</strong> — a <code>transition</code> or <code>@keyframes</code> — for anything that stays in the document and changes state: hover, press, open, closed. It reads the <code>--dur-*</code> tokens, so reduced motion reaches it for free. A <strong>Svelte transition</strong> (<code>transition:</code>, <code>in:</code>, <code>out:</code>) for an element that enters or leaves the document because of state — the one thing CSS cannot do on its own, because once an element is removed there is nothing left to animate. An <strong>animation</strong> (<code>animate:</code>) for an item that moves to a new place in a keyed list. And a <strong>motion value</strong> — <code>Tween</code> or <code>Spring</code> from <code>svelte/motion</code> — for a number that has to glide to its new value while a script reads it every frame. The hero’s GSAP timeline is the fifth, used once, and chapter <a href="the-design-system.html">23</a> says why.</p>
+<h3 id="css-first">CSS first, and a library that waits for it</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/styles/base.css<span class="code__lines">:556-594</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-css">/*
+ * Bits UI renders `data-state=&quot;open&quot;` while the dialog is up and flips it
+ * to `closed` just before unmounting, waiting for any CSS animation on the
+ * element to finish. So the enter and the exit are two keyframe rules and
+ * no JavaScript — and under reduced motion every `--dur-*` is 0ms, so the
+ * dialog simply appears.
+ */
+.overlay {
+	position: fixed;
+	inset: 0;
+	z-index: var(--z-scrim);
+	background: var(--scrim);
+}
+.overlay[data-state='open'] {
+	animation: fade-in var(--dur-3) var(--ease-out) both;
+}
+.overlay[data-state='closed'] {
+	animation: fade-out var(--dur-3) var(--ease-in) both;
+}
+
+/* Phone first: a bottom sheet with the top corners rounded and the bottom flush with the screen. */
+.dialog {
+	position: fixed;
+	z-index: var(--z-dialog);
+	inset: auto 0 0 0;
+	max-height: calc(100dvh - var(--space-6));
+	overflow: auto;
+	padding: var(--space-4) var(--gutter) calc(var(--space-5) + env(safe-area-inset-bottom));
+	border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
+	background: var(--paper-4);
+	color: var(--ink);
+	box-shadow: var(--shadow-3), var(--ring-hairline);
+}
+.dialog[data-state='open'] {
+	animation: sheet-in var(--dur-4) var(--ease-sheet) both;
+}
+.dialog[data-state='closed'] {
+	animation: sheet-out var(--dur-3) var(--ease-in) both;
+}</code></pre>
+</figure>
+<p>The dialogs are the largest movement in the product, and they have no JavaScript animation at all. Bits UI renders <code>data-state=&quot;open&quot;</code> while a dialog is up and flips it to <code>closed</code> just before unmounting — and, the comment says, waits for any CSS animation on the element to finish first. So the enter and the exit are two keyframe rules each: the scrim fades, the phone’s sheet slides up on <code>--ease-sheet</code> and down on <code>--ease-in</code>, and from 40em the panel scales from 0.96 and rises 8px. The exit is shorter than the entrance on purpose (<code>--dur-3</code> against <code>--dur-4</code>): a person who has decided to close something wants it gone. Under reduced motion every token is 0ms, the animation ends the moment it starts, and the dialog simply appears and disappears.</p>
+<p>That is the line between CSS and a Svelte transition. CSS can animate an element’s *leaving* only when something keeps the element in the document until the animation ends — Bits UI does it for its own components by waiting. For an element of yours inside an <code>{#if}</code>, Svelte is the thing that waits: the documentation’s rule is that when a block is transitioning out, “all elements inside it, including those that do not have their own transitions, are kept in the DOM until every transition in the block has been completed”. An element that never leaves — the update banner, which reloads the page instead of closing, the header’s sheet, the tab indicator — needs no transition at all, and gets CSS.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/ui/UpdateBanner.svelte<span class="code__lines">:53-58</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">@keyframes arrive {
+	from {
+		opacity: 0;
+		translate: 0 16px;
+	}
+}</code></pre>
+</figure>
+<p>The update banner is the plainest case: one keyframe rule, <code>arrive</code>, from 16px lower and transparent, on <code>--dur-4</code> with <code>--ease-out</code>, played once when the banner is rendered. It has no exit because it has no way to leave — the button reloads the page — and an <code>in:fly</code> would have done the same thing with a JavaScript import and a reduced-motion check of its own.</p>
+<h3 id="custom">One custom transition</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/motion/transitions.ts<span class="code__lines">:1-33</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">/**
+ * ONE CUSTOM TRANSITION
+ * =====================
+ *
+ * `pop` is for a small thing that confirms something — the check mark that
+ * replaces a copy icon for a moment. It scales from 60% with its opacity,
+ * on `cubicOut` — the nearest built-in curve to the `--ease-out` token,
+ * which a JavaScript easing cannot read — and takes 0ms when motion is
+ * reduced, so a component that uses it does not have to ask.
+ *
+ * A Svelte transition is a function of the element that returns `duration`,
+ * `easing` and a `css` function of `t` (0 → 1 on the way in). Returning
+ * `css` rather than `tick` lets Svelte turn it into keyframes for a Web
+ * Animation, which can run off the main thread, and that is why the
+ * built-in ones do the same. It is also why the 0ms is written here: a
+ * Web Animation is not a CSS animation, so the `--dur-*` tokens and the
+ * reduced-motion block in `tokens.css` never reach it.
+ */
+
+import { cubicOut } from 'svelte/easing';
+import type { TransitionConfig } from 'svelte/transition';
+import { reducedMotion } from './prefers.svelte.ts';
+
+export function pop(
+	_node: Element,
+	{ duration = 160 }: { duration?: number } = {}
+): TransitionConfig {
+	return {
+		duration: reducedMotion.current ? 0 : duration,
+		easing: cubicOut,
+		css: (t) =&gt; `opacity: ${t}; scale: ${0.6 + 0.4 * t}`
+	};
+}</code></pre>
+</figure>
+<p>A transition is a function of three arguments — the element, the parameters written in the directive, and an <code>options</code> object, whose <code>options.direction</code> says which way this run goes (<code>'in'</code>, <code>'out'</code> or <code>'both'</code>) — that returns a <code>TransitionConfig</code>: <code>delay</code>, <code>duration</code>, <code>easing</code>, and one of <code>css</code> or <code>tick</code>. <code>css(t, u)</code> returns a string of CSS for a moment of the transition: <code>t</code> runs from 0 to 1 on the way in and from 1 back to 0 on the way out, so 1 is always the element as it naturally is, and <code>u</code> is <code>1 - t</code>. Easing is applied before <code>css</code> sees <code>t</code>, so <code>pop</code> writes a straight line — opacity <code>t</code>, scale from 0.6 to 1 — and <code>cubicOut</code> bends it. Svelte calls <code>css</code> many times *before* the transition starts and turns the answers into keyframes for a Web Animation, which a browser can run off the main thread; <code>tick(t, u)</code> is called on every frame instead, for the rare movement that CSS cannot describe (the documentation’s example types a sentence out letter by letter). The rule is theirs: “If it’s possible to use <code>css</code> instead of <code>tick</code>, do so.”</p>
+<p>Two more forms exist and <code>pop</code> needs neither. The third argument, <code>options</code>, carries <code>direction</code> — <code>in</code>, <code>out</code> or <code>both</code> — for a transition that should move differently on the way out. And a transition may return a *function* that returns the config instead of the config itself; that function is called in the next microtask, after every transition starting in the same update has been created, which is how <code>crossfade</code> lets a leaving element and an arriving one find each other before either decides how to move.</p>
+
+<aside class="callout callout--why">
+	<h4>Why <code>pop</code> asks about reduced motion itself</h4>
+	<p>Because nothing else will. The tokens in <code>tokens.css</code> reach CSS animations, and the documentation says plainly that Svelte’s transitions are not those: they “are driven by the Web Animations API rather than by CSS. A global <code>@media (prefers-reduced-motion: reduce)</code> rule that zeroes <code>transition-duration</code> and <code>animation-duration</code> therefore has no effect on them.” So every transition in the project reads <code>reducedMotion</code> — <code>prefersReducedMotion</code> from <code>svelte/motion</code>, under the app’s name (chapter <a href="the-design-system.html">23</a>) — and takes a duration of 0 when it is set — <code>pop</code> in its own body, so a component that uses it never has to remember, and the built-ins at the place they are used.</p>
+</aside>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/trip/Companions.svelte<span class="code__lines">:172-193</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">{#if inviteUrl}
+	&lt;!-- The link block fades in; it does not grow — layout never animates. --&gt;
+	&lt;div class=&quot;stack stack--sm&quot; in:fade={{ duration: reducedMotion.current ? 0 : 240 }}&gt;
+		&lt;p class=&quot;muted&quot;&gt;{m.companions_link_ready()}&lt;/p&gt;
+		&lt;div class=&quot;invite__row&quot;&gt;
+			&lt;!--
+				A `&lt;code&gt;`, not a read-only input: the end-to-end suite reads its
+				text content, and `user-select: all` makes one tap select the lot.
+			--&gt;
+			&lt;code class=&quot;invite__url well tabular&quot;&gt;{inviteUrl}&lt;/code&gt;
+			&lt;!-- The toast says &quot;Copied&quot; to a screen reader; a live region in the button said it a second time. --&gt;
+			&lt;button class=&quot;btn btn--sm&quot; type=&quot;button&quot; onclick={copy}&gt;
+				{#if copied}
+					&lt;span class=&quot;copy__icon&quot; in:pop&gt;&lt;CheckIcon size={14} aria-hidden=&quot;true&quot; /&gt;&lt;/span&gt;
+				{:else}
+					&lt;span class=&quot;copy__icon&quot;&gt;&lt;CopyIcon size={14} aria-hidden=&quot;true&quot; /&gt;&lt;/span&gt;
+				{/if}
+				{m.companions_copy()}
+			&lt;/button&gt;
+		&lt;/div&gt;
+	&lt;/div&gt;
+{/if}</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/routes/(site)/t/[slug=slug]/settings/EmbedSection.svelte<span class="code__lines">:68-82</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">{#snippet copyButton(which: 'frame' | 'element', text: string)}
+	&lt;button
+		class=&quot;btn btn--sm snippet__copy&quot;
+		type=&quot;button&quot;
+		aria-label={which === 'frame' ? m.embed_copy_frame() : m.embed_copy_element()}
+		onclick={() =&gt; copy(which, text)}
+	&gt;
+		{#if copied === which}
+			&lt;span class=&quot;copy__icon&quot; in:pop&gt;&lt;CheckIcon size={14} aria-hidden=&quot;true&quot; /&gt;&lt;/span&gt;
+		{:else}
+			&lt;span class=&quot;copy__icon&quot;&gt;&lt;CopyIcon size={14} aria-hidden=&quot;true&quot; /&gt;&lt;/span&gt;
+		{/if}
+		{m.embed_copy()}
+	&lt;/button&gt;
+{/snippet}</code></pre>
+</figure>
+<p><code>in:</code> is a transition that plays only on the way in. The check mark that replaces a copy icon pops in, and the copy icon it replaced simply goes: an <code>out:</code> on it would hold both icons in the button for 160ms, side by side, and the button would grow and shrink — layout, which never animates. The invite link’s block fades in rather than sliding open for the same reason. Both are *local*, which is the default in Svelte 5: “Local transitions only play when the block they belong to is created or destroyed, not when parent blocks are created or destroyed.” The fade belongs to <code>{#if inviteUrl}</code>, so it plays at the one moment it explains — the link has just been made — and never because something around it appeared. <code>|global</code> is the opt-in for the other behaviour, and a screen built from global transitions animates every piece of itself at once whenever a page or a tab first renders; the project has none.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/map/MapView.svelte<span class="code__lines">:530-543</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;!-- The status pill fades in and out: the one Svelte transition on the map, and it is observable. --&gt;
+{#if showMe &amp;&amp; (geo.error || !geo.fix)}
+	&lt;p
+		class=&quot;map__status&quot;
+		role=&quot;status&quot;
+		transition:fade={{ duration: reducedMotion.current ? 0 : 160 }}
+	&gt;
+		{#if geo.error}
+			{m.map_no_location()}
+		{:else}
+			{m.map_locating()}
+		{/if}
+	&lt;/p&gt;
+{/if}</code></pre>
+</figure>
+<p><code>transition:</code> is the bidirectional kind: the same function on the way in and on the way out, and “it can be smoothly reversed while the transition is in progress” — toggle the locate button twice quickly and the pill turns round where it is rather than finishing and starting again. It is the one Svelte transition on the map, on the one element that comes and goes there: “Finding you…” while the browser looks, “Location is not available.” if it cannot. <code>role=&quot;status&quot;</code> makes a screen reader say it; the fade is for everybody else.</p>
+<h3 id="flip">One animation, in the one list that reorders</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/trip/Itinerary.svelte<span class="code__lines">:110-129</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/*
+ * MOTION, FROM ONE SOURCE OF TRUTH
+ * --------------------------------
+ * `animate:flip` slides the other cards out of the way of a drag, and
+ * the library's own FLIP does the same for the dragged one; both take
+ * their duration from here, and here reads `reducedMotion` — so the
+ * itinerary's JavaScript-driven motion honours the operating system
+ * setting that the CSS `--dur-*` tokens cannot reach.
+ *
+ * No `in:`/`out:` transitions on the items: svelte-dnd-action says
+ * plainly that it does not play well with them. A card that has just
+ * arrived is marked instead — the effect below compares the stop ids
+ * with the last render's and puts a new one in `fresh` for 1.2 seconds,
+ * and the stop card turns that into a highlight that fades over 700ms.
+ * The first render marks nothing: forty stops do not all light up.
+ * It is an effect and not a `$derived` because a mark lives on its own
+ * clock — a timer takes it off again — and is not a function of the
+ * stops alone.
+ */
+const duration = $derived(reducedMotion.current ? 0 : 240);</code></pre>
+</figure>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/trip/Itinerary.svelte<span class="code__lines">:241-257</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">&lt;ul
+	class=&quot;day__list&quot;
+	role=&quot;list&quot;
+	{@attach fromAction(dndzone, () =&gt; ({
+		items: group.stops,
+		type: 'stops',
+		flipDurationMs: duration,
+		dragDisabled: !editable,
+		dropTargetStyle: {},
+		dropTargetClasses: ['day__list--target'],
+		transformDraggedElement: lift
+	}))}
+	onconsider={(e) =&gt; consider(group.date, e)}
+	onfinalize={(e) =&gt; finalize(group.date, e)}
+&gt;
+	{#each group.stops as stop (stop.id)}
+		&lt;li class=&quot;day__item&quot; animate:flip={{ duration }}&gt;</code></pre>
+</figure>
+<p><code>animate:</code> is for a different event from a transition: an item that stays in a keyed <code>{#each}</code> but moves to another index. The documentation’s three conditions are the whole contract — it runs “when the contents of a keyed each block are re-ordered”, it does not run “when an element is added or removed”, and the directive must sit on an *immediate* child of the keyed block, which is why it is on the <code>&lt;li&gt;</code> and not on the card inside it. <code>flip</code> measures where the element was (First) and where it is now (Last), moves it back to the first place with a transform (Invert), and lets it go (Play). svelte-dnd-action does its own FLIP for the card being dragged, and <code>flipDurationMs</code> tells it how long Svelte’s will take for the others, so both read one <code>duration</code> — 240ms, or 0 under reduced motion. There are no <code>in:</code> or <code>out:</code> on the items: the library says it does not work with them, and a stop that arrives gets the brief’s “highlight, not a bounce” instead, the <code>fresh</code> mark the effect sets for 1.2 seconds.</p>
+<aside class="callout callout--note"><p>A custom animation has the same shape as a custom transition, with one difference in its arguments: <code>(node, { from, to }, params)</code>, where <code>from</code> and <code>to</code> are the element’s <code>DOMRect</code> before and after the reorder, returning an <code>AnimationConfig</code> — <code>delay</code>, <code>duration</code>, <code>easing</code>, <code>css</code>, <code>tick</code>. The project writes none, because <code>flip</code> is the reorder the brief asks for, and the only list that reorders by hand is the itinerary. The expenses table re-sorts in place, with no movement at all: the brief lists table sorting among the things that never animate.</p></aside>
+<h3 id="values">A value that moves: <code>Tween</code>, and the <code>Spring</code> beside it</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/trip/TripView.svelte<span class="code__lines">:176-195</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">const indicator = new Tween({ x: 0, w: 0 }, { duration: 160, easing: cubicOut });
+let settled = false;
+let fadeStart = $state(false);
+let fadeEnd = $state(false);
+
+const INSET = 32;
+
+function measure(animate: boolean) {
+	const current = strip?.querySelector&lt;HTMLElement&gt;('[aria-current=&quot;page&quot;]');
+	if (!current || !strip) return;
+	const target = { x: current.offsetLeft, w: current.offsetWidth };
+	const instant = !animate || !settled || untrack(() =&gt; reducedMotion.current);
+	void indicator.set(target, instant ? { duration: 0 } : undefined);
+	settled = true;
+
+	const left = current.offsetLeft - INSET;
+	const right = current.offsetLeft + current.offsetWidth + INSET - strip.clientWidth;
+	if (strip.scrollLeft &gt; left) strip.scrollLeft = Math.max(0, left);
+	else if (strip.scrollLeft &lt; right) strip.scrollLeft = right;
+}</code></pre>
+</figure>
+<p>The tab indicator is one 2px bar that slides between tabs, and its position is a <code>Tween</code>: <code>new Tween(initial, { duration, easing })</code>, then <code>set(target)</code> — which returns a promise for when it arrives — and <code>.current</code>, which the markup reads on every frame and hands to the stylesheet as <code>style:--x</code> and <code>style:--w</code> (chapter <a href="the-design-system.html">23</a>). The options given to <code>set</code> override the defaults for that one move, and <code>{ duration: 0 }</code> is how a tween jumps: the first placement, a resize, and every move under reduced motion. <code>Tween.of(() =&gt; value)</code> is the other constructor, a tween bound to whatever the function returns, created during component initialisation — and the project does not use it, because the obvious place for it is the trip header’s total distance, and the brief says numbers never count up.</p>
+<p><code>Spring</code> is the tween’s physical sibling, available since Svelte 5.8: instead of a duration it has <code>stiffness</code>, <code>damping</code> and <code>precision</code>, and a value set while it is moving keeps its momentum. Its <code>set</code> takes <code>{ instant: true }</code> to jump — where a <code>Tween</code> takes <code>{ duration: 0 }</code> — and <code>preserveMomentum</code> in milliseconds for a fling, and <code>Spring.of</code> binds it to a function as <code>Tween.of</code> does. The place it belongs is the waypoint library’s compass needle, swinging to a new bearing (chapter <a href="two-components-for-any-app.html">08</a>); it is not there because the library promises <code>svelte ^5.0.0</code> to anybody who installs it, and a class from 5.8 would break that promise. Both replace the stores <code>tweened</code> and <code>spring</code>, which Svelte 5 still exports and marks deprecated: they did the same job behind <code>subscribe</code> and <code>$value</code>.</p>
+<h3 id="sheet">A menu whose motion ends outside the accessibility tree</h3>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">src/lib/ui/Header.svelte<span class="code__lines">:266-306</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-svelte">/*
+ * Mobile first: the nav is a tier-3 sheet under the header. It is always
+ * in the DOM (so `aria-controls` points at something) and hidden with
+ * `visibility` plus a `clip-path` that reveals it from the top — an
+ * animation of a mask, not of layout. The links fade in 30ms apart.
+ */
+.nav {
+	position: absolute;
+	inset-inline: 0;
+	top: 100%;
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-1);
+	padding: var(--space-3) var(--gutter) var(--space-5);
+	background: var(--paper-4);
+	border-bottom: 1px solid var(--line);
+	box-shadow: var(--shadow-3), var(--ring-hairline);
+	z-index: var(--z-dialog);
+	visibility: hidden;
+	clip-path: inset(0 0 100% 0);
+	transition:
+		clip-path var(--dur-2) var(--ease-in),
+		visibility 0s linear var(--dur-2);
+}
+
+.nav--open {
+	visibility: visible;
+	clip-path: inset(0);
+	transition: clip-path var(--dur-3) var(--ease-out);
+}
+
+.nav &gt; * {
+	opacity: 0;
+	transition: opacity var(--dur-2) var(--ease-out);
+}
+
+/* `--stagger` is 30ms, and 0 under reduced motion, like every duration: the links arrive together. */
+.nav--open &gt; * {
+	opacity: 1;
+	transition-delay: calc(var(--i, 0) * var(--stagger));
+}</code></pre>
+</figure>
+<p>The phone’s menu sheet looks like a textbook <code>slide</code>, and the brief chose otherwise for three reasons. The sheet is always in the document, because the menu button’s <code>aria-controls</code> must point at something, and a transition only plays when an <code>{#if}</code> adds or removes an element. And <code>slide</code> animates height, padding and margin — layout, which never animates. (It also measures the element it moves, and Svelte warns at run time, as <code>transition_slide_display</code>, when the element’s <code>display</code> is <code>contents</code>, <code>inline</code> or <code>table</code>, where that measuring cannot work.) So the sheet is revealed by a <code>clip-path</code> from the top — a mask, not a box changing size — and its links fade in 30ms apart through <code>--i</code>, the custom property each link is given in the markup.</p>
+<p>The part that matters more than the look is the last line of the closed state: <code>visibility: hidden</code>, after a delay as long as the clip takes. A clipped element is invisible to the eye and perfectly visible to a screen reader and to the Tab key — a closed menu that a keyboard can still walk into. <code>visibility: hidden</code> takes the links out of the accessibility tree and out of the tab order, and the delay lets the clip finish before it does. Opening switches <code>visibility</code> at once and runs the clip; closing runs the clip and then switches. The test proves the result rather than the CSS:</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/public.e2e.ts<span class="code__lines">:228-251</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">test('on a phone the closed menu is not in the accessibility tree, and Escape closes the open one', async ({
+	page
+}, testInfo) =&gt; {
+	test.skip(testInfo.project.name !== 'phone', 'the menu is a phone’s; a desktop shows the links');
+	await page.goto('/');
+	await page.locator('html[data-hydrated]').waitFor();
+
+	// The sheet is always in the DOM — `aria-controls` points at it — so &quot;closed&quot; has to mean
+	// more than clipped to nothing: `visibility: hidden` at the end of its motion takes its
+	// links out of the accessibility tree, and a role query cannot find them.
+	const sheet = page.locator('#primary-nav');
+	const explore = sheet.getByRole('link', { name: 'Explore' });
+	const menu = page.getByRole('button', { name: 'Menu' });
+	await expect(explore).toBeHidden();
+
+	await menu.click();
+	await expect(menu).toHaveAttribute('aria-expanded', 'true');
+	await expect(explore).toBeVisible();
+
+	await page.keyboard.press('Escape');
+	await expect(menu).toHaveAttribute('aria-expanded', 'false');
+	await expect(menu).toBeFocused();
+	await expect(explore).toBeHidden();
+});</code></pre>
+</figure>
+<p>On the Pixel 7 profile only, because a desktop has no menu. Before the menu opens, a query by role cannot find the Explore link at all — Playwright’s role queries see what the accessibility tree sees — so <code>toBeHidden()</code> passes on an element that is not there for a screen reader either. Opened, it is visible; Escape closes it, the button says <code>aria-expanded=&quot;false&quot;</code>, focus is back on it, and the link is gone from the tree again. Delete <code>visibility: hidden</code> from the closed sheet and the first assertion fails, with the sheet still perfectly clipped on screen.</p>
+<h3 id="easing">The easing table</h3>
+<p><code>svelte/easing</code> exports thirty-one functions: <code>linear</code>, and ten families in three forms each — <code>in</code>, <code>out</code> and <code>inOut</code>, as in <code>cubicIn</code>, <code>cubicOut</code>, <code>cubicInOut</code>. The form says where the movement is fast. <code>…Out</code> starts fast and settles — the curve for something *arriving*, and <code>cubicOut</code> is the nearest built-in to the <code>--ease-out</code> token, which a JavaScript easing cannot read. <code>…In</code> starts slowly and leaves fast — for something going away, the role <code>--ease-in</code> plays in CSS, “exits only”. <code>…InOut</code> is slow at both ends, for something moving from one place on screen to another, like <code>--ease-inout</code>. The family says how strongly:</p>
+<ul><li><strong><code>sine</code>, <code>quad</code></strong> — the gentlest. A fade that should barely be noticed.</li><li><strong><code>cubic</code></strong> — the project’s default: <code>cubicOut</code> for the tab indicator and for <code>pop</code>.</li><li><strong><code>quart</code>, <code>quint</code>, <code>expo</code></strong> — the same shape, steeper each time: most of the movement in the first moment, then a long settle. GSAP’s <code>power3.out</code> on the hero is the quart curve under another name.</li><li><strong><code>circ</code></strong> — a quarter circle: abrupt at one end, very soft at the other.</li><li><strong><code>back</code>, <code>elastic</code>, <code>bounce</code></strong> — they overshoot the target and come back, or bounce off it. Declined everywhere: an overshoot is a bounce, and the brief’s word for a new stop is “a highlight, not a bounce”.</li><li><strong><code>linear</code></strong> — no easing: for progress and for anything continuous. Nothing here needs it; the live dot’s pulse is CSS.</li></ul>
+<h3 id="left-out">What is left out, and the rule that does it</h3>
+<ul><li><strong><code>fade|global</code> or <code>in:scale out:fade</code> on presence chips</strong> — “Presence chips entering/leaving — they appear.” A person arriving with a bounce is a slot machine. (<code>in:</code> and <code>out:</code> together are the non-bidirectional pair: a different movement each way, and no reversing halfway.)</li><li><strong><code>Tween.of</code> on the total distance</strong> — “Numbers (totals, distances) — no count-up.”</li><li><strong><code>fly</code> on the update banner</strong> — the CSS <code>arrive</code> above does it, with no exit to need a transition.</li><li><strong><code>slide</code> on the menu sheet</strong> — above: the sheet never leaves the document, and <code>slide</code> animates layout.</li><li><strong><code>draw</code> on a trip card’s route</strong> — <code>draw</code> traces an SVG path’s stroke over time, and it is not in the brief’s table: card hover is the only card motion.</li><li><strong><code>crossfade</code> when a stop moves to another day</strong> — <code>crossfade({ fallback })</code> returns a pair, <code>[send, receive]</code>, and an element sent with a <code>key</code> flies to the element received with the same key. It needs <code>out:</code> and <code>in:</code> on the items, and items in a dndzone may not have them; the brief says list reorder is FLIP only.</li><li><strong><code>scale</code> and <code>blur</code></strong> — <code>scale</code> grows a thing from a point, which is a bounce by another name; <code>blur</code> makes the text being read unreadable mid-movement, and the brief will not move the text you are reading.</li><li><strong><code>unmount(component, { outro: true })</code></strong> — plays a component’s outros before it leaves, and its promise resolves when they have finished; <code>mount</code> plays intros unless <code>intro: false</code> is passed. Both are for a component mounted by hand, and this project mounts none — even the custom element is mounted by the browser.</li><li><strong>Skeleton loaders</strong> — “Skeletons — None.” Every <code>await</code> resolves on the server; a shimmer would invent latency to show off.</li></ul>
+
+<aside class="callout callout--why">
+	<h4>Why reduced motion means none, not less</h4>
+	<p>Because “less” is a judgement made on somebody else’s behalf, and the setting exists for people for whom motion is not a matter of taste — vestibular disorders, migraine, attention. So in this project the setting turns every duration to 0, turns view transitions off (the root layout starts none, chapter <a href="the-shell.html">25</a>), stops the globe’s flight and its camera, makes the map jump instead of fly, sets <code>flip</code> to 0, and never attaches the hero timeline at all. The live dot is the only thing that pulses, and under reduced motion it holds still too. Every one of those checks reads the same query, and the visual suite runs with reduced motion on, so a screen that only settles correctly with motion would fail there (chapter <a href="end-to-end.html">46</a>).</p>
+</aside>
+
+<aside class="callout callout--check">
+	<h4>Checkpoint</h4>
+	<ul><li>Given a movement, you can say whether it is CSS, a transition, an animation or a motion value, and why.</li><li>You can write a custom transition with <code>css(t, u)</code>, say what <code>t</code> and <code>u</code> are on the way in and out, and say when <code>tick</code> is the right answer.</li><li>You can say what local means for a transition, and what <code>|global</code> would change.</li><li>You know the three conditions under which <code>animate:</code> runs, and why the itinerary’s items have no <code>in:</code> or <code>out:</code>.</li><li>You can say why the phone menu ends on <code>visibility: hidden</code>, and what the end-to-end test proves.</li><li>You can name the rule in the brief that keeps each left-out built-in out.</li></ul>
+</aside>
+		</article>
+
+		<nav class="pager" aria-label="Chapter navigation">
+			<a class="pager__link pager__link--prev" href="the-design-system.html">
+				<span class="pager__dir">← Previous</span>
+				<span class="pager__title">The design system</span>
+			</a>
+			<a class="pager__link pager__link--next" href="the-shell.html">
+				<span class="pager__dir">Next →</span>
+				<span class="pager__title">The shell: a root that knows nobody</span>
+			</a>
+		</nav>
+	</main>
+</div>
+
+<script>
+	// Copy buttons. Progressive enhancement — the code is selectable without them.
+	document.addEventListener('click', async (event) => {
+		const button = event.target.closest('[data-copy]');
+		if (!button) return;
+		const code = button.closest('figure').querySelector('code');
+		try {
+			await navigator.clipboard.writeText(code.innerText);
+			button.textContent = 'Copied';
+			setTimeout(() => { button.textContent = 'Copy'; }, 1600);
+		} catch {
+			button.textContent = 'Press Ctrl+C';
+		}
+	});
+
+	// Mobile chapter drawer.
+	const toggle = document.querySelector('[data-toggle-nav]');
+	const sidebar = document.getElementById('chapter-nav');
+	toggle?.addEventListener('click', () => {
+		const open = sidebar.classList.toggle('is-open');
+		toggle.setAttribute('aria-expanded', String(open));
+	});
+
+	// Left/right arrow keys move between chapters, unless you're typing.
+	document.addEventListener('keydown', (event) => {
+		if (event.metaKey || event.ctrlKey || event.altKey) return;
+		if (/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '')) return;
+		if (event.key === 'ArrowLeft') document.querySelector('.pager__link--prev[href]')?.click();
+		if (event.key === 'ArrowRight') document.querySelector('.pager__link--next[href]')?.click();
+	});
+</script>
+</body>
+</html>
