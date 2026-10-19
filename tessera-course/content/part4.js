@@ -505,7 +505,7 @@ export const auth = betterAuth({
 			{ type: 'h3', id: 'a-change-under-you', text: 'A change under you: migration 0001' },
 			{
 				type: 'p',
-				text: 'A dependency can change the database schema it expects without you touching a line, and Better Auth did. 1.7.0 added a required `issuer` column to `account` — who vouches for the account: an OAuth provider’s URL, or `local:credential` for a password — with a unique index on `(issuer, account_id)`, and `pnpm run auth:schema` wrote both into `auth.schema.ts`. 1.7.3 withdrew the idea: accounts are identified by `(provider_id, account_id)` again, exactly as in 1.6, and 1.7.7 never writes the column. It also checks the Drizzle schema at startup and refuses to start with a `NOT NULL` column it will never fill, because every sign-up would fail on the insert.'
+				text: 'A dependency can change the database schema it expects without you touching a line, and Better Auth did. 1.7.0 added a required `issuer` column to `account` — who vouches for the account: an OAuth provider’s URL, or `local:credential` for a password — with a unique index on `(issuer, account_id)`, and `pnpm run auth:schema` wrote both into `auth.schema.ts`. 1.7.3 withdrew the idea: accounts are identified by `(provider_id, account_id)` again, exactly as in 1.6, and 1.7.10 never writes the column. It also checks the Drizzle schema at startup and refuses to start with a `NOT NULL` column it will never fill, because every sign-up would fail on the insert.'
 			},
 			{
 				type: 'code',
