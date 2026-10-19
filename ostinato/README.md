@@ -55,8 +55,8 @@ undeclared one cannot be imported and a malformed one fails at boot.
 
 ## Toolchain
 
-Node 24.21.0 (`.nvmrc`, the current LTS) and pnpm 12.10.1 (`packageManager`, so
-Corepack picks it). SvelteKit 3.0.1 on Svelte 5.57, Vite 8.3 and
+Node 24.22.0 (`.nvmrc`, the current LTS) and pnpm 12.14.0 (`packageManager`, so
+Corepack picks it). SvelteKit 3.1.0 on Svelte 5.57, Vite 8.3 and
 vite-plugin-svelte 7.3; Vitest 5 with `@vitest/browser-playwright`; Playwright
 1.64; TypeScript 6.0 — the latest of each as of October 2026, with one
 deliberate exception: TypeScript 7 exists, and SvelteKit, svelte-check and
