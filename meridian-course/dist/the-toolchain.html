@@ -336,7 +336,7 @@ Detected file path, reading file...
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">scripts/autofix-report.ts<span class="code__lines">:45-72</span></span>
+		<span class="code__file">scripts/autofix-report.ts<span class="code__lines">:46-73</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">/**
@@ -372,7 +372,7 @@ const { accepted } = v.parse(
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">scripts/autofix-report.ts<span class="code__lines">:74-91</span></span>
+		<span class="code__file">scripts/autofix-report.ts<span class="code__lines">:75-92</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">const files = SOURCES.flatMap(({ dir, async }) =&gt;
@@ -394,11 +394,11 @@ const results = await Promise.all(
 	}))
 );</code></pre>
 </figure>
-<p>The script imports <code>svelteAutofixer</code> — the function the <code>svelte-autofixer</code> command calls — instead of spawning the command fifty-five times. The command prints its result with <code>console.log</code>, which is Node’s inspect format and not JSON, so parsing it would mean parsing a debugging format; the package exports the function itself, with its types. All the files are analysed at once and the whole run takes a few seconds.</p>
+<p>The script imports <code>svelteAutofixer</code> — the function the <code>svelte-autofixer</code> command calls — instead of spawning the command fifty-five times. The command prints its result with <code>console.log</code>, which is Node’s inspect format and not JSON, so parsing it would mean parsing a debugging format; the package exports the function itself, with its types. All the files are analysed at once and the whole run takes a few seconds. One import comes before it, <code>./offline-docs.ts</code>, for a reason that is easy to miss: importing the package also starts its MCP server, which fetches the docs index from svelte.dev and never handles a refusal. From a network svelte.dev turns away, that unhandled rejection exits the process with code 1 after a clean report. The small module answers that one request locally, because a lint step must not depend on a website.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">scripts/autofix-report.ts<span class="code__lines">:93-118</span></span>
+		<span class="code__file">scripts/autofix-report.ts<span class="code__lines">:94-119</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">const problems: string[] = [];

@@ -345,7 +345,7 @@ $ pnpm run test:unit -- --run
 			},
 
 			{ type: 'h3', id: 'autofixer', text: 'The autofixer as a gate' },
-			code('scripts/autofix-report.ts', 81, 131),
+			code('scripts/autofix-report.ts', 82, 132),
 			{
 				type: 'p',
 				text: 'The compiler’s warnings are about what the code *does*; the Svelte autofixer’s suggestions are about how it is *written* — an `$effect` that assigns state another rune could derive, a `bind:this` an attachment would replace. `pnpm run lint:svelte` runs it over every component (chapter {{the-toolchain}} builds the script) and fails on any suggestion that is neither followed nor answered in `.autofixer-accepted.json`, where each declined suggestion is recorded with the file, a piece of its text, how many times the file earns it, and a reason. The count is the teeth: a new occurrence of an accepted suggestion still fails, because it has not been read yet.'

@@ -468,17 +468,17 @@ Detected file path, reading file...
 				text: 'An agent runs that on what it writes. The project runs it on everything it has, as a step of `verify`, with one rule: every **issue** is fixed, and every **suggestion** is either followed or answered in writing.'
 			},
 			code('package.json', 23, 23),
-			code('scripts/autofix-report.ts', 45, 72),
+			code('scripts/autofix-report.ts', 46, 73),
 			{
 				type: 'p',
 				text: 'Two sources, because the app compiles with `experimental.async` and the library does not. The list of answered suggestions is data, so it is parsed with a valibot schema like every other input in this project: `strictObject` rejects a misspelt key, so an entry cannot quietly stop matching because somebody typed `reasons`.'
 			},
-			code('scripts/autofix-report.ts', 74, 91),
+			code('scripts/autofix-report.ts', 75, 92),
 			{
 				type: 'p',
-				text: 'The script imports `svelteAutofixer` — the function the `svelte-autofixer` command calls — instead of spawning the command fifty-five times. The command prints its result with `console.log`, which is Node’s inspect format and not JSON, so parsing it would mean parsing a debugging format; the package exports the function itself, with its types. All the files are analysed at once and the whole run takes a few seconds.'
+				text: 'The script imports `svelteAutofixer` — the function the `svelte-autofixer` command calls — instead of spawning the command fifty-five times. The command prints its result with `console.log`, which is Node’s inspect format and not JSON, so parsing it would mean parsing a debugging format; the package exports the function itself, with its types. All the files are analysed at once and the whole run takes a few seconds. One import comes before it, `./offline-docs.ts`, for a reason that is easy to miss: importing the package also starts its MCP server, which fetches the docs index from svelte.dev and never handles a refusal. From a network svelte.dev turns away, that unhandled rejection exits the process with code 1 after a clean report. The small module answers that one request locally, because a lint step must not depend on a website.'
 			},
-			code('scripts/autofix-report.ts', 93, 118),
+			code('scripts/autofix-report.ts', 94, 119),
 			code('.autofixer-accepted.json', 58, 63),
 			{
 				type: 'p',

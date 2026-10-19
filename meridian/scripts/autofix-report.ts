@@ -37,6 +37,7 @@ import { globSync, readFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import './offline-docs.ts'; // before @sveltejs/mcp, which fetches the docs index on import
 import { svelteAutofixer } from '@sveltejs/mcp';
 import * as v from 'valibot';
 
