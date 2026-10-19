@@ -52,6 +52,8 @@ pnpm test           # unit suite, then the Playwright e2e suite
 pnpm run db:studio  # poke at the database in a browser
 ```
 
+CI runs `verify` and the course checks: `../.github/workflows/halfpast-app.yml`.
+
 ## Building without a `.env`
 
 `pnpm run build` needs two variables, and both are public:

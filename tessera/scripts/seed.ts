@@ -18,7 +18,15 @@
  * erasing (`enum`, namespaces, parameter properties) is not used here.
  */
 
-process.loadEnvFile('.env');
+/*
+ * `.env` is for a developer's machine, and it is gitignored, so a fresh
+ * checkout — CI's — has none, and `loadEnvFile` throws ENOENT on a missing
+ * file. Where `DATABASE_URL` is already set (CI's job env, or the e2e harness
+ * pointing the seed at its throwaway database) the file is not needed. Node
+ * never lets the file override a variable that is already set, so loading it
+ * could not redirect the seed; skipping it is only about the file not being there.
+ */
+if (!process.env.DATABASE_URL) process.loadEnvFile('.env');
 
 import { createClient } from '@libsql/client';
 import { drizzle } from 'drizzle-orm/libsql';

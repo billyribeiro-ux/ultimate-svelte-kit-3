@@ -4,9 +4,13 @@
  * Turns the chapter data in `content/` into a set of static HTML pages with real
  * prev/next links.
  *
- * The third course to use this builder unchanged, which is the point: the
- * program and the content are separate, so a new course is a new `content/`
- * folder and a different `COURSE` object rather than a fork that drifts.
+ * The third course to use this builder with nothing changed but the `COURSE`
+ * object, which is the point: the program and the content are separate, so a
+ * new course is a new `content/` folder and a different `COURSE` object rather
+ * than a fork that drifts. It has been changed once since, along with the
+ * builders of the other courses that share it: titles are rendered with
+ * `inline()` like the rest of the prose, and a code span may be written with
+ * two backticks.
  *
  * Why one file per chapter rather than one big page with JavaScript tabs?
  *   - Each chapter gets its own URL, so you can bookmark and share where you are
@@ -63,15 +67,47 @@ function esc(value) {
 }
 
 /**
- * Inline markup for prose: `code`, **bold**, [text](url).
+ * A code span: one backtick on each side, or two when the code holds a backtick
+ * of its own (CommonMark's double-backtick span). A double span opens and closes
+ * on exactly two, and one space just inside each end is padding that it drops,
+ * which is how the code can itself begin or end with a backtick. One expression,
+ * so the two forms are read left to right and neither pairs up the other's.
+ */
+const CODE_SPAN = /(?<!`)``(?!`)([\s\S]+?)(?<!`)``(?!`)|`([^`]+)`/g;
+
+/**
+ * The code of a span, from the two capture groups of `CODE_SPAN`.
+ * @param {string | undefined} two
+ * @param {string} one
+ */
+function codeOf(two, one) {
+	if (two === undefined) return one;
+	const padded = two.startsWith(' ') && two.endsWith(' ') && two.trim() !== '';
+	return padded ? two.slice(1, -1) : two;
+}
+
+/**
+ * Inline markup for prose: `code`, **bold**, [text](url). Titles go through
+ * this too, so a chapter named after an identifier shows it as code.
  * Escaping happens FIRST, so the source text can never inject HTML.
  * @param {string} text
  */
 function inline(text) {
 	return esc(text)
-		.replace(/`([^`]+)`/g, '<code>$1</code>')
+		.replace(CODE_SPAN, (_, two, one) => `<code>${codeOf(two, one)}</code>`)
 		.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
 		.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+}
+
+/**
+ * The same prose with its code spans unwrapped, for the places that cannot hold
+ * markup: `<title>` and `<meta name="description">`, which a tab and a search
+ * result show as text. A backtick inside a double span belongs to the code, so
+ * it stays.
+ * @param {string} text
+ */
+function plain(text) {
+	return text.replace(CODE_SPAN, (_, two, one) => codeOf(two, one));
 }
 
 /* ------------------------------------------------------------------ */
@@ -164,7 +200,7 @@ function renderPage({ chapter, index, all }) {
 	const toc = all
 		.map((c, i) => {
 			const current = i === index ? ' aria-current="page"' : '';
-			return `<li><a href="${c.slug}.html"${current}><span class="toc__num">${String(i + 1).padStart(2, '0')}</span><span>${esc(c.title)}</span></a></li>`;
+			return `<li><a href="${c.slug}.html"${current}><span class="toc__num">${String(i + 1).padStart(2, '0')}</span><span>${inline(c.title)}</span></a></li>`;
 		})
 		.join('');
 
@@ -173,14 +209,14 @@ function renderPage({ chapter, index, all }) {
 	const prevLink = prev
 		? `<a class="pager__link pager__link--prev" href="${prev.slug}.html">
 				<span class="pager__dir">← Previous</span>
-				<span class="pager__title">${esc(prev.title)}</span>
+				<span class="pager__title">${inline(prev.title)}</span>
 			</a>`
 		: `<span class="pager__link pager__link--disabled"><span class="pager__dir">← Previous</span><span class="pager__title">You're at the start</span></span>`;
 
 	const nextLink = next
 		? `<a class="pager__link pager__link--next" href="${next.slug}.html">
 				<span class="pager__dir">Next →</span>
-				<span class="pager__title">${esc(next.title)}</span>
+				<span class="pager__title">${inline(next.title)}</span>
 			</a>`
 		: `<span class="pager__link pager__link--disabled pager__link--next"><span class="pager__dir">Next →</span><span class="pager__title">You've finished 🎉</span></span>`;
 
@@ -189,8 +225,8 @@ function renderPage({ chapter, index, all }) {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${esc(chapter.title)} — ${COURSE.name}</title>
-<meta name="description" content="${esc(chapter.summary ?? '')}">
+<title>${esc(plain(chapter.title))} — ${COURSE.name}</title>
+<meta name="description" content="${esc(plain(chapter.summary ?? ''))}">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -218,7 +254,7 @@ function renderPage({ chapter, index, all }) {
 	<main class="content" id="content">
 		<article>
 			<p class="eyebrow">Chapter ${number}</p>
-			<h1>${esc(chapter.title)}</h1>
+			<h1>${inline(chapter.title)}</h1>
 			${chapter.summary ? `<p class="lede">${inline(chapter.summary)}</p>` : ''}
 			${chapter.goal ? `<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>${inline(chapter.goal)}</p></aside>` : ''}
 			${body}
@@ -277,8 +313,8 @@ function renderIndex(all) {
 			<a class="card" href="${c.slug}.html">
 				<span class="card__num">${String(i + 1).padStart(2, '0')}</span>
 				<span class="card__body">
-					<span class="card__title">${esc(c.title)}</span>
-					${c.summary ? `<span class="card__summary">${esc(c.summary)}</span>` : ''}
+					<span class="card__title">${inline(c.title)}</span>
+					${c.summary ? `<span class="card__summary">${inline(c.summary)}</span>` : ''}
 				</span>
 			</a>
 		</li>`

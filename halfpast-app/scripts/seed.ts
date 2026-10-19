@@ -35,10 +35,11 @@ import { addDays, slotsIn, todayIn, wallClockToInstant, type Weekday } from '#li
 /*
  * Node (22 and newer) reads a `.env` file without a dependency.
  *
- * Only when nothing has been set already, though: the end-to-end harness runs
- * this with `DATABASE_URL` pointing at a throwaway database, and loading `.env`
- * unconditionally would quietly redirect the seed into the development one and
- * wipe it.
+ * Only when nothing has been set already, though. The end-to-end harness and
+ * CI run this with `DATABASE_URL` pointing at a throwaway database, and a fresh
+ * checkout has no `.env` (it is gitignored), where `loadEnvFile` would throw.
+ * Node never lets the file override a variable that is already set, so the
+ * harness's database always wins; the guard is about the missing file.
  */
 if (!process.env.DATABASE_URL) process.loadEnvFile('.env');
 

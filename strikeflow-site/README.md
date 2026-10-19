@@ -66,6 +66,9 @@ pnpm run ebook:build
 | `pnpm run fonts:sync`    | Copy font files out of `node_modules` into `static/`              |
 | `pnpm run fonts:measure` | Recompute metric-matched fallback values (server must be running) |
 
+CI runs `check`, `lint`, `test:unit`, `build` and `test:e2e`, then the course
+checks: `../.github/workflows/strikeflow-site.yml`.
+
 ## Layout
 
 ```

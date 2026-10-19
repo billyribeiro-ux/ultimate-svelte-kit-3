@@ -149,6 +149,9 @@ build on port 4173 against their own `e2e.db`, which they seed fresh every run
 something is already listening there. `test:e2e` does not build; `verify`
 builds immediately before it.
 
+CI runs `verify`, `lint` and the course checks:
+`../.github/workflows/sequent.yml`.
+
 The build needs `PUBLIC_ORIGIN`. It is declared `static` in `apps/web/src/env.ts`,
 so SvelteKit reads it at build time and refuses to build without it — a missing
 origin is a venue whose CSRF check compares against `undefined`, and that is

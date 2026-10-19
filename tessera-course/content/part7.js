@@ -1087,7 +1087,7 @@ export const en = {
 			{
 				type: 'why',
 				title: 'Plurals in the language’s own terms',
-				text: '`nodes: (count) => count === 1 ? \'1 shape\' : `${count} shapes`` is not a workaround for a missing plural system. Japanese has no plural forms, and its catalogue simply does not branch — which no `one{}/other{}` scheme can represent without lying, because it forces you to write the same string twice and pretend they are different cases. A function is the general form; ICU is a special case of it that happens to be data.'
+				text: '`` nodes: (count) => count === 1 ? \'1 shape\' : `${count} shapes` `` is not a workaround for a missing plural system. Japanese has no plural forms, and its catalogue simply does not branch — which no `one{}/other{}` scheme can represent without lying, because it forces you to write the same string twice and pretend they are different cases. A function is the general form; ICU is a special case of it that happens to be data.'
 			},
 			{
 				type: 'p',

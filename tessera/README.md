@@ -61,6 +61,8 @@ pnpm test           # unit suite, then the Playwright e2e suite
 pnpm run db:studio  # poke at the database in a browser
 ```
 
+CI runs `verify` and the course checks: `../.github/workflows/tessera.yml`.
+
 ## Provenance
 
 Scaffolded with the Svelte CLI and then built out by hand:
