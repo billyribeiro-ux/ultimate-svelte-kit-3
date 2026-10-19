@@ -696,11 +696,11 @@ mkdir new-thing  # make a directory`
 			{
 				type: 'terminal',
 				code: `node -v
-# v24.21.0  — this project requires 24.21.0 or higher`
+# v24.22.0  — this project requires 24.22.0 or higher`
 			},
 			{
 				type: 'warn',
-				text: 'SvelteKit 3 on its own accepts an older Node (its floor is 22.17), but this project sets its floor at the current LTS — its `package.json` declares `"engines": { "node": ">=24.21.0" }`. If yours is older, get the LTS from [nodejs.org](https://nodejs.org). "LTS" means Long Term Support — the stable version, which is what you want.'
+				text: 'SvelteKit 3 on its own accepts an older Node (its floor is 22.17), but this project sets its floor at the current LTS — its `package.json` declares `"engines": { "node": ">=24.22.0" }`. If yours is older, get the LTS from [nodejs.org](https://nodejs.org). "LTS" means Long Term Support — the stable version, which is what you want.'
 			},
 			{ type: 'h3', id: 'packages', text: 'Packages and the package manager' },
 			{
@@ -786,7 +786,7 @@ mkdir new-thing  # make a directory`
 			},
 			{
 				type: 'checkpoint',
-				text: '`node -v` shows 24.21.0 or newer, `pnpm -v` shows 12 or newer, and you can explain what the `^` in a version number means.'
+				text: '`node -v` shows 24.22.0 or newer, `pnpm -v` shows 12 or newer, and you can explain what the `^` in a version number means.'
 			}
 		]
 	},
