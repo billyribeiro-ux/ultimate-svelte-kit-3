@@ -604,7 +604,7 @@ $ # the server's HTML for /demo/traces, signed in, before and after
 			code('src/routes/[tenant]/explore/+page.svelte', 144, 157),
 			{
 				type: 'warn',
-				text: 'The first version was keyed on `query`, and the tab froze when two runs overlapped. The remote-functions documentation says that queries “are cached while they’re on the page, meaning `getPosts() === getPosts()`”, and in SvelteKit 3.0.1 the client does not do that: each call makes a new object in front of the shared cache entry. With two runs in flight, each read of the key found a new object and started the block over, without end. A string built from the arguments is equal to itself.'
+				text: 'The first version was keyed on `query`, and the tab froze when two runs overlapped. The remote-functions documentation says that queries “are cached while they’re on the page, meaning `getPosts() === getPosts()`”, and in SvelteKit 3.1.0 the client does not do that: each call makes a new object in front of the shared cache entry. With two runs in flight, each read of the key found a new object and started the block over, without end. A string built from the arguments is equal to itself.'
 			},
 			{
 				type: 'terminal',
