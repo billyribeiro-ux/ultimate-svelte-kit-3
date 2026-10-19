@@ -47,11 +47,11 @@
  * ==================
  *
  * SvelteKit emits an OpenTelemetry span for every `handle`, `load`, form
- * action and remote function, and OpenTelemetry's job is to hand those to an
- * *exporter*. The usual exporter sends them to a collector over the network.
- * This one keeps the last few hundred in memory, which is all a single-process
- * app needs in order to answer &quot;what did the last request actually do?&quot; on its
- * own diagnostics page.
+ * action, remote function and (since 3.1) `+server` handler, and
+ * OpenTelemetry's job is to hand those to an *exporter*. The usual exporter
+ * sends them to a collector over the network. This one keeps the last few
+ * hundred in memory, which is all a single-process app needs in order to
+ * answer &quot;what did the last request actually do?&quot; on its own diagnostics page.
  *
  * It is deliberately not a replacement for a real collector. It forgets on
  * restart, it holds one process's spans, and it is bounded by `TRACE_BUFFER`
