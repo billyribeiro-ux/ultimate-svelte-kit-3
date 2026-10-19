@@ -8,7 +8,7 @@
  * column to `account` (who vouches for the account: an OAuth provider's URL,
  * or `local:credential` for a password) with a unique index on
  * `(issuer, account_id)`, and this file carried both. 1.7.3 withdrew it, so
- * 1.7.7 never writes the column — and a `NOT NULL` column nothing writes is a
+ * 1.7.10 never writes the column — and a `NOT NULL` column nothing writes is a
  * sign-up that fails on its insert, which is how the seed found it the first
  * time it ran against the new library. Migration `0001` drops the index and
  * then the column, which is why `account` below looks like 1.6's again.

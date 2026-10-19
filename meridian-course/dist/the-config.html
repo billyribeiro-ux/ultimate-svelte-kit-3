@@ -231,13 +231,13 @@ experimental: {
  * =============
  *
  * `tracing.server` makes SvelteKit emit OpenTelemetry spans for
- * `handle`, `load`, form actions and remote functions, and puts the
- * root span on `event.tracing.root`. It graduated out of
- * `experimental` in SvelteKit 3, and so did the instrumentation file:
- * `src/instrumentation.server.ts` is loaded before any application
- * code whenever it exists, with nothing to switch on. That file is
- * where the exporter is set up, and the diagnostics page reads the
- * spans back.
+ * `handle`, `load`, form actions, remote functions and (since 3.1)
+ * `+server` handlers, and puts the root span on `event.tracing.root`.
+ * It graduated out of `experimental` in SvelteKit 3, and so did the
+ * instrumentation file: `src/instrumentation.server.ts` is loaded
+ * before any application code whenever it exists, with nothing to
+ * switch on. That file is where the exporter is set up, and the
+ * diagnostics page reads the spans back.
  */
 tracing: { server: true },
 
@@ -247,7 +247,7 @@ prerender: {
 	handleMissingId: 'fail'
 },</code></pre>
 </figure>
-<p><code>tracing.server</code> was experimental in SvelteKit 2 and is not in 3; it makes every <code>handle</code>, <code>load</code>, form action and remote function an OpenTelemetry span, and <code>src/instrumentation.server.ts</code> — loaded before any application code, with nothing to switch on — is where the exporter lives. Chapter <a href="explore-and-diagnostics.html">37</a> reads the spans back on the diagnostics page. The two explicit <code>'fail'</code> values restate the default, so that the intent is in the file: a broken link or a missing <code>#id</code> on a prerendered page fails the build, which is the only time you want to find out. The other three handlers — <code>handleEntryGeneratorMismatch</code>, <code>handleUnseenRoutes</code> and <code>handleInvalidUrl</code> — also default to <code>'fail'</code>. The options left out keep their defaults too: <code>entries</code> is <code>[&quot;*&quot;]</code>, every route without a required parameter; <code>crawl</code> is <code>true</code>, so the build follows links from there, which is how <code>/de/guides</code> and <code>/pt-br/guides</code> are found — through the language switcher’s links, with no entry of their own; and <code>concurrency</code> is <code>1</code>, which is right for pages whose content is in the repository rather than behind a network.</p>
+<p><code>tracing.server</code> was experimental in SvelteKit 2 and is not in 3; it makes every <code>handle</code>, <code>load</code>, form action, remote function and (since 3.1) <code>+server</code> handler an OpenTelemetry span, and <code>src/instrumentation.server.ts</code> — loaded before any application code, with nothing to switch on — is where the exporter lives. Chapter <a href="explore-and-diagnostics.html">37</a> reads the spans back on the diagnostics page. The two explicit <code>'fail'</code> values restate the default, so that the intent is in the file: a broken link or a missing <code>#id</code> on a prerendered page fails the build, which is the only time you want to find out. The other three handlers — <code>handleEntryGeneratorMismatch</code>, <code>handleUnseenRoutes</code> and <code>handleInvalidUrl</code> — also default to <code>'fail'</code>. The options left out keep their defaults too: <code>entries</code> is <code>[&quot;*&quot;]</code>, every route without a required parameter; <code>crawl</code> is <code>true</code>, so the build follows links from there, which is how <code>/de/guides</code> and <code>/pt-br/guides</code> are found — through the language switcher’s links, with no entry of their own; and <code>concurrency</code> is <code>1</code>, which is right for pages whose content is in the repository rather than behind a network.</p>
 <h3 id="csp">The Content Security Policy</h3>
 
 <figure class="code">

@@ -13,7 +13,8 @@ Node **24.22.0** (the current LTS; `.nvmrc` pins it, and `engines` refuses
 anything older), pnpm **12.14.0** (pinned by `packageManager`, so Corepack or
 pnpm's own version check picks it up), SvelteKit **3.1.0** with adapter-node
 **6**, Vitest **5**, TypeScript **6**. Everything else is at its latest
-release; `pnpm-lock.yaml` is the exact answer.
+release except `@types/node`, which stays on 24.x to match Node 24;
+`pnpm-lock.yaml` is the exact answer.
 
 The server-side code is TypeScript that Node runs directly — type stripping,
 no build step — which is why `tsconfig.base.json` is `noEmit` and why there is

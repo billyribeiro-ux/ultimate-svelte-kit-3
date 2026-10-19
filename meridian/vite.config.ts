@@ -181,13 +181,13 @@ export default defineConfig(({ mode }) => {
 				 * =============
 				 *
 				 * `tracing.server` makes SvelteKit emit OpenTelemetry spans for
-				 * `handle`, `load`, form actions and remote functions, and puts the
-				 * root span on `event.tracing.root`. It graduated out of
-				 * `experimental` in SvelteKit 3, and so did the instrumentation file:
-				 * `src/instrumentation.server.ts` is loaded before any application
-				 * code whenever it exists, with nothing to switch on. That file is
-				 * where the exporter is set up, and the diagnostics page reads the
-				 * spans back.
+				 * `handle`, `load`, form actions, remote functions and (since 3.1)
+				 * `+server` handlers, and puts the root span on `event.tracing.root`.
+				 * It graduated out of `experimental` in SvelteKit 3, and so did the
+				 * instrumentation file: `src/instrumentation.server.ts` is loaded
+				 * before any application code whenever it exists, with nothing to
+				 * switch on. That file is where the exporter is set up, and the
+				 * diagnostics page reads the spans back.
 				 */
 				tracing: { server: true },
 

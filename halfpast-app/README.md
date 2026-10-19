@@ -91,9 +91,9 @@ Locally, `.env` supplies everything. The e2e suite sets its own variables in
 
 ## Toolchain notes
 
-- `pnpm install` is clean except for one widened peer: `better-auth` still
-  declares `@sveltejs/kit ^2`. The reason it is safe, and the rule that widens
-  it, are both in `pnpm-workspace.yaml`.
+- `pnpm install` is clean, with no peer warnings: Better Auth 1.7.10 lists
+  `@sveltejs/kit ^3` in its own peer range, so the rule that used to widen it
+  is gone from `pnpm-workspace.yaml`.
 - pnpm 12 holds back packages younger than a day; the three it excluded when the
   toolchain was pinned are listed in `pnpm-workspace.yaml` with the same note.
 

@@ -1608,7 +1608,7 @@ export const trailingSlash = 'never';`
 			},
 			{
 				type: 'p',
-				text: "Options exported from a layout cascade to every page beneath it, so those two lines configure the entire site (each `// …` stands for a doc comment in the real file saying what follows here). At build time SvelteKit crawls your app, renders each page and writes plain HTML files. A visitor gets a static file from the CDN edge — no server render, no cold start. Behind `adapter-node` the file is served with a `Content-Type` looked up from its extension, in a list SvelteKit hands the adapter: until 3.1 that list was built from the prerendered paths (`/about` has no extension), so these pages went out with no `Content-Type` at all, and since 3.1 it is built from the files that were written, so `about.html` goes out as `text/html`."
+				text: "Options exported from a layout cascade to every page beneath it, so those two lines configure the entire site (each `// …` stands for a doc comment in the real file saying what follows here). At build time SvelteKit crawls your app, renders each page and writes plain HTML files. A visitor gets a static file from the CDN edge — no server render, no cold start. Behind `adapter-node` the file is served with a `Content-Type` looked up from its extension, in a list SvelteKit hands the adapter: until 3.1 that list was built from the prerendered paths (`/about` has no extension), so these pages went out with no `Content-Type` at all, and since 3.1 it is built from the files that were written, so `about.html` goes out as `text/html;charset=utf-8` (adapter-node adds the charset to every HTML type)."
 			},
 			{
 				type: 'note',

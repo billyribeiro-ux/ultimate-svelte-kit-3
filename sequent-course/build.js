@@ -42,7 +42,7 @@ const COURSE = {
 		construction, and the entire venue can be replayed from its log and arrive
 		at exactly the same state. Built from an empty folder, with every bug found
 		along the way written down.`,
-	badges: ['SvelteKit 3.0', 'Event sourcing', 'Node 24 LTS', 'Three processes'],
+	badges: ['SvelteKit 3.1', 'Event sourcing', 'Node 24 LTS', 'Three processes'],
 	closing: `Every chapter shows the real code from the finished project in
 		<code>sequent</code>. Type it out rather than pasting where you can — the
 		errors you make and fix are the part that sticks. Roughly a dozen chapters
