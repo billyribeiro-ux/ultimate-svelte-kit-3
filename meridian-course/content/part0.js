@@ -145,10 +145,10 @@ export const part0 = [
 				type: 'p',
 				text: 'The first seven projects were single packages. This one is a **workspace**: the SvelteKit app at the root, and a library in `packages/waypoint` that the app depends on as if it had downloaded it from the registry. That is not an affectation. A library that is only ever imported by relative path is never really tested as a library; the first outside consumer finds the missing `exports` entry, the `.ts` import that should have been `.js`, the type that was never emitted. Making the app the first consumer finds all of that on every build.'
 			},
-			code('pnpm-workspace.yaml', 1, 39),
+			code('pnpm-workspace.yaml', 1, 51),
 			{
 				type: 'p',
-				text: 'Four settings, each a decision. `packages` names the folders. `allowBuilds` is pnpm’s answer to supply-chain attacks through install scripts (and pnpm 12 fails the install on a key in this file it does not recognise, so every setting here is one it checks): a dependency’s `postinstall` does not run unless you name the package, so a compromised transitive package cannot run code on your machine by being installed. esbuild needs its script to unpack a platform binary, and Vite needs esbuild; nothing else in this tree is allowed to run anything. `minimumReleaseAgeExclude` is the other half of the same policy — pnpm can refuse versions published less than some number of days ago, so a malicious release has time to be noticed and pulled before it reaches you, and this list is the six versions we deliberately took inside that window — each the release that made the toolchain line up — named so the policy lets exactly them through. `peerDependencyRules` is the one setting that exists because of the move to SvelteKit 3. Better Auth 1.7.7 and runed 0.37.1 both declare `@sveltejs/kit` as an *optional* peer and have not widened the range past 2 yet; both use only what did not change in Kit 3 — `svelteKitHandler` takes `resolve` and `building` as arguments, runed reads `$app/state` — and both are proved against 3.0.1 by the end-to-end suite, so `allowedVersions` tells pnpm that a 3 satisfies those two peers and `pnpm peers check` stays clean. Each line is deleted the day its library’s release notes say “SvelteKit 3”, and the check is what says when. A rule like this is never written to make a warning go away; it is written when the warning has been investigated and found to be noise, and the comment above it has to say so.'
+				text: 'Five settings, each a decision. `packages` names the folders. `allowBuilds` is pnpm’s answer to supply-chain attacks through install scripts (and pnpm 12 fails the install on a key in this file it does not recognise, so every setting here is one it checks): a dependency’s `postinstall` does not run unless you name the package, so a compromised transitive package cannot run code on your machine by being installed. esbuild needs its script to unpack a platform binary, and Vite needs esbuild; nothing else in this tree is allowed to run anything. `minimumReleaseAgeExclude` is the other half of the same policy — pnpm can refuse versions published less than some number of days ago, so a malicious release has time to be noticed and pulled before it reaches you, and this list is the five versions we deliberately took inside that window — each the release that made the toolchain line up — named so the policy lets exactly them through. `peerDependencyRules` is the one setting that exists because of the move to SvelteKit 3. runed 0.37.1 declares `@sveltejs/kit` as an *optional* peer at `^2.21.0` and has not widened the range past 2 yet; it reads only `$app/state`, which did not change in Kit 3, and the end-to-end suite proves it against 3.1.0, so `allowedVersions` tells pnpm that a 3 satisfies that peer and `pnpm peers check` stays clean. The line is deleted the day the library’s release notes say “SvelteKit 3”, and the check is what says when — as it did for Better Auth, whose rule went with 1.7.10, which declares `^2.0.0 || ^3.0.0`. A rule like this is never written to make a warning go away; it is written when the warning has been investigated and found to be noise, and the comment above it has to say so. `permissions` is the newest of the five. pnpm 12.11 added agent skills — instructions for a coding agent that a package ships — as a second thing a dependency may ask to do, beside running a script: pnpm links them into the project’s skill directories only once a person approves the package by name, and `pnpm permissions list` shows what is waiting. `@tanstack/svelte-table` 9.3 is the first dependency here to ship some, and the answer recorded is `skills: false`: an agent working in this repository should be steered by `AGENTS.md` and the code, not by whatever a dependency bundles, and a recorded denial stops pnpm offering the same package on every install.'
 			},
 			{
 				type: 'p',
@@ -188,7 +188,7 @@ export const part0 = [
 			{
 				type: 'terminal',
 				code: `
-$ corepack enable            # pnpm 12.10.1, pinned by "packageManager"
+$ corepack enable            # pnpm 12.14.0, pinned by "packageManager"
 $ pnpm install               # installs both packages, then runs prepare:
                              #   svelte-package → packages/waypoint/dist
                              #   paraglide-js compile → src/lib/paraglide
@@ -295,7 +295,7 @@ $ pnpm exec sv add ai-tools="ide:claude-code+delivery:plugin" --no-git-check`
 			code('AGENTS.md', 1, 6),
 			{
 				type: 'p',
-				text: 'Line 6 is the roll-call `sv` writes, in its order. Lines 3 to 5 were rewritten by hand, because the scaffold can only know “TypeScript” and the package manager, and an agent reading this file should know the versions this project pins and why two peer warnings are allowed.'
+				text: 'Line 6 is the roll-call `sv` writes, in its order. Lines 3 to 5 were rewritten by hand, because the scaffold can only know “TypeScript” and the package manager, and an agent reading this file should know the versions this project pins and why a peer warning is allowed.'
 			},
 
 			{ type: 'h3', id: 'sv-add', text: '`sv add`, and what each add-on wrote' },
@@ -354,7 +354,7 @@ $ pnpm exec sv add ai-tools="ide:claude-code+delivery:plugin" --no-git-check`
 			code('package.json', 20, 23),
 			{
 				type: 'p',
-				text: 'The flags `svelte-check` 4.7.6 accepts, apart from `--color`, `--no-color`, `--version` and `--help`, and what this project does with each:'
+				text: 'The flags `svelte-check` 4.7.7 accepts, apart from `--color`, `--no-color`, `--version` and `--help`, and what this project does with each:'
 			},
 			{
 				type: 'ul',

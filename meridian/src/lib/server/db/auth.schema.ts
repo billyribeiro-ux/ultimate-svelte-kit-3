@@ -1,5 +1,5 @@
 /**
- * Better Auth's four tables, in the shape Better Auth 1.7.7 expects.
+ * Better Auth's four tables, in the shape Better Auth 1.7.10 expects.
  *
  * `pnpm exec auth generate` would write this file from `auth.ts`; it is kept
  * by hand so that the column names follow the same `snake_case` convention as
@@ -8,7 +8,7 @@
  * `issuer` column to `account` (who vouches for the account — an OAuth
  * provider's URL, or `local:credential` for a password), with a unique index
  * on `(issuer, account_id)`, and the first version of this file carried both.
- * 1.7.3 withdrew it, so 1.7.7 never writes the column; Better Auth's own
+ * 1.7.3 withdrew it, so 1.7.10 never writes the column; Better Auth's own
  * schema diff now warns about it, and the 1.7 upgrade guide says what to do
  * on SQLite: drop the index, then the column. Migration `0001` does exactly
  * that, which is why the `account` table below looks like 1.6's again.

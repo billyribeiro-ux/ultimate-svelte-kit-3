@@ -5,14 +5,14 @@ friends plan a trip together: stops on days, a map and a globe of the route,
 a shared ledger that says who owes whom, notes that save themselves, guides in
 three languages, and a link that puts the route on somebody else's page.
 
-It is built on Svelte 5.57, SvelteKit 3.0.1 and Vite 8.3, as of October
+It is built on Svelte 5.57, SvelteKit 3.1.0 and Vite 8.3, as of October
 2026, and it exists to use every current capability of both for something
 real. The course in [`../meridian-course`](../meridian-course) reads
 every line of it in order and says why.
 
 ## Run it
 
-Requires Node 24.21.0 (`.nvmrc`, the current LTS) and pnpm 12.10.1
+Requires Node 24.22.0 (`.nvmrc`, the current LTS) and pnpm 12.14.0
 (`packageManager`; `corepack enable` gets it). This is a pnpm workspace: the
 app at the root, the geodesy library in `packages/waypoint`.
 

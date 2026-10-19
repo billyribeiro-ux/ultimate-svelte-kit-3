@@ -98,7 +98,7 @@ runtime.d.ts  runtime.js  server.d.ts  server.js`
 			{
 				type: 'why',
 				title: 'Why Paraglide and not svelte-i18n, or paraglide-sveltekit',
-				text: 'svelte-i18n is a runtime dictionary with stores; it works, and it ships every string of every loaded language and offers no type for the keys. `@inlang/paraglide-sveltekit` was the framework-specific wrapper, and it has been folded into Paraglide 2’s own `strategy` plus the `reroute` hook — there is nothing left for a SvelteKit-specific package to do, which is why the ecosystem survey in chapter {{choosing-libraries}} lists it as “not needed” rather than “rejected”. The pieces here are Paraglide 2.26, one universal hook, one server handler, and a component of links.'
+				text: 'svelte-i18n is a runtime dictionary with stores; it works, and it ships every string of every loaded language and offers no type for the keys. `@inlang/paraglide-sveltekit` was the framework-specific wrapper, and it has been folded into Paraglide 2’s own `strategy` plus the `reroute` hook — there is nothing left for a SvelteKit-specific package to do, which is why the ecosystem survey in chapter {{choosing-libraries}} lists it as “not needed” rather than “rejected”. The pieces here are Paraglide 2.29, one universal hook, one server handler, and a component of links.'
 			},
 			{
 				type: 'checkpoint',

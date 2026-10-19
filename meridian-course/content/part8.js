@@ -762,7 +762,7 @@ Running 259 tests using 1 worker
 			},
 			{
 				type: 'p',
-				text: '`mode: \'auto\'` is the interesting setting. SvelteKit’s own scripts are inline (the tiny module that starts the client), so the policy has to allow *those* while refusing everything else. Two mechanisms exist: a **nonce** — a random value generated per request, put on the header and on each allowed `<script>` — and a **hash** of the script’s content. A prerendered page has no request, so it cannot have a nonce; a dynamically rendered one streams `resolve()` scripts after the header has gone, so it cannot know all the hashes. `auto` uses hashes for prerendered pages and nonces for the rest, and the guides (chapter {{guides-prerendered-with-mdsvex}}) are the reason the project needs both.'
+				text: '`mode: \'auto\'` is the interesting setting. SvelteKit’s own scripts are inline (the tiny module that starts the client), so the policy has to allow *those* while refusing everything else. Two mechanisms exist: a **nonce** — a random value generated per request, put on the header and on each allowed `<script>` — and a **hash** of the script’s content. A prerendered page has no request, so it cannot have a nonce; a dynamically rendered one streams `resolve()` scripts after the header has gone, so it cannot know all the hashes. `auto` uses hashes for prerendered pages and nonces for the rest, and the guides (chapter {{guides-prerendered-with-mdsvex}}) are the reason the project needs both. One thing this policy does not use: since 3.1 a source list such as `script-src` may carry the hash-reporting keywords `report-sha256`, `report-sha384` and `report-sha512`, which SvelteKit now accepts and writes into the header quoted, as it does `report-sample`. Meridian sends no violation reports, so it has no use for them; the report-only trial on the backlog (chapter {{what-i-would-do-next}}) is where they would belong.'
 			},
 			code('src/app.html', 44, 57),
 			code('vite.config.ts', 421, 426),
@@ -993,6 +993,10 @@ $ grep -rn "@migration-task" src                         # must find nothing at 
 				type: 'why',
 				title: 'Why one task per commit',
 				text: 'Because a migration commit is reviewed by reading its diff, and nine tasks in one diff is a diff nobody reads. The documentation says it outright: run “one selectable task at a time and commit the result before starting the next one”, and — just as important — “do not expect a project to work after running only a few tasks”. The commits are for review, not for stopping half-way. When something breaks after the fourth, `git bisect` has nine small commits to choose from instead of one large one.'
+			},
+			{
+				type: 'p',
+				text: 'A minor release is a different job and needs none of this. SvelteKit 3.1.0 had no breaking changes, so there is no migration tool to run and no diff to review beyond the version numbers: bump the range in `package.json`, install so the lockfile follows, and run the gate. The gate is the evidence — `verify` type-checks, lints, tests, builds and drives a browser through the result — and a release that broke something the gate never reaches would be a gap in the gate, not a reason to trust the changelog less. Read the changelog all the same, because it says where the new behaviour lives: 3.1.0 added a CSP keyword family (chapter {{security-headers-and-csp}}), a span for `+server` handlers (chapter {{explore-and-diagnostics}}) and a guard for a failing service-worker update (chapter {{the-offline-itinerary}}), and moving Meridian from 3.0.1 to 3.1.0 changed nothing about how it behaves for any of them.'
 			},
 			{
 				type: 'table',
@@ -1245,7 +1249,7 @@ $ node ../meridian-course/build.js && node ../meridian-course/tools/check-dist.j
 			blocks: [
 				{
 					type: 'p',
-					text: `“8++” is a promise about coverage and about reasons. Every surface the coverage plan named for Svelte 5.57 and SvelteKit 3.0.1 — ${SURFACES.length} of them — is in one of four states in this course: used for something in Meridian, with the reason written down; declined, with the reason written down; on the backlog, with the reason it waits; or dropped, with the reason it was not built. The plan is this course’s own list and not the whole API, so a built-in nobody planned has no row here. Nothing is demonstrated for its own sake, and nothing is claimed that the code does not do. This chapter is the list, and it is the hardest chapter in the course to fake, because it is not written by hand.`
+					text: `“8++” is a promise about coverage and about reasons. Every surface the coverage plan named for Svelte 5.57 and SvelteKit 3.0.1 — ${SURFACES.length} of them — is in one of four states in this course: used for something in Meridian, with the reason written down; declined, with the reason written down; on the backlog, with the reason it waits; or dropped, with the reason it was not built. The plan is this course’s own list and not the whole API, so a built-in nobody planned has no row here. The 3.1.0 minor the project now runs on brought two such cases — the CSP hash-reporting keywords and the \`sveltekit.endpoint\` span arrived after the plan was drawn — and chapters {{security-headers-and-csp}} and {{explore-and-diagnostics}} say where they apply. Nothing is demonstrated for its own sake, and nothing is claimed that the code does not do. This chapter is the list, and it is the hardest chapter in the course to fake, because it is not written by hand.`
 				},
 				{
 					type: 'why',

@@ -21,19 +21,31 @@ allowBuilds:
 minimumReleaseAgeExclude:
   - '@libsql/client@0.18.0'
   - '@libsql/core@0.18.0'
-  - maplibre-gl@6.13.0
   - '@types/node@24.19.2'
   - eslint-plugin-svelte@3.23.1
   - phosphor-svelte@3.1.1
 
-# Two libraries declare `@sveltejs/kit` as an *optional* peer and have not
-# widened the range past 2 yet: Better Auth 1.7.7 (`^2.0.0`) and runed 0.37.1
-# (`^2.21.0`). Both use only what did not change in Kit 3 — `svelteKitHandler`
-# takes `resolve` and `building` as arguments, runed reads `$app/state` — and
-# both are proved against 3.0.1 by the end-to-end suite, so the warning is
-# noise rather than information. Remove each line when its release notes say
-# "SvelteKit 3"; `pnpm peers check` will tell you when it is time.
+# runed 0.37.1 declares `@sveltejs/kit` as an *optional* peer at `^2.21.0` and
+# has not widened the range past 2 yet. It reads only `$app/state`, which did
+# not change in Kit 3, and the end-to-end suite proves it against 3.1.0, so the
+# unmet-peer warning is noise rather than information. Remove the line when its
+# release notes say "SvelteKit 3"; `pnpm peers check` will tell you when it is
+# time. Better Auth had the same line until 1.7.10, whose peer range became
+# `^2.0.0 || ^3.0.0`: an allowance for a peer that is met is a rule that can
+# only ever hide the next real mismatch, so it went with the release that made
+# it unnecessary.
 peerDependencyRules:
   allowedVersions:
-    'better-auth>@sveltejs/kit': '3'
     'runed>@sveltejs/kit': '3'
+
+# pnpm 12.11 added a second kind of approval beside build scripts: a package may
+# ship "agent skills" (instructions for a coding agent), and pnpm links them
+# into the project's skill directories once somebody says so by name.
+# @tanstack/svelte-table 9.3 is the first dependency here to ship some (a
+# getting-started guide, the v8 -> v9 migration this project is already past, and
+# a table-state guide). An agent working in this repository should be steered by
+# `AGENTS.md` and the code, not by whatever a dependency bundles, so the answer
+# is a recorded denial, which also stops pnpm offering it on every install.
+permissions:
+  '@tanstack/svelte-table':
+    skills: false

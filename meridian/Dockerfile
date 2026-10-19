@@ -17,7 +17,7 @@
 #   docker run -e BETTER_AUTH_SECRET=… -e DATABASE_URL=file:/data/meridian.db \
 #              -v meridian-data:/data -p 3000:3000 meridian
 
-ARG NODE_VERSION=24.21.0
+ARG NODE_VERSION=24.22.0
 
 # ---------------------------------------------------------------------------
 FROM node:${NODE_VERSION}-slim AS deps
