@@ -149,6 +149,28 @@ function renderBlock(block) {
 	<pre><code>${esc(plain(block.code.replace(/^\n/, '')))}</code></pre>
 </figure>`;
 
+		case 'table':
+			/*
+			 * A real table, because a mapping — old API to new, warning to the
+			 * element that answers it — is two or three columns of facts, and a
+			 * list of arrows hides which column is which. The wrapper scrolls
+			 * sideways on its own, so a wide table never widens the page, and it
+			 * is a labelled, focusable region so a keyboard can scroll it too.
+			 */
+			return `
+<div class="table" role="region" aria-label="${esc(plain(block.caption))}" tabindex="0">
+	<table>
+		<caption>${inline(block.caption)}</caption>
+		<thead><tr>${block.head.map((/** @type {string} */ h) => `<th scope="col">${inline(h)}</th>`).join('')}</tr></thead>
+		<tbody>${block.rows
+			.map(
+				(/** @type {string[]} */ row) =>
+					`<tr>${row.map((cell) => `<td>${inline(cell)}</td>`).join('')}</tr>`
+			)
+			.join('')}</tbody>
+	</table>
+</div>`;
+
 		case 'note':
 			return `<aside class="callout callout--note"><p>${inline(block.text)}</p></aside>`;
 

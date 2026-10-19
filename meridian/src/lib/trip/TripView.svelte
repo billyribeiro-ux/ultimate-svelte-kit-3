@@ -6,6 +6,7 @@
 	import { cubicOut } from 'svelte/easing';
 	import { browser } from '$app/env';
 	import { reducedMotion } from '#lib/motion/prefers.svelte.ts';
+	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { toast } from 'svelte-sonner';
 	import { boundaryMessage, errorMessage } from '#lib/ui/errors.ts';
@@ -311,8 +312,37 @@
 	 */
 	const wide = new MediaQuery('(min-width: 64em)');
 
-	/** The stop dialog: closed, adding at a day (and maybe a point), or editing a stop. */
-	let dialog: Mode | null = $state(null);
+	/*
+	 * THE STOP DIALOG IS A HISTORY ENTRY
+	 * ----------------------------------
+	 * Closed, adding at a day (and maybe a point), or editing a stop — and
+	 * which of those is not component state but `page.state`, the state of
+	 * the history entry. Opening is a *shallow* navigation: `goto('', {
+	 * shallow: true, state })` pushes an entry for the same URL without
+	 * running a load or rendering another page. So the back button — on a
+	 * phone, a swipe — closes the dialog instead of leaving the trip, and
+	 * closing it any other way is `history.back()`, which leaves the history
+	 * as it was before the dialog opened. A reload starts closed: page state
+	 * is not kept across a reload unless `persistState` asks, and a dialog
+	 * that reopened over a fresh page would be a surprise.
+	 *
+	 * Derived, and read once per change of `page.state` — which changes when
+	 * the entry does, not when a live snapshot arrives — so the stop row it
+	 * hands the dialog stays the one the dialog opened with, and the draft
+	 * derived from it is not reset under somebody's fingers.
+	 */
+	const dialog: Mode | null = $derived.by(() => {
+		const { dialog: open, stop, day, point } = page.state;
+		if (open !== 'stop') return null;
+		return stop ? { kind: 'edit', stop } : { kind: 'add', date: day ?? null, point };
+	});
+
+	function openDialog(state: Omit<App.PageState, 'dialog'>) {
+		// '' is this entry's own URL — the shallow-routing docs' own call. The rule
+		// allows it for the deprecated `pushState` and has not caught up with `goto`.
+		// eslint-disable-next-line svelte/no-navigation-without-resolve
+		void goto('', { shallow: true, state: { dialog: 'stop', ...state } });
+	}
 
 	async function moveTo(id: string, point: { lng: number; lat: number }) {
 		try {
@@ -350,7 +380,7 @@
 
 		<div class="trip__status cluster">
 			<Presence {view} viewerId={initial.viewerId} />
-			<CommandPalette {view} {editable} onadd={() => (dialog = { kind: 'add', date: null })} />
+			<CommandPalette {view} {editable} onadd={() => openDialog({ day: null })} />
 			<!-- The sizer is invisible and holds the four labels as generated text, so the slot is as wide as the widest. -->
 			<span class="status">
 				<span class="status__sizer" aria-hidden="true">
@@ -450,8 +480,8 @@
 					{view}
 					{editable}
 					viewerId={initial.viewerId}
-					onadd={(date) => (dialog = { kind: 'add', date })}
-					onedit={(stop) => (dialog = { kind: 'edit', stop })}
+					onadd={(day) => openDialog({ day })}
+					onedit={(stop) => openDialog({ stop })}
 				/>
 				{#if wide.current}
 					<div class="split__map">
@@ -460,7 +490,7 @@
 							selected={view.selectedStopId}
 							{editable}
 							onselect={(id) => view.select(id)}
-							onadd={(point) => (dialog = { kind: 'add', date: null, point })}
+							onadd={(point) => openDialog({ day: null, point })}
 							onmove={moveTo}
 						/>
 					</div>
@@ -473,7 +503,7 @@
 					selected={view.selectedStopId}
 					{editable}
 					onselect={(id) => view.select(id)}
-					onadd={(point) => (dialog = { kind: 'add', date: null, point })}
+					onadd={(point) => openDialog({ day: null, point })}
 					onmove={moveTo}
 				/>
 			</div>
@@ -532,7 +562,7 @@
 		mode={dialog}
 		tripId={view.trip.id}
 		days={view.days}
-		onclose={() => (dialog = null)}
+		onclose={() => history.back()}
 		onsaved={(stop) => view.select(stop.id)}
 	/>
 {/if}

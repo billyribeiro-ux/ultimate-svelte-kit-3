@@ -78,5 +78,9 @@ image, and checks the course.
 | `src/hooks.client.ts`                     | the browser's `handleError`: an unexpected failure is put into the page's language                                                              |
 | `src/service-worker/`, `src/lib/offline/` | the offline itinerary: the build and each page kept on the device, emptied when nobody is signed in                                             |
 | `vite.config.ts`                          | every SvelteKit option, commented: CSP, tracing, version, prerender, the test projects                                                          |
+| `scripts/`                                | what `verify` runs beside the tests — the autofixer gate, the bundle guard, the contrast check — and the seed, the migrations, the screenshots  |
+| `docs/`                                   | `migration-sveltekit-3.md`: every SvelteKit 3 migration task, resolved with the file and line that answered it                                  |
+| `AGENTS.md`, `.claude/`                   | the agent beside you: project instructions, and the Svelte plugin with its `svelte-file-editor` subagent                                        |
+| `.vscode/`                                | the editor extensions the project assumes: Svelte, ESLint, Prettier                                                                             |
 | `e2e/`                                    | eight Playwright suites; `collab.e2e.ts` runs two browsers on one trip, `visual.e2e.ts` runs axe, `offline.e2e.ts` reads a trip with no network |
 | `Dockerfile`, `compose.yaml`              | three stages, one process, a health check                                                                                                       |

@@ -79,7 +79,7 @@ export const part6 = [
 		slug: 'trips-and-a-new-trip',
 		title: 'The trips list and a new trip',
 		summary:
-			'A list awaited in markup with a `failed` snippet and no `pending` one; a preview per card through `query.batch` — two requests for twenty trips; a thumbnail component; and a creation form whose date picker writes hidden inputs named by the form itself, prefilled from the explore page.',
+			'A list awaited in markup with a `failed` snippet and no `pending` one; a preview per card through `query.batch` — two requests for twenty trips; a thumbnail component; and a creation form whose date picker writes hidden inputs named by the form itself, prefilled from the explore page, whose draft survives a reload through `snapshot`.',
 		goal: 'Compose a page from two remote reads and one remote form, and let a headless picker participate in a form it knows nothing about.',
 		blocks: [
 			code(`${ROUTES}/(site)/(app)/trips/+page.svelte`, 1, 33),
@@ -91,7 +91,7 @@ export const part6 = [
 			code('src/lib/ui/Empty.svelte', 1, 57),
 			{
 				type: 'p',
-				text: 'A new account’s trips list is empty, and so is a search that matches nothing and a trip with no expenses; all three are `Empty`, so “nothing here yet” looks and reads the same everywhere. Its one action is a `Snippet` prop — `action?: Snippet`, rendered with `{@render action()}` — because the caller knows what the action is: a link to the new-trip form here, a button that clears the search on the explore page. A snippet passed as a child, `{#snippet action()}…{/snippet}` inside `<Empty>`, *is* that prop, by name, so the call site reads like markup and the component stays ignorant of what it is rendering. The title is a paragraph in the display face, not a heading — “No expenses yet” must not be a second heading in a section already called Expenses — and the card sits at the left edge, like the heading above it, and centres its contents inside: a card floating in the middle of a left-aligned page had read as a dialog that had lost its way.'
+				text: 'A new account’s trips list is empty — the `{:else}` of the list’s `{#each}`, which renders when the array has nothing in it — and so is a search that matches nothing and a trip with no expenses; all three are `Empty`, so “nothing here yet” looks and reads the same everywhere. Its one action is a `Snippet` prop — `action?: Snippet`, rendered with `{@render action()}` — because the caller knows what the action is: a link to the new-trip form here, a button that clears the search on the explore page. A snippet passed as a child, `{#snippet action()}…{/snippet}` inside `<Empty>`, *is* that prop, by name, so the call site reads like markup and the component stays ignorant of what it is rendering. The title is a paragraph in the display face, not a heading — “No expenses yet” must not be a second heading in a section already called Expenses — and the card sits at the left edge, like the heading above it, and centres its contents inside: a card floating in the middle of a left-aligned page had read as a dialog that had lost its way.'
 			},
 			{
 				type: 'why',
@@ -106,8 +106,8 @@ export const part6 = [
 			},
 
 			{ type: 'h3', id: 'new-trip', text: 'A new trip' },
-			code(`${ROUTES}/(site)/(app)/trips/new/+page.svelte`, 1, 18),
-			code(`${ROUTES}/(site)/(app)/trips/new/+page.svelte`, 24, 84),
+			code(`${ROUTES}/(site)/(app)/trips/new/+page.svelte`, 1, 43),
+			code(`${ROUTES}/(site)/(app)/trips/new/+page.svelte`, 49, 109),
 			{
 				type: 'p',
 				text: 'Three things in one form. The name is prefilled from `?place=`, which the explore page sets: the gazetteer comes from the prerendered `places()`, already in the browser’s cache from the page that linked here, and `as("text", suggested)` sets the initial value. The description and currency are ordinary fields. The dates are the picker from chapter {{dates-and-money-in-a-locale}} — and the picker renders its own hidden inputs, so they must carry the names SvelteKit expects, which encode the field’s type. So the names come from `fields.startDate.as("hidden", …).name`, the same call the form’s own inputs use, and the picker never learns what a remote form is. The issues for both dates are gathered into one prop and shown under the field.'
@@ -117,11 +117,21 @@ export const part6 = [
 				text: 'This is the general pattern for any third-party input inside a remote form: let the library render what it renders, and give it the `name` that `fields.x.as(...)` would have produced. The form then receives the value the same way it would from a plain `<input>`, with JavaScript on or off.'
 			},
 			{
+				type: 'p',
+				text: 'And a draft that survives. `snapshot` from `$app/navigation` captures a value just before the page changes — a link, Back, a reload, a phone that discarded the tab — keeps it with that history entry, and hands it back when the entry is shown again. The documentation’s two sentences that matter here: captured values “are serialized with devalue”, through the app’s `transport` hook, and “persisted to `sessionStorage`, which allows the state to be restored when the page is reloaded”. The call sits above the page’s `await`, because `snapshot` registers itself with `onMount` and a lifecycle function belongs to initialisation; the explicit `id` keeps the draft across a deploy that moves the line, where the default id, worked out from the stack, would not.'
+			},
+			{
+				type: 'why',
+				title: 'Why the name, the description and the currency — and not the dates',
+				text: 'Because a snapshot should put back exactly what the page can show. `createTrip.fields.value()` and `.set()` read and write the form’s values, and three of them are rendered from those values. The dates are not: `DateRangeField` reads its props once and owns its value after it mounts, so a restored date would sit in the form’s values while the picker showed an empty field — and a form that says one thing and shows another is worse than one that forgets. The older way to do this, `export const snapshot = { capture, restore }` from a `+page.svelte`, still works and is deprecated: it could only live in a route component, it serialised to JSON rather than through `transport`, and shallow navigations did not capture it.'
+			},
+			{
 				type: 'checkpoint',
 				items: [
 					'You can explain why the trips boundary has no `pending` snippet and how many requests twenty cards cost.',
 					'You can say how the picker’s hidden inputs get their names and why that matters.',
-					'You know how the explore page prefills the name without a store or a context.'
+					'You know how the explore page prefills the name without a store or a context.',
+					'You can keep a half-typed form across a reload with `snapshot`, and say why it restores three fields and not five.'
 				]
 			}
 		]
@@ -278,7 +288,7 @@ Error: Cannot access url.search on a page with prerendering enabled
 			{ type: 'h3', id: 'the-frame', text: 'The frame' },
 			code(`${ROUTES}/embed/[slug=slug]/+page.ts`, 1, 7),
 			code(`${ROUTES}/embed/[slug=slug]/+page.svelte`, 1, 63),
-			code('src/hooks.server.ts', 136, 153),
+			code('src/hooks.server.ts', 136, 158),
 			{
 				type: 'p',
 				text: 'The frame page is outside the `(site)` group — no header — and has `csr = false`, so it is a few kilobytes of HTML and CSS. For a while it was a few kilobytes of HTML and no CSS of its own: the compiler option below that turns `src/lib/embed` into custom elements tested for any folder called `embed`, so the client build compiled this page as a custom element too, put its styles into a shadow root that never exists, and emitted no stylesheet for the server to link. The test is now the path `src/lib/embed`, and the end-to-end test of the frame asks for two things only this page’s own stylesheet provides: the card is the 22rem the CSS says, and the list has no indent (chapter {{end-to-end}}). It used to ask whether *a* stylesheet was linked, which was true with the bug too — the root layout’s global CSS is linked on every page, frame or not — so it could not fail. The stops are numbered the way the itinerary and the map number them — a counter in a disc of the stop’s kind colour, through the same `data-kind` — because a grid row is not `display: list-item`, and the list’s own markers had silently gone. Their indent had not: the browser gives an `<ol>` 40px of padding for the markers, drawn or not, and the discs sat 40px right of the title until the list’s padding was set to nothing. It refuses a private trip even to a member, because the frame is on somebody else’s page and their visitors are strangers. And it is the one route for which `hooks.server.ts` replaces `frame-ancestors "none"` with `*` after SvelteKit has built the policy — every other page in the app refuses to be framed, which is what stops clickjacking.'
@@ -449,8 +459,8 @@ src/service-worker/index.ts(135,1): error TS2584: Cannot find name 'document'. D
 			},
 
 			{ type: 'h3', id: 'honest-header', text: 'A header that says “Offline”' },
-			code(`${TRIP}/TripView.svelte`, 93, 142),
-			code(`${TRIP}/TripView.svelte`, 355, 386),
+			code(`${TRIP}/TripView.svelte`, 94, 143),
+			code(`${TRIP}/TripView.svelte`, 385, 416),
 			{
 				type: 'p',
 				text: 'A page served from the copy hydrates from the copied build and runs like any other — and its live stream cannot connect. Before this chapter the chip would have said “Connecting…” for three seconds and then offered the coral “Reconnect”, a button that cannot work in a tunnel. Now the status has a fourth state, first in the derivation: `online` from `svelte/reactivity/window` is `navigator.onLine` as a reactive value, and when it is `false` the chip says “Offline” in the quiet grey and offers nothing. It is `undefined` on the server, which is why the test is `=== false`: a page rendered on a server must not claim to be offline. The sizer gained a fourth label, so the slot stays the width of the widest in every language.'
@@ -461,10 +471,10 @@ src/service-worker/index.ts(135,1): error TS2584: Cannot find name 'document'. D
 			},
 
 			{ type: 'h3', id: 'updates', text: 'A new worker after a deploy' },
-			code('src/routes/+layout.svelte', 89, 111),
+			code('src/routes/+layout.svelte', 94, 116),
 			{
 				type: 'p',
-				text: 'The documentation is precise about when a browser looks for a new worker: “when a full-page navigation happens within its scope, and after functional events such as `push` and `sync`. Client-side navigations are neither.” A trip planner is a page people leave open for days, so a deploy could go unnoticed by its worker for as long as the tab lives. The root layout asks on every navigation, which is the documentation’s own pattern, with two changes: no request when there is no network, because `afterNavigate` also runs when a page hydrates and a page read offline hydrates too; and a failed check is fire-and-forget, a background chore the next navigation repeats. A new worker found this way installs in the background and “take[s] over as soon as the number of tabs managed by the existing service worker drops to zero”. It does not swap itself in under an open page. That is why only hashed files are served from the copy: everything whose name outlives its content — pages, prerendered guides, `static/` — is asked of the network first, so a waiting worker never serves an old one online, and the deploy banner (chapter {{the-shell}}) already turns the next navigation into a full reload.'
+				text: 'The documentation is precise about when a browser looks for a new worker: “when a full-page navigation happens within its scope, and after functional events such as `push` and `sync`. Client-side navigations are neither.” A trip planner is a page people leave open for days, so a deploy could go unnoticed by its worker for as long as the tab lives. The root layout asks on every navigation — `navigator.serviceWorker.getRegistration()`, then `registration.update()` — which is the documentation’s own pattern, with two changes: no request when there is no network, because `afterNavigate` also runs when a page hydrates and a page read offline hydrates too; and a failed check is fire-and-forget, a background chore the next navigation repeats. A new worker found this way installs in the background and “take[s] over as soon as the number of tabs managed by the existing service worker drops to zero”. It does not swap itself in under an open page. That is why only hashed files are served from the copy: everything whose name outlives its content — pages, prerendered guides, `static/` — is asked of the network first, so a waiting worker never serves an old one online, and the deploy banner (chapter {{the-shell}}) already turns the next navigation into a full reload.'
 			},
 			{
 				type: 'note',

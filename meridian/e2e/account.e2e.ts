@@ -89,6 +89,20 @@ test('on a German page the schema’s own messages are German', async ({ page })
 	await expect(page).toHaveURL(/\/de\/signin/);
 });
 
+test('a half-typed new trip survives a reload', async ({ page }) => {
+	// `snapshot()` keeps the draft with the history entry, in sessionStorage, so a reload —
+	// or a phone that discarded the tab — gives it back instead of an empty form.
+	await signIn(page, USERS.ana, '/trips/new');
+	await page.locator('html[data-hydrated]').waitFor();
+	await page.getByLabel('Name').fill('Half a plan');
+	await page.getByLabel('Description').fill('Somewhere warm in March');
+
+	await page.reload();
+	await page.locator('html[data-hydrated]').waitFor();
+	await expect(page.getByLabel('Name')).toHaveValue('Half a plan');
+	await expect(page.getByLabel('Description')).toHaveValue('Somewhere warm in March');
+});
+
 test('a trip is started from the explore page, listed, and deleted from its settings', async ({
 	page
 }) => {

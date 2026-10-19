@@ -264,10 +264,10 @@ export const part2 = [
 			},
 
 			{ type: 'h3', id: 'connection', text: 'One connection, two pragmas' },
-			code('src/lib/server/db/index.ts', 1, 33),
+			code('src/lib/server/db/index.ts', 1, 50),
 			{
 				type: 'p',
-				text: '`DATABASE_URL` comes from `$app/env/private`, a module that exists only on the server — a component that imported this file by mistake fails to build rather than shipping a connection string. `intMode: "number"` stops libSQL handing back `BigInt`s for columns that hold timestamps and cents. And the two pragmas are the difference between a shared trip working and not: WAL lets readers proceed while a writer appends, and the busy timeout makes a second writer wait five seconds instead of failing at once. This file has top-level `await`, which is why it is imported and never re-exported by a `.svelte` file.'
+				text: '`DATABASE_URL` comes from `$app/env/private`, a module that exists only on the server — a component that imported this file by mistake fails to build rather than shipping a connection string. `intMode: "number"` stops libSQL handing back `BigInt`s for columns that hold timestamps and cents. While SvelteKit builds, `building` is `true` and there is no URL to need — `src/env.ts` lets `DATABASE_URL` be missing then (chapter {{environment-and-hooks}}) — so `databaseUrl()` answers `:memory:`, the pragmas are skipped, and the build’s analysis gets a database that dies with it. And the two pragmas are the difference between a shared trip working and not: WAL lets readers proceed while a writer appends, and the busy timeout makes a second writer wait five seconds instead of failing at once. This file has top-level `await`, which is why it is imported and never re-exported by a `.svelte` file.'
 			},
 			code('drizzle.config.ts', 1, 20),
 			code('scripts/migrate.ts', 1, 39),

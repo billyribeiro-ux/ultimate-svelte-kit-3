@@ -29,6 +29,20 @@ test('the itinerary shows the seeded days and the palette jumps between tabs', a
 	await expect(page.getByRole('heading', { name: 'Expenses' })).toBeVisible();
 });
 
+test('the back button closes the stop dialog and stays on the trip', async ({ page }) => {
+	// The dialog is a history entry (shallow routing), so Back — a phone's swipe — closes
+	// it. Held in component state, as it once was, Back left the trip for the page before.
+	await page.locator('html[data-hydrated]').waitFor();
+	await page.getByRole('button', { name: 'Add a stop' }).first().click();
+	const dialog = page.getByRole('dialog');
+	await expect(dialog.getByRole('heading', { name: 'New stop' })).toBeVisible();
+
+	await page.goBack();
+	await expect(dialog).toBeHidden();
+	await expect(page).toHaveURL(new RegExp(`/t/${TRIPS.iberia}$`));
+	await expect(page.getByRole('button', { name: 'Alfama' })).toBeVisible();
+});
+
 test('a stop is added from the place search, edited, and removed', async ({ page }) => {
 	await page.getByRole('button', { name: 'Add a stop' }).first().click();
 	const dialog = page.getByRole('dialog');

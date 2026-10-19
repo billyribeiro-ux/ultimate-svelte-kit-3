@@ -119,7 +119,7 @@ export const part5 = [
 			code('src/lib/motion/prefers.svelte.ts', 1, 21),
 			{
 				type: 'p',
-				text: 'CSS has its own answer to “does this person want motion?” — the `prefers-reduced-motion` block at the bottom of `tokens.css` — and it reaches everything a stylesheet animates. It does not reach a script. The itinerary’s FLIP, the map’s camera, the globe and the hero are JavaScript, and so are Svelte’s own transitions: the documentation says they “are driven by the Web Animations API rather than by CSS”, so that a stylesheet rule zeroing durations “has no effect on them”. Every one of those reads `reducedMotion` from this module. It used to build its own `new MediaQuery(\'(prefers-reduced-motion: reduce)\')`; `svelte/motion` ships exactly that query as `prefersReducedMotion`, built once, and the module now only gives the framework’s instance the name the app reads. One query, so no two components can disagree about the setting.'
+				text: 'CSS has its own answer to “does this person want motion?” — the `prefers-reduced-motion` block at the bottom of `tokens.css` — and it reaches everything a stylesheet animates. It does not reach a script. The itinerary’s FLIP, the map’s camera, the globe and the hero are JavaScript, and so are Svelte’s own transitions: the documentation says they “are driven by the Web Animations API rather than by CSS”, so that a stylesheet rule zeroing durations “has no effect on them”. Every one of those reads `reducedMotion` from this module — `prefersReducedMotion.current`, under the name the project gave it. It used to build its own `new MediaQuery(\'(prefers-reduced-motion: reduce)\')`; `svelte/motion` ships exactly that query as `prefersReducedMotion`, built once, and the module now only gives the framework’s instance the name the app reads. One query, so no two components can disagree about the setting.'
 			},
 			{
 				type: 'p',
@@ -136,8 +136,8 @@ export const part5 = [
 				type: 'p',
 				text: 'A component’s `<style>` applies to that component and nothing else, and the mechanism is plain enough to read in the browser’s inspector. The documentation: Svelte works “by adding a class to affected elements, which is based on a hash of the component styles (e.g. `svelte-123xyz`)”, and adds the same class to each selector. Two consequences follow. Every scoped selector gains “a specificity increase of 0-1-0”, so a component’s `p` beats a global `p` “even if the global stylesheet is loaded later” — which is why a component can restyle a utility class from `utilities.css` without `!important`. And where the class would have to appear twice in one selector, the second time it is written as `:where(.svelte-xyz123)`, which adds nothing, so a long selector does not climb in specificity as it grows. `@keyframes` are scoped by the same hash, so `rise` on the home page and `pulse` in the trip header cannot collide with anybody else’s. What a scoped selector cannot see is an attribute a script writes after the fact, which is why the home page’s card rules are wrapped in `:global(…)` (above): the compiler would otherwise drop a selector it cannot see matching anything in the markup.'
 			},
-			code(`${TRIP}/TripView.svelte`, 430, 436),
-			code(`${TRIP}/TripView.svelte`, 840, 848),
+			code(`${TRIP}/TripView.svelte`, 460, 466),
+			code(`${TRIP}/TripView.svelte`, 870, 878),
 			{
 				type: 'p',
 				text: 'When a number computed in a script has to reach the stylesheet, the project passes it as a custom property with the `style:` directive — `style:--x`, `style:--w` — and lets the CSS decide what to do with it. The tab indicator’s position is a `Tween` (chapter {{the-trip-page}}), and the markup hands its current value to two properties that one rule turns into a `translate` and a `width`. The same bridge carries the header sheet’s stagger (`style:--i={i}` on each link, read as `calc(var(--i) * var(--stagger))`), the home page’s card delay, the frame height the trip page measures (`--frame-top`), and the trips grid’s minimum column (`style:--grid-min="18rem"` over the `.grid` utility’s `var(--grid-min, 18rem)`). The line between that and a `data-*` attribute is the kind of value. A custom property carries a *quantity* — a length, an index, a duration — that CSS does arithmetic with. An attribute carries a *state* from a short list — `data-kind="food"`, `data-ready`, `data-fresh` — that CSS matches with a selector. The directive also wins over a `style` attribute on the same element, “even over `!important` properties”, so there is never a question of which one applies.'
@@ -218,7 +218,7 @@ export const part5 = [
 			code('src/lib/motion/transitions.ts', 1, 33),
 			{
 				type: 'p',
-				text: 'A transition is a function of three arguments — the element, the parameters written in the directive, and an `options` object — that returns a `TransitionConfig`: `delay`, `duration`, `easing`, and one of `css` or `tick`. `css(t, u)` returns a string of CSS for a moment of the transition: `t` runs from 0 to 1 on the way in and from 1 back to 0 on the way out, so 1 is always the element as it naturally is, and `u` is `1 - t`. Easing is applied before `css` sees `t`, so `pop` writes a straight line — opacity `t`, scale from 0.6 to 1 — and `cubicOut` bends it. Svelte calls `css` many times *before* the transition starts and turns the answers into keyframes for a Web Animation, which a browser can run off the main thread; `tick(t, u)` is called on every frame instead, for the rare movement that CSS cannot describe (the documentation’s example types a sentence out letter by letter). The rule is theirs: “If it’s possible to use `css` instead of `tick`, do so.”'
+				text: 'A transition is a function of three arguments — the element, the parameters written in the directive, and an `options` object, whose `options.direction` says which way this run goes (`\'in\'`, `\'out\'` or `\'both\'`) — that returns a `TransitionConfig`: `delay`, `duration`, `easing`, and one of `css` or `tick`. `css(t, u)` returns a string of CSS for a moment of the transition: `t` runs from 0 to 1 on the way in and from 1 back to 0 on the way out, so 1 is always the element as it naturally is, and `u` is `1 - t`. Easing is applied before `css` sees `t`, so `pop` writes a straight line — opacity `t`, scale from 0.6 to 1 — and `cubicOut` bends it. Svelte calls `css` many times *before* the transition starts and turns the answers into keyframes for a Web Animation, which a browser can run off the main thread; `tick(t, u)` is called on every frame instead, for the rare movement that CSS cannot describe (the documentation’s example types a sentence out letter by letter). The rule is theirs: “If it’s possible to use `css` instead of `tick`, do so.”'
 			},
 			{
 				type: 'p',
@@ -254,7 +254,7 @@ export const part5 = [
 			},
 
 			{ type: 'h3', id: 'values', text: 'A value that moves: `Tween`, and the `Spring` beside it' },
-			code(`${TRIP}/TripView.svelte`, 175, 194),
+			code(`${TRIP}/TripView.svelte`, 176, 195),
 			{
 				type: 'p',
 				text: 'The tab indicator is one 2px bar that slides between tabs, and its position is a `Tween`: `new Tween(initial, { duration, easing })`, then `set(target)` — which returns a promise for when it arrives — and `.current`, which the markup reads on every frame and hands to the stylesheet as `style:--x` and `style:--w` (chapter {{the-design-system}}). The options given to `set` override the defaults for that one move, and `{ duration: 0 }` is how a tween jumps: the first placement, a resize, and every move under reduced motion. `Tween.of(() => value)` is the other constructor, a tween bound to whatever the function returns, created during component initialisation — and the project does not use it, because the obvious place for it is the trip header’s total distance, and the brief says numbers never count up.'
@@ -274,7 +274,7 @@ export const part5 = [
 				type: 'p',
 				text: 'The part that matters more than the look is the last line of the closed state: `visibility: hidden`, after a delay as long as the clip takes. A clipped element is invisible to the eye and perfectly visible to a screen reader and to the Tab key — a closed menu that a keyboard can still walk into. `visibility: hidden` takes the links out of the accessibility tree and out of the tab order, and the delay lets the clip finish before it does. Opening switches `visibility` at once and runs the clip; closing runs the clip and then switches. The test proves the result rather than the CSS:'
 			},
-			code('e2e/public.e2e.ts', 207, 230),
+			code('e2e/public.e2e.ts', 214, 237),
 			{
 				type: 'p',
 				text: 'On the Pixel 7 profile only, because a desktop has no menu. Before the menu opens, a query by role cannot find the Explore link at all — Playwright’s role queries see what the accessibility tree sees — so `toBeHidden()` passes on an element that is not there for a screen reader either. Opened, it is visible; Escape closes it, the button says `aria-expanded="false"`, focus is back on it, and the link is gone from the tree again. Delete `visibility: hidden` from the closed sheet and the first assertion fails, with the sheet still perfectly clipped on screen.'
@@ -283,7 +283,7 @@ export const part5 = [
 			{ type: 'h3', id: 'easing', text: 'The easing table' },
 			{
 				type: 'p',
-				text: '`svelte/easing` exports thirty-one functions: `linear`, and ten families in three forms each. The form says where the movement is fast. `…Out` starts fast and settles — the curve for something *arriving*, and `cubicOut` is the nearest built-in to the `--ease-out` token, which a JavaScript easing cannot read. `…In` starts slowly and leaves fast — for something going away, the role `--ease-in` plays in CSS, “exits only”. `…InOut` is slow at both ends, for something moving from one place on screen to another, like `--ease-inout`. The family says how strongly:'
+				text: '`svelte/easing` exports thirty-one functions: `linear`, and ten families in three forms each — `in`, `out` and `inOut`, as in `cubicIn`, `cubicOut`, `cubicInOut`. The form says where the movement is fast. `…Out` starts fast and settles — the curve for something *arriving*, and `cubicOut` is the nearest built-in to the `--ease-out` token, which a JavaScript easing cannot read. `…In` starts slowly and leaves fast — for something going away, the role `--ease-in` plays in CSS, “exits only”. `…InOut` is slow at both ends, for something moving from one place on screen to another, like `--ease-inout`. The family says how strongly:'
 			},
 			{
 				type: 'ul',
@@ -343,7 +343,7 @@ export const part5 = [
 				text: 'The layout split is the decision this chapter is about, and it came from a failure. The first version had the header in the root layout, fed by a root `+layout.server.ts` that loaded the signed-in person. Then the guides were prerendered, and a prerendered page is rendered once, at build time, with nobody signed in — and that answer is baked into its data. A signed-in person navigating to a guide would see “Sign in” in the header. So the root knows nobody, and the pages that need to know live in a group.'
 			},
 			code('src/routes/+layout.svelte', 1, 40, { partial: true }),
-			code('src/routes/+layout.svelte', 42, 122, { partial: true }),
+			code('src/routes/+layout.svelte', 42, 127, { partial: true }),
 			{
 				type: 'p',
 				text: 'Two more things in that block belong to every page. `afterNavigate` asks the browser to look for a new service worker on each client-side navigation, because the browser only looks by itself on a full page load, and a tab left open across a deploy would otherwise keep the old worker for as long as it stays open — chapter {{the-offline-itinerary}} explains the worker and why the check is skipped with no network. And the last thing in the script is one line in `onMount`: a `data-hydrated` attribute on the root element. `onMount` in the root layout runs once the whole tree has hydrated, so the attribute is an honest signal that the JavaScript is running — a stylesheet can hide a control that needs it until then, and the end-to-end suite waits for it in the test that proves text typed *before* hydration survives (chapter {{signing-in-and-up}}).'
@@ -352,7 +352,7 @@ export const part5 = [
 				type: 'p',
 				text: 'What is left at the root is what every page shares: the fonts and stylesheet, the toaster, the deploy banner, and the two navigation hooks. `onNavigate` wraps the completion of every client-side navigation in `document.startViewTransition`, so the old page cross-fades into the new — and an element with a `view-transition-name`, like the trip title, morphs. Unless the person prefers reduced motion: then no transition is started at all. Turning the CSS off is not enough, because the browser’s own default for a view transition — a 250ms cross-fade, and a position-and-size morph of every named element — runs unless something replaces it; not starting the transition is the one switch that covers all of it. `beforeNavigate` turns the next navigation into a full page load when `updated.current` says a new build was deployed, so no chunk from the old build is ever requested.'
 			},
-			code('src/routes/+layout.svelte', 158, 243),
+			code('src/routes/+layout.svelte', 163, 248),
 			{
 				type: 'p',
 				text: 'Two decisions in that block. The toaster is `unstyled`, with class names that `base.css` dresses as the same tier-3 surface as a dialog, and it moves by screen size: on a phone the bottom of the screen is where the stop sheet opens, so toasts sit under the header instead, offset further when the deploy banner is up there too; on a wide screen they take the free bottom-right corner. svelte-sonner reads a separate `mobileOffset` below 600px and ignores `offset` there, so the same value goes to both — without it a phone’s toast sat 16px from the top, over the brand — and the value names the top alone, because a single string would push the sides in by a header’s height as well. Successes are `toast.success(…)`, so they wear a Phosphor check in `--ok`; errors a warning circle in `--coral`; the list sits on `--z-toast`. `MediaQuery` makes the placement a value the props read rather than a listener. And the cross-fade is CSS on the view-transition pseudo-elements — the old page leaves in 120ms, the new one arrives in 200ms — with the header excluded: it has a `view-transition-name` of its own and its group is told not to animate, so the one element that should feel fixed does not fade with every page. The trip title morphs over `--dur-4`; the trip panel rises 4px. All of it also sits inside `prefers-reduced-motion: no-preference` — the second lock on a door the script has already locked, since under reduced motion there is no transition for the CSS to style, and a navigation is a cut.'
@@ -453,12 +453,12 @@ export const part5 = [
 			},
 
 			{ type: 'h3', id: 'the-view', text: 'The view' },
-			code(`${TRIP}/TripView.svelte`, 41, 73),
+			code(`${TRIP}/TripView.svelte`, 42, 74),
 			{
 				type: 'p',
 				text: '`watchTrip(slug)` is the live query; `.current` is the latest snapshot and `.connected` says whether the stream is up. It is created inside `untrack`, and so is the state object, because the props are read once on purpose — the page keys this component on the slug — and `untrack` both says so and quiets the compiler’s fair question. The tab comes from the URL: `?tab=map` is a link, so it works with the back button, can be shared, and needs no state. What the URL says is a `string | null`, and `isTab` from `state.svelte.ts` is a type guard — `value is Tab` — so the value that passes it is a `Tab` to TypeScript with no cast, and anything else falls back to the itinerary.'
 			},
-			code(`${TRIP}/TripView.svelte`, 257, 298),
+			code(`${TRIP}/TripView.svelte`, 258, 299),
 			{
 				type: 'p',
 				text: 'Read the comment above the effects slowly; it records two bugs the end-to-end suite found, and both are general. First, an effect that read `view.trip` re-ran every time the live query yielded — because `view.trip` is a new object each time — and its cleanup said goodbye, which woke the room, which yielded, which re-ran the effect: a loop through the server. The id is a string that never changes, so it is read once. Second, a remote command keeps a little reactive state of its own and reads it as it starts; called inside an effect, that read becomes a dependency and the write that follows re-runs the effect synchronously until Svelte stops it with `effect_update_depth_exceeded`. `untrack` around the call says: run this, depend on nothing it touches.'
@@ -472,8 +472,8 @@ export const part5 = [
 				type: 'p',
 				text: 'The heartbeat and the goodbye are sent and not awaited, and the first version wrote `.catch(() => {})` after each — reasonable for a heartbeat, whose next attempt is fifteen seconds away, and exactly how a real bug hid for an afternoon: when the seeded ids turned out not to be UUIDs (chapter {{the-database}}), every heartbeat that named a seeded stop failed validation on the server and nobody heard. `fireAndForget()` keeps the production behaviour — nothing a person could act on — and adds a console warning in development, where somebody is looking. Silence is a decision; it should be one you can see in the code.'
 			},
-			code(`${TRIP}/TripView.svelte`, 93, 127),
-			code(`${TRIP}/TripView.svelte`, 327, 399),
+			code(`${TRIP}/TripView.svelte`, 94, 128),
+			code(`${TRIP}/TripView.svelte`, 357, 429),
 			{
 				type: 'p',
 				text: 'The header shows the live status, in four states rather than two: a pulsing chip while the stream is up, a quiet “Connecting…” for the first three seconds while it is not up *yet*, and only after that the coral “Reconnect” button — `live.reconnect()` is the method SvelteKit gives every live query. The first version had two states, and showed “Reconnect” the moment the page hydrated, before the stream had had a chance: everybody on a slow network was told something had failed when nothing had. The fourth state comes first in the derivation: when the device itself has no network, the chip says “Offline” in the same quiet grey and offers nothing, because a button that cannot work is a button that lies — chapter {{the-offline-itinerary}} is where a page with no network comes from, and why the stream needs asking back. All four share one slot as wide as the widest label, so the palette and settings beside it never move. The width comes from an invisible sizer in the same grid cell whose labels are generated text — `content: attr(data-label)` — so they are in nobody’s way: not in the accessibility tree, not in the page’s text, not a second “Live” for a test to find. The slot is that wide and the chip is not: a grid item stretches to its cell by default, and “Live” sat in a pill two and a half times its width, crowded to one side. `justify-self` puts the chip at the slot’s leading edge on a phone, where the tools read from the left, and at its trailing edge beside the name, where they are set against the right — so the edge beside the settings button is the one that stays put when the label changes.'
@@ -482,28 +482,28 @@ export const part5 = [
 				type: 'p',
 				text: 'On a phone the trip’s name has the full width and the status tools are a row of their own under the lede; from 40em they move up beside the name. Sharing the name’s row at every width, as the first version did, left a real trip name 177px of a 328px column, and “A long weekend in the Douro valley with the cousins” ran to five ragged lines of display type. On a phone the palette button is a magnifier and the settings link an icon, its word still its name, visually hidden.'
 			},
-			code(`${TRIP}/TripView.svelte`, 401, 437),
+			code(`${TRIP}/TripView.svelte`, 431, 467),
 			{
 				type: 'p',
 				text: 'The strip itself. The tabs are links to the same route with a different `?tab=` — `href()` with a route id that carries its search string — marked `data-sveltekit-reset="false"` so the scroll position and the focus survive the navigation; SvelteKit 3 folded the old `noscroll` and `keepfocus` attributes into that one `reset`, and only warns about the old names in development, it no longer reads them. The strip is sticky under the header, so the tabs stay in reach down a long itinerary, and it scrolls sideways on a phone, where six tabs do not fit. The frame around it carries the paper and two edge fades, `::before` and `::after` gradients from `--paper` to transparent, each shown only while there is more strip that way. The first version faded the strip with a `mask-image`, which faded whatever was *behind* the strip too — the page scrolling under a sticky element — and faded the current tab whenever it sat at an edge.'
 			},
-			code(`${TRIP}/TripView.svelte`, 144, 219),
+			code(`${TRIP}/TripView.svelte`, 145, 220),
 			{
 				type: 'p',
 				text: 'One bar slides under the current tab instead of each link drawing its own border, and its position is a `Tween` from `svelte/motion`: a value that, when `set`, moves to the new one over a duration, with `.current` read by the markup on every frame. The effect reads `tab` and so re-runs on every switch; the first `set` passes `{ duration: 0 }` so the bar starts under the tab rather than sliding in from the edge, and reduced motion — read with `untrack`, because the effect should not re-run when the setting changes — makes every move instant. The second effect is a `ResizeObserver` on the strip and on every link: a rotation, a resize or a late font changes a tab’s width, and the bar is measured again — moved, not animated, because nothing was chosen. The current tab is also scrolled into view by hand, to a position that leaves 32px clear on either side, because `scrollIntoView({ inline: \'nearest\' })` stops exactly at the strip’s edge, which is where the fade is: “Notes” was left with its last letter and its bar faded out. And there is no scroll snapping — proximity snapping took a tab scrolled into view by hand and re-aligned it to the edge, under the fade again. The bar sits inside the strip — `overflow-y: hidden`, the hairline under the tabs an inset shadow — because a scroll container clips at its padding box: a bar placed on the border was cut to 1px and let the strip scroll a pixel up and down.'
 			},
-			code(`${TRIP}/TripView.svelte`, 221, 255),
+			code(`${TRIP}/TripView.svelte`, 222, 256),
 			{
 				type: 'p',
 				text: 'The map and the globe fill what is left of the screen below the tabs, so their bottom edge — the map’s status pill, the globe’s “Fly the route” — is on screen without a scroll, at 1440×900 and on a phone alike. A fixed `72dvh` did not manage that, because how much is left depends on the header, and the header depends on the trip’s name, the width and the language. So the effect measures the panel’s top in page coordinates whenever the header changes size, writes it to `--frame-top`, and the CSS does the rest: `clamp(20rem, calc(100dvh - var(--frame-top, var(--frame-guess)) - var(--space-4)), 46rem)`. Until the script has measured — on the server, and in the first frame — the top is `--frame-guess`, a guess for the width: 21rem on a phone, where the status tools are a row of their own, 18rem beside them from 40em. A guess that matches the measurement is a frame that does not change height under a map that has already started, which the map in chapter {{the-map}} had to be taught to survive.'
 			},
-			code(`${TRIP}/TripView.svelte`, 439, 479, { partial: true }),
-			code(`${TRIP}/TripView.svelte`, 306, 312),
+			code(`${TRIP}/TripView.svelte`, 469, 509, { partial: true }),
+			code(`${TRIP}/TripView.svelte`, 307, 313),
 			{
 				type: 'p',
 				text: 'The panel has a `view-transition-name` of its own, so a tab switch cross-fades the panel while the header and the strip hold still. The itinerary tab is a split view from 64em, with the map sticky beside the days, and the list alone below that — the Map tab is one tap away. The map is not hidden with CSS on a phone but not rendered at all: `wide` is a `MediaQuery`, and a hidden MapLibre would still be a WebGL context, two of them for one trip on the device least able to afford it. Both components take the same `view` and the same callbacks, and selecting a stop in one highlights it in the other because the selection lives in `view`.'
 			},
-			code(`${TRIP}/TripView.svelte`, 530, 538),
+			code(`${TRIP}/TripView.svelte`, 560, 568),
 			{
 				type: 'checkpoint',
 				items: [
@@ -520,7 +520,7 @@ export const part5 = [
 		slug: 'the-itinerary',
 		title: 'The itinerary: days you can drag',
 		summary:
-			'One `dndzone` per day with svelte-dnd-action, `animate:flip` for the settling, an optimistic override that is derived rather than synced, `place()` from the domain on both sides, a stop card, a dialog with assignable deriveds, and a combobox over the gazetteer.',
+			'One `dndzone` per day with svelte-dnd-action, `animate:flip` for the settling, an optimistic override that is derived rather than synced, `place()` from the domain on both sides, a stop card, a dialog with assignable deriveds that Back closes — a shallow history entry — and a combobox over the gazetteer.',
 		goal: 'Wire a drag-and-drop library into a live document so the screen shows the drop immediately and agrees with the server when it answers — and build the dialog and search that add stops.',
 		blocks: [
 			{
@@ -604,12 +604,43 @@ export const part5 = [
 			code(`${TRIP}/StopDialog.svelte`, 212, 379),
 			{
 				type: 'p',
-				text: 'The kind is a segmented control — six radios in a `fieldset`, drawn as a pill track three to a row — six across would squeeze “Transport” and “Hospedagem” out of a 32rem panel — whose chosen segment takes the kind’s colour — and the coordinates sit in a `<details>` that folds away once a place is picked, because then the pin is already right, and is open while adding: a click on the map gives a pin to nudge, and an add with neither has no pin at all — the summary says “Not set”, the two inputs are `required` so the browser will not submit, and the summary refuses to fold, because a required field folded out of sight is a form that will not submit and will not say why. The inputs listen for the browser’s own `invalid` event as well, which unfolds the row and puts the issue under it, and their `step` is `any`: a click on the map or a dragged pin gives a coordinate to many more places than four, and `step="0.0001"` made the browser refuse a perfectly good point as a “step mismatch”. From 40em the dialog opens with focus in the place search, labelled “Place” like every other field (`onOpenAutoFocus`); on a phone focus stays on the close button, so no keyboard rises over the sheet. The day select writes each day as the itinerary’s headings do — “Sunday, May 10”. The close button is labelled “Close” and the second action “Cancel”: an icon button announced as “Menu”, and a cancel that said “Undo”, were both things a review of the screens caught, and neither shows in a screenshot.'
+				text: 'The kind is a segmented control — six radios in a `fieldset`, drawn as a pill track three to a row — six across would squeeze “Transport” and “Hospedagem” out of a 32rem panel — whose chosen segment takes the kind’s colour — and the coordinates sit in a `<details>` that folds away once a place is picked, because then the pin is already right, and is open while adding: a click on the map gives a pin to nudge, and an add with neither has no pin at all — the summary says “Not set”, the two inputs are `required` so the browser will not submit, and the summary refuses to fold, because a required field folded out of sight is a form that will not submit and will not say why. The inputs listen for the browser’s own `invalid` event as well, which unfolds the row and puts the issue under it, and their `step` is `any`: a click on the map or a dragged pin gives a coordinate to many more places than four, and `step="0.0001"` made the browser refuse a perfectly good point as a “step mismatch”. From 40em the dialog opens with focus in the place search, labelled “Place” like every other field (`onOpenAutoFocus`); on a phone focus stays on the close button, so no keyboard rises over the sheet. The day select writes each day as the itinerary’s headings do — “Sunday, May 10”. The close button is labelled “Close” and the second action “Cancel”: an icon button announced as “Menu”, and a cancel that said “Undo”, were both things a review of the screens caught, and neither shows in a screenshot. The six radios share one `bind:group={kind}`, so the checked radio and the `kind` the draft holds are one value, not two kept in step; and the place search above them takes its listbox id from `$props.id()`, which is unique per component instance and the same on the server and in the browser, so the `aria-controls` that points at it survives hydration.'
 			},
 			code('src/lib/styles/base.css', 556, 594),
 			{
 				type: 'p',
 				text: 'The shell lives in `base.css` because it is the product’s dialog pattern, not because two dialogs share it today: the stop dialog is the one that wears it. The command palette shares only the scrim — it is a search box you type into, a panel near the top of the screen at every width, not a sheet — and its own comment says so. On a phone the shell is a bottom sheet with a grabber, sliding up on the `--ease-sheet` curve; from 40em it is a centred panel that rises 8px and scales from 96%. There is no JavaScript in any of it: Bits UI sets `data-state="open"` while the dialog is up and `closed` as it leaves, waiting for the exit animation, so the motion is two keyframe rules per state — and under reduced motion every `--dur-*` is zero and the dialog simply appears.'
+			},
+
+			{ type: 'h3', id: 'shallow', text: 'Back closes it: the dialog as a history entry' },
+			{
+				type: 'p',
+				text: 'On a phone the natural way to put a sheet away is the back gesture. A dialog held in component state is invisible to history, so Back did what Back does — it left the trip for whatever page came before, with the half-typed stop in it. SvelteKit’s documentation names this exact case as the reason for *shallow routing*: “a modal that is *not* associated with a history entry can be a source of frustration, as a user may swipe backwards in an attempt to dismiss it and find themselves on the wrong page.” Shallow routing makes a history entry without navigating — no `load` runs, no other page renders — and attaches state to it, read back as `page.state`.'
+			},
+			code('src/app.d.ts', 32, 50),
+			{
+				type: 'p',
+				text: '`App.PageState` is how `page.state` gets a type. It used to name three dialogs — `\'stop\' | \'expense\' | \'invite\'` — of which only one ever existed; a type that lists things that are not there is a comment that lies. The stop travels as the whole row rather than its id, and that is deliberate: the dialog’s fields are assignable deriveds of the row it is handed, and a row looked up afresh from the live document would be a new object on every snapshot — every heartbeat — and would reset the draft under somebody’s fingers.'
+			},
+			code(`${TRIP}/TripView.svelte`, 315, 345),
+			{
+				type: 'p',
+				text: 'Opening is `goto(\'\', { shallow: true, state })` — the documentation’s own call. The empty string is this entry’s own URL, so the address bar does not change and `page.shallow` stays `null`. SvelteKit 2 spelled this `pushState(\'\', state)`, and the 3.0 documentation is direct about it: `pushState` and `replaceState` “are now deprecated. Use `goto` with `shallow: true` instead.” Two defaults are right as they stand: a shallow navigation keeps the scroll position and focus (`reset` is off unless asked for), and page state is not restored after a reload unless `persistState` says so — a dialog that reopened over a freshly loaded page would be a surprise. The ESLint comment is there because `svelte/no-navigation-without-resolve` accepts an empty URL for the deprecated `pushState` and not yet for `goto`; the comment says so rather than reaching for a `resolve()` that would change the URL.'
+			},
+			code(`${TRIP}/TripView.svelte`, 560, 568),
+			{
+				type: 'p',
+				text: 'Closing is `history.back()`, for every way out: Escape, the scrim, the close button, and “Save” once the save has landed. Back itself is the same move, made by the browser. So however the dialog closes, history is left as it was before it opened, and Forward reopens it — with the row it had. SvelteKit answers Back onto an entry of the same page without a navigation at all: it updates `page.state`, and `dialog` derives `null`.'
+			},
+			code('src/routes/+layout.svelte', 67, 76),
+			{
+				type: 'p',
+				text: 'The root layout’s view transition has to stand aside for all of this, and it reads one flag. The navigation hooks run for a shallow `goto` with `navigation.shallow` set — the documentation says they run “with `navigation.type === \'goto\'` and `navigation.shallow === true`” — and the first version checked both. But Back or Forward onto an entry whose shallow URL differs from the page’s is a `popstate` that SvelteKit also marks shallow, and a cross-fade over a page that did not change is a flicker whichever way it was reached. `if (navigation.shallow) return;` covers every case, and the test in chapter {{end-to-end}} proves the back button closes the dialog and stays on the trip.'
+			},
+			{
+				type: 'why',
+				title: 'Why not the documentation’s `preloadData` recipe',
+				text: 'The shallow-routing page’s longer example opens a *route* in a modal: a link to `/photos/123`, `preloadData()` to run that route’s `load`, and the route’s own `+page.svelte` rendered inside the dialog with the data in `page.state`. It fits when the dialog is a page that also exists on its own, at its own URL. The stop dialog is not: there is no `/t/[slug]/stops/new` to load or to land on after a reload, only a form over the trip. So the state is the dialog’s mode and nothing else, and the URL stays the trip’s.'
 			},
 
 			{ type: 'h3', id: 'search', text: 'A combobox over the gazetteer' },
@@ -625,7 +656,8 @@ export const part5 = [
 					'You can explain the override, why it is derived, and what the version stamp compares against.',
 					'You can say which `finalize` sends the move and why the other one must not.',
 					'You can describe assignable deriveds in the dialog and what they replaced.',
-					'You can say why the gazetteer is fetched by the dialog and read through `.current`, rather than awaited by the search.'
+					'You can say why the gazetteer is fetched by the dialog and read through `.current`, rather than awaited by the search.',
+					'You can open a dialog as a shallow history entry, close it with `history.back()`, and say why the stop travels in `page.state` as a whole row.'
 				]
 			}
 		]
@@ -787,7 +819,7 @@ export const part5 = [
 				type: 'p',
 				text: 'Threlte is Svelte for three.js. `<T.Mesh>` is a `THREE.Mesh`; its attributes are the object’s properties; a geometry and a material as children become that mesh’s geometry and material. The scene is markup, and the two things that are genuinely imperative — building vertex buffers and moving a camera per frame — are the only imperative code in the file.'
 			},
-			code(`${TRIP}/TripView.svelte`, 480, 519, { partial: true }),
+			code(`${TRIP}/TripView.svelte`, 510, 549, { partial: true }),
 			{
 				type: 'p',
 				text: 'Loading first, because it is the decision that matters most. three.js and Threlte are the largest dependency in the project and most visits never open the globe tab, so the import is dynamic, in markup, behind a boundary: `{const { default: Globe } = await import(...)}`. That declaration is bare on purpose — a module is the same module however often it is asked for, so there is nothing to follow — where the page’s `{const initial = $derived(await tripBySlug(slug))}` follows the slug. The `pending` snippet shows until the chunk arrives and the `failed` snippet if the network does not deliver it, with a `reset` that tries again. `failed` prints the `message` of what it is handed, through `boundaryMessage` (chapter {{the-itinerary}}), because that is an `App.Error` — the failure after `handleError` in `src/hooks.client.ts` has put it into words, in the page’s language (chapter {{environment-and-hooks}}) — and not the `Error` the import threw. The first version tested `error instanceof Error`, which an `App.Error` never is, so it showed its fallback whatever had happened. This is the one boundary whose failure never touches the server, so it is the one chapter {{end-to-end}} breaks on purpose: the test drops the chunk on its way to a German page and expects “Etwas ist schiefgelaufen” and a “Neu verbinden” button. `browser` guards the whole thing because a WebGL scene has no server-rendered form; the server renders the loading text and nothing else.'
@@ -876,7 +908,7 @@ export const part5 = [
 			code(`${TRIP}/Expenses.svelte`, 352, 409),
 			{
 				type: 'p',
-				text: 'LayerChart is components over d3 scales: `<BarChart data x y>` and `<PieChart data key value>` draw with sensible defaults. The bars take `--sea` through a class, and the axes are told what a person needs from them: under each bar the date while there is room and the day of the month alone when there is not — the box’s width is bound, and below 56px a band six “May 10”s run into one string — and up the side round amounts in the trip’s currency, with the ticks and the top of the domain computed from one step, so the top line is at or above the tallest bar (LayerChart rounds the domain and picks its ticks separately, and a 264 bar rose past a top line at 250). Two settings are about looking right rather than being right: `tickLength: 8` is the gap between the baseline and the labels, since no tick marks are drawn; and LayerChart draws a halo round every label in `--color-surface-100`, white or black, so the chart sets that variable to the card’s own paper — the halo still keeps a label legible over a bar, and no longer embosses every label in black on a dark card. The amounts are `fromMinor()`, which asks `Intl` how many decimals the currency has, so yen are yen. The donut’s slices need one colour per category, as strings, and a token is `light-dark(#…, #…)` until a browser resolves it for an element — so a hidden probe element is given each `--kind-*` as its `color` and `getComputedStyle` hands back the plain `rgb(…)` the current theme means, again whenever `theme.resolved` changes. That is an effect writing state — the thing effects are usually told not to do — and the right tool here, because the answer comes from the DOM: a server render has no document to ask, and a `$derived` must not force a style resolution in the middle of drawing. The server draws the slices in `currentColor`, and the effect paints them once the page is in a browser. The pie is a donut with the total in the hole and a legend of chips under it, because five labels around a 14rem circle are unreadable. The data for both is derived from the rows into small arrays of `{ label, total }`, and the `Map` inside each derivation is a plain one on purpose — built whole and never mutated after, which the ESLint comment says, because the Svelte plugin would otherwise suggest a `SvelteMap` that signals on every insert for nobody. The settle-up is the domain’s `balances()` and `settle()` on the raw minor units: the cents on screen are the cents the server would compute. Balances and transfers sit side by side from 64em, each list no wider than 28rem and pushed to the two edges of the card, so an amount is never a screen’s width from its name and the card has no empty third on the right, and a negative balance is written with U+2212, the minus sign, rather than the hyphen `Intl` produces. Above it all, the total is shown only when there is something to total, and the empty state says “add the first one below” only to somebody with a form below.'
+				text: 'LayerChart is components over d3 scales: `<BarChart data x y>` and `<PieChart data key value>` draw with sensible defaults. The bars take `--sea` through a class, and the axes are told what a person needs from them: under each bar the date while there is room and the day of the month alone when there is not — the box’s width is bound with `bind:clientWidth`, which Svelte measures with a `ResizeObserver`, and below 56px a band six “May 10”s run into one string — and up the side round amounts in the trip’s currency, with the ticks and the top of the domain computed from one step, so the top line is at or above the tallest bar (LayerChart rounds the domain and picks its ticks separately, and a 264 bar rose past a top line at 250). Two settings are about looking right rather than being right: `tickLength: 8` is the gap between the baseline and the labels, since no tick marks are drawn; and LayerChart draws a halo round every label in `--color-surface-100`, white or black, so the chart sets that variable to the card’s own paper — the halo still keeps a label legible over a bar, and no longer embosses every label in black on a dark card. The amounts are `fromMinor()`, which asks `Intl` how many decimals the currency has, so yen are yen. The donut’s slices need one colour per category, as strings, and a token is `light-dark(#…, #…)` until a browser resolves it for an element — so a hidden probe element is given each `--kind-*` as its `color` and `getComputedStyle` hands back the plain `rgb(…)` the current theme means, again whenever `theme.resolved` changes. That is an effect writing state — the thing effects are usually told not to do — and the right tool here, because the answer comes from the DOM: a server render has no document to ask, and a `$derived` must not force a style resolution in the middle of drawing. The server draws the slices in `currentColor`, and the effect paints them once the page is in a browser. The pie is a donut with the total in the hole and a legend of chips under it, because five labels around a 14rem circle are unreadable. The data for both is derived from the rows into small arrays of `{ label, total }`, and the `Map` inside each derivation is a plain one on purpose — built whole and never mutated after, which the ESLint comment says, because the Svelte plugin would otherwise suggest a `SvelteMap` that signals on every insert for nobody. The settle-up is the domain’s `balances()` and `settle()` on the raw minor units: the cents on screen are the cents the server would compute. Balances and transfers sit side by side from 64em, each list no wider than 28rem and pushed to the two edges of the card, so an amount is never a screen’s width from its name and the card has no empty third on the right, and a negative balance is written with U+2212, the minus sign, rather than the hyphen `Intl` produces. Above it all, the total is shown only when there is something to total, and the empty state says “add the first one below” only to somebody with a form below.'
 			},
 
 			{ type: 'h3', id: 'the-form', text: 'A form that submits numbers and arrays' },

@@ -17,6 +17,12 @@
  * closed, the person navigated away — which is what closes the mailbox
  * and, through `finally`, unsubscribes from the room. Without that, every
  * visitor who ever opened the trip would be a listener forever.
+ *
+ * It also ends when the person may no longer read the trip. A connection
+ * is not a permission: a companion removed while their tab stays open, or
+ * somebody reading by link after the owner makes the trip private, would
+ * otherwise go on receiving every snapshot for as long as the tab lives.
+ * So access is asked again on every wake, before anything is read.
  */
 
 import * as v from 'valibot';
@@ -31,8 +37,6 @@ import type { TripDocument } from '#lib/server/trips.ts';
 export interface LiveTrip {
 	readonly document: TripDocument;
 	readonly presence: presence.Presence[];
-	/** When the server took this snapshot; the header shows "updated 3s ago". */
-	readonly at: number;
 }
 
 export const watchTrip = query.live(SlugSchema, async function* (slug) {
@@ -48,15 +52,29 @@ export const watchTrip = query.live(SlugSchema, async function* (slug) {
 	try {
 		while (true) {
 			const document = await trips.loadDocument(tripId);
-			// Deleted under us: send the fact and stop.
+			// Deleted between the check and the read: send the fact and stop.
 			if (!document) {
 				yield null;
 				break;
 			}
-			const snapshot: LiveTrip = { document, presence: presence.list(tripId), at: Date.now() };
+			const snapshot: LiveTrip = { document, presence: presence.list(tripId) };
 			yield snapshot;
 
 			if (!(await mailbox.next())) break;
+
+			/*
+			 * Woken: may this person still read it? The same question, asked
+			 * the same way, as when the stream opened. A refusal is thrown out
+			 * of the generator, SvelteKit sends it down the stream as an error
+			 * and closes it, and the browser marks the live query failed
+			 * instead of reconnecting — so nothing written after it is read.
+			 *
+			 * This works after a `yield` because SvelteKit runs every step of
+			 * the generator — each call to `next()` — inside the request's
+			 * context, so `getRequestEvent()`, and with it the signed-in person
+			 * on `locals`, still answers. A deleted trip ends the same way.
+			 */
+			await readableTrip(slug);
 		}
 	} finally {
 		unsubscribe();

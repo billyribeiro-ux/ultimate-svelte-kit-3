@@ -20,6 +20,7 @@
  *     building. It must be last.
  */
 
+import { building } from '$app/env';
 import { BETTER_AUTH_SECRET } from '$app/env/private';
 import { PUBLIC_ORIGIN } from '$app/env/public';
 import { getRequestEvent } from '$app/server';
@@ -30,7 +31,14 @@ import { db } from './db/index.ts';
 
 export const auth = betterAuth({
 	baseURL: PUBLIC_ORIGIN,
-	secret: BETTER_AUTH_SECRET,
+	/*
+	 * The real secret whenever the server runs: `src/env.ts` refuses to start
+	 * without one. While SvelteKit builds, it imports this module to analyse
+	 * the app, the secret may be missing, and Better Auth will not initialise
+	 * without one — so the build gets a random throwaway. Nothing is signed
+	 * while building, and the value dies with the build.
+	 */
+	secret: building ? `build-${crypto.randomUUID()}` : BETTER_AUTH_SECRET,
 
 	database: drizzleAdapter(db, { provider: 'sqlite' }),
 

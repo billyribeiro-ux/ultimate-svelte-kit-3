@@ -1,13 +1,29 @@
 /**
  * PART 8 — Proof and production
- * (chapters {{unit-and-browser-tests}}–{{what-i-would-do-next}})
+ * (chapters {{unit-and-browser-tests}}–{{the-exit-criteria}})
  *
- * The tests at three scales, the security the server applies to every
- * response, the container and the pipeline that build and prove it, and an
- * honest list of what a ninth week would do.
+ * The tests at three scales, what the compiler says and how to answer it,
+ * the security the server applies to every response, the container and the
+ * pipeline that build and prove it, how to take a major version, an honest
+ * list of what a ninth week would do, and the exit criteria — measured.
  */
 
+import { readFileSync } from 'node:fs';
 import { code } from './quote.js';
+import { GROUPS, readSurfaces } from './surfaces.js';
+
+/*
+ * The exit criteria and the backlog are data: `surfaces.json` and
+ * `backlog.json`, written once by `tools/exit-criteria.js` from the coverage
+ * plan and the gap list, and held to the course by `verify.js`.
+ */
+const { rows: SURFACES } = readSurfaces();
+/** @type {{ id: string, what: string, why: string }[]} */
+const BACKLOG = JSON.parse(readFileSync(new URL('./backlog.json', import.meta.url), 'utf8'));
+
+/** The deferred surfaces an item of the backlog carries, in backticks. */
+const surfacesOf = (/** @type {string} */ id) =>
+	SURFACES.filter((row) => row.status === 'deferred' && row.gap === id).map((row) => `\`${row.surface}\``);
 
 export const part8 = [
 	{
@@ -163,10 +179,210 @@ $ pnpm run test:unit -- --run
 	},
 
 	{
+		slug: 'what-the-compiler-says',
+		title: 'What the compiler says: warnings, errors and the codes that name them',
+		summary:
+			'Every message Svelte prints has a code, and the code is the handle for everything you can do about it. Zero `svelte-ignore` comments, a `check` that fails on a warning, and the autofixer in `verify`; the warnings the code answers by its shape, the errors that explain why it is written the way it is, the runtime errors and warnings worth recognising on sight — and the one warning the build still prints, and why it stays.',
+		goal: 'Read any Svelte diagnostic by its code, know the three places that code can be named, and fix the cause rather than the message.',
+		blocks: [
+			{
+				type: 'p',
+				text: 'Svelte talks to you in four voices. **Compiler warnings** — markup that will probably hurt somebody, like a clickable `<div>` — and **compiler errors**, code it refuses to compile. Then, once the code runs, **runtime errors**, which stop it, and **runtime warnings**, which the development build prints to the console. Each message carries a short `snake_case` code: `state_referenced_locally`, `each_key_duplicate`, `await_waterfall`. Svelte’s documentation lists every one under four pages with those names, and the codes are the handle for everything else in this chapter.'
+			},
+			code('package.json', 20, 20),
+			{
+				type: 'p',
+				text: 'The bar this project keeps is simple to say. `pnpm run check` runs `svelte-check` with `--fail-on-warnings` (chapter {{the-toolchain}}), so a compiler warning fails `verify` and CI as surely as a type error does; and there is not one `<!-- svelte-ignore -->` comment anywhere in `src` — `grep -rn svelte-ignore src` finds nothing. Every warning the compiler could give was answered by changing the code, and the sections below show the answers. That is not because suppressing is wrong. It is because a suppression is a decision that outlives the reason for it, and a project with none has nothing to re-check when the reason goes away.'
+			},
+
+			{ type: 'h3', id: 'one-code', text: 'One code, three places to name it' },
+			{
+				type: 'p',
+				text: 'A warning’s `code` is the same string in every tool that can act on it. In a component, `<!-- svelte-ignore a11y_autofocus (because of reasons) -->` above the line silences that one occurrence — the parenthesised reason is part of the syntax, and Svelte’s documentation shows it. For the whole project, `svelte-check --compiler-warnings "css_unused_selector:error"` turns a warning into an error or `:ignore` drops it; the flag’s own help text still spells codes the Svelte 4 way, with dashes, and Svelte 5’s have underscores — an old spelling in an ignore comment earns you `legacy_code`, and an unknown one `unknown_code`. And for the compiler itself, `compilerOptions.warningFilter` is a function that receives each `Warning` and returns `true` to keep it — vite-plugin-svelte’s `onwarn` is the bundler’s older hook for the same job. Three places, one string. This project uses none of them.'
+			},
+
+			{ type: 'h3', id: 'warnings-answered', text: 'Warnings the code answers' },
+			code('src/lib/embed/element.ts', 1, 36),
+			{
+				type: 'p',
+				text: '`options_missing_custom_element` — “The `customElement` option is used when generating a custom element. Did you forget the `customElement: true` compile option?” — is what the embed component used to earn in every compile that was not the custom-element one: the server build, `svelte-check`, the autofixer. The component named its tag in `<svelte:options customElement={{ tag }}>`, which is what Svelte’s docs show, and the `check` script once silenced the warning for the whole project. The answer was to move the one thing the option did — define the tag — into this module, which only the two builds that compile the folder as a custom element ever load. The component became an ordinary component everywhere, the warning had nothing left to say, and the project-wide silence went (chapter {{embedding-a-trip}}).'
+			},
+			code(`src/lib/trip/TripView.svelte`, 58, 68),
+			code('src/lib/ui/DateRangeField.svelte', 66, 68),
+			{
+				type: 'p',
+				text: '`state_referenced_locally` — “This reference only captures the initial value of `%name%`. Did you mean to reference it inside a %type% instead?” — fires when a component reads a prop at the top of its script, because a prop can change and that read will not see it. Usually that is a bug, and the docs’ example is one: state passed into `setContext` by value, which the child then reads forever as its first value. Twice in this project it is the intent. The trip page is keyed on its slug, so a different trip is a different `TripView`, and its props are read once; the date picker takes its start and end as the *initial* value and owns the range after that. `untrack(() => …)` says “read this without subscribing”, which is exactly the claim, and the compiler takes it as an answer. A comment beside each says the same thing to a person.'
+			},
+			code('src/routes/(site)/+page.svelte', 323, 339),
+			{
+				type: 'p',
+				text: '`css_unused_selector` — “Unused CSS selector” — is the compiler noticing that a scoped rule matches nothing in the template, and removing it from the output. Here the rule matches attributes an attachment writes at run time, which the compiler cannot see. The docs give the answer in the warning’s own entry: “use `:global` to preserve the selector as-is” — and wrapping it in the parent element’s class keeps it from leaking beyond this page. This is the warning to treat with the most suspicion, because it is usually right: a selector the compiler cannot see matching is, nine times out of ten, a selector nothing matches.'
+			},
+			{
+				type: 'table',
+				caption: 'Other compiler warnings, and why this code does not earn them',
+				head: ['Warning', 'What it catches', 'Why it stays quiet here'],
+				rows: [
+					['`non_reactive_update`', 'a plain `let` that is reassigned and read in the markup', 'everything that changes and is rendered is `$state` or `$derived`'],
+					['`store_rune_conflict`', 'a local variable named like a rune, so `$state` would read a store', 'no variable shares a rune’s name, and app code has no stores'],
+					['`custom_element_props_identifier`', '`$props()` not destructured in a custom element, so its attributes cannot be inferred', 'the embed destructures `let { slug = \'\', origin = \'\' }: Props = $props()`'],
+					['`perf_avoid_inline_class`, `perf_avoid_nested_class`', 'a class declared inside a function or created with `new class`', '`TripState` and `ThemeState` are declared at the top of their modules'],
+					['`node_invalid_placement_ssr`', 'markup the browser will repair, which then fails to hydrate', 'the markup nests as HTML allows; in runes mode the worst cases are the error `node_invalid_placement`'],
+					['`element_invalid_self_closing_tag`', '`<div />` — HTML has no self-closing tags for non-void elements', 'none in the code; `npx sv migrate self-closing-tags` exists for code that has them'],
+					['`block_empty`', 'an empty `{#if}` or `{#each}`', 'none'],
+					['`bidirectional_control_characters`', 'invisible characters that reorder how code reads', 'the compiler’s own supply-chain guard (chapter {{the-workspace}})']
+				]
+			},
+			{
+				type: 'p',
+				text: 'The accessibility warnings are a third of the list, and each is a question about an element. The table is the project’s answers, element by element — the point being that every one is answered by markup a screen reader understands, never by an `aria-*` attribute that papers over the wrong element.'
+			},
+			{
+				type: 'table',
+				caption: 'Accessibility warnings and the elements that answer them in Meridian',
+				head: ['Warning', 'What it asks', 'Meridian’s answer'],
+				rows: [
+					['`a11y_click_events_have_key_events`, `a11y_no_static_element_interactions`', 'a clickable `<div>` needs a role and a keyboard handler', 'nothing clickable is a `<div>`: a stop’s name is a `<button aria-pressed>` (`StopCard.svelte`), a tab is a link, the palette’s rows are Bits UI options'],
+					['`a11y_consider_explicit_label`', 'an icon-only button or link needs a name', '`aria-label` on every icon button — “Edit stop”, “Remove”, “Remove Ben Okafor” (`Companions.svelte`) — and a visually hidden word on the settings link'],
+					['`a11y_label_has_associated_control`', 'a `<label>` needs a control', 'every field is a `<label class="field">` wrapping its input (`trips/new/+page.svelte`); the kind picker is a `<fieldset>` with a `<legend>` (`StopDialog.svelte`)'],
+					['`a11y_missing_attribute`', '`<img>` needs `alt`, `<a>` an `href`', 'the hero’s `<enhanced:img>` carries `alt=""`, the empty alt that tells a screen reader a decorative picture is decorative; every link has a resolved `href`'],
+					['`a11y_no_redundant_roles`', '`role="list"` on a `<ul>` repeats its role', 'allowed, deliberately: Svelte’s own source says “`<ul role="list">` is ok because CSS list-style:none removes the semantics and this is a way to bring them back” — Safari does exactly that, so the members, presence and balances lists say it'],
+					['`a11y_role_has_required_aria_props`, `a11y_interactive_supports_focus`', 'a custom role needs its states and a tab stop', 'none written by hand: the combobox, the dialogs and the date picker are Bits UI’s, and the map’s pins are MapLibre’s, outside the compiler’s view'],
+					['`a11y_media_has_caption`, `a11y_autofocus`, `a11y_positive_tabindex`', 'captions; no autofocus; no tab order of your own', 'no video, no `autofocus`, no `tabindex` above zero — the dialog moves focus through Bits UI’s focus trap instead']
+				]
+			},
+
+			{ type: 'h3', id: 'errors-answered', text: 'Errors the shape of the code answers' },
+			code('src/lib/ui/theme.svelte.ts', 37, 44, { partial: true }),
+			code('src/lib/ui/theme.svelte.ts', 89, 89),
+			{
+				type: 'p',
+				text: 'A module that wanted to share a theme would naturally write `export let choice = $state(\'system\')`, and the compiler refuses: `state_invalid_export` — “Cannot export state from a module if it is reassigned. Either export a function returning the state value or only mutate the state value’s properties”. Its sibling `derived_invalid_export` says the same of `$derived`. The reason is mechanical: an importer receives the binding’s value at import time, and a rune’s reactivity lives in the variable, not the value, so a reassigned export would be a snapshot. The shape that answers it is a class with `$state` fields and one exported instance — `theme.choice` is a property read, which stays reactive. The module’s header says why one module-level instance is safe on a server here, against Svelte’s general advice to prefer context (chapter {{the-design-system}}).'
+			},
+			code('src/lib/trip/StopDialog.svelte', 266, 284),
+			{
+				type: 'p',
+				text: '`{const Icon = $derived(KIND_ICONS[k])}` is a *declaration tag*, and it replaced `{@const}` in this project. The old tag had a placement rule — `const_tag_invalid_placement`: “`{@const}` must be the immediate child of `{#snippet}`, `{#if}`, `{:else if}`, `{:else}`, `{#each}` …” — and a value that was worked out once. A declaration tag is an ordinary `const` or `let`, its value is a rune like anywhere else (`$derived` here, so it follows `k`), and the only things it refuses are legacy mode (`declaration_tag_no_legacy_mode`) and anything that is not a `let` or `const` (`declaration_tag_invalid_type`). Chapter {{migrating-a-major}} counts the migration.'
+			},
+			code('tsconfig.json', 31, 35),
+			{
+				type: 'p',
+				text: '`erasableSyntaxOnly` is a TypeScript option answering a Svelte error before it can happen. Svelte strips the types from a `lang="ts"` block rather than compiling TypeScript, so a feature that *emits* JavaScript — an `enum`, a value `namespace`, a constructor parameter property — is `typescript_invalid_feature`: “TypeScript language features like %feature% are not natively supported … you will need to use a preprocessor”, with a pointer to `vitePreprocess({ script: true })`. That preprocessor would work, at the cost of running TypeScript over every component. Forbidding the features costs nothing — this codebase never wanted an `enum` — and Node’s type stripping for `scripts/*.ts` needs the same rule, so one option serves both.'
+			},
+			{
+				type: 'table',
+				caption: 'More compiler errors, and the habit in this codebase that never meets them',
+				head: ['Error', 'What triggers it', 'Why Meridian does not'],
+				rows: [
+					['`rune_renamed`, `rune_removed`', 'a rune from a prerelease spelling — “`%name%` is now `%replacement%`”', 'the code was written against 5.57; the autofixer catches old spellings in review'],
+					['`props_duplicate`', '`$props()` called twice', 'one destructured `$props()` per component, typed by an `interface Props`'],
+					['`illegal_await_expression`', '`await` inside `use:`, `transition:`, `animate:`, an attachment or a binding', 'awaits live in `{const x = $derived(await …)}` and markup, never in a directive'],
+					['`attribute_invalid_sequence_expression`', '`class={a, b}` — a comma is not an array', '`class={[\'chip\', { active }]}` arrays everywhere (chapter {{the-design-system}})'],
+					['`mixed_event_handler_syntaxes`', '`on:click` and `onclick` in one component', 'no `on:` anywhere; handlers are attributes'],
+					['`store_invalid_subscription_module`', '`$store` read outside a `.svelte` file', 'no stores in app code: `$app/state`, reactive classes and remote functions instead'],
+					['`snippet_invalid_export`', 'an exported snippet that reaches into instance state', 'no module snippets yet; the kinds map icons to components'],
+					['`experimental_async`', '`await` in markup or a derived without the option', '`compilerOptions.experimental.async` is on (chapter {{the-config}})'],
+					['`each_item_invalid_assignment`', 'writing to an `{#each}` item in runes mode', 'edits go through the array or, here, a command and the next snapshot'],
+					['`import_svelte_internal_forbidden`', 'importing `svelte/internal/*`', 'never; the public modules cover everything this app does'],
+					['`state_field_duplicate`', 'a class field declared twice, once as `$state`', 'each `$state` field of `TripState` is declared once, at the top of the class'],
+					['`node_invalid_placement`', 'HTML the browser would repair — a `<div>` in a `<p>` — which runes mode refuses', 'the markup is valid HTML; the compiler is the first reviewer of that'],
+					['`host_invalid_placement`', '`$host()` outside a custom element', 'not used: the embed dispatches no events yet (the backlog has it)'],
+					['`slot_snippet_conflict`', '`<slot>` and `{@render}` in one component', 'no `<slot>` anywhere: content is passed as snippets']
+				]
+			},
+
+			{ type: 'h3', id: 'runtime-errors', text: 'Runtime errors worth recognising on sight' },
+			{
+				type: 'table',
+				caption: 'Runtime errors, what they mean, and where this project met or avoids them',
+				head: ['Error', 'Meaning', 'In Meridian'],
+				rows: [
+					['`effect_update_depth_exceeded`', '“an effect reads and writes the same piece of state”, in a loop', 'met once: the presence heartbeat read its own command’s `pending` — the trip page was a 500 until `untrack` (chapter {{the-trip-page}})'],
+					['`state_unsafe_mutation`', 'state written inside `$derived`, `$inspect` or a template expression', 'everything that could be derived is `$derived`; writes happen in handlers and commands'],
+					['`lifecycle_outside_component`', '“`%name%(...)` can only be used during component initialisation”', '`snapshot()` registers with `onMount`, so the new-trip page calls it above its `await` (chapter {{trips-and-a-new-trip}})'],
+					['`set_context_after_init`, `effect_orphan`', 'context set, or an effect created, after an `await` or in a handler', 'contexts and effects are created at the top of the script, before anything waits'],
+					['`each_key_duplicate`, `each_key_volatile`', 'two items with one key; a key that is a new value each time', 'keys are ids — `(stop.id)`, `(member.userId)` — never indexes or arrays'],
+					['`hydration_failed`', 'the server’s HTML and the client’s first render disagree beyond repair', 'one source of truth for the first paint: the server’s document, handed to the live query as its fallback'],
+					['`svelte_boundary_reset_onerror`', '`reset()` called while the boundary is still handling the error', 'the failed snippets reset from a button, never synchronously in `onerror`'],
+					['`fork_discarded`, `fork_timing`', 'committing a discarded `fork()`; forking inside an effect', '`forkPreloads` is off on evidence (chapter {{the-config}})'],
+					['`await_invalid` (server)', '“asynchronous work while rendering synchronously” — a synchronous `render()` of a component that awaits', 'SvelteKit awaits its own renders; the project never calls `render()` itself'],
+					['the rest', '`async_derived_orphan`, `bind_not_bindable`, `component_api_changed`, `component_api_invalid_new`, `derived_references_self`, `effect_in_teardown`, `effect_in_unowned_derived`, `effect_pending_outside_reaction`, `flush_sync_in_effect`, `get_abort_signal_outside_reaction`, `invalid_snippet`, `props_rest_readonly`, `rune_outside_svelte`, `state_descriptors_fixed`, `state_prototype_fixed`, `invariant_violation` (that one is Svelte’s bug, and says so)', 'read the code, then the documentation’s entry for it: each names its own fix']
+				]
+			},
+
+			{ type: 'h3', id: 'runtime-warnings', text: 'Runtime warnings, in the console' },
+			{
+				type: 'p',
+				text: 'The development build prints these; production does not. One of them is the one an async-first codebase meets first. `await_waterfall` — “An async derived, `%name%` was not read immediately after it resolved. This often indicates an unnecessary waterfall” — is two independent `$derived(await …)` in a row: the second is not even created until the first resolves. The documentation’s fix is to start both promises first, each in its own `$derived`, and await them after. The trip page has one `await` and the new-trip page one, which is the cheapest way to stay out of this warning’s way.'
+			},
+			{
+				type: 'table',
+				caption: 'Every runtime warning, in one line each',
+				head: ['Warning', 'What it is telling you'],
+				rows: [
+					['`assignment_value_stale`', '`(obj.array ??= []).push(…)` pushed to the plain array, not the proxy that was stored'],
+					['`await_reactivity_loss`', 'state read after an `await` inside a function is not tracked; pass it in as an argument'],
+					['`await_waterfall`', 'two async deriveds that could have started together ran one after the other'],
+					['`binding_property_non_reactive`', '`bind:` to a property that is not reactive state'],
+					['`console_log_state`', 'a `$state` proxy was logged; use `$inspect` or `$state.snapshot`'],
+					['`derived_inert`', 'a derived created inside an effect that has been destroyed'],
+					['`event_handler_invalid`', 'a handler that is not a function — usually a call where a reference was meant'],
+					['`hydratable_missing_but_expected`', 'a `hydratable` rendered on the client that the server never sent'],
+					['`hydration_attribute_changed`, `hydration_html_changed`', 'an attribute or `{@html}` differed between server and client; the server’s value is kept'],
+					['`hydration_mismatch`', 'the DOM was not what the server sent — often HTML the browser repaired'],
+					['`invalid_raw_snippet_render`', '`createRawSnippet` returned more than one element'],
+					['`legacy_recursive_reactive_block`', 'a migrated `$:` block reads and writes the same value'],
+					['`lifecycle_double_unmount`', '`unmount` on a component that was not mounted'],
+					['`ownership_invalid_binding`, `ownership_invalid_mutation`', 'a child mutating or binding state its parent never handed it with `bind:`'],
+					['`select_multiple_invalid_value`', '`<select multiple>` given a value that is not an array'],
+					['`state_proxy_equality_mismatch`', 'a proxy compared with `===` to the object it proxies'],
+					['`svelte_boundary_reset_noop`', 'a boundary’s `reset` called a second time'],
+					['`transition_slide_display`', '`slide` on an inline or table element, which has no height to animate'],
+					['`dynamic_void_element_content`', '`<svelte:element this="input">` given children'],
+					['`state_snapshot_uncloneable`', '`$state.snapshot` met a value it cannot clone, and returned the original']
+				]
+			},
+
+			{ type: 'h3', id: 'autofixer', text: 'The autofixer as a gate' },
+			code('scripts/autofix-report.ts', 81, 131),
+			{
+				type: 'p',
+				text: 'The compiler’s warnings are about what the code *does*; the Svelte autofixer’s suggestions are about how it is *written* — an `$effect` that assigns state another rune could derive, a `bind:this` an attachment would replace. `pnpm run lint:svelte` runs it over every component (chapter {{the-toolchain}} builds the script) and fails on any suggestion that is neither followed nor answered in `.autofixer-accepted.json`, where each declined suggestion is recorded with the file, a piece of its text, how many times the file earns it, and a reason. The count is the teeth: a new occurrence of an accepted suggestion still fails, because it has not been read yet.'
+			},
+
+			{ type: 'h3', id: 'the-one-left', text: 'The one warning the build still prints' },
+			{
+				type: 'terminal',
+				code: `
+$ pnpm run build
+[vite-plugin-svelte] src/content/guides/porto-and-the-douro.svx:1:8 \`context="module"\` is deprecated, use the \`module\` attribute instead
+https://svelte.dev/e/script_context_deprecated
+1: <script context="module">
+            ^
+…the same for the other three guides`
+			},
+			{
+				type: 'p',
+				text: '`script_context_deprecated` is real, and it is not this project’s code. mdsvex turns a guide’s front matter into a module script, and the latest stable release, 0.12.8, writes it as `<script context="module">` — there is no option to change that, and its regular expression for “reuse an existing module script” only matches the old spelling, so a guide cannot pre-empt it with a `<script module>` of its own. The 1.0 line writes `<script module>`, and it is a prerelease. A `warningFilter` would make the build quiet, and it would also make it lie: the deprecation is true, and the day it becomes an error, the line will be the first thing to read. So it stays printed, and the upgrade is on the backlog in chapter {{what-i-would-do-next}}. `svelte-check` never sees it, because it does not check `.svx` files — which is the one place `--fail-on-warnings` has a gap, and now you know where it is.'
+			},
+			{
+				type: 'checkpoint',
+				items: [
+					'You can name the four kinds of diagnostic and where Svelte documents each.',
+					'You know the three places a warning’s code can be named, and why this project uses none of them.',
+					'You can say how `untrack`, `:global` and a module-level `customElements.define` each answer a warning without silencing it.',
+					'You can explain `state_invalid_export` and the class-and-instance shape that answers it, and what `erasableSyntaxOnly` has to do with `typescript_invalid_feature`.',
+					'You can read `effect_update_depth_exceeded` and `await_waterfall` and say what to change.'
+				]
+			}
+		]
+	},
+
+	{
 		slug: 'end-to-end',
 		title: 'End to end: the built server, two viewports, two people',
 		summary:
-			'Playwright runs against `node build/index.js` — the same process a deployment runs — on a database rebuilt from the seed before every run, in a desktop and a Pixel 7 profile, and the design’s checks in a third at 360px. Six suites cover a stranger, an account, one trip’s every tab, the map’s own behaviour, two browsers on one trip, and invites plus the embed; a seventh asks every screen of the design, in both themes and at three widths, whether anything sticks out, whether a finger can hit it, what axe finds, and how it paints, on a fast connection and a slow one; and a bundle guard after the build holds the chunks to a budget. How the suite is kept honest, what it found, and what each failure taught.',
+			'Playwright runs against `node build/index.js` — the same process a deployment runs — on a database rebuilt from the seed before every run, in a desktop and a Pixel 7 profile, and the design’s checks in a third at 360px. Seven suites cover a stranger, an account, one trip’s every tab, the map’s own behaviour, two browsers on one trip, invites plus the embed, and the trip with no network; an eighth asks every screen of the design, in both themes and at three widths, whether anything sticks out, whether a finger can hit it, what axe finds, and how it paints, on a fast connection and a slow one; and a bundle guard after the build holds the chunks to a budget. How the suite is kept honest, what it found, and what each failure taught.',
 		goal: 'Run the end-to-end suite locally, read a failure’s call log and trace, and write a new test that signs in, does one thing, and cleans up after itself.',
 		blocks: [
 			{
@@ -180,7 +396,7 @@ $ pnpm run test:unit -- --run
 			},
 			{
 				type: 'p',
-				text: '`workers: 1` and `fullyParallel: false` are not timidity. The suite shares one SQLite file and its tests *create* things — a trip, a stop, an expense — and then expect to find them; two workers would race. Serial costs several minutes of wall clock for two hundred and fifty-one tests across the three projects — the design suite’s axe runs are most of it — plus the build, the first time, and buys a suite whose failures are always real. The third project is the Pixel 7 narrowed to 360px, with a screen of the same size, and it runs `visual.e2e.ts` alone: a behaviour does not change between 412px and 360px, and a layout does.'
+				text: '`workers: 1` and `fullyParallel: false` are not timidity. The suite shares one SQLite file and its tests *create* things — a trip, a stop, an expense — and then expect to find them; two workers would race. Serial costs several minutes of wall clock for two hundred and fifty-nine tests across the three projects — the design suite’s axe runs are most of it — plus the build, the first time, and buys a suite whose failures are always real. The third project is the Pixel 7 narrowed to 360px, with a screen of the same size, and it runs `visual.e2e.ts` alone: a behaviour does not change between 412px and 360px, and a layout does.'
 			},
 			{
 				type: 'p',
@@ -204,7 +420,7 @@ $ pnpm run test:unit -- --run
 				text: '`typeDate` exists because Bits UI’s date picker is not an `<input type="date">`; it is three editable segments per date, in the locale’s order, and Playwright’s `fill()` has nothing to fill. Clicking a segment and typing is what a person does, so it is what the helper does — and the work is in `typeDateInto`, which takes any date input as a locator, because the expense form’s date is the same picker now: the trip’s two dates find their input by position in the range, the expense finds its by role, `getByRole("group", { name: "Date", exact: true })`. When a control has a custom keyboard model, the helper that drives it belongs in one place with a comment saying what that model is.'
 			},
 
-			{ type: 'h3', id: 'suites', text: 'Six suites' },
+			{ type: 'h3', id: 'suites', text: 'The suites' },
 			code('e2e/public.e2e.ts', 14, 34),
 			{
 				type: 'p',
@@ -225,7 +441,7 @@ $ pnpm run test:unit -- --run
 				type: 'p',
 				text: 'And a test for the browser’s own `handleError` (chapter {{environment-and-hooks}}), which nothing else reaches: a remote function’s refusal goes through the server’s hook, so a page could lose its client hook and every other test would still pass. The globe is the one chunk loaded on demand, so the test drops it — `page.route` fetches each script and aborts the one that contains the globe’s class name, because the file’s own name is a hash — and opens the globe tab on a German page. The boundary must say “Etwas ist schiefgelaufen” with its “Neu verbinden” button, and the console must carry the hook’s `[meridian]` line. Without the hook, SvelteKit’s default fills the boundary with `Internal Error`, in English, and the first assertion fails.'
 			},
-			code('e2e/public.e2e.ts', 161, 187),
+			code('e2e/public.e2e.ts', 161, 194),
 			{
 				type: 'p',
 				text: 'The machine-facing test uses `request` — Playwright’s API client, with no browser — for the health endpoint and the route API, and the page for the embed frame. The interesting assertions are the negative ones: the private trip’s API is a 404, the private trip’s frame is a 404, and the public frame’s Content-Security-Policy contains `frame-ancestors *` — the one route the hook allows to be framed (chapter {{security-headers-and-csp}}). A security rule with no test is a security rule that will be refactored away. The last two lines guard a different kind of seam: the frame ships no script, so nothing at run time would notice if it shipped no *style* either — and for a while it did, because a compiler option meant for the custom element caught this page too (chapter {{embedding-a-trip}}). They ask for two facts only the page’s own stylesheet makes true: the card’s computed `max-width` is the 22rem the CSS says, and its list has no indent. The first version asked whether *a* stylesheet was linked, and the root layout’s CSS is linked on every page — so the assertion was true with the bug as well. An assertion that cannot fail is a comment with a cost.'
@@ -240,12 +456,12 @@ $ pnpm run test:unit -- --run
 				type: 'p',
 				text: 'The German test is about which code produced a sentence, not about German. The sign-in *handler*’s message — “that email and password do not match” — was always localised, because it is written with `m.*()` in the handler. The *schema*’s message for a malformed email runs before the handler, and it answered in English on every page until two things changed: the messages became functions called at failure time (chapter {{schemas-with-valibot}}), and the Paraglide middleware read the locale from the page the form is on rather than the `/_app/remote` URL it posts to (chapter {{three-languages-with-paraglide}}). The test asserts both halves — the German sentence is there, the English one is not — because a test that only looked for German would pass on a page that printed both.'
 			},
-			code('e2e/account.e2e.ts', 127, 149),
+			code('e2e/account.e2e.ts', 141, 163),
 			{
 				type: 'p',
 				text: 'The delete test answers the dialog twice. Playwright accepts nothing by default — a `confirm()` with no handler is dismissed — so `page.once(\'dialog\', …)` decides each answer explicitly. First “Cancel”: the page must still be the settings page and the trip must still be in the list. Then “OK”: the trip must be gone. The first half is new, and it is new because it failed: the `confirm()` lived in an `onsubmit` that called `preventDefault()`, the remote form’s own submit listener does not look at `defaultPrevented`, and Cancel deleted the trip (chapter {{companions-presence-and-settings}}). Testing only the “yes” path of a question is testing half of it.'
 			},
-			code('e2e/account.e2e.ts', 152, 192),
+			code('e2e/account.e2e.ts', 166, 206),
 			{
 				type: 'p',
 				text: 'Two tests for things that used to go wrong without a sound. The first needs the server to refuse something the page asked for, and nothing on the trips list ever asks for anything wrong — so the test rewrites the request on its way out. `page.route` holds the `tripPreview` batch, swaps every argument for one the schema refuses, and lets it go on; the server’s `handleError` answers with its sentence for a failed validation, and the boundary must print it. *Where* it is printed is half of the assertion. `+error.svelte` shows `page.error.message` too, so a test that looked for the sentence anywhere on the page would still pass with the boundary gone and the whole page swapped for the error page. So the test looks inside the trips page: under its “Your trips” heading, in the snippet’s `.issue` paragraph, beside the Reconnect button that runs `reset`, where only the `failed` snippet can have put it. Against the old `failed` snippet the page said `[object Object]` (chapter {{trips-and-a-new-trip}}). The second presses Refresh on the diagnostics page and expects the newest row to change, which it did not while the report was a bare `{const}` (chapter {{explore-and-diagnostics}}). Neither waits longer than the default: each change happens once a single request comes back.'
@@ -255,7 +471,7 @@ $ pnpm run test:unit -- --run
 				type: 'p',
 				text: '`beforeEach` signs Ana in straight to her trip, and the first test presses `ControlOrMeta+k` — Playwright’s name for “Control on Linux and Windows, Command on a Mac” — to open the command palette and jump to a tab by typing part of its name. A keyboard shortcut is a feature people rely on and never think to report when it breaks.'
 			},
-			code('e2e/trip.e2e.ts', 60, 83),
+			code('e2e/trip.e2e.ts', 74, 97),
 			{
 				type: 'p',
 				text: 'The expenses test adds one row and asserts a *consequence*: that the settle-up now says Ben pays Ana. Its date used to be `fill("2026-05-10")` on a native date input; the field became the segmented picker, in the page’s language rather than the browser’s, so the test types the date segment by segment like a person — the same assertion, through the control that ships. It then removes the row, so the next test — and the next run against a reused server — starts from the seed. Tests that clean up after themselves are the alternative to a database reset between every test, which would cost seconds each and would hide any test that depended on the order.'
@@ -291,10 +507,52 @@ $ pnpm run test:unit -- --run
 				text: 'The settings test has a shape worth copying: `try … finally`. It flips the trip to visible-by-link, checks that the embed section appears and that the custom element inside it renders the trip *through the route API* — Playwright locators pierce shadow DOM, so `page.locator(\'meridian-route\').getByText(…)` reaches inside — and then, whatever happened, flips it back. Without the `finally`, one failure in the middle would leave the seeded trip public, and the stranger’s suite in the next run would fail on a 200 where it expects a 404, two files away from the cause.'
 			},
 
+			{ type: 'h3', id: 'proofs', text: 'The proofs the later passes added' },
+			{
+				type: 'p',
+				text: 'Every feature and every fix since the first version came with a test, and every test was first run against the code *before* the change, where it had to fail — for the right reason, read from its error, not merely fail. A test that passes on the old code proves nothing about the new. These are the ones those passes added, each named by its title, the way the runner prints it.'
+			},
+			code('e2e/public.e2e.ts', 203, 212),
+			{
+				type: 'p',
+				text: '“a dynamically rendered page carries its preloads as a Link header” proves `output.linkHeaderPreload` (chapter {{the-config}}): the preloads leave the HTML for a `Link` response header, including the font the `preload` hook picks by its source filename — and the last line proves they *left*, rather than appearing twice.'
+			},
+			code('e2e/public.e2e.ts', 214, 237),
+			{
+				type: 'p',
+				text: '“on a phone the closed menu is not in the accessibility tree, and Escape closes the open one” is about motion that ends somewhere honest (chapter {{motion-with-intent}}): a sheet clipped to nothing is still in the DOM, and only `visibility: hidden` at the end of its transition takes its links out of reach of a role query — and of a screen reader. It skips itself on the desktop, where there is no menu.'
+			},
+			code('e2e/offline.e2e.ts', 60, 100),
+			{
+				type: 'p',
+				text: '“a trip opened once is readable offline” and “after signing out, a trip is not readable offline” are the two halves of the service worker’s contract (chapter {{the-offline-itinerary}}): the copy is there for the person who opened it, in a tunnel, and gone for the next person on a shared device. The third test in the file, “a session that ends without the button takes the copies with it”, covers the sign-out nobody pressed.'
+			},
+			code('e2e/collab.e2e.ts', 154, 223),
+			code('e2e/collab.e2e.ts', 225, 269),
+			{
+				type: 'p',
+				text: '“a companion who is removed stops receiving the trip” and “a trip made private stops the stream of somebody reading it by link” prove the live query asks for access on every wake (chapter {{live-collaboration}}). The assertion that decides is the removed person’s chip leaving “Live” for “Reconnect”: it says the server ended the stream, so the stop added afterwards *cannot* arrive, and the `toHaveCount(0)` after it is the consequence rather than a wait. Both were also run against the generator with only the re-check deleted, and both failed at that line. The removed companion is a new person per run, joined through an invite link, because the desktop and phone projects share one database and removing a seeded person would leave the other suites a different trip; the privacy test puts the trip back in `finally`.'
+			},
+			code('e2e/public.e2e.ts', 188, 193),
+			{
+				type: 'p',
+				text: 'Three lines added to “health, the route API and the embed frame answer for machines”: the German frame, `/de/embed/<slug>`, must carry `frame-ancestors *` like the English one. Against the old hook — a pathname test — it came back `\'none\'` (chapter {{security-headers-and-csp}}).'
+			},
+			code('e2e/trip.e2e.ts', 32, 44),
+			{
+				type: 'p',
+				text: '“the back button closes the stop dialog and stays on the trip” is shallow routing’s whole promise in four lines (chapter {{the-itinerary}}): open the dialog, `page.goBack()`, and the dialog is gone while the URL is still the trip’s. Against the dialog held in component state, Back left for the sign-in page that came before.'
+			},
+			code('e2e/account.e2e.ts', 92, 104),
+			{
+				type: 'p',
+				text: '“a half-typed new trip survives a reload” proves `snapshot` (chapter {{trips-and-a-new-trip}}). The worry with a reload test is that the browser restores form fields by itself and the test passes for the wrong reason; it did not — against the old page both fields came back empty.'
+			},
+
 			{ type: 'h3', id: 'visual', text: 'The suite that looks at the design' },
 			{
 				type: 'p',
-				text: 'The six suites above are about behaviour. The seventh, `visual.e2e.ts`, is about the things a person reviewing a screenshot is bad at: a control that runs two pixels past its card, a button a finger cannot hit, a missing accessible name, a colour pair a theme change broke. It walks the same list of screens `scripts/screens.ts` photographs — one list, so the screens a person reviews are the screens the gate checks.'
+				text: 'The seven suites above are about behaviour. The eighth, `visual.e2e.ts`, is about the things a person reviewing a screenshot is bad at: a control that runs two pixels past its card, a button a finger cannot hit, a missing accessible name, a colour pair a theme change broke. It walks the same list of screens `scripts/screens.ts` photographs — one list, so the screens a person reviews are the screens the gate checks.'
 			},
 			code('e2e/matrix.ts', 3, 33),
 			code('e2e/matrix.ts', 161, 163),
@@ -445,7 +703,7 @@ BUNDLE (133 chunks, gzipped)
 				code: `
 $ pnpm run test:e2e
 
-Running 243 tests using 1 worker
+Running 259 tests using 1 worker
 
   ✓  [desktop] › public.e2e.ts › the guides are prerendered, translated and shipped without JavaScript
   ✓  [desktop] › collab.e2e.ts › a change by one person reaches the other through the live query
@@ -456,8 +714,8 @@ Running 243 tests using 1 worker
   ✓  [phone] › visual.e2e.ts › first impressions on a phone › / paints its largest thing inside 2.5 seconds on a slow 4G connection
   ✓  [narrow] › visual.e2e.ts › light theme › trip-new › trip-new holds together
 
-  17 skipped
-  226 passed`
+  18 skipped
+  241 passed`
 			},
 			{
 				type: 'note',
@@ -523,14 +781,23 @@ Running 243 tests using 1 worker
 			},
 
 			{ type: 'h3', id: 'headers', text: 'The headers, and the one route that may be framed' },
-			code('src/hooks.server.ts', 114, 165),
+			code('src/hooks.server.ts', 114, 172),
 			{
 				type: 'p',
 				text: 'Three headers are always right and cost nothing: `x-content-type-options: nosniff` (the browser trusts our content types and does not guess), `referrer-policy: strict-origin-when-cross-origin` (other sites learn our origin, not our paths — a trip’s slug is not their business), and a `permissions-policy` that turns off the microphone and the camera and keeps geolocation for this origin only, because “where am I” on the map is the one capability the app asks for. `Vary: Cookie` on pages is for shared caches: the header shows the person’s name and the locale cookie changes the language, so a cache must never serve one person’s page to another. API responses and the hashed `/_app/` assets are excluded because they do not depend on the cookie, and a `Vary` there would only defeat the cache. One cache cannot be protected by a header, because it is on the device itself: the service worker’s copies of the pages a person opened, kept for reading offline. A shared laptop is a shared cache with one browser profile, so the app deletes those copies before signing anybody out, and again whenever it finds nobody signed in — chapter {{the-offline-itinerary}} has the code and the test that proves the next person reads nothing.'
 			},
 			{
 				type: 'p',
-				text: 'The embed route is the exception that proves the policy was applied thoughtfully. `/embed/<slug>` exists to be framed — it is the read-only route summary the custom element loads (chapter {{embedding-a-trip}}) — and for that path, and only that path, the handler rewrites the `frame-ancestors` directive **after SvelteKit has built the header**. A regular expression on the header is cruder than a per-route config would be, but SvelteKit’s policy is global, the route is one, and the rewrite is six lines next to a comment that says exactly what it does. The end-to-end suite asserts the result on the public frame and the 404 on the private one.'
+				text: 'The embed route is the exception that proves the policy was applied thoughtfully. `/embed/<slug>` exists to be framed — it is the read-only route summary the custom element loads (chapter {{embedding-a-trip}}) — and for that route, and only that route, the handler rewrites the `frame-ancestors` directive **after SvelteKit has built the header**. A regular expression on the header is cruder than a per-route config would be, but SvelteKit’s policy is global, the route is one, and the rewrite is six lines next to a comment that says exactly what it does. The end-to-end suite asserts the result on the public frame, on the German one, and the 404 on the private one.'
+			},
+			{
+				type: 'p',
+				text: '“That route” is the part that was wrong. The first version tested `event.url.pathname.startsWith(\'/embed/\')`, and `/de/embed/<slug>` is the same route: `reroute` in `src/hooks.ts` hands it to `src/routes/embed/[slug=slug]` with the locale prefix taken off, but `event.url` is still what the browser asked for. So the German frame went out with `frame-ancestors \'none\'`, and every page that framed it got a refusal instead of a trip. `event.route.id` is what the router *matched* — `\'/embed/[slug=slug]\'` for both URLs, after `reroute` — and it is checked against the generated route types, so a typo in it is a type error rather than a rule that quietly never fires. The `Vary: Cookie` rule below it moved for the same reason: by route and by request kind — `event.isRemoteRequest` for remote function calls, a route id under `/api/` for the machine endpoints — rather than by path prefixes that a locale prefix slips past.'
+			},
+			{
+				type: 'why',
+				title: 'Why a route id and not a pathname, for every rule about “this page”',
+				text: 'A pathname is input: it is what was typed, with a locale prefix, a trailing slash, a base path, an encoding — every one of which `reroute` and the router are there to see through. A route id is the answer the router gave, the same for every spelling of the address. A security rule keyed on input has to anticipate each spelling, and the one it forgets is a hole; a rule keyed on the route has nothing to anticipate. The test that would have caught it costs one `page.goto`.'
 			},
 			code('src/hooks.server.ts', 93, 102),
 			{
@@ -549,12 +816,12 @@ Running 243 tests using 1 worker
 				type: 'p',
 				text: 'The route API is the one endpoint with `access-control-allow-origin: *`, and the comment explains why that is safe rather than assumes it: the response holds nothing that was not already public by link. The authorisation is *content-based* — a trip that is not visible by link is a 404 whether or not the caller is signed in — because the custom element runs on somebody else’s page, where our cookies are not sent and must not matter. That is the rule for any CORS-open endpoint: it may return only what an anonymous stranger could already see, and it must decide from the data, not the session.'
 			},
-			code('src/hooks.server.ts', 174, 182),
+			code('src/hooks.server.ts', 181, 189),
 			{
 				type: 'p',
 				text: '`handleFetch` wraps every server-side `fetch` the app makes. Same-origin requests go through untouched; anything leaving the server gets a ten-second `AbortSignal.timeout` and a user agent that names the app. The project makes no external requests today — the map is offline — which is exactly when to put the guard in: the first person to add a weather lookup inherits a timeout instead of a server that hangs when the weather service does.'
 			},
-			code('src/hooks.server.ts', 199, 214),
+			code('src/hooks.server.ts', 206, 221),
 			{
 				type: 'p',
 				text: 'Error handling is a security surface too. `handleError` receives a `kind` in SvelteKit 3 — `app`, `framework`, `validation` or `unknown` — and the code returns something only for the last two. A validation failure (a remote function argument that did not match its schema) is logged with the *path* of the field and answered with a fixed sentence — `m.error_bad_request()`, in the request’s language, and the same sentence whatever failed — so a caller probing the API learns that the request was malformed and nothing about the schema. An unknown error gets an id that is logged with the stack and shown to the person, so a bug report can be matched to a log line; the message itself says nothing about what broke.'
@@ -592,12 +859,12 @@ Running 243 tests using 1 worker
 				type: 'p',
 				text: 'The `deps` stage installs dependencies, and nothing else, so that the layer is cached until the lockfile changes. Three details are the difference between a Dockerfile that works and one that works reliably. **The workspace needs every `package.json` the lockfile mentions**, so the library’s manifest is copied beside the root’s before `pnpm install` — without it, pnpm refuses the frozen install because the lockfile describes a package that is not there. **`--frozen-lockfile`** fails the build if the lockfile disagrees with `package.json` instead of quietly resolving something newer; the lockfile is the contract. **`--ignore-scripts`** skips the root `prepare` script, which would try to build the library before its source has been copied; the build stage runs those steps itself, in order, where it can see them. The `--mount=type=cache` keeps pnpm’s store between builds without putting it in a layer.'
 			},
-			code('Dockerfile', 41, 62, { partial: true }),
+			code('Dockerfile', 41, 61, { partial: true }),
 			{
 				type: 'p',
-				text: 'The `build` stage is `prepare` spelled out: package the library, compile the messages, sync the types, then build the element and the app. `PUBLIC_ORIGIN` is a **build argument**, and the stage refuses to continue without it, because SvelteKit bakes `paths.origin` into the server bundle (chapter {{the-config}}) and Better Auth derives its base URL from the same value. This is the fact that decides the deployment model: one image per origin. The other two variables are placeholders — `src/env.ts` validates that they exist at import time, and they are never read during a build — and they do not survive into the runtime stage. `pnpm prune --prod` then removes every devDependency: the compilers, the test runners, drizzle-kit, Playwright. That is most of `node_modules`. The `CI=true` in front of it is a scar from the first pipeline run: pnpm asks for confirmation before it purges a modules directory — 11 did, 12 still does — and with no terminal to ask on it aborts the build instead of asking — the variable is how you tell it nobody is there.'
+				text: 'The `build` stage is `prepare` spelled out: package the library, compile the messages, sync the types, then build the element and the app. `PUBLIC_ORIGIN` is a **build argument**, and the stage refuses to continue without it, because SvelteKit bakes `paths.origin` into the server bundle (chapter {{the-config}}) and Better Auth derives its base URL from the same value. This is the fact that decides the deployment model: one image per origin. It is the only variable the stage sets. The database URL and the auth secret used to be set here too, to invented values — `src/env.ts` validated them during the build — and now they are not: `src/env.ts` makes both optional while `building` (chapter {{environment-and-hooks}}), the database client opens an in-memory database for the build’s analysis, and Better Auth gets a throwaway secret that dies with it. A build stage that holds no secret, not even a fake one, is one nobody has to argue about; CI proves it by building and starting the image with the secret given only to `docker run`. `pnpm prune --prod` then removes every devDependency: the compilers, the test runners, drizzle-kit, Playwright. That is most of `node_modules`. The `CI=true` in front of it is a scar from the first pipeline run: pnpm asks for confirmation before it purges a modules directory — 11 did, 12 still does — and with no terminal to ask on it aborts the build instead of asking — the variable is how you tell it nobody is there.'
 			},
-			code('Dockerfile', 65, 103, { partial: true }),
+			code('Dockerfile', 64, 102, { partial: true }),
 			{
 				type: 'p',
 				text: 'The `runtime` stage starts from a clean `node:slim` and copies five things from the build: the manifest, the pruned `node_modules`, the `build/` directory, the `drizzle/` migrations and the migration script. Nothing else — no source, no tests, no `.git`. It runs as the `node` user the base image ships with, because nothing here needs root and a process that does not need root should not have it. `/data` is a volume owned by that user, and `DATABASE_URL` points into it, so the database outlives the container.'
@@ -620,7 +887,7 @@ Running 243 tests using 1 worker
 
 			{ type: 'h3', id: 'health', text: 'The health endpoint and the first request' },
 			code('src/routes/healthz/+server.ts', 23, 36),
-			code('src/hooks.server.ts', 221, 225),
+			code('src/hooks.server.ts', 228, 232),
 			{
 				type: 'p',
 				text: '“Healthy” means the database answers. A process that is up and cannot reach its data is a process that should not be receiving traffic, and `select 1` is the cheapest way to ask. The response carries the `version` — the commit the build was made from, through `version.name` in chapter {{the-config}} — so “which version is live?” is one request, and `cache-control: no-store`, because a cached “healthy” is worse than none. It goes out through `Response.json`, where SvelteKit 3 points you now that its own `json()` helper is deprecated. `init` in the hooks reaches the database once before the first request, which turns “the deploy is broken” into a process that never claims to be healthy — and that is precisely what a rolling deployment needs in order to keep the old version serving.'
@@ -689,10 +956,165 @@ $ docker compose down     # SIGTERM, in-flight requests finish, exit code 0`
 	},
 
 	{
+		slug: 'migrating-a-major',
+		title: 'Migrating a major: the routine, the record, and a dependency still on Svelte 4',
+		summary:
+			'`sv migrate` and its task-based migrations — one task per commit, `@migration-task` comments, and a `MIGRATION_TASKS.md` for what no tool can decide — with this project’s own file, every box resolved. What SvelteKit 3 removed and renamed, module by module and option by option; and how to read a component written for Svelte 4, each legacy construct with its runes replacement and the code that flags it.',
+		goal: 'Run a major upgrade as a reviewable series of commits, resolve every finding with evidence, and read legacy Svelte without writing any.',
+		blocks: [
+			{
+				type: 'p',
+				text: 'A major version is a list of breaking changes and, these days, a tool that makes most of them for you. The skill is in the rest: knowing which changes the tool made, which it could not, and how to leave a record that the next person — or the next major — can trust. This project went from SvelteKit 2 to 3 that way, and this chapter is the routine it followed.'
+			},
+			{
+				type: 'terminal',
+				code: `
+$ git status --short                                     # clean first; or --no-git-check
+$ npx sv migrate sveltekit-3 --tasks                     # list the tasks, run nothing
+$ npx sv migrate sveltekit-3 --tasks prerequisite --install pnpm
+$ git commit -am "sveltekit-3: package-json, tsconfig"
+$ npx sv migrate sveltekit-3 --tasks svelte-config --no-install
+$ git commit -am "sveltekit-3: svelte-config"
+  … one task, one review, one commit, for each of the nine …
+$ grep -rn "@migration-task" src                         # must find nothing at the end`
+			},
+			{
+				type: 'p',
+				text: '`sv migrate` has two kinds of migration. The newer ones are *task-based*: `sveltekit-3` and `app-state`. The older ones — `svelte-5`, `self-closing-tags`, `svelte-4`, `sveltekit-2`, `package`, `routes` — are delegated to `svelte-migrate@1`, kept so old projects can move forward, and, in the documentation’s words, “no longer receive updates”. A task-based migration shows its tasks before it runs any; the *prerequisite* tasks always run, and the rest are chosen interactively or with `--tasks`. Run without IDs, `--tasks` lists them; `--tasks all` runs everything at once, which the documentation reserves for automation. The other options are plumbing: `--cwd` to run against another directory, `--confirm` to skip the last prompt in a script, `--install <manager>` or `--no-install`, and `--files <glob>` — an escape hatch that saves only matching files, which the documentation warns “can leave imports, configuration, or types inconsistent”.'
+			},
+			{
+				type: 'why',
+				title: 'Why one task per commit',
+				text: 'Because a migration commit is reviewed by reading its diff, and nine tasks in one diff is a diff nobody reads. The documentation says it outright: run “one selectable task at a time and commit the result before starting the next one”, and — just as important — “do not expect a project to work after running only a few tasks”. The commits are for review, not for stopping half-way. When something breaks after the fourth, `git bisect` has nine small commits to choose from instead of one large one.'
+			},
+			{
+				type: 'table',
+				caption: 'The nine `sveltekit-3` tasks, and where their result lives in Meridian',
+				head: ['Task', 'What it does', 'Where it shows'],
+				rows: [
+					['`package-json` (prerequisite)', 'bumps the packages to SvelteKit 3’s minimums', 'the versions and pnpm’s release-age rules (chapter {{the-workspace}})'],
+					['`tsconfig` (prerequisite)', 'extends `$app/tsconfig` instead of `.svelte-kit/tsconfig.json`', '`tsconfig.json` and its explicit `include` (chapter {{the-config}})'],
+					['`svelte-config`', 'moves the config into `sveltekit({…})` in `vite.config.ts`', 'there is no `svelte.config.js` (chapter {{the-config}})'],
+					['`environment`', 'replaces the `$env/*` modules with `$app/env` and a `src/env.ts`', '`src/env.ts` (chapter {{environment-and-hooks}})'],
+					['`paths`', 'replaces `base`, `assets` and `resolveRoute` with `resolve` and `asset`', 'the `href()` helper over `resolve()` (chapter {{the-shell}})'],
+					['`external-redirects`', 'opts external redirects into `{ external }`', 'nothing to do: no redirect leaves the site, and the sign-in target is sanitised to stay on it (chapter {{security-headers-and-csp}})'],
+					['`shallow-routing`', 'turns `pushState` / `replaceState` into `goto(…, { shallow })`', 'the stop dialog as a history entry (chapter {{the-itinerary}})'],
+					['`params`', 'gathers matchers into one `src/params.ts`', '`defineParams` with a valibot slug (chapter {{environment-and-hooks}})'],
+					['`app-state`', 'moves `$app/stores` to `$app/state`', 'every `page.` read (chapter {{the-shell}})']
+				]
+			},
+
+			{ type: 'h3', id: 'the-record', text: 'The record: every finding resolved' },
+			{
+				type: 'p',
+				text: 'What a task cannot decide safely it leaves in two places: `@migration-task` comments at the spot, and a `MIGRATION_TASKS.md` at the root listing the migrations that are “uncommon, context-dependent, or disproportionately difficult to automate safely”, each with the files worth a look. The file’s own instruction is to delete it when the work is done. This project kept it instead, as `docs/migration-sveltekit-3.md`, with every box ticked and the evidence beside it.'
+			},
+			code('docs/migration-sveltekit-3.md', 1, 30),
+			{
+				type: 'p',
+				text: 'The findings are deliberately broad, and the file says so — “may include files that do not require changes”. Eight of the twenty boxes here were false positives, and *not affected, because* is a resolution as long as the because is checkable. The header’s `page.url` finding was a read, never a write. The `error(...)` finding in the trip page was svelte-sonner’s `toast.error`. The one below is the most instructive: three forms flagged for hand-written `name` attributes, none of them remote forms.'
+			},
+			code('docs/migration-sveltekit-3.md', 94, 108),
+			{
+				type: 'p',
+				text: 'The rule behind that task is strict — the migration guide says a hand-written name on a remote form “will cause the submission to be rejected” — so the check had to be real: each flagged `<form>` is plain HTML with an `onsubmit` that calls a `command`, and its `name` only groups radio buttons for the browser. Every actual remote form takes its attributes from `fields.x.as(…)` (chapter {{remote-functions-the-writes}}).'
+			},
+			code('docs/migration-sveltekit-3.md', 118, 126),
+
+			{ type: 'h3', id: 'what-went-away', text: 'What went away, and what replaced it' },
+			{
+				type: 'table',
+				caption: 'Modules SvelteKit 3 removed or renamed',
+				head: ['SvelteKit 2', 'SvelteKit 3', 'In Meridian'],
+				rows: [
+					['`$app/environment`', '`$app/env` — renamed, and now importable in a service worker', '`browser`, `building`, `dev`, `version` (chapters {{environment-and-hooks}}, {{the-map-of-features}}, {{the-offline-itinerary}})'],
+					['`$app/stores` (`$page`, `$navigating`, `$updated`)', 'removed — `$app/state`: `page`, `navigating`, `updated`, read without the `$`', 'every page read (chapter {{the-shell}})'],
+					['`$service-worker`', 'removed — `version` from `$app/env`; `assets`, `immutable`, `prerendered` from `$app/manifest`; `resolve()` from `$app/paths`', '`src/service-worker/index.ts` (chapter {{the-offline-itinerary}})'],
+					['`$env/static/*`, `$env/dynamic/*`', 'deprecated — declared in `src/env.ts`, imported from `$app/env/private` and `$app/env/public`', 'chapter {{environment-and-hooks}}'],
+					['`$lib`', '`#lib`, declared in `package.json` `imports`, with file extensions', 'every import (chapter {{the-workspace}})'],
+					['`base`, `assets`, `resolveRoute` from `$app/paths`', '`resolve()` and `asset()`; the `Pathname` and `Asset` types are `Path` and `AssetPath`', '`#lib/href.ts` (chapter {{the-shell}})'],
+					['hook, env and remote types from `@sveltejs/kit`', '`@sveltejs/kit/hooks`, `@sveltejs/kit/env`, `@sveltejs/kit/params`, `$app/server`', 'the first lines of `hooks.server.ts` (chapter {{environment-and-hooks}})']
+				]
+			},
+			{
+				type: 'table',
+				caption: 'Configuration SvelteKit 3 removed',
+				head: ['Removed', 'Instead', 'Note'],
+				rows: [
+					['`svelte.config.js`', 'options passed to `sveltekit({…})` in `vite.config.ts`', 'the `kit.*` options are top-level there'],
+					['`files.lib`', '`#lib` in `package.json`', ''],
+					['`vitePlugin`', 'vite-plugin-svelte options such as `inspector` passed straight to the plugin', 'chapter {{the-config}}'],
+					['`output.preloadStrategy`', 'nothing — `modulepreload` is always used', 'still in the types, marked “@deprecated removed in 3.0”'],
+					['`prerender.origin`', '`paths.origin`', 'also replaces adapter-node’s `ORIGIN`'],
+					['`csrf.checkOrigin`', '`csrf.trustedOrigins`', 'still in the types: “Use `trustedOrigins: [\'*\']` instead”'],
+					['`experimental.tracing`, `.instrumentation`, `.handleRenderingErrors`', 'top-level `tracing`; instrumentation and rendering errors are always on', ''],
+					['`serviceWorker.files`', 'gone: `serviceWorker` has only `register` and `options`', 'the worker filters what it caches itself'],
+					['`env.publicPrefix`, `env.privatePrefix`', 'gone: `env` has only `dir`; `public: true` is per variable in `src/env.ts`', ''],
+					['`export const snapshot` (the `Snapshot` type)', '`snapshot()` from `$app/navigation`, callable from any component', 'chapter {{trips-and-a-new-trip}}']
+				]
+			},
+			{
+				type: 'p',
+				text: 'And the behaviour that changed under code that still compiles, which is where an upgrade actually bites. In this project each was met and answered: `error()` takes a message string, with extra properties as a third argument; `handleError` now receives *every* error, told apart by `kind`, and can set the status; `json()` and `text()` are deprecated for `Response.json()` and `new Response()`; `goto` rejects a URL that is not a route; `page.url` is readonly; `delta` exists only for `popstate`; `preloadData` can return an `error` result; a 204 has no body; a cookie with no `path` gets `/`; `data-sveltekit-*` attributes take `false`, not `\'off\'`; a redirect off the site needs `{ external }`; a link to the current page refreshes; a universal `config` wins over a server one; and the service worker is registered as a module.'
+			},
+
+			{ type: 'h3', id: 'svelte-4', text: 'Reading a dependency that is still on Svelte 4' },
+			{
+				type: 'p',
+				text: 'Svelte 5 still compiles Svelte 4 syntax — a component without runes is in *legacy mode* — so a library written for 4 usually runs. You will read its source when it misbehaves, and every construct in it has a runes equivalent and a code that names it. No code in this project is written in legacy mode; this is a reading table.'
+			},
+			{
+				type: 'table',
+				caption: 'Svelte 4 constructs, their runes replacements, and the code that flags each in runes mode',
+				head: ['Svelte 4', 'Svelte 5', 'Flagged by'],
+				rows: [
+					['`let count = 0` (implicitly reactive)', '`let count = $state(0)`', '`non_reactive_update` when a plain `let` is reassigned and read reactively'],
+					['`$: double = count * 2`; `$: { … }`', '`$derived(count * 2)`; `$effect(() => { … })`', '`legacy_reactive_statement_invalid`; `run()` from `svelte/legacy` is the migration’s stopgap'],
+					['`export let name`', '`let { name } = $props()`', '`legacy_export_invalid`'],
+					['`$$props`, `$$restProps`', '`let props = $props()`; `let { a, ...rest } = $props()`', '`legacy_props_invalid`, `legacy_rest_props_invalid`'],
+					['`on:click={…}`, `on:click|preventDefault`', '`onclick={…}`, and `event.preventDefault()` inside it', '`event_directive_deprecated`; `mixed_event_handler_syntaxes` if both appear'],
+					['`createEventDispatcher`', 'callback props', 'deprecated in the types; the migration script leaves it to you'],
+					['`<slot />`, `$$slots`, `<svelte:fragment>`', '`{@render children()}`, snippet props', '`slot_element_deprecated`; `slot_snippet_conflict` if mixed'],
+					['`<svelte:component this={X}>`', '`<X />` — components are dynamic', '`svelte_component_deprecated`'],
+					['`<svelte:self>`', 'the component imports itself', '`svelte_self_deprecated`'],
+					['`new App({ target })`, `$set`, `$on`, `$destroy`', '`mount(App, { target })`, `$state` props, `unmount`', '`legacy_component_creation`; at run time `component_api_changed`, `component_api_invalid_new`'],
+					['`beforeUpdate`, `afterUpdate`', '`$effect.pre`, `$effect` (and `tick`)', '`lifecycle_legacy_only`'],
+					['`SvelteComponent`, `ComponentType`, `ComponentEvents`', 'the `Component` type; callback props instead of events', 'deprecated in the types: “`SvelteComponent`, the base class from Svelte 4, is deprecated in favour of the new `Component` type”'],
+					['`<script context="module">`', '`<script module>`', '`script_context_deprecated`'],
+					['`<div />`', '`<div></div>`', '`element_invalid_self_closing_tag`; `npx sv migrate self-closing-tags`']
+				]
+			},
+			{
+				type: 'p',
+				text: '`svelte/legacy` is the bridge the `svelte-5` migration reaches for when it cannot be sure: `run` for a `$:` it could not classify, `createBubbler` and `handlers` for forwarded events, the eight modifier helpers — `once`, `preventDefault`, `self`, `stopPropagation`, `stopImmediatePropagation`, `trusted`, `passive`, `nonpassive` — and `asClassComponent` / `createClassComponent` with the `LegacyComponentType` type for code that still says `new Component(…)`. For a dependency you cannot change, `compilerOptions.compatibility.componentApi: 4` makes `new Component(...)` keep working, at “a bit of overhead to each component”. Each is a way to finish migrating later; none is a way to write new code.'
+			},
+			{
+				type: 'p',
+				text: 'Turning a component into runes mode changes more than syntax, and these are the ones that surprise people. Props are not bindable unless declared with `$bindable()`. `accessors` and `immutable` are ignored. A class instance is not “auto-reactive” — only its `$state` fields are, and wrapping `new Foo()` in `$state` does nothing. `ontouchstart` and `ontouchmove` handlers are passive. An attribute that concatenates must be quoted. HTML the browser would repair is a compile error. Selectors inside `:is()`, `:has()` and `:where()` are scoped now. Whitespace between nodes collapses to one space and is trimmed at the edges of a tag. And `children` is a reserved prop name, because content between a component’s tags *is* the `children` snippet.'
+			},
+
+			{ type: 'h3', id: 'performed', text: 'The two migrations this course made by hand' },
+			{
+				type: 'p',
+				text: 'Two pieces of syntax changed under this project after it was written, and neither has a migration task, because both old forms still compile. `{@const x = …}` became the declaration tag `{const x = $derived(…)}` — twenty-seven of them across twenty components, and no `{@const}` left — for the placement rule and the computed-once value chapter {{what-the-compiler-says}} describes. And `class:active={…}` directives became `class={[\'chip\', { active }]}` arrays — fifteen class arrays across ten components, no `class:` directive left — because one attribute that says everything about an element’s classes reads better than a list of directives, and merges with a `class` prop without string-building. The autofixer’s legacy checks and `pnpm run lint:svelte` keep both from coming back.'
+			},
+			{
+				type: 'checkpoint',
+				items: [
+					'You can run a task-based migration one task per commit, and say what `--tasks`, `--files`, `--cwd`, `--confirm` and `--no-install` do.',
+					'You can resolve a `MIGRATION_TASKS.md` finding with evidence, including the findings that are false positives.',
+					'You can name what replaced `$app/environment`, `$app/stores`, `$service-worker`, `$env/*`, `$lib` and `resolveRoute`.',
+					'You can read a Svelte 4 component and name, for each construct, its runes form and the code that flags it.'
+				]
+			}
+		]
+	},
+
+	{
 		slug: 'what-i-would-do-next',
 		title: 'What I would do next, and what you now know',
 		summary:
-			'The project is complete and the suite is green, and it is still version one. An honest list of the next ten pieces of work, each with the chapter it would touch and the reason it was not done this week; a map from every Svelte and SvelteKit capability the course used to the chapter that used it; and how to keep the project current as the framework moves.',
+			'The project is complete and the suite is green, and it is still version one. An honest list of the next ten pieces of work, each with the chapter it would touch, then every deferred item with the reason it waits — generated, and checked against the exit criteria; a map from every Svelte and SvelteKit capability the course used to the chapter that used it; and how to keep the project current as the framework moves.',
 		goal: 'Leave with a prioritised backlog you could start on tomorrow, a mental index of where each framework feature lives in the code, and a routine for upgrading without breaking the course.',
 		blocks: [
 			{
@@ -704,21 +1126,44 @@ $ docker compose down     # SIGTERM, in-flight requests finish, exit code 0`
 			{
 				type: 'ol',
 				items: [
-					'**A real tile server, behind a feature flag.** The bundled world is the right default — offline, no keys, no third party — and it is too coarse for a city. A vector tile source is one origin in `connect-src` (chapter {{security-headers-and-csp}}), one `style` swap in the map (chapter {{the-map}}), and an environment variable in `src/env.ts` so the offline build stays the default. The flag is what keeps CI free of network.',
-					'**Invites by email.** The invite *link* works; a mail with the link in it is a queue and a sender. The clean shape is an outbox table written in the same transaction as the invite (chapter {{invites-and-membership}}) and a worker that drains it — the pattern the third project in this series built in full.',
-					'**Offline notes.** Tiptap already holds the document (chapter {{notes-with-tiptap-through-an-attachment}}); an IndexedDB copy and a queue of `saveNote` commands to replay on reconnect would make the notes tab survive a train tunnel. The read side is built: chapter {{the-offline-itinerary}} keeps every page a person opens and brings the live stream back when the network does. What is left is the write side, and the conflict policy it needs against a document somebody else may have changed in the meantime.',
-					'**Photos on stops.** `@sveltejs/enhanced-img` handles the *static* images (chapter {{the-design-system}}); uploads need object storage, a signed upload URL from a `command`, and a thumbnail pipeline. `BODY_SIZE_LIMIT` (chapter {{deploying}}) is the first number to revisit.',
-					'**Rate limiting the public surface.** Sign-in, sign-up, the join page and the route API are reachable by anyone. A token bucket keyed by IP in the security handler (chapter {{security-headers-and-csp}}), backed by the database or memory, is a morning’s work and the first thing a penetration test would flag.',
-					'**A libSQL server instead of a file.** The file is right for one machine; the moment there are two, `DATABASE_URL` becomes a `libsql://` URL (chapter {{the-database}}) and the rooms need a pub/sub that both processes share (chapter {{live-collaboration}}). Drizzle and the migration script do not change.',
-					'**Exporting the traces.** The in-memory ring buffer (chapter {{explore-and-diagnostics}}) is for one process and a curious developer. Pointing the same provider at an OTLP collector is a different exporter in `instrumentation.server.ts` and nothing else — which was the point of putting OpenTelemetry in rather than a custom logger.',
-					'**More of the itinerary on the map.** The map shows stops and the route; it could show days as colours, the selected stop’s neighbours, and a “fly to” on selection using the same `interpolate()` the globe uses (chapter {{the-globe}}).',
-					'**A fourth locale, right-to-left.** Paraglide makes a new locale a new JSON file (chapter {{three-languages-with-paraglide}}); an Arabic or Hebrew one would also exercise `%paraglide.dir%` and every `inline-start` in the CSS (chapter {{the-design-system}}), which is why the tokens were written logically from the start.',
-					'**Accessibility audit with real assistive technology.** The roles and names are there and the tests assert them; a session with a screen reader on the itinerary’s drag-and-drop and the date picker would find what tests cannot, and svelte-dnd-action’s keyboard mode deserves a chapter of its own.'
+					'**Notice a sign-out in another tab.** Sign out in one tab and the others still look signed in until they next ask the server for something — mutations already answer 401 and the toast says so, but the page should know first. The shape is `depends(\'meridian:session\')` on the layout’s load and an `invalidate` when the tab becomes visible again (chapter {{the-shell}}). The live stream has the same gap at a smaller scale: it re-checks *membership* on every wake (chapter {{live-collaboration}}), but the person on `locals` is the one the connection opened with. (B4-D30)',
+					'**Prove the redirect sanitiser.** `redirectTo` is cleaned rather than rejected (chapter {{security-headers-and-csp}}), and nothing yet proves `//evil.example` lands on `/trips`. One end-to-end test, and `LoadEvent.untrack` so the guard does not re-run on every navigation. (B4-D55)',
+					'**A sitemap.** A prerendered `sitemap.xml/+server.ts` with an `hreflang` alternate per language, for four guides in three languages (chapter {{guides-prerendered-with-mdsvex}}). Fifteen minutes. (B4-D57)',
+					'**Rate-limit the public surface.** Sign-in, sign-up, the join page and the route API are reachable by anyone. A token bucket on `getClientAddress()` in the security handler, answering 429 with `retry-after`, and `ADDRESS_HEADER` / `XFF_DEPTH` read correctly behind the proxy (chapters {{security-headers-and-csp}}, {{deploying}}). The end-to-end suite signs in from one address many times, so it needs a limit per environment. (B4-D62)',
+					'**A cover image for a trip.** An upload is `fields.cover.as(\'file\')` with `v.file()` and a size cap, sharp for the resizing, an endpoint to serve it, and `BODY_SIZE_LIMIT` raised to match (chapter {{deploying}}). Not `as(\'image\')`, which sounds right and is `<input type="image">` — click coordinates, `ImageInputValue`, no file at all. (B4-D54)',
+					'**A share image.** `render()` from `svelte/server` drawing the route as an SVG in an endpoint, and `og:image` on the trip page (chapter {{embedding-a-trip}}). (B4-D50)',
+					'**Stops mentioned in the notes.** A Tiptap node view that renders a Svelte component with `mount` and `unmount` — the one honest place for them in this project (chapter {{notes-with-tiptap-through-an-attachment}}). Two new dependencies and the biggest item here. (B4-D51)',
+					'**Installable.** A web manifest and an icon set; the worker that installing needs is already there (chapter {{the-offline-itinerary}}). (B3-D1)',
+					'**Writing offline.** Note saves queued while the network is gone and replayed on `online`, with a conflict policy against the live query’s last-writer-wins (chapters {{the-offline-itinerary}}, {{live-collaboration}}). (B3-D5)',
+					'**An inventory from the compiler.** A `scripts/inventory.ts` that walks every component with `parse` from `svelte/compiler` and writes the map of features from what the code actually uses, so chapter {{the-map-of-features}} is generated rather than kept (chapter {{what-the-compiler-says}}). (B1-D2)'
 				]
 			},
 			{
 				type: 'p',
-				text: 'Three things are deliberately *not* on the list. A native app: the web app is installable as it stands, and the map and the globe already work on a phone. A rewrite of the itinerary as a CRDT: the live query with last-write-wins per stop is the right trade for a few people planning a trip, and the fourth project in this series is the one to read if you need the other trade. And “more libraries”: chapter {{choosing-libraries}} spent as long on what was rejected as on what was chosen, and every item above is doable with what is installed.'
+				text: 'Further out, the work a growing product would ask for rather than the work this course left: invites sent by email from an outbox written in the same transaction (chapter {{invites-and-membership}}); a libSQL server instead of a file, and rooms on a pub/sub two processes share (chapters {{the-database}}, {{live-collaboration}}); the traces exported to an OTLP collector (chapter {{explore-and-diagnostics}}); a fourth, right-to-left locale (chapter {{three-languages-with-paraglide}}); a session with a real screen reader on the drag-and-drop; a tile server behind a flag. And one upgrade with a date on it: mdsvex 1.0, the first release to write `<script module>`, when it leaves prerelease (chapter {{what-the-compiler-says}}).'
+			},
+			{
+				type: 'p',
+				text: 'Three things are deliberately *not* on the list. A native app: the map and the globe already work on a phone, and a web manifest is item eight. A rewrite of the itinerary as a CRDT: the live query with last-write-wins per stop is the right trade for a few people planning a trip. And a second framework for the marketing pages: the home page is a SvelteKit route like the others, prerendered where it can be.'
+			},
+
+			{ type: 'h3', id: 'the-whole-list', text: 'The whole list' },
+			{
+				type: 'p',
+				text: 'The ten above are the top of a longer list: every piece of work the course planned and decided not to do yet, each with the reason it waits. It is generated from the gap list that decided what this course would build, and checked on every build — the exit criteria in chapter {{the-exit-criteria}} mark a surface *deferred* only if its item is here and the surface is named on it. The ids are the gap list’s own: B1 is the toolchain, B2 design and motion, B3 offline, B4 the server and the pages, B5 the proofs; so “goes with B4-D8” points at a row of this table.'
+			},
+			{
+				type: 'table',
+				caption: 'Every deferred item: what it is, the surfaces it carries, and why it waits',
+				head: ['Item', 'What', 'Why it waits'],
+				rows: BACKLOG.map((item) => {
+					const carried = surfacesOf(item.id);
+					return [
+						item.id,
+						carried.length > 0 ? `${item.what} Surfaces: ${carried.join(', ')}.` : item.what,
+						item.why || 'A few sentences of prose, not yet written.'
+					];
+				})
 			},
 
 			{ type: 'h3', id: 'map', text: 'Where everything lives' },
@@ -738,6 +1183,7 @@ $ docker compose down     # SIGTERM, in-flight requests finish, exit code 0`
 					'**Configuration** — everything in `vite.config.ts`: `paths.origin` and `paths.relative`, `dynamicCompileOptions` for a client-only custom element, `tracing`, `csp` in `auto` mode, `csrf`, `version`, `preprocess` for mdsvex, `optimizeDeps` for the browser tests: ch. {{the-config}}, {{unit-and-browser-tests}}, {{security-headers-and-csp}}.',
 					'**Build and runtime** — `@sveltejs/package` with publint and arethetypeswrong: ch. {{packaging-and-proving}}; `@sveltejs/enhanced-img`: ch. {{the-design-system}}; `read()` for a bundled asset from an endpoint: ch. {{remote-functions-the-reads}}; a `prerender` function that is `dynamic` so a server render can fall back to it: ch. {{remote-functions-the-reads}}; `customElement: true` and `customElements.define(…, Component.element)`, and a second Vite config for the element’s IIFE: ch. {{embedding-a-trip}}; `$app/env`’s `browser`, `building`, `version`: ch. {{environment-and-hooks}}, {{the-trip-page}}, {{deploying}}; view transitions with `onNavigate` and an update banner from `version.pollInterval`: ch. {{the-shell}}.',
 					'**The ecosystem** — headless (Bits UI, TanStack Table): ch. {{the-command-palette}}, {{expenses-with-tanstack-and-layerchart}}, {{the-headless-pattern}}; wrappers (svelte-maplibre, Threlte, LayerChart): ch. {{the-map}}, {{the-globe}}, {{expenses-with-tanstack-and-layerchart}}, {{the-wrapper-pattern}}; imperative through an attachment (Tiptap, GSAP): ch. {{notes-with-tiptap-through-an-attachment}}, {{the-design-system}}; compilers (Paraglide, mdsvex, Phosphor’s plugin): ch. {{three-languages-with-paraglide}}, {{guides-prerendered-with-mdsvex}}, {{the-design-system}}; the survey and the rejections: ch. {{choosing-libraries}}.',
+					'**The six chapters added since the first edition** — the toolchain and the agent beside you: ch. {{the-toolchain}}; motion and the rules it keeps: ch. {{motion-with-intent}}; the trip with no network: ch. {{the-offline-itinerary}}; diagnostics by code: ch. {{what-the-compiler-says}}; upgrading a major: ch. {{migrating-a-major}}; and the checklist that measures all of it: ch. {{the-exit-criteria}}.',
 					'**Proof** — Vitest projects and `vitest-browser-svelte`: ch. {{unit-and-browser-tests}}; Playwright on the built server, in three projects — a desktop, a phone, and the phone at 360px — with two browser contexts on one trip and a test with JavaScript switched off: ch. {{end-to-end}}; the container, the health check, the pipeline: ch. {{deploying}}; the course’s own checks: ch. {{deploying}}.'
 				]
 			},
@@ -747,6 +1193,8 @@ $ docker compose down     # SIGTERM, in-flight requests finish, exit code 0`
 				type: 'terminal',
 				code: `
 $ pnpm outdated                       # what moved since the lockfile
+$ pnpm exec svelte-mcp get-documentation kit/migrating-to-sveltekit-3   # on a major: read the guide first
+$ npx sv migrate sveltekit-3 --tasks  # then the tasks, one per commit (chapter {{migrating-a-major}})
 $ pnpm update --latest --interactive  # pick, do not take everything blindly
 $ pnpm run verify                     # check · lint · unit · build · e2e
 $ pnpm run verify:package             # the library, as a consumer meets it
@@ -755,7 +1203,7 @@ $ node ../meridian-course/build.js && node ../meridian-course/tools/check-dist.j
 			},
 			{
 				type: 'p',
-				text: 'The framework this course is built on moves every few weeks, and the versions in chapter {{choosing-libraries}} are dated for that reason. The routine above is the whole upgrade process, and the reason it is short is the reason the tests exist: `verify` is the same command in the pipeline and on a laptop, the suite runs against the built output, and the course reads the code rather than copying it — so a refactor that moves a function changes the course the next time it is built, and `verify.js` says which ranges need a human. When a SvelteKit release renames a thing, the Svelte documentation server and the `svelte-autofixer` used throughout this series are the fastest way to learn the new name; when it adds a thing, the question to ask is the one from chapter {{what-we-are-building}}: is this the right shape, does it earn its bytes, could we remove it later.'
+				text: 'The framework this course is built on moves every few weeks, and the versions in chapter {{choosing-libraries}} are dated for that reason. The routine above is the whole upgrade process. On a major version it starts with two more lines: read the migration guide — `get-documentation` with `["kit/migrating-to-sveltekit-3"]`, from an agent through the MCP server or from the terminal through the same package’s CLI — and then `npx sv migrate`, one task per commit, before `pnpm update` touches anything else (chapter {{migrating-a-major}}). The reason the routine is short is the reason the tests exist: `verify` is the same command in the pipeline and on a laptop, the suite runs against the built output, and the course reads the code rather than copying it — so a refactor that moves a function changes the course the next time it is built, and `verify.js` says which ranges need a human. When a SvelteKit release renames a thing, the Svelte documentation server and the `svelte-autofixer` used throughout this series are the fastest way to learn the new name; when it adds a thing, the question to ask is the one from chapter {{what-we-are-building}}: is this the right shape, does it earn its bytes, could we remove it later.'
 			},
 			{
 				type: 'p',
@@ -766,9 +1214,98 @@ $ node ../meridian-course/build.js && node ../meridian-course/tools/check-dist.j
 				items: [
 					'You can pick one item from the backlog and name the files it would change before opening the editor.',
 					'You can find the chapter for any capability in the map above without searching.',
-					'You can run the upgrade routine end to end and say what each of its six commands protects.'
+					'You can run the upgrade routine end to end, including the two lines a major version adds, and say what each command protects.'
 				]
 			}
 		]
-	}
+	},
+	(() => {
+		const count = (/** @type {string} */ status) => SURFACES.filter((row) => row.status === status).length;
+		const where = (/** @type {import('./surfaces.js').Surface} */ row) =>
+			row.status === 'taught' || row.status === 'declined'
+				? `chapter {{${row.chapter}}}`
+				: row.status === 'deferred'
+					? `the backlog, chapter {{what-i-would-do-next}} (${row.gap})`
+					: 'not built';
+		const claim = (/** @type {import('./surfaces.js').Surface} */ row) =>
+			row.status === 'dropped' ? `${row.statement}: ${row.reason}` : row.statement;
+		return {
+			slug: 'the-exit-criteria',
+			title: 'The exit criteria: what a DPE 8++ in Svelte can do',
+			summary:
+				'What “8++” means for this course, measured: every surface the coverage plan assigned to a chapter, with what you should be able to do with it and where it was taught — or declined, deferred or dropped, and why. Twelve production exercises that start where the course stops, a rubric, and the routine that keeps you current.',
+			goal: 'Measure yourself against every Svelte and SvelteKit surface the course planned, honestly — and pick the exercises that close the gaps you find.',
+			blocks: [
+				{
+					type: 'p',
+					text: '“8++” is a promise about coverage and about reasons. Every built-in of Svelte 5.57 and SvelteKit 3.0.1 is in one of four states in this course: used for something in Meridian, with the reason written down; declined, with the reason written down; on the backlog, with the reason it waits; or dropped, with the reason it was not built. Nothing is demonstrated for its own sake, and nothing is claimed that the code does not do. This chapter is the list, and it is the hardest chapter in the course to fake, because it is not written by hand.'
+				},
+				{
+					type: 'why',
+					title: 'Why this list can be trusted',
+					text: `It was generated from the two documents that decided the course — the coverage plan, which assigned each surface to a chapter, and the gap list, which recorded what was then built, deferred or dropped — by \`tools/exit-criteria.js\`, and committed as \`content/surfaces.json\`. Then \`verify.js\` holds it to the course on every build: a surface marked taught must be in backticks in the prose of the chapter it names, a deferred one must be named on the backlog in chapter {{what-i-would-do-next}}, and every planned chapter must have a row. Mark one deferred surface taught and the build fails. Today the list has ${SURFACES.length} surfaces: ${count('taught')} taught, ${count('declined')} declined, ${count('deferred')} deferred and ${count('dropped')} dropped.`
+				},
+				{
+					type: 'terminal',
+					code: `
+$ node meridian-course/tools/exit-criteria.js plan.json GAPS.md     # once, from the working documents
+content/surfaces.json: ${SURFACES.length} surfaces; content/backlog.json: ${BACKLOG.length} items
+$ node meridian-course/verify.js                                     # on every build, in CI
+… · ${SURFACES.length} surfaces in the exit criteria (${count('taught')} taught, ${count('declined')} declined, ${count('deferred')} deferred, ${count('dropped')} dropped)`
+				},
+				{
+					type: 'p',
+					text: 'Read each table with one question per row: can I do what the middle column says, without this course open? “Use it, and say why Meridian does” means both halves — the code and the reason. “Read it in older code, and say what replaced it” is the migration chapter’s history. “Say what it would take” is the backlog: knowing what you have not built, and why it waits, is part of the skill. The groups follow the order of Svelte’s own documentation index.'
+				},
+				...GROUPS.filter((group) => SURFACES.some((row) => row.group === group)).map((group) => ({
+					type: 'table',
+					caption: `${group} — ${SURFACES.filter((row) => row.group === group).length} surfaces`,
+					head: ['Surface', 'I can…', 'Where'],
+					rows: SURFACES.filter((row) => row.group === group).map((row) => [`\`${row.surface}\``, claim(row), where(row)])
+				})),
+
+				{ type: 'h3', id: 'exercises', text: 'Twelve production exercises' },
+				{
+					type: 'p',
+					text: 'The checklist measures what you know. These measure what you can ship. Each starts where the course stops, names the chapters it draws on, and says what “done” looks like; several build an item from the backlog, which is the point — the backlog is real work with the reasoning already done.'
+				},
+				{
+					type: 'ol',
+					items: [
+						'**Add a fourth, right-to-left locale** (chapters {{three-languages-with-paraglide}}, {{the-design-system}}, {{guides-prerendered-with-mdsvex}}). A Paraglide messages file, `%paraglide.dir%`, an audit of every physical CSS property, the guides prerendered in the new language, and the sitemap from the backlog with an alternate per locale. Done: the guides ship in four languages, and a right-to-left page has no physical margin anywhere.',
+						'**Give a trip a cover image, then move it to object storage** (chapters {{companions-presence-and-settings}}, {{deploying}}, {{security-headers-and-csp}}). First the upload: `fields.cover.as(\'file\')`, `v.file()`, sharp, `BODY_SIZE_LIMIT`. Then a signed upload from a `command`, the bucket in `connect-src`, `handleFetch` for the server’s side. Done: an image that never passes through the app server.',
+						'**Rate-limit sign-in, then share the limit across two containers** (chapters {{security-headers-and-csp}}, {{deploying}}, {{live-collaboration}}). A token bucket on `getClientAddress()`, then a shared store — and the live rooms need the same pub/sub. Done: the eleventh sign-in from one address is a 429 on either container.',
+						'**Export the traces to an OTLP collector, and keep /diagnostics working** (chapters {{explore-and-diagnostics}}, {{deploying}}). A second exporter and the bundling caveats. Done: the same span in the collector and on the page.',
+						'**Write an `sv` add-on for this series** (chapters {{the-toolchain}}, {{migrating-a-major}}) that writes `src/env.ts`, the `href()` helper and the three-handler `hooks.server.ts`: `defineAddon`, `sv/testing`, published with the `sv-add` keyword. Done: `npx sv add` on a fresh scaffold writes files this course could quote.',
+						'**Run a dependency that ships Svelte 4 components inside Meridian** (chapters {{migrating-a-major}}, {{what-the-compiler-says}}). Legacy mode, `compatibility.componentApi`, the codes it raises, and the migration script on a fork. Done: it renders, and you can name every warning it printed.',
+						'**Ship the waypoint docs site to GitHub Pages and to one platform adapter** (chapters {{packaging-and-proving}}, {{deploying}}). `@sveltejs/adapter-static`, `paths.base`, a fallback page; then `platform` and `emulate`. Done: both serve the same pages, and you can say what broke on the second.',
+						'**Make the itinerary writable offline** (chapters {{the-offline-itinerary}}, {{notes-with-tiptap-through-an-attachment}}, {{live-collaboration}}). A command queue in IndexedDB, replayed on `online`, with a conflict policy against the live query’s last-writer-wins. Done: a stop added in a tunnel reaches a companion when the train comes out, and a conflict is reported, not lost.',
+						'**Tighten the CSP to `style-src \'self\'`** (chapters {{security-headers-and-csp}}, {{explore-and-diagnostics}}). Turn on `csp.reportOnly` with the stricter policy and an endpoint for the reports, count the violations, move the inline styles, then enforce. Done: no `\'unsafe-inline\'`, and a quiet report endpoint.',
+						'**Require Trusted Types** (chapters {{security-headers-and-csp}}, {{what-the-compiler-says}}). `require-trusted-types-for \'script\'`, policies for MapLibre, three.js and Tiptap, and Svelte’s `fragments: \'tree\'`. Done: the browser enforces it and every screen still works.',
+						'**Run the whole `sv migrate` routine on a SvelteKit 2 project of your own, and ship it** (chapters {{migrating-a-major}}, {{the-toolchain}}). One commit per task, `MIGRATION_TASKS.md` resolved with evidence, the `@migration-task` grep clean. Done: your record reads like `docs/migration-sveltekit-3.md`.',
+						'**Build the invite-email outbox** (chapters {{invites-and-membership}}, {{three-languages-with-paraglide}}, {{the-headless-pattern}}). `render()` for the body, a table written in the same transaction as the invite, a worker that drains it, the mail in the inviter’s language. Done: an invite sent while the mail server is down arrives when it comes back.'
+					]
+				},
+
+				{ type: 'h3', id: 'scoring', text: 'Scoring' },
+				{
+					type: 'ul',
+					items: [
+						'**Knowledge** — for every declined and dropped row, you can explain the trade without looking it up: what the surface would have bought, and why Meridian does without it.',
+						'**Practice** — you have shipped the “done” of at least three exercises, in a branch with tests that failed before and pass after.',
+						'**Depth** — you can read the adapter you deploy (chapter {{deploying}}) and the compiler’s messages (chapter {{what-the-compiler-says}}) without the documentation open.',
+						'**Currency** — you can say what the next minor of Svelte or SvelteKit would change in Meridian, because you ran the routine: `get-documentation` for the release notes, `sv migrate` on a branch, `verify` (chapter {{what-i-would-do-next}}).'
+					]
+				},
+				{
+					type: 'checkpoint',
+					items: [
+						'You can map any surface in the Svelte or SvelteKit documentation to a file in Meridian, or to the sentence that declines it.',
+						'You have done at least three of the twelve exercises.',
+						'You can run the upgrade routine and the migration routine without this course open.'
+					]
+				}
+			]
+		};
+	})()
 ];

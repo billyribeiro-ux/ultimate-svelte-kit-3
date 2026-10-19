@@ -184,6 +184,13 @@ test('health, the route API and the embed frame answer for machines', async ({ p
 
 	const framedPrivate = await page.goto(`/embed/${TRIPS.iberia}`);
 	expect(framedPrivate?.status()).toBe(404);
+
+	// The same route under a locale prefix: `reroute` serves `/de/embed/…` from
+	// `/embed/[slug=slug]`, so the rule that lets it be framed keys on the route, not on
+	// the path in the address bar. Keyed on the path, the German frame refused every frame.
+	const localised = await page.goto(`/de/embed/${TRIPS.japan}`);
+	expect(localised?.status()).toBe(200);
+	expect(localised?.headers()['content-security-policy']).toContain('frame-ancestors *');
 });
 
 test('a URL that matches nothing gets the root error page, with a way home', async ({ page }) => {

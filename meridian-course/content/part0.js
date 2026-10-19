@@ -46,6 +46,8 @@ export const part0 = [
 					'**Guides in Markdown.** mdsvex compiles `.svx` files into components; the guide pages are prerendered in all three languages and ship no JavaScript at all.',
 					'**A custom element.** `<meridian-route>` renders a trip on any web page from one script tag, built from the same source with `dynamicCompileOptions`.',
 					'**An itinerary that survives a tunnel.** A service worker keeps the build and a copy of every page it serves, so a trip opened once reads again with no network — and the trip header says “Offline” instead of offering a Reconnect that cannot work. The copies were rendered for the person signed in, so they go when nobody is: on a shared device, the next person reads nothing.',
+					'**Motion with rules.** A design brief lists what moves and what never does, and the code holds to it: one custom transition, a `Tween` for the tab indicator, `animate:flip` for a dropped card, CSS keyframes for dialogs — every one of them still when the system asks for reduced motion, and nothing animated that the brief says should simply appear.',
+					'**A stream that keeps asking.** The live trip is authorised on every update, not once per connection: remove a companion, or make a trip private, and the next change stops at the server. The stop dialog is a history entry, so a phone’s back gesture closes it; a half-typed new trip survives a reload.',
 					'**Everything around it.** Server hooks, a CSP with hashes and nonces, OpenTelemetry tracing into a diagnostics page, typed route ids, `<enhanced:img>`, a health endpoint, a multi-stage Dockerfile, and a CI workflow that builds the image and boots it.'
 				]
 			},
@@ -720,6 +722,9 @@ src/lib/trip/StopCardScratch.svelte
 					'**CSP `mode: "auto"`, `csrf`, `version.pollInterval` and `updated.current`, `preload` by source `filename`** (ch. {{the-config}}, {{the-shell}}, {{security-headers-and-csp}}).',
 					'**`$app/env`: `browser`, `building`, `dev`, `version`** (ch. {{the-shell}}, {{the-globe}}, {{the-trip-page}}, {{embedding-a-trip}}).',
 					'**`onNavigate` view transitions, `beforeNavigate`, `afterNavigate`** (ch. {{the-shell}}, {{the-offline-itinerary}}).',
+					'**Shallow routing: `goto(\'\', { shallow: true, state })`, `page.state`, `App.PageState`, `history.back()`** — the stop dialog as a history entry (ch. {{the-itinerary}}).',
+					'**`snapshot()` from `$app/navigation`** — a half-typed new trip that survives a reload (ch. {{trips-and-a-new-trip}}).',
+					'**`query.live` authorised on every wake, with `getRequestEvent()` after a `yield`** (ch. {{live-collaboration}}).',
 					'**A service worker: `src/service-worker/index.ts`, `self` from `$app/service-worker`, `immutable`/`assets`/`prerendered` from `$app/manifest`, `version` as the cache name, `$app/tsconfig/service-worker`, automatic registration** — the offline itinerary, and the copies a shared device forgets (ch. {{the-offline-itinerary}}).',
 					'**`<enhanced:img>`** (ch. {{the-design-system}}).',
 					'**adapter-node with `precompress`, `paths.origin`, a health endpoint, graceful shutdown** (ch. {{deploying}}).'
@@ -734,7 +739,10 @@ src/lib/trip/StopCardScratch.svelte
 					'**`svelte-check`** with `--fail-on-warnings`, and every other flag it takes (ch. {{the-toolchain}}).',
 					'**ESLint and Prettier** — `projectService` for `.svelte` and `.svelte.ts`, `eslint-config-prettier`, `.prettierignore` as the map of generated folders (ch. {{the-toolchain}}).',
 					'**The Svelte AI tools** — `AGENTS.md`, the MCP server, the skills, the `svelte-file-editor` subagent, the Claude Code plugin, and `lint:svelte`, the autofixer over every component in `verify` (ch. {{the-toolchain}}).',
-					'**The workspace** — pnpm 12, `allowBuilds`, a minimum release age, `.vscode/extensions.json` (ch. {{the-workspace}}).'
+					'**The workspace** — pnpm 12, `allowBuilds`, a minimum release age, `.vscode/extensions.json` (ch. {{the-workspace}}).',
+					'**Diagnostics by code** — compiler warnings and errors, runtime errors and warnings, zero `svelte-ignore`, and the autofixer as a gate (ch. {{what-the-compiler-says}}).',
+					'**`sv migrate`** — task-based migrations, one task per commit, `MIGRATION_TASKS.md` resolved into `docs/migration-sveltekit-3.md`, and the Svelte 4 legacy table (ch. {{migrating-a-major}}).',
+					'**The exit criteria** — every planned surface, taught, declined, deferred or dropped, generated and checked (ch. {{the-exit-criteria}}).'
 				]
 			},
 

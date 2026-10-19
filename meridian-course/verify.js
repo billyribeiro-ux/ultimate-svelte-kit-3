@@ -31,7 +31,18 @@
  *      is written by hand ("ch. 24", "chapter 36", "chapters 16–19"), in the
  *      prose, in the part files' own comments, or in a quoted code comment. A
  *      hand-written number is right until a chapter is inserted before it, and
- *      then wrong on every page at once with nothing to say so.
+ *      then wrong on every page at once with nothing to say so;
+ *   8. the exit criteria are true. `content/surfaces.json` lists every
+ *      surface the coverage plan assigned to a chapter, with a status, and
+ *      the last chapter renders it as the checklist a reader measures
+ *      themselves against. So every chapter it names must exist, and every
+ *      planned chapter must have a row; a surface marked `taught` or
+ *      `declined` must be in backticks in the prose of the chapter it names;
+ *      and a `deferred` one must be on the backlog — its gap-list item in
+ *      `content/backlog.json`, and the surface itself in backticks in the
+ *      prose of what-i-would-do-next. Mark a deferred surface `taught` and
+ *      this fails, which is the point: the checklist cannot claim what the
+ *      course does not do.
  *
  * Run:  node meridian-course/verify.js
  */
@@ -41,6 +52,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chapters } from './content/index.js';
 import { linesOf } from './content/quote.js';
+import { hasInBackticks, proseOf, readSurfaces } from './content/surfaces.js';
 
 /** @type {string[]} */
 const problems = [];
@@ -206,9 +218,50 @@ for (const chapter of chapters) {
 	}
 }
 
+/* 8. The exit criteria --------------------------------------------- */
+
+const { plannedChapters, rows } = readSurfaces();
+const backlog = JSON.parse(readFileSync(join(content, 'backlog.json'), 'utf8'));
+const backlogIds = new Set(backlog.map((/** @type {{ id: string }} */ item) => item.id));
+const proseBySlug = new Map(chapters.map((c) => [c.slug, proseOf(c)]));
+const BACKLOG = 'what-i-would-do-next';
+/** @type {Record<string, number>} */
+const counts = { taught: 0, declined: 0, deferred: 0, dropped: 0 };
+
+for (const slug of plannedChapters) {
+	if (!slugs.has(slug)) problems.push(`surfaces.json: planned chapter ${slug} is not a chapter`);
+	else if (!rows.some((row) => row.planned.includes(slug))) {
+		problems.push(`surfaces.json: planned chapter ${slug} has no row in the exit criteria`);
+	}
+}
+
+for (const row of rows) {
+	counts[row.status] = (counts[row.status] ?? 0) + 1;
+	const where = `surfaces.json: \`${row.surface}\` (${row.status})`;
+	for (const slug of [row.chapter, ...row.planned]) {
+		if (!slugs.has(slug)) problems.push(`${where} names ${slug}, which is not a chapter`);
+	}
+	if (row.status === 'taught' || row.status === 'declined') {
+		if (!hasInBackticks(proseBySlug.get(row.chapter) ?? '', row.surface)) {
+			problems.push(`${where} — ${row.chapter} never names it in backticks, so it is not taught there`);
+		}
+	} else if (row.status === 'deferred') {
+		if (!row.gap || !backlogIds.has(row.gap)) problems.push(`${where} — its gap-list item ${row.gap} is not in backlog.json`);
+		if (!hasInBackticks(proseBySlug.get(BACKLOG) ?? '', row.surface)) {
+			problems.push(`${where} — not named in the backlog of ${BACKLOG}`);
+		}
+	} else if (row.status === 'dropped') {
+		if (!row.reason) problems.push(`${where} — a dropped surface needs the reason it was not built`);
+	} else {
+		problems.push(`${where} — unknown status`);
+	}
+}
+
 console.log(
 	`${chapters.length} chapters · ${quoted} blocks quoted from meridian/ by line range · ` +
-		`${illustrative} illustrative blocks (no file named) · ${xrefs} chapter references by name`
+		`${illustrative} illustrative blocks (no file named) · ${xrefs} chapter references by name · ` +
+		`${rows.length} surfaces in the exit criteria (${counts.taught} taught, ${counts.declined} declined, ` +
+		`${counts.deferred} deferred, ${counts.dropped} dropped)`
 );
 
 if (problems.length > 0) {
@@ -217,5 +270,5 @@ if (problems.length > 0) {
 }
 
 console.log(
-	'every range is inside its file, whole, and starts somewhere a reader can follow; every chapter reference names a chapter'
+	'every range is inside its file, whole, and starts somewhere a reader can follow; every chapter reference names a chapter; every surface the exit criteria claim is taught is taught, and every deferred one is on the backlog'
 );

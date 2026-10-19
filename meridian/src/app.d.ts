@@ -1,5 +1,6 @@
 import type { Session, User } from 'better-auth';
 import type { DndEvent } from 'svelte-dnd-action';
+import type { Stop } from '#lib/server/db/schema.ts';
 
 declare global {
 	namespace App {
@@ -31,11 +32,21 @@ declare global {
 		interface PageState {
 			/**
 			 * Shallow routing: the dialog a trip page has open, as a history entry,
-			 * so the back button closes it instead of leaving the trip.
+			 * so the back button — a phone's swipe — closes it instead of leaving
+			 * the trip. `TripView.svelte` opens it with `goto('', { shallow: true,
+			 * state })` and closes it with `history.back()`.
 			 */
-			dialog?: 'stop' | 'expense' | 'invite';
-			/** The stop the dialog is editing, if any. */
-			stop?: string;
+			dialog?: 'stop';
+			/**
+			 * The stop being edited, as it was when the dialog opened — the whole
+			 * row, not its id, because the draft is derived from it and a live
+			 * snapshot must not reset what is being typed. Absent when adding.
+			 */
+			stop?: Stop;
+			/** Adding: the day it goes on, or `null` for the ideas list. */
+			day?: string | null;
+			/** Adding from the map: where it was clicked. */
+			point?: { lng: number; lat: number };
 		}
 	}
 }

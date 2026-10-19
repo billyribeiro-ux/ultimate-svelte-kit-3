@@ -1,10 +1,35 @@
 <script lang="ts">
+	import { snapshot } from '$app/navigation';
 	import { page } from '$app/state';
 	import { m } from '#lib/paraglide/messages.js';
 	import { CURRENCIES } from '#lib/domain/money.ts';
 	import { places } from '#lib/remote/geo.remote.ts';
 	import { createTrip } from '#lib/remote/trips.remote.ts';
 	import DateRangeField from '#lib/ui/DateRangeField.svelte';
+
+	/*
+	 * A half-typed trip outlives a reload, a trip to another page and back,
+	 * and a phone that threw the tab away. `snapshot` captures the draft just
+	 * before the page changes, keeps it with the history entry — in
+	 * `sessionStorage`, serialised by devalue — and hands it back when that
+	 * entry is shown again. It registers itself with `onMount` — a lifecycle
+	 * function — so it is called during initialisation, above the `await`
+	 * below; the explicit `id` keeps the draft across a deploy that moves
+	 * this line.
+	 *
+	 * The name, the description and the currency: the fields this page can put
+	 * back. The dates are the picker's own once it has mounted
+	 * (`DateRangeField` reads its props once), so a restored date would sit in
+	 * the form's values while the picker showed something else.
+	 */
+	snapshot({
+		id: 'new-trip',
+		capture: () => {
+			const { name, description, currency } = createTrip.fields.value();
+			return { name, description, currency };
+		},
+		restore: (draft) => createTrip.fields.set(draft)
+	});
 
 	/*
 	 * `/trips/new?place=lisbon` — the explore page links here — starts the

@@ -1,0 +1,447 @@
+[
+	{
+		"id": "B1-D1",
+		"what": "`check:ci`, `scripts/check-annotations.ts` and the `meridian.yml` step.",
+		"why": "They only change how CI presents errors: a failed `pnpm run verify` log already names the file and line, and the Playwright `github` reporter is not used either."
+	},
+	{
+		"id": "B1-D2",
+		"what": "`scripts/inventory.ts` (svelte/compiler `parse` plus `estree-walker`), the course CI diff, and the map regenerated from it.",
+		"why": "That is about 40 minutes and a new dependency to guard a hand-written reference page. Chapter {{what-the-compiler-says}} teaches the compiler’s `code` field through `pnpm run lint:svelte` instead."
+	},
+	{
+		"id": "B1-D3",
+		"what": "`prerender.entries ['*','/de/guides','/pt-br/guides']`.",
+		"why": "The crawler already reaches both locale roots through the LocaleSwitcher links, and the image job proves it (`meridian.yml`, \"the prerendered guides are served from the image\"). Chapter {{the-config}} names the option."
+	},
+	{
+		"id": "B1-D4",
+		"what": "`inlineStyleThreshold`.",
+		"why": "It needs a measured production build (an open question). Every page shares one cached stylesheet, so a threshold buys about one request."
+	},
+	{
+		"id": "B1-D5",
+		"what": "`.vscode/launch.json`.",
+		"why": "One sentence in chapter {{unit-and-browser-tests}} covers it, and VS Code's JavaScript Debug Terminal needs no file."
+	},
+	{
+		"id": "B1-D6",
+		"what": "Separate setup walkthroughs for the OpenCode, Cursor, Copilot and Codex plugins and `defineAddon`/`sv/testing`/publishing.",
+		"why": "One line each in chapter {{the-toolchain}}; the original plan deferred `defineAddon`."
+	},
+	{
+		"id": "B2-D1",
+		"what": "`Spring.of` on the waypoint `Compass` needle, plus the class-array merge.",
+		"why": "Compass and Sparkline are not rendered anywhere in the app (`grep \"<Compass\" meridian/src` → 0). The peer range `^5.0.0` was kept on purpose (`Compass.svelte:21-26`), and `Spring` needs 5.8. The 359→1° long spin is real and stays on the backlog."
+	},
+	{
+		"id": "B2-D2",
+		"what": "`in:fly` on the UpdateBanner.",
+		"why": "The CSS `arrive` keyframe (`UpdateBanner.svelte:38,51-56`) already meets the design brief \"Update banner\" (rise 16px, no exit). Swapping it changes no behaviour."
+	},
+	{
+		"id": "B2-D3",
+		"what": "`unmount(…, { outro })` in project code.",
+		"why": "Its only honest use is the Tiptap NodeView. Prose in chapter {{motion-with-intent}} instead."
+	},
+	{
+		"id": "B3-D1",
+		"what": "`static/manifest.webmanifest`, icons (192/512/maskable) and the `app.html` `<link rel=\"manifest\">`.",
+		"why": "Offline reading needs the worker, not installability. The icon set is design work, and would need a `scripts/make-icons.ts` with sharp."
+	},
+	{
+		"id": "B3-D2",
+		"what": "TripView `postMessage` of the last snapshot.",
+		"why": "The network-first page cache already holds the server-rendered itinerary (`t/[slug=slug]/+page.svelte:32` renders the whole document on the server)."
+	},
+	{
+		"id": "B3-D3",
+		"what": "`skipWaiting` tied to the UpdateBanner, plus `on(navigator.serviceWorker, 'controllerchange', …)`.",
+		"why": "The banner already does a full reload (`UpdateBanner.svelte:20`). Pages are network-first, so a waiting worker never serves stale HTML online."
+	},
+	{
+		"id": "B3-D4",
+		"what": "`serviceWorker: { register: false }` with manual registration in `hooks.client.ts` `init`.",
+		"why": "No honest reason was found: automatic registration already carries Kit's CSP nonce or hash. `ClientInit` stays with B4-D7."
+	},
+	{
+		"id": "B3-D5",
+		"what": "Queued note saves while offline, with `online`.",
+		"why": "This is exercise 8 in chapter {{the-exit-criteria}} (\"make the itinerary writable offline\"). It needs a conflict policy against `query.live`."
+	},
+	{
+		"id": "B4-D1",
+		"what": "`'unchecked'` and its cost.",
+		"why": "No module uses it; one sentence fits when someone first needs it."
+	},
+	{
+		"id": "B4-D2",
+		"what": "`preflight` pointer.",
+		"why": "`preflight` is already taught where it is used (Expenses, `Expenses.svelte:546-551`)."
+	},
+	{
+		"id": "B4-D3",
+		"what": "`sv add drizzle` and the five `db:*` scripts.",
+		"why": "The scripts are visible in the `package.json` range chapter {{the-workspace}} quotes."
+	},
+	{
+		"id": "B4-D4",
+		"what": "`sv add better-auth`: what it writes and the `demo:github` clause.",
+		"why": "The catalogue table in chapter {{the-toolchain}} carries the add-on → files mapping."
+	},
+	{
+		"id": "B4-D5",
+		"what": "`requireUser`/`readableTrip` as non-exported queries for per-request dedupe.",
+		"why": "It is unverified that `query()` may be declared outside a `.remote.ts` module. The double authorisation costs one indexed SELECT per page load."
+	},
+	{
+		"id": "B4-D6",
+		"what": "Quoting `app.d.ts` whole, the three `error()` overloads and `Platform` absent.",
+		"why": "Partly taught already; low marginal value."
+	},
+	{
+		"id": "B4-D7",
+		"what": "`hooks.client.ts` `init` (`ClientInit`) warming `places()`.",
+		"why": "`places()` is prerendered and cached; warming saves one cached fetch."
+	},
+	{
+		"id": "B4-D8",
+		"what": "Client errors reported into the tracing ring: a `reportClientError` command, a client-error `SpanRecord`, the same `id` as the server, and `<svelte:boundary onerror>` → report.",
+		"why": "About 30 minutes; diagnostics is a developer page."
+	},
+	{
+		"id": "B4-D9",
+		"what": "The `sequence()` resolve-option merge rules warn block.",
+		"why": ""
+	},
+	{
+		"id": "B4-D10",
+		"what": "`token` matcher and the `join/[token]` → `join/[token=token]` rename.",
+		"why": "`inviteByToken`'s `TokenSchema` already refuses a malformed token; the gain is 404 instead of 400."
+	},
+	{
+		"id": "B4-D11",
+		"what": "`MatcherParam`/`ParamValue`, the plain-function matcher and the `resolve()` symmetry rule (pairs with B4-D10).",
+		"why": ""
+	},
+	{
+		"id": "B4-D12",
+		"what": "`EnvVarConfig` function-form `schema`, `%sveltekit.env.[NAME]%` and `filterSerializedResponseHeaders`.",
+		"why": ""
+	},
+	{
+		"id": "B4-D13",
+		"what": "`PUBLIC_TILE_SOURCE` as a runtime public variable flipping the map style.",
+		"why": "The project has no tile server on purpose (CSP `connect-src 'self'`, offline CI), so it is a code path nobody runs."
+	},
+	{
+		"id": "B4-D14",
+		"what": "`HandleServerError<CustomIssue>`.",
+		"why": ""
+	},
+	{
+		"id": "B4-D15",
+		"what": "`App.PageData { user }` declared, and ErrorView reading `page.data.user` with \"Try again\" (`goto(page.url, { refreshAll })`).",
+		"why": "`data.user` is already typed through `LayoutProps`; small UX gain."
+	},
+	{
+		"id": "B4-D16",
+		"what": "`placeDetail` as `prerender` with `{ inputs, dynamic: false }`.",
+		"why": "The whole gazetteer is already one prerendered `places()` (`geo.remote.ts:56`); per-place prerender adds files and no product value."
+	},
+	{
+		"id": "B4-D17",
+		"what": "What `RequestEvent` means in each flavour, module naming, server-only widening, cache-key sorting, `RemoteQueryFunction<…>`, `event.fetch` vs remote dedupe, and `read()` = `createReadableStream`.",
+		"why": ""
+	},
+	{
+		"id": "B4-D18",
+		"what": "`RemoteQueryRequestedResult`/`RemoteLiveQueryRequestedEntry`/`RemoteLiveQueryRequestedResult` and `reconnectAll()`, named (types exist at kit types ×3 each).",
+		"why": ""
+	},
+	{
+		"id": "B4-D19",
+		"what": "\"command cannot redirect / cannot run during render; redirects are not errors\" and `isValidationError`/`ValidationError` named.",
+		"why": ""
+	},
+	{
+		"id": "B4-D20",
+		"what": "A `for await (const snap of watchTrip(slug))` e2e helper.",
+		"why": "The collab tests already wait on the UI."
+	},
+	{
+		"id": "B4-D21",
+		"what": "`tracing.current.addEvent('snapshot', { version })` per yield.",
+		"why": "Only /diagnostics would show it; goes with B4-D8."
+	},
+	{
+		"id": "B4-D22",
+		"what": "`closeAllRooms()`, `process.on('sveltekit:shutdown')` closing libSQL and rooms.",
+		"why": "The CI image job already proves exit 0 on SIGTERM within 15 s (`meridian.yml`, \"the container stops cleanly\"), and `SHUTDOWN_TIMEOUT=10` (`Dockerfile:85`)."
+	},
+	{
+		"id": "B4-D23",
+		"what": "\"why `query.live` and not a `ReadableStream` from `+server`\" and `setResponse` keeping the stream open.",
+		"why": ""
+	},
+	{
+		"id": "B4-D24",
+		"what": "`render()` for an invite email, named as the second server-render use (exercise 12 in chapter {{the-exit-criteria}}).",
+		"why": ""
+	},
+	{
+		"id": "B4-D25",
+		"what": "`src/hooks.spec.ts` for `reroute`/`normalizeUrl`.",
+		"why": "`reroute` is one line delegating to Paraglide (`hooks.ts:27`), and `public.e2e.ts:80` covers the language switch end to end."
+	},
+	{
+		"id": "B4-D26",
+		"what": "`sv add paraglide`, async `reroute` with `fetch`, `[[lang]]` declined.",
+		"why": ""
+	},
+	{
+		"id": "B4-D27",
+		"what": "Cookies API with a distance-unit preference: a `setUnits` form, `cookies.set` 3.0 defaults, and `cookies.get`/`delete`.",
+		"why": "The product has no units preference. `cookies.get` is already used (`(site)/+layout.server.ts:11-14`); `set` is a sentence away."
+	},
+	{
+		"id": "B4-D28",
+		"what": "`value = $bindable()` on DateRangeField, with `bind:value` in `trips/new` and SettingsForm.",
+		"why": "It refactors two working forms for an idiom; `state_referenced_locally` is taught as prose."
+	},
+	{
+		"id": "B4-D29",
+		"what": "`NavigationProgress` from `navigating`, skipping `popstate`, reduced motion and `aria-busy`.",
+		"why": "Navigations mostly resolve from the server render and the root view transition already covers the wait."
+	},
+	{
+		"id": "B4-D30",
+		"what": "`depends('meridian:session')` + `invalidate` on `visibilitychange` for sign-out in another tab.",
+		"why": "This is the original plan’s \"real hole\", but mutations already return 401/403 and toast. Medium value; first in line."
+	},
+	{
+		"id": "B4-D31",
+		"what": "The `$app/state` section, the `Navigation` type card, the link-options card and the \"when does which load run\" box.",
+		"why": ""
+	},
+	{
+		"id": "B4-D32",
+		"what": "`src/error.html` third tier.",
+		"why": "It only shows when the error page itself fails to render."
+	},
+	{
+		"id": "B4-D33",
+		"what": "Trip-page `<svelte:head>` `og:*` and per-locale canonical.",
+		"why": "Belongs with the share image (B4-D50)."
+	},
+	{
+		"id": "B4-D34",
+		"what": "`<svelte:element this>` for the current nav item.",
+		"why": "It would be there for its own sake: the nav uses `aria-current` on links (`Header.svelte:141`)."
+	},
+	{
+		"id": "B4-D35",
+		"what": "Header nav links on `page.route.id` instead of pathname comparison.",
+		"why": "The action links already use route ids (`Header.svelte:101-102`); the nav compares localised pathnames on purpose (`:87-89`)."
+	},
+	{
+		"id": "B4-D36",
+		"what": "`router.type`/`router.resolution`, `%sveltekit.version%`, `event.fetch` why-blocks, and attribute nullish rules / `&lbrace;`.",
+		"why": ""
+	},
+	{
+		"id": "B4-D37",
+		"what": "`isRedirect` in `fireAndForget` and a `$effect.tracking()` guard.",
+		"why": "Heartbeats never redirect, and `fire-and-forget.ts` is not a `.svelte.ts` module."
+	},
+	{
+		"id": "B4-D38",
+		"what": "`<svelte:document bind:visibilityState>` pausing the heartbeat, and `<svelte:body onmouseleave>`.",
+		"why": "It saves one heartbeat per 15 s per background tab."
+	},
+	{
+		"id": "B4-D39",
+		"what": "`SvelteDate` + `Intl.RelativeTimeFormat` \"updated 3 s ago\".",
+		"why": "There is no UI slot for it in the brief's header."
+	},
+	{
+		"id": "B4-D40",
+		"what": "`$state.eager` on the tab strip, `RouteParams<…>` typing, `createContext` viewer context, `disableScrollHandling` for `#stop-<id>` deep links.",
+		"why": "Idiom changes with no user-visible gain."
+	},
+	{
+		"id": "B4-D41",
+		"what": "`$inspect.trace`, `#key` cost, `perf_avoid_inline_class`, the replacestate decision and the current-link `refreshAll` rule.",
+		"why": ""
+	},
+	{
+		"id": "B4-D42",
+		"what": "`snapshot()` for the StopDialog draft.",
+		"why": "Chapter {{trips-and-a-new-trip}} teaches `snapshot()`; doing it twice adds a capture site inside a dialog that closes on Back."
+	},
+	{
+		"id": "B4-D43",
+		"what": "`isValidationError` mapping command issues onto dialog fields, and `isHttpError(e, 404|403)` deciding the optimistic override.",
+		"why": "The dialog already toasts the server's sentence (`errors.ts:38-43`)."
+	},
+	{
+		"id": "B4-D44",
+		"what": "`kind-icon.svelte` exporting a snippet from `<script module>`.",
+		"why": "`kinds.ts` maps kinds to icon components today; the snippet would be there to show the feature."
+	},
+	{
+		"id": "B4-D45",
+		"what": "`SvelteSet` collapsed days (localStorage) and `SvelteMap<stopId, status>` with `getOrInsert`/`getOrInsertComputed`.",
+		"why": "New UI state nobody asked for; `SvelteSet` is already used honestly (`Itinerary.svelte:131`)."
+	},
+	{
+		"id": "B4-D46",
+		"what": "`await settled()` after `addStop`, and `fork()` on Add-stop hover/focus.",
+		"why": "`forkPreloads` is off on evidence (`vite.config.ts:153-163`); a dialog chunk pre-fork is marginal."
+	},
+	{
+		"id": "B4-D47",
+		"what": "Palette `preloadCode`/`preloadData`/`match()`, `{ reset: false }`, `await tick()` focus.",
+		"why": "Tab jumps are same-page `?tab=` changes (`CommandPalette.svelte:53`); there is nothing to preload."
+	},
+	{
+		"id": "B4-D48",
+		"what": "MapView `bind:this` + `export function fitRoute()`.",
+		"why": "`fitRoute` is already wired to the map's own button (`MapView.svelte:514`); no outside caller exists."
+	},
+	{
+		"id": "B4-D49",
+		"what": "Expenses: `DataTable.svelte` with `generics`, `Snippet<[Row]>` and explicit snippet props; function bindings for `parseAmount`; `bind:indeterminate`; `as('radio', kind)` chips.",
+		"why": "A large refactor of a working, design-reviewed screen; the design pass chose a `select` for category (`Expenses.svelte:592`)."
+	},
+	{
+		"id": "B4-D50",
+		"what": "`render()` SVG share image (`api/route/[slug].svg/+server.ts`) and `og:image`.",
+		"why": "About 30 minutes, plus a CSS-injection question on `RouteThumb` ."
+	},
+	{
+		"id": "B4-D51",
+		"what": "Tiptap NodeView stop mention (`StopMention.ts`, `StopChip.svelte`, `mount`/`unmount`/ `getAllContexts`/`ComponentProps`/`MountOptions`).",
+		"why": "Two new dependencies (`@tiptap/html`, `dompurify`) and the largest single item on this list."
+	},
+	{
+		"id": "B4-D52",
+		"what": "Notes: `beforeNavigate` flush/cancel; read-only notes via `generateHTML` + DOMPurify + `{@html}`; `isHttpError(e, 403)` → read-only.",
+		"why": "Goes with B4-D51."
+	},
+	{
+		"id": "B4-D53",
+		"what": "Companions: `withOverride` optimistic settings; two `as('submit', …)` buttons; `changeRole.for()`; `{let confirming}` two-step Remove; `bind:checked`; `{#await invitePromise}`.",
+		"why": "Idiom changes on a reviewed screen. Declaration tags are already taught (chapter {{the-design-system}})."
+	},
+	{
+		"id": "B4-D54",
+		"what": "Trip cover image.",
+		"why": "Note an error in the original plan: `fields.cover.as('image')` / `ImageInputValue` is `<input type=\"image\">` click coordinates (`ImageInputValue = { x: number; y: number }`, in SvelteKit’s types), not an upload. A cover is `as('file')` + `v.file()` + sharp + `/api/cover/[slug]` + `BODY_SIZE_LIMIT`. About 45 minutes; exercise 2 in chapter {{the-exit-criteria}}."
+	},
+	{
+		"id": "B4-D55",
+		"what": "`signUp.validate()` on input, `LoadEvent.untrack` for `redirectTo`, and an e2e that `redirectTo=//evil` lands on `/trips`.",
+		"why": "The sanitiser exists (`auth.remote.ts:30-49`); proving it is cheap and first in line."
+	},
+	{
+		"id": "B4-D56",
+		"what": "Trips list: `createTrip.preflight(TripInputSchema)`, `allIssues()` live summary, `leaveTrip` `withOverride`, `$effect.pending()` \"Refreshing…\", `data-sveltekit-preload-code=\"viewport\"`, `onpointerenter` warming.",
+		"why": "Each is an idiom on a reviewed screen."
+	},
+	{
+		"id": "B4-D57",
+		"what": "`sitemap.xml/+server.ts` prerendered with hreflang alternates.",
+		"why": "SEO for four guides; 15 minutes. First in line for the guides chapter."
+	},
+	{
+		"id": "B4-D58",
+		"what": "`crawl`/`trailingSlash` output names, `Component`/`PreprocessorGroup` types, `svelte_component_deprecated`, CSP `<meta>` on prerendered pages.",
+		"why": ""
+	},
+	{
+		"id": "B4-D59",
+		"what": "Explore as a GET `<form action=\"/explore\">` with `?q=`.",
+		"why": "The in-page filter keeps pre-hydration input (`public.e2e.ts:48`); a URL-state rewrite of a reviewed page."
+	},
+	{
+		"id": "B4-D60",
+		"what": "Diagnostics depth: `hydratable('meridian:featured')`, `.loading`/`.error`, `updated.check()`, `VERSION`, the `$app/manifest` routes table, a recursive span snippet, `$effect.pre` + `tick()`, tracing attributes, CSP violations.",
+		"why": "One developer page; about 45 minutes."
+	},
+	{
+		"id": "B4-D61",
+		"what": "Embedding: typed `asset('embed/meridian-route.js')`, `setHeaders` cache-control on the frame, `$host().dispatchEvent('stopselect')` + `props.reflect` + `svelte/elements` augmentation, `getAbortSignal()`.",
+		"why": "The element works and is e2e-proven (`invite.e2e.ts:63`); these are idioms without a consumer."
+	},
+	{
+		"id": "B4-D62",
+		"what": "`getClientAddress()` token-bucket rate limiter (429 + `retry-after`), plus `ADDRESS_HEADER` and `XFF_DEPTH`.",
+		"why": "The e2e suite signs in many times from one address, so it needs a per-environment limit and a test-only bypass. About 30 minutes; exercise 3 in chapter {{the-exit-criteria}}."
+	},
+	{
+		"id": "B4-D63",
+		"what": "`csp.reportOnly` + `api/csp-report/+server.ts` + violations on /diagnostics, and `isDataRequest`/`isSubRequest` scoping.",
+		"why": "Goes with B4-D60; `isRemoteRequest` is already used (`locale-url.ts:31-33`)."
+	},
+	{
+		"id": "B4-D64",
+		"what": "Deploying depth: reading adapter-node (`Builder`, `Server.init/respond`, `getRequest`/`setResponse`); `KEEP_ALIVE_TIMEOUT`/`HEADERS_TIMEOUT` in compose; `node --env-file` (fails when `.env` is absent; Node 24 has `--env-file-if-exists`); `svelte-kit sync --mode production`; the waypoint docs site on adapter-static + a GitHub Pages job (feature 9; about 45 minutes, and Pages",
+		"why": ""
+	},
+	{
+		"id": "B5-D1",
+		"what": "Chapter {{choosing-libraries}} `build:analyze` (`vite-bundle-visualizer`).",
+		"why": "Superseded by the `bundleStats()` plugin + `scripts/bundle-guard.ts` (`vite.config.ts` `bundleStats`, `package.json` `verify`), which already measures every chunk."
+	},
+	{
+		"id": "B5-D2",
+		"what": "Chapter {{choosing-libraries}} prose rows (form actions declined row, storybook/tailwind clauses, the `fromStore`/`toStore` bridge test, adapter-node 3.0 rows).",
+		"why": "The form-actions table is in chapter {{remote-functions-the-writes}}; the rest are sentences."
+	},
+	{
+		"id": "B5-D3",
+		"what": "Chapter {{the-headless-pattern}}: `Field.svelte` + `Issues.svelte` + `createContext` field context, migrating about 25 label/issues blocks.",
+		"why": "The largest refactor in part 7, touching every form already design-reviewed."
+	},
+	{
+		"id": "B5-D4",
+		"what": "Chapter {{the-wrapper-pattern}}: `Action`/`ActionReturn` typing, `createAttachmentKey`.",
+		"why": ""
+	},
+	{
+		"id": "B5-D5",
+		"what": "Chapter {{reactivity-utilities}} cross-references (`SvelteDate`, `on()` + `createSubscriber`, `SvelteURL`, `fromStore`).",
+		"why": "Most targets are deferred; cross-referencing them would point at nothing."
+	},
+	{
+		"id": "B5-D6",
+		"what": "Chapter {{unit-and-browser-tests}}: a `$effect.root` + `flushSync` test of `geolocation.svelte.ts`.",
+		"why": "Useful; next in line."
+	},
+	{
+		"id": "B5-D7",
+		"what": "Chapter {{unit-and-browser-tests}}: a `settled()` test of PlaceSearch, a raw `mount`/`flushSync`/`unmount` test with a context wrapper, and `ComponentProps<typeof StopCard>` fixtures.",
+		"why": "`StopCard.svelte.test.ts` already covers the component through `vitest-browser-svelte`."
+	},
+	{
+		"id": "B5-D8",
+		"what": "Chapter {{what-the-compiler-says}}: the `svelte/compiler` API through `scripts/inventory.ts` (`parse` modern, `AST`, `compile`/`compileModule`/`print`/`parseCss`/`migrate`, `CompileOptions`).",
+		"why": "Goes with B1-D2."
+	},
+	{
+		"id": "B5-D9",
+		"what": "Chapter {{what-the-compiler-says}}: the full runtime-warnings catalogue, each row with the project line it would touch.",
+		"why": "One table without per-line references is enough to read a console."
+	},
+	{
+		"id": "B5-D10",
+		"what": "Chapter {{migrating-a-major}}: the full `migrating-to-sveltekit-3` list mapped to file + chapter, beyond the twenty boxes of the migration record and the removed-modules/options tables.",
+		"why": ""
+	},
+	{
+		"id": "B5-D11",
+		"what": "Chapter {{a-route-as-a-class}}: `compileModule` on `dist/route.svelte.js`, `rune_outside_svelte`, why `$state.snapshot`.",
+		"why": "Three sentences, and nobody has written them yet."
+	}
+]

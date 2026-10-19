@@ -10,14 +10,37 @@
  * The schemas are valibot. They run once, at boot, against the real environment.
  */
 import { defineEnvVars } from '@sveltejs/kit/env';
+import { building } from '$app/env';
 import * as v from 'valibot';
 
 const required = v.pipe(v.string(), v.trim(), v.minLength(1));
 
+/**
+ * Required when the server starts; allowed to be missing while it is built.
+ *
+ * SvelteKit checks every variable here during `vite build` as well, because
+ * it analyses the app by running it — "if a value is invalid, the app will
+ * fail to start (or build)" — and its documentation gives the opt-out in the
+ * next sentence: `building` from `$app/env`, with a schema that accepts a
+ * missing value. That is what this is, for the two private, dynamic secrets.
+ * Neither is inlined into the bundle and the build has no use for either, so
+ * an image can be built knowing nothing secret and pointing at no database;
+ * the Dockerfile's build stage used to invent both. When the server starts,
+ * `building` is `false`, and a missing or bad value stops it at once.
+ *
+ * The cost is in the types: both import as `string | undefined`, because at
+ * build time they can be. The two modules that read them,
+ * `#lib/server/db/index.ts` and `#lib/server/auth.ts`, check `building`
+ * themselves.
+ */
+function neededAtRuntime<Schema extends v.GenericSchema<string, string>>(schema: Schema) {
+	return building ? v.optional(schema) : schema;
+}
+
 export const variables = defineEnvVars({
 	DATABASE_URL: {
-		description: 'libSQL connection string. `file:local.db` in development.',
-		schema: required
+		description: 'libSQL connection string. `file:local.db` in development. Not needed to build.',
+		schema: neededAtRuntime(required)
 	},
 
 	PUBLIC_ORIGIN: {
@@ -41,8 +64,9 @@ export const variables = defineEnvVars({
 	},
 
 	BETTER_AUTH_SECRET: {
-		description: 'Signs the session cookie. Generate with `openssl rand -base64 32`.',
-		schema: v.pipe(required, v.minLength(32, 'Use at least 32 characters'))
+		description:
+			'Signs the session cookie. Generate with `openssl rand -base64 32`. Not needed to build.',
+		schema: neededAtRuntime(v.pipe(required, v.minLength(32, 'Use at least 32 characters')))
 	},
 
 	STOP_LIMIT: {
