@@ -49,11 +49,35 @@ export function proseOf(chapter) {
 
 const escape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
+/**
+ * The code spans in `text`, read the way the builder renders them and the way
+ * CommonMark defines them: a run of backticks opens a span that only a run of
+ * the same length closes, so `` `a` `` is one span holding `a` in backticks.
+ * Each line is read on its own, because `proseOf` joins a chapter's parts with
+ * newlines and no span crosses from one part into the next; a lone backtick in
+ * one paragraph cannot then turn every later span in the chapter inside out.
+ */
+function codeSpans(text) {
+	const spans = [];
+	for (const line of text.split('\n')) {
+		const runs = [...line.matchAll(/`+/g)];
+		for (let i = 0; i < runs.length; i++) {
+			const open = runs[i][0].length;
+			const close = runs.findIndex((run, j) => j > i && run[0].length === open);
+			if (close === -1) continue;
+			const span = line.slice(runs[i].index + open, runs[close].index);
+			spans.push(open > 1 && span.startsWith(' ') && span.endsWith(' ') ? span.slice(1, -1) : span);
+			i = close;
+		}
+	}
+	return spans;
+}
+
 /** How many backticked spans in `text` carry `token` as a whole name rather than part of a longer one. */
 export function countInBackticks(text, token) {
 	const name = new RegExp(`(^|[^\\w$])${escape(token)}($|[^\\w])`);
 	let n = 0;
-	for (const [, span] of text.matchAll(/`([^`]+)`/g)) if (name.test(span)) n += 1;
+	for (const span of codeSpans(text)) if (name.test(span)) n += 1;
 	return n;
 }
 
