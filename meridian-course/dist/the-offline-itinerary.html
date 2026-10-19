@@ -487,7 +487,7 @@ function ononline() {
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/+layout.svelte<span class="code__lines">:94-116</span></span>
+		<span class="code__file">src/routes/+layout.svelte<span class="code__lines">:106-131</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/*
@@ -502,19 +502,22 @@ function ononline() {
  * every tab the old one controls has closed; it does not swap itself in
  * under a page that is open.
  *
- * Two changes from the documentation's version. With no network there is
- * nothing to look for, so it does not ask — `afterNavigate` also runs
- * when a page hydrates, and a page read offline hydrates too. And a
- * check that fails for any other reason fails quietly: it is a
- * background chore, and the next navigation asks again.
+ * Three changes from the documentation's version. With no network there
+ * is nothing to look for, so it does not ask — `afterNavigate` also runs
+ * when a page hydrates, and a page read offline hydrates too. A shallow
+ * `goto` does not ask either: opening the stop dialog is not a visit
+ * to a page, and `afterNavigate` runs for it, so every open would
+ * fetch `service-worker.js` for nothing. And a check that fails for any
+ * other reason fails quietly: it is a background chore, and the next
+ * navigation asks again.
  */
-afterNavigate(async () =&gt; {
-	if (!('serviceWorker' in navigator) || !navigator.onLine) return;
+afterNavigate(async (navigation) =&gt; {
+	if (isShallowGoto(navigation) || !('serviceWorker' in navigator) || !navigator.onLine) return;
 	const registration = await navigator.serviceWorker.getRegistration();
 	if (registration) fireAndForget(registration.update(), 'service worker update check');
 });</code></pre>
 </figure>
-<p>The documentation is precise about when a browser looks for a new worker: “when a full-page navigation happens within its scope, and after functional events such as <code>push</code> and <code>sync</code>. Client-side navigations are neither.” A trip planner is a page people leave open for days, so a deploy could go unnoticed by its worker for as long as the tab lives. The root layout asks on every navigation — <code>navigator.serviceWorker.getRegistration()</code>, then <code>registration.update()</code> — which is the documentation’s own pattern, with two changes: no request when there is no network, because <code>afterNavigate</code> also runs when a page hydrates and a page read offline hydrates too; and a failed check is fire-and-forget, a background chore the next navigation repeats. A new worker found this way installs in the background and “take[s] over as soon as the number of tabs managed by the existing service worker drops to zero”. It does not swap itself in under an open page. That is why only hashed files are served from the copy: everything whose name outlives its content — pages, prerendered guides, <code>static/</code> — is asked of the network first, so a waiting worker never serves an old one online, and the deploy banner (chapter <a href="the-shell.html">25</a>) already turns the next navigation into a full reload.</p>
+<p>The documentation is precise about when a browser looks for a new worker: “when a full-page navigation happens within its scope, and after functional events such as <code>push</code> and <code>sync</code>. Client-side navigations are neither.” A trip planner is a page people leave open for days, so a deploy could go unnoticed by its worker for as long as the tab lives. The root layout asks on every navigation — <code>navigator.serviceWorker.getRegistration()</code>, then <code>registration.update()</code> — which is the documentation’s own pattern, with three changes: no request when there is no network, because <code>afterNavigate</code> also runs when a page hydrates and a page read offline hydrates too; none for a shallow <code>goto</code> — <code>isShallowGoto</code>, the test chapter <a href="the-itinerary.html">27</a> explains — because opening the stop dialog is not a visit to a page and would fetch <code>service-worker.js</code> every time; and a failed check is fire-and-forget, a background chore the next navigation repeats. A new worker found this way installs in the background and “take[s] over as soon as the number of tabs managed by the existing service worker drops to zero”. It does not swap itself in under an open page. That is why only hashed files are served from the copy: everything whose name outlives its content — pages, prerendered guides, <code>static/</code> — is asked of the network first, so a waiting worker never serves an old one online, and the deploy banner (chapter <a href="the-shell.html">25</a>) already turns the next navigation into a full reload.</p>
 <aside class="callout callout--note"><p>Two refinements are named and left out. <code>self.skipWaiting()</code> would let a new worker take over open tabs at once, and the pattern that makes it safe is to call it from the deploy banner’s button and reload when <code>navigator.serviceWorker</code> fires <code>controllerchange</code> — a listener on an object outside any component, which is the honest use of <code>on()</code> from <code>svelte/events</code>. Nothing needs it today, for the reason above. And <code>@vite-pwa/sveltekit</code>, the generator most SvelteKit projects reach for, was declined in chapter <a href="choosing-libraries.html">40</a>: its SvelteKit integration reads a <code>svelte.config.js</code> that SvelteKit 3 does not have, and a worker of a few dozen lines written against <code>$app/manifest</code>, each rule with its reason beside it, is easier to read than a generated one.</p></aside>
 <h3 id="proof">Proving it without a clock</h3>
 

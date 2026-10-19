@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Migrating a major: the routine, the record, and a dependency still on Svelte 4 — Building Meridian</title>
-<meta name="description" content="`sv migrate` and its task-based migrations — one task per commit, `@migration-task` comments, and a `MIGRATION_TASKS.md` for what no tool can decide — with this project’s own file, every box resolved. What SvelteKit 3 removed and renamed, module by module and option by option; and how to read a component written for Svelte 4, each legacy construct with its runes replacement and the code that flags it.">
+<meta name="description" content="`sv migrate` and its task-based migrations — one task per commit, `@migration-task` comments, and a `MIGRATION_TASKS.md` for what no tool can decide — with the record this project kept, every box resolved. What SvelteKit 3 removed and renamed, module by module and option by option; and how to read a component written for Svelte 4, each legacy construct with its runes replacement and the code that flags it.">
 <link rel="stylesheet" href="course.css">
 </head>
 <body>
@@ -33,16 +33,17 @@
 		<article>
 			<p class="eyebrow">Chapter 49</p>
 			<h1>Migrating a major: the routine, the record, and a dependency still on Svelte 4</h1>
-			<p class="lede"><code>sv migrate</code> and its task-based migrations — one task per commit, <code>@migration-task</code> comments, and a <code>MIGRATION_TASKS.md</code> for what no tool can decide — with this project’s own file, every box resolved. What SvelteKit 3 removed and renamed, module by module and option by option; and how to read a component written for Svelte 4, each legacy construct with its runes replacement and the code that flags it.</p>
+			<p class="lede"><code>sv migrate</code> and its task-based migrations — one task per commit, <code>@migration-task</code> comments, and a <code>MIGRATION_TASKS.md</code> for what no tool can decide — with the record this project kept, every box resolved. What SvelteKit 3 removed and renamed, module by module and option by option; and how to read a component written for Svelte 4, each legacy construct with its runes replacement and the code that flags it.</p>
 			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Run a major upgrade as a reviewable series of commits, resolve every finding with evidence, and read legacy Svelte without writing any.</p></aside>
-			<p>A major version is a list of breaking changes and, these days, a tool that makes most of them for you. The skill is in the rest: knowing which changes the tool made, which it could not, and how to leave a record that the next person — or the next major — can trust. This project went from SvelteKit 2 to 3 that way, and this chapter is the routine it followed.</p>
+			<p>A major version is a list of breaking changes and, these days, a tool that makes most of them for you. The skill is in the rest: knowing which changes the tool made, which it could not, and how to leave a record that the next person — or the next major — can trust. This chapter is the routine for a project that is on SvelteKit 2, and it is not Meridian’s history: Meridian was started on the 3.0 prereleases and moved to 3.0.1 in a single commit, by hand, so there is no run of nine commits in its log to point at. What it does have is the record the routine ends in — the tool run against a copy of the finished project, every finding resolved with evidence — and that is what the rest of the chapter reads. A course that claimed a history the repository does not have would be teaching you to trust a record you cannot check.</p>
 
 <figure class="code code--terminal">
 	<figcaption>
 		<span class="code__file">terminal</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code>$ git status --short                                     # clean first; or --no-git-check
+	<pre><code># the routine, for a SvelteKit 2 project; Meridian began on 3, so none of these commits are in its log
+$ git status --short                                     # clean first; or --no-git-check
 $ npx sv migrate sveltekit-3 --tasks                     # list the tasks, run nothing
 $ npx sv migrate sveltekit-3 --tasks prerequisite --install pnpm
 $ git commit -am &quot;sveltekit-3: package-json, tsconfig&quot;
@@ -66,22 +67,25 @@ $ grep -rn &quot;@migration-task&quot; src                         # must find n
 	</table>
 </div>
 <h3 id="the-record">The record: every finding resolved</h3>
-<p>What a task cannot decide safely it leaves in two places: <code>@migration-task</code> comments at the spot, and a <code>MIGRATION_TASKS.md</code> at the root listing the migrations that are “uncommon, context-dependent, or disproportionately difficult to automate safely”, each with the files worth a look. The file’s own instruction is to delete it when the work is done. This project kept it instead, as <code>docs/migration-sveltekit-3.md</code>, with every box ticked and the evidence beside it.</p>
+<p>What a task cannot decide safely it leaves in two places: <code>@migration-task</code> comments at the spot, and a <code>MIGRATION_TASKS.md</code> at the root listing the migrations that are “uncommon, context-dependent, or disproportionately difficult to automate safely”, each with the files worth a look. The file’s own instruction is to delete it when the work is done. Meridian has one because the tool can be run on a finished project too: it was run against a copy, the findings were resolved by hand, and the result is kept as <code>docs/migration-sveltekit-3.md</code>, with every box ticked and the evidence beside it.</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">docs/migration-sveltekit-3.md<span class="code__lines">:1-30</span></span>
+		<span class="code__file">docs/migration-sveltekit-3.md<span class="code__lines">:1-33</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-md">&lt;!-- Generated by sv migrate sveltekit-3:collect-migration-instructions, then resolved by hand --&gt;
 
 # SvelteKit 3 migration tasks, resolved
 
-`npx sv migrate sveltekit-3` rewrote what it could and wrote the rest into a `MIGRATION_TASKS.md`
-at the project root: the migrations that are uncommon, context-dependent or not safe to automate.
-This is that file, kept as the record. Every box is ticked, and under each is what resolved it —
-the file and line that does the new thing, or &quot;not affected&quot; and why the finding was a false
-positive. The findings are deliberately broad; eight of the twenty were.
+Meridian was never on SvelteKit 2. It began on the SvelteKit 3 prereleases and moved to 3.0.1 in one
+commit, by hand, so `npx sv migrate sveltekit-3` had nothing to rewrite here and there are no
+per-task commits. What the migration can still do for a finished project is list what it would not
+decide for you: run against a copy of this one, it wrote a `MIGRATION_TASKS.md` at the project root
+of the migrations that are uncommon, context-dependent or not safe to automate. This is that file,
+kept as the record, with its findings resolved by hand. Every box is ticked, and under each is what
+resolved it — the file and line that does the new thing, or &quot;not affected&quot; and why the finding was
+a false positive. The findings are deliberately broad; eight of the twenty were.
 
 The course chapter on upgrades (`migrating-a-major`) reads this file.
 
@@ -108,7 +112,7 @@ The course chapter on upgrades (`migrating-a-major`) reads this file.
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">docs/migration-sveltekit-3.md<span class="code__lines">:94-108</span></span>
+		<span class="code__file">docs/migration-sveltekit-3.md<span class="code__lines">:97-111</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-md">### Use remote form field attributes
@@ -131,7 +135,7 @@ Remote form controls must use attributes from the current form field.
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">docs/migration-sveltekit-3.md<span class="code__lines">:118-126</span></span>
+		<span class="code__file">docs/migration-sveltekit-3.md<span class="code__lines">:121-129</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-md">## Final verification

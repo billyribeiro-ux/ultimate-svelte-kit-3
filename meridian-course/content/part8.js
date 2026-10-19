@@ -235,7 +235,7 @@ $ pnpm run test:unit -- --run
 			},
 			{
 				type: 'p',
-				text: 'The accessibility warnings are a third of the list, and each is a question about an element. The table is the project’s answers, element by element — the point being that every one is answered by markup a screen reader understands, never by an `aria-*` attribute that papers over the wrong element.'
+				text: 'The accessibility warnings are about half of the compiler’s list — forty-two of its eighty-one in Svelte 5.57 — and each is a question about an element. The table is the project’s answers, element by element — the point being that every one is answered by markup a screen reader understands, never by an `aria-*` attribute that papers over the wrong element.'
 			},
 			{
 				type: 'table',
@@ -317,7 +317,7 @@ $ pnpm run test:unit -- --run
 			},
 			{
 				type: 'table',
-				caption: 'Every runtime warning, in one line each',
+				caption: 'Every runtime warning in Svelte 5.57, in one line each',
 				head: ['Warning', 'What it is telling you'],
 				rows: [
 					['`assignment_value_stale`', '`(obj.array ??= []).push(…)` pushed to the plain array, not the proxy that was stored'],
@@ -339,7 +339,8 @@ $ pnpm run test:unit -- --run
 					['`svelte_boundary_reset_noop`', 'a boundary’s `reset` called a second time'],
 					['`transition_slide_display`', '`slide` on an inline or table element, which has no height to animate'],
 					['`dynamic_void_element_content`', '`<svelte:element this="input">` given children'],
-					['`state_snapshot_uncloneable`', '`$state.snapshot` met a value it cannot clone, and returned the original']
+					['`state_snapshot_uncloneable`', '`$state.snapshot` met a value it cannot clone, and returned the original'],
+					['`unresolved_hydratable` (server)', 'a `hydratable` value was created but at least part of it was not used during the render, so the response waited for content nothing read — printed by the server, not the browser']
 				]
 			},
 
@@ -441,10 +442,10 @@ https://svelte.dev/e/script_context_deprecated
 				type: 'p',
 				text: 'And a test for the browser’s own `handleError` (chapter {{environment-and-hooks}}), which nothing else reaches: a remote function’s refusal goes through the server’s hook, so a page could lose its client hook and every other test would still pass. The globe is the one chunk loaded on demand, so the test drops it — `page.route` fetches each script and aborts the one that contains the globe’s class name, because the file’s own name is a hash — and opens the globe tab on a German page. The boundary must say “Etwas ist schiefgelaufen” with its “Neu verbinden” button, and the console must carry the hook’s `[meridian]` line. Without the hook, SvelteKit’s default fills the boundary with `Internal Error`, in English, and the first assertion fails.'
 			},
-			code('e2e/public.e2e.ts', 161, 194),
+			code('e2e/public.e2e.ts', 161, 208),
 			{
 				type: 'p',
-				text: 'The machine-facing test uses `request` — Playwright’s API client, with no browser — for the health endpoint and the route API, and the page for the embed frame. The interesting assertions are the negative ones: the private trip’s API is a 404, the private trip’s frame is a 404, and the public frame’s Content-Security-Policy contains `frame-ancestors *` — the one route the hook allows to be framed (chapter {{security-headers-and-csp}}). A security rule with no test is a security rule that will be refactored away. The last two lines guard a different kind of seam: the frame ships no script, so nothing at run time would notice if it shipped no *style* either — and for a while it did, because a compiler option meant for the custom element caught this page too (chapter {{embedding-a-trip}}). They ask for two facts only the page’s own stylesheet makes true: the card’s computed `max-width` is the 22rem the CSS says, and its list has no indent. The first version asked whether *a* stylesheet was linked, and the root layout’s CSS is linked on every page — so the assertion was true with the bug as well. An assertion that cannot fail is a comment with a cost.'
+				text: 'The machine-facing test uses `request` — Playwright’s API client, with no browser — for the health endpoint and the route API, and the page for the embed frame. The interesting assertions are the negative ones: the private trip’s API is a 404, the private trip’s frame is a 404, and the public frame’s Content-Security-Policy contains `frame-ancestors *` — the one route the hook allows to be framed (chapter {{security-headers-and-csp}}). A security rule with no test is a security rule that will be refactored away, and a rule has two halves: the exception, and everything the exception must not reach. The last assertions are the second half — `/` still carries `frame-ancestors \'none\'` and `Vary: Cookie`, and the route API under a locale prefix carries no `Vary: Cookie` — so a change that framed every route would not pass. The two lines before them guard a different kind of seam: the frame ships no script, so nothing at run time would notice if it shipped no *style* either — and for a while it did, because a compiler option meant for the custom element caught this page too (chapter {{embedding-a-trip}}). They ask for two facts only the page’s own stylesheet makes true: the card’s computed `max-width` is the 22rem the CSS says, and its list has no indent. The first version asked whether *a* stylesheet was linked, and the root layout’s CSS is linked on every page — so the assertion was true with the bug as well. An assertion that cannot fail is a comment with a cost.'
 			},
 			code('e2e/account.e2e.ts', 13, 43),
 			{
@@ -512,12 +513,12 @@ https://svelte.dev/e/script_context_deprecated
 				type: 'p',
 				text: 'Every feature and every fix since the first version came with a test, and every test was first run against the code *before* the change, where it had to fail — for the right reason, read from its error, not merely fail. A test that passes on the old code proves nothing about the new. These are the ones those passes added, each named by its title, the way the runner prints it.'
 			},
-			code('e2e/public.e2e.ts', 203, 212),
+			code('e2e/public.e2e.ts', 217, 226),
 			{
 				type: 'p',
 				text: '“a dynamically rendered page carries its preloads as a Link header” proves `output.linkHeaderPreload` (chapter {{the-config}}): the preloads leave the HTML for a `Link` response header, including the font the `preload` hook picks by its source filename — and the last line proves they *left*, rather than appearing twice.'
 			},
-			code('e2e/public.e2e.ts', 214, 237),
+			code('e2e/public.e2e.ts', 228, 251),
 			{
 				type: 'p',
 				text: '“on a phone the closed menu is not in the accessibility tree, and Escape closes the open one” is about motion that ends somewhere honest (chapter {{motion-with-intent}}): a sheet clipped to nothing is still in the DOM, and only `visibility: hidden` at the end of its transition takes its links out of reach of a role query — and of a screen reader. It skips itself on the desktop, where there is no menu.'
@@ -538,6 +539,11 @@ https://svelte.dev/e/script_context_deprecated
 				type: 'p',
 				text: 'Three lines added to “health, the route API and the embed frame answer for machines”: the German frame, `/de/embed/<slug>`, must carry `frame-ancestors *` like the English one. Against the old hook — a pathname test — it came back `\'none\'` (chapter {{security-headers-and-csp}}).'
 			},
+			{
+				type: 'p',
+				text: 'And the half that a test for the exception cannot see. Every assertion above passes if the hook frames *every* route, which is the worst way for it to be wrong, so the same test asks the home page what it sends: `frame-ancestors \'none\'` in the policy, and `Vary: Cookie` on the response. Then it asks the route API under `/de/` for the opposite — no `Vary: Cookie` on an endpoint that names nobody — which is the case the pathname rule got wrong in the other direction. The test was run once against a hook that sets `frame-ancestors *` on every route, and it failed on the home page’s policy; the hook is as it was.'
+			},
+			code('e2e/public.e2e.ts', 195, 207),
 			code('e2e/trip.e2e.ts', 32, 44),
 			{
 				type: 'p',
@@ -745,7 +751,7 @@ Running 259 tests using 1 worker
 		blocks: [
 			{
 				type: 'p',
-				text: 'Security in a web application is mostly a list of things that are true of *every* response, and the place to make them true is the one function every response passes through. In SvelteKit that is `handle` in `hooks.server.ts` (chapter {{environment-and-hooks}}), and the third handler in its sequence is where this chapter lives. The rest is a policy in `vite.config.ts` that SvelteKit applies for us, and a handful of decisions at the edges: what may be framed, what may be fetched from another origin, where a sign-in may redirect.'
+				text: 'Security in a web application is mostly a list of things that are true of *every* response, and the place to make them true is the one function every response passes through. In SvelteKit that is `handle` in `hooks.server.ts` (chapter {{environment-and-hooks}}), and the third handler in its sequence is where this chapter lives. The rest is a policy — the `csp` option in `vite.config.ts` — that SvelteKit applies for us, and a handful of decisions at the edges: what may be framed, what may be fetched from another origin, where a sign-in may redirect.'
 			},
 
 			{ type: 'h3', id: 'csp', text: 'The Content Security Policy' },
@@ -872,7 +878,7 @@ Running 259 tests using 1 worker
 			{
 				type: 'ul',
 				items: [
-					'`HOST=0.0.0.0` — adapter-node binds to localhost by default, which inside a container means “reachable by nobody”.',
+					'`HOST=0.0.0.0` — `@sveltejs/adapter-node` binds to localhost by default, which inside a container means “reachable by nobody”.',
 					'`SHUTDOWN_TIMEOUT=10` — on `SIGTERM`, adapter-node stops accepting connections, lets in-flight requests finish for this many seconds, and exits. An orchestrator’s grace period is usually thirty; a shutdown that outlasts it is a `SIGKILL` anyway, so this is shorter.',
 					'`BODY_SIZE_LIMIT=8M` — the largest request body the server will read. Notes and expenses are kilobytes; this leaves room for the future without accepting a gigabyte.',
 					'`HEALTHCHECK` — the same question a load balancer asks, so `docker ps` shows the truth about the container rather than whether the process exists.',
@@ -959,16 +965,17 @@ $ docker compose down     # SIGTERM, in-flight requests finish, exit code 0`
 		slug: 'migrating-a-major',
 		title: 'Migrating a major: the routine, the record, and a dependency still on Svelte 4',
 		summary:
-			'`sv migrate` and its task-based migrations — one task per commit, `@migration-task` comments, and a `MIGRATION_TASKS.md` for what no tool can decide — with this project’s own file, every box resolved. What SvelteKit 3 removed and renamed, module by module and option by option; and how to read a component written for Svelte 4, each legacy construct with its runes replacement and the code that flags it.',
+			'`sv migrate` and its task-based migrations — one task per commit, `@migration-task` comments, and a `MIGRATION_TASKS.md` for what no tool can decide — with the record this project kept, every box resolved. What SvelteKit 3 removed and renamed, module by module and option by option; and how to read a component written for Svelte 4, each legacy construct with its runes replacement and the code that flags it.',
 		goal: 'Run a major upgrade as a reviewable series of commits, resolve every finding with evidence, and read legacy Svelte without writing any.',
 		blocks: [
 			{
 				type: 'p',
-				text: 'A major version is a list of breaking changes and, these days, a tool that makes most of them for you. The skill is in the rest: knowing which changes the tool made, which it could not, and how to leave a record that the next person — or the next major — can trust. This project went from SvelteKit 2 to 3 that way, and this chapter is the routine it followed.'
+				text: 'A major version is a list of breaking changes and, these days, a tool that makes most of them for you. The skill is in the rest: knowing which changes the tool made, which it could not, and how to leave a record that the next person — or the next major — can trust. This chapter is the routine for a project that is on SvelteKit 2, and it is not Meridian’s history: Meridian was started on the 3.0 prereleases and moved to 3.0.1 in a single commit, by hand, so there is no run of nine commits in its log to point at. What it does have is the record the routine ends in — the tool run against a copy of the finished project, every finding resolved with evidence — and that is what the rest of the chapter reads. A course that claimed a history the repository does not have would be teaching you to trust a record you cannot check.'
 			},
 			{
 				type: 'terminal',
 				code: `
+# the routine, for a SvelteKit 2 project; Meridian began on 3, so none of these commits are in its log
 $ git status --short                                     # clean first; or --no-git-check
 $ npx sv migrate sveltekit-3 --tasks                     # list the tasks, run nothing
 $ npx sv migrate sveltekit-3 --tasks prerequisite --install pnpm
@@ -1007,19 +1014,19 @@ $ grep -rn "@migration-task" src                         # must find nothing at 
 			{ type: 'h3', id: 'the-record', text: 'The record: every finding resolved' },
 			{
 				type: 'p',
-				text: 'What a task cannot decide safely it leaves in two places: `@migration-task` comments at the spot, and a `MIGRATION_TASKS.md` at the root listing the migrations that are “uncommon, context-dependent, or disproportionately difficult to automate safely”, each with the files worth a look. The file’s own instruction is to delete it when the work is done. This project kept it instead, as `docs/migration-sveltekit-3.md`, with every box ticked and the evidence beside it.'
+				text: 'What a task cannot decide safely it leaves in two places: `@migration-task` comments at the spot, and a `MIGRATION_TASKS.md` at the root listing the migrations that are “uncommon, context-dependent, or disproportionately difficult to automate safely”, each with the files worth a look. The file’s own instruction is to delete it when the work is done. Meridian has one because the tool can be run on a finished project too: it was run against a copy, the findings were resolved by hand, and the result is kept as `docs/migration-sveltekit-3.md`, with every box ticked and the evidence beside it.'
 			},
-			code('docs/migration-sveltekit-3.md', 1, 30),
+			code('docs/migration-sveltekit-3.md', 1, 33),
 			{
 				type: 'p',
 				text: 'The findings are deliberately broad, and the file says so — “may include files that do not require changes”. Eight of the twenty boxes here were false positives, and *not affected, because* is a resolution as long as the because is checkable. The header’s `page.url` finding was a read, never a write. The `error(...)` finding in the trip page was svelte-sonner’s `toast.error`. The one below is the most instructive: three forms flagged for hand-written `name` attributes, none of them remote forms.'
 			},
-			code('docs/migration-sveltekit-3.md', 94, 108),
+			code('docs/migration-sveltekit-3.md', 97, 111),
 			{
 				type: 'p',
 				text: 'The rule behind that task is strict — the migration guide says a hand-written name on a remote form “will cause the submission to be rejected” — so the check had to be real: each flagged `<form>` is plain HTML with an `onsubmit` that calls a `command`, and its `name` only groups radio buttons for the browser. Every actual remote form takes its attributes from `fields.x.as(…)` (chapter {{remote-functions-the-writes}}).'
 			},
-			code('docs/migration-sveltekit-3.md', 118, 126),
+			code('docs/migration-sveltekit-3.md', 121, 129),
 
 			{ type: 'h3', id: 'what-went-away', text: 'What went away, and what replaced it' },
 			{
@@ -1150,7 +1157,7 @@ $ grep -rn "@migration-task" src                         # must find nothing at 
 			{ type: 'h3', id: 'the-whole-list', text: 'The whole list' },
 			{
 				type: 'p',
-				text: 'The ten above are the top of a longer list: every piece of work the course planned and decided not to do yet, each with the reason it waits. It is generated from the gap list that decided what this course would build, and checked on every build — the exit criteria in chapter {{the-exit-criteria}} mark a surface *deferred* only if its item is here and the surface is named on it. The ids are the gap list’s own: B1 is the toolchain, B2 design and motion, B3 offline, B4 the server and the pages, B5 the proofs; so “goes with B4-D8” points at a row of this table.'
+				text: 'The ten above are the top of a longer list: every piece of work the course planned and decided not to do yet, each with the reason it waits. It is generated from the gap list that decided what this course would build, and checked on every build — the exit criteria in chapter {{the-exit-criteria}} mark a surface *deferred* only if its item is here, and where the row says the item names the surface, the item’s own text has to. The ids are the gap list’s own: B1 is the toolchain, B2 design and motion, B3 offline, B4 the server and the pages, B5 the proofs; so “goes with B4-D8” points at a row of this table.'
 			},
 			{
 				type: 'table',
@@ -1238,12 +1245,12 @@ $ node ../meridian-course/build.js && node ../meridian-course/tools/check-dist.j
 			blocks: [
 				{
 					type: 'p',
-					text: '“8++” is a promise about coverage and about reasons. Every built-in of Svelte 5.57 and SvelteKit 3.0.1 is in one of four states in this course: used for something in Meridian, with the reason written down; declined, with the reason written down; on the backlog, with the reason it waits; or dropped, with the reason it was not built. Nothing is demonstrated for its own sake, and nothing is claimed that the code does not do. This chapter is the list, and it is the hardest chapter in the course to fake, because it is not written by hand.'
+					text: `“8++” is a promise about coverage and about reasons. Every surface the coverage plan named for Svelte 5.57 and SvelteKit 3.0.1 — ${SURFACES.length} of them — is in one of four states in this course: used for something in Meridian, with the reason written down; declined, with the reason written down; on the backlog, with the reason it waits; or dropped, with the reason it was not built. The plan is this course’s own list and not the whole API, so a built-in nobody planned has no row here. Nothing is demonstrated for its own sake, and nothing is claimed that the code does not do. This chapter is the list, and it is the hardest chapter in the course to fake, because it is not written by hand.`
 				},
 				{
 					type: 'why',
 					title: 'Why this list can be trusted',
-					text: `It was generated from the two documents that decided the course — the coverage plan, which assigned each surface to a chapter, and the gap list, which recorded what was then built, deferred or dropped — by \`tools/exit-criteria.js\`, and committed as \`content/surfaces.json\`. Then \`verify.js\` holds it to the course on every build: a surface marked taught must be in backticks in the prose of the chapter it names, a deferred one must be named on the backlog in chapter {{what-i-would-do-next}}, and every planned chapter must have a row. Mark one deferred surface taught and the build fails. Today the list has ${SURFACES.length} surfaces: ${count('taught')} taught, ${count('declined')} declined, ${count('deferred')} deferred and ${count('dropped')} dropped.`
+					text: `It was generated from the two documents that decided the course — the coverage plan, which assigned each surface to a chapter, and the gap list, which recorded what was then built, deferred or dropped — by \`tools/exit-criteria.js\`, and committed as \`content/surfaces.json\`. Then \`verify.js\` holds it to the course on every build: a surface marked taught must be in backticks in the prose of the chapter it names, a deferred one must sit under an item of the backlog in chapter {{what-i-would-do-next}} — and, when the row says that item names it, the item’s own text must carry it in backticks — and every planned chapter must have a row. Mark one deferred surface taught and the build fails. Today the list has ${SURFACES.length} surfaces: ${count('taught')} taught, ${count('declined')} declined, ${count('deferred')} deferred and ${count('dropped')} dropped.`
 				},
 				{
 					type: 'terminal',
@@ -1255,7 +1262,7 @@ $ node meridian-course/verify.js                                     # on every 
 				},
 				{
 					type: 'p',
-					text: 'Read each table with one question per row: can I do what the middle column says, without this course open? “Use it, and say why Meridian does” means both halves — the code and the reason. “Read it in older code, and say what replaced it” is the migration chapter’s history. “Say what it would take” is the backlog: knowing what you have not built, and why it waits, is part of the skill. The groups follow the order of Svelte’s own documentation index.'
+					text: 'Read each table with one question per row: can I do what the middle column says, without this course open? “Use it, and say why Meridian does” means both halves — the code and the reason. “Read it in older code, and say what replaced it” is the migration chapter’s history. “Say what it would take” is the backlog: knowing what you have not built, and why it waits, is part of the skill. Where a row says the *planned use* is on the backlog, the plan imagined a use of the surface that nobody has built, and the surface may or may not be in the code; where it says what is installed and what waits, as for `tracing.current`, it is in the code in part. The groups follow the order of Svelte’s own documentation index.'
 				},
 				...GROUPS.filter((group) => SURFACES.some((row) => row.group === group)).map((group) => ({
 					type: 'table',

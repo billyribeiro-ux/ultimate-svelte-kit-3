@@ -2,11 +2,14 @@
 
 # SvelteKit 3 migration tasks, resolved
 
-`npx sv migrate sveltekit-3` rewrote what it could and wrote the rest into a `MIGRATION_TASKS.md`
-at the project root: the migrations that are uncommon, context-dependent or not safe to automate.
-This is that file, kept as the record. Every box is ticked, and under each is what resolved it —
-the file and line that does the new thing, or "not affected" and why the finding was a false
-positive. The findings are deliberately broad; eight of the twenty were.
+Meridian was never on SvelteKit 2. It began on the SvelteKit 3 prereleases and moved to 3.0.1 in one
+commit, by hand, so `npx sv migrate sveltekit-3` had nothing to rewrite here and there are no
+per-task commits. What the migration can still do for a finished project is list what it would not
+decide for you: run against a copy of this one, it wrote a `MIGRATION_TASKS.md` at the project root
+of the migrations that are uncommon, context-dependent or not safe to automate. This is that file,
+kept as the record, with its findings resolved by hand. Every box is ticked, and under each is what
+resolved it — the file and line that does the new thing, or "not affected" and why the finding was
+a false positive. The findings are deliberately broad; eight of the twenty were.
 
 The course chapter on upgrades (`migrating-a-major`) reads this file.
 

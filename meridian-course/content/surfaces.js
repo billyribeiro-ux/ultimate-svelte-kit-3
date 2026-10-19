@@ -5,15 +5,17 @@
  * `surfaces.json` is the exit criteria's checklist: one row per surface the
  * coverage plan assigned to a chapter, with its status — `taught`,
  * `declined` (Meridian does not use it, and a chapter says why), `deferred`
- * (on the backlog, with the gap-list item that put it there) or `dropped`
- * (known, not built, and why). `tools/exit-criteria.js` wrote it once;
+ * (on the backlog, with the gap-list item that put it there — and whether
+ * that item names the surface itself, `attached: 'name'`, or only the plan
+ * sentence the surface came from, `attached: 'plan'`) or `dropped` (known,
+ * not built, and why). `tools/exit-criteria.js` wrote it once;
  * `verify.js` holds it to the course on every build, with the helpers here,
  * and the last chapter renders it.
  */
 
 import { readFileSync } from 'node:fs';
 
-/** @typedef {{ planned: string[], surface: string, chapter: string, status: 'taught' | 'declined' | 'deferred' | 'dropped', group: string, gap?: string, reason?: string }} Surface */
+/** @typedef {{ planned: string[], surface: string, chapter: string, status: 'taught' | 'declined' | 'deferred' | 'dropped', group: string, statement: string, gap?: string, attached?: 'name' | 'plan', reason?: string }} Surface */
 
 /** @returns {{ plannedChapters: string[], rows: Surface[] }} */
 export function readSurfaces() {

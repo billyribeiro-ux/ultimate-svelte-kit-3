@@ -741,7 +741,7 @@ src/lib/trip/StopCardScratch.svelte
 					'**The Svelte AI tools** — `AGENTS.md`, the MCP server, the skills, the `svelte-file-editor` subagent, the Claude Code plugin, and `lint:svelte`, the autofixer over every component in `verify` (ch. {{the-toolchain}}).',
 					'**The workspace** — pnpm 12, `allowBuilds`, a minimum release age, `.vscode/extensions.json` (ch. {{the-workspace}}).',
 					'**Diagnostics by code** — compiler warnings and errors, runtime errors and warnings, zero `svelte-ignore`, and the autofixer as a gate (ch. {{what-the-compiler-says}}).',
-					'**`sv migrate`** — task-based migrations, one task per commit, `MIGRATION_TASKS.md` resolved into `docs/migration-sveltekit-3.md`, and the Svelte 4 legacy table (ch. {{migrating-a-major}}).',
+					'**`sv migrate`** — the one-task-per-commit routine for a SvelteKit 2 project, the `MIGRATION_TASKS.md` record this project kept in `docs/migration-sveltekit-3.md`, and the Svelte 4 legacy table (ch. {{migrating-a-major}}).',
 					'**The exit criteria** — every planned surface, taught, declined, deferred or dropped, generated and checked (ch. {{the-exit-criteria}}).'
 				]
 			},

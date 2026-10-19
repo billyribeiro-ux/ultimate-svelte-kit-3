@@ -191,6 +191,20 @@ test('health, the route API and the embed frame answer for machines', async ({ p
 	const localised = await page.goto(`/de/embed/${TRIPS.japan}`);
 	expect(localised?.status()).toBe(200);
 	expect(localised?.headers()['content-security-policy']).toContain('frame-ancestors *');
+
+	// The other half of the rule: the exception stays an exception. Every other page keeps
+	// `frame-ancestors 'none'` — a trip planner inside somebody else's frame is a clickjacking
+	// target — and `Vary: Cookie`, because its header names the person looking at it. A change
+	// that framed every route, or dropped the header from every page, would pass everything above.
+	const home = await request.get('/');
+	expect(home.headers()['content-security-policy']).toContain("frame-ancestors 'none'");
+	expect(home.headers()['vary']).toContain('Cookie');
+
+	// The machine endpoints carry no `Vary: Cookie`, and a locale prefix does not change that:
+	// `reroute` serves `/de/api/…` from `/api/…`, so the rule keys on the route id.
+	const localisedRoute = await request.get(`/de/api/route/${TRIPS.japan}.json`);
+	expect(localisedRoute.status()).toBe(200);
+	expect(localisedRoute.headers()['vary'] ?? '').not.toContain('Cookie');
 });
 
 test('a URL that matches nothing gets the root error page, with a way home', async ({ page }) => {

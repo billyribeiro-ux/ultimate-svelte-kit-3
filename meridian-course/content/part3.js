@@ -74,7 +74,7 @@ export const part3 = [
 			code('src/hooks.server.ts', 176, 232),
 			{
 				type: 'p',
-				text: '`handleError` is told apart by `kind`, which SvelteKit 3 added: `app` is a deliberate `error(404, m.error_no_trip())` — its sentence a Paraglide message like every other, worked out inside the request and so already in the page’s language, which is why the hook leaves it alone — `framework` is SvelteKit’s own, `validation` is a remote function argument that failed its schema — with the `issues` handed over, so the log can say which field — and `unknown` is the only kind worth an id. The id goes into the log and into the message a person sees, so a support conversation can find the stack trace. The two messages are Paraglide’s, `m.error_bad_request()` and `m.error_server()`: `handleError` runs inside the request the middleware wrapped, so they come out in that request’s language. `init` runs once before the first request and reaches the database, so a broken deploy never claims to be healthy.'
+				text: '`handleError`, typed `HandleServerError`, is told apart by `kind`, which SvelteKit 3 added: `app` is a deliberate `error(404, m.error_no_trip())` — its sentence a Paraglide message like every other, worked out inside the request and so already in the page’s language, which is why the hook leaves it alone — `framework` is SvelteKit’s own, `validation` is a remote function argument that failed its schema — with the `issues` handed over, so the log can say which field — and `unknown` is the only kind worth an id. The id goes into the log and into the message a person sees, so a support conversation can find the stack trace. The two messages are Paraglide’s, `m.error_bad_request()` and `m.error_server()`: `handleError` runs inside the request the middleware wrapped, so they come out in that request’s language. `init` runs once before the first request and reaches the database, so a broken deploy never claims to be healthy.'
 			},
 			code('src/hooks.client.ts', 1, 28),
 			{
@@ -88,7 +88,7 @@ export const part3 = [
 			code('src/hooks.ts', 1, 35),
 			{
 				type: 'p',
-				text: 'The universal hooks run in the browser too, and both of these have to. `reroute` tells the router that `/de/trips` is served by `src/routes/trips` — on the server for the first request, in the browser for every navigation after it. `transport` teaches devalue about `CalendarDate`, so a date range that leaves the picker as a `CalendarDate` arrives on the server as one; chapter {{dates-and-money-in-a-locale}} shows the value crossing.'
+				text: 'The universal hooks run in the browser too, and both of these have to. `reroute` tells the router that `/de/trips` is served by `src/routes/trips` — one line, Paraglide’s `deLocalizeUrl` taking the language off the pathname — on the server for the first request, in the browser for every navigation after it. `transport` teaches devalue about `CalendarDate`, so a date range that leaves the picker as a `CalendarDate` arrives on the server as one; chapter {{dates-and-money-in-a-locale}} shows the value crossing.'
 			},
 			code('src/params.ts', 1, 21),
 			{

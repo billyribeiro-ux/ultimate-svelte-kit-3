@@ -20,8 +20,9 @@
  *     at least one row;
  *   - a row marked `taught` or `declined` names a chapter whose prose
  *     carries the surface in backticks;
- *   - a row marked `deferred` is named, in backticks, in the backlog of
- *     what-i-would-do-next.
+ *   - a row marked `deferred` sits under an item of the backlog, and a row
+ *     that says its item names it (`attached: 'name'`) is in backticks in
+ *     that item's own text.
  *
  * HOW A ROW IS DECIDED
  * --------------------
@@ -37,13 +38,29 @@
  * owes a sentence, or the token belongs in `OMIT` below with the reason it
  * is not a surface.
  *
+ * WHAT "DEFERRED" MAY CLAIM
+ * -------------------------
+ * A deferred row is attached to its backlog item in one of two ways, and the
+ * row says which: `name`, because the item's own text names the surface, or
+ * `plan`, because the plan sentence the token came from is the work the item
+ * describes and the item does not repeat the token. The second is a weaker
+ * claim — it is the *planned use* that is on the backlog, not necessarily the
+ * surface — and the row's statement says so.
+ *
+ * It can also be wrong in the other direction: a surface the project's own
+ * code uses is not "on the backlog" as though unshipped. So the run reads the
+ * project, and stops at any deferred row whose surface the code uses, unless
+ * a chapter now names it (it is then `taught`, and the course owes nothing
+ * more) or `OVERRIDES` below says, in its own words, what is and is not built.
+ *
  * Run:  node meridian-course/tools/exit-criteria.js <plan.json> <GAPS.md>
  */
 
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chapters } from '../content/index.js';
+import { PROJECT } from '../content/quote.js';
 import { GROUPS, NOT_TEACHING, countInBackticks, hasInBackticks, proseOf } from '../content/surfaces.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -114,6 +131,7 @@ const OMIT = new Map(
 		asEditor: 'a project variable', mapView: 'a project variable', spanRow: 'a project snippet',
 		hasField: 'a project function', getViewer: 'a project function', setViewer: 'a project function',
 		hasViewer: 'a project function', saveNote: 'a project command', 'user.id': 'a project attribute name',
+		stopId: 'a field of the project’s schemas; the plan meant a `SvelteMap` keyed by it, which is a row',
 		// names the plan used that the code settled differently
 		'reveal.ts': 'the plan’s working name; the module is `hero.ts`',
 		reveal: 'the plan’s working name; the attachment is `hero`',
@@ -207,7 +225,70 @@ const DECLINED = new Set([
 	'<svelte:component>', '<svelte:self>', 'createEventDispatcher', 'export let', 'on:'
 ]);
 
+/**
+ * Deferred rows whose surface Meridian ships in part, with the statement
+ * that is true of them. The default for a deferred row — "it is on the
+ * backlog" — would read as though nothing were built; here something is, and
+ * the backlog item is about a further use of it. Each entry is checked: one
+ * whose row is no longer deferred stops the run, so this list cannot outlive
+ * the thing it excuses.
+ */
+const OVERRIDES = new Map(
+	Object.entries({
+		'tracing.current':
+			'say what installs it, and what calling it would take; the call is on the backlog'
+	})
+);
+
 const mentions = (text, token) => text.includes('`') && hasInBackticks(text, token);
+
+/* ------------------------------------------------------------------ */
+/* The project's own code                                              */
+/* ------------------------------------------------------------------ */
+
+const CODE_DIRS = ['src', 'e2e', 'scripts', 'packages'];
+const CODE_ROOT_FILES = ['vite.config.ts', 'vite.element.config.ts', 'playwright.config.ts', 'drizzle.config.ts'];
+/* Generated, vendored or built: not code anyone wrote. */
+const SKIP_DIRS = new Set(['node_modules', 'build', 'dist', '.svelte-kit', 'paraglide', 'static', 'test-results']);
+
+/** Code with its comments taken out, so that a comment about a thing is not a use of it. */
+function withoutComments(text, file) {
+	let out = text.replace(/\/\*[\s\S]*?\*\//g, '');
+	if (file.endsWith('.svelte')) out = out.replace(/<!--[\s\S]*?-->/g, '');
+	return out.replace(/(^|[\s;{}),])\/\/.*$/gm, '$1');
+}
+
+/** @returns {{ path: string, text: string }[]} */
+function projectCode() {
+	const found = [];
+	const walk = (dir) => {
+		for (const name of readdirSync(dir)) {
+			if (SKIP_DIRS.has(name)) continue;
+			const path = join(dir, name);
+			if (statSync(path).isDirectory()) walk(path);
+			else if (/\.(?:ts|js|svelte)$/.test(name)) found.push(path);
+		}
+	};
+	for (const dir of CODE_DIRS) walk(join(PROJECT, dir));
+	for (const file of CODE_ROOT_FILES) found.push(join(PROJECT, file));
+	return found.map((path) => ({ path, text: withoutComments(readFileSync(path, 'utf8'), path) }));
+}
+
+let projectFiles;
+const escapeRegExp = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/**
+ * The project files whose code uses `token` as a name: whole, and not as a
+ * member of something else (`header.getContext()` is not `getContext`). A plain
+ * lowercase word — `parent`, `parse`, `depends` — is too common to place by
+ * text, and is left to the plan's own reading.
+ */
+function usedBy(token) {
+	if (/^[a-z]+$/.test(token)) return [];
+	projectFiles ??= projectCode();
+	const pattern = new RegExp(`(?:^|[^\\w$.]|\\.\\.\\.)${escapeRegExp(token)}(?:$|[^\\w$-])`);
+	return projectFiles.filter((file) => pattern.test(file.text)).map((file) => file.path.slice(PROJECT.length + 1));
+}
 
 /* ------------------------------------------------------------------ */
 /* Groups                                                              */
@@ -302,7 +383,7 @@ for (const entry of plan.chapterPlan) {
 			}
 			const later = deferred.find((d) => mentions(d.text, token));
 			if (later) {
-				rows.push({ planned, surface: token, chapter: planned, status: 'deferred', group: groupOf(token), gap: later.id });
+				rows.push({ planned, surface: token, chapter: planned, status: 'deferred', group: groupOf(token), gap: later.id, attached: 'name' });
 				continue;
 			}
 			const gone = dropped.find((d) => mentions(d.item, token));
@@ -313,7 +394,7 @@ for (const entry of plan.chapterPlan) {
 			const index = entry.teaches.indexOf(sentence);
 			const owed = SENTENCE_GAPS.find(([c, i]) => c === planned && i === index);
 			if (owed) {
-				rows.push({ planned, surface: token, chapter: planned, status: 'deferred', group: groupOf(token), gap: owed[2] });
+				rows.push({ planned, surface: token, chapter: planned, status: 'deferred', group: groupOf(token), gap: owed[2], attached: 'plan' });
 				continue;
 			}
 			const cut = SENTENCE_DROPPED.find(([c, i]) => c === planned && i === index);
@@ -452,7 +533,9 @@ const STATEMENT = {
 	deferred: 'say what it would take; it is on the backlog',
 	dropped: 'say why it was not built'
 };
-const unique = [...bySurface.values()].map(({ planned, surface, chapter, status, group, gap, reason }) =>
+/** A row attached to its item by the plan sentence it came from: what waits is the use the plan imagined. */
+const PLANNED_USE = 'say what it would take; the planned use is on the backlog';
+const unique = [...bySurface.values()].map(({ planned, surface, chapter, status, group, gap, attached, reason }) =>
 	Object.fromEntries(
 		Object.entries({
 			surface,
@@ -462,15 +545,43 @@ const unique = [...bySurface.values()].map(({ planned, surface, chapter, status,
 					? 'read it in older code, and say what replaced it'
 					: status === 'taught' && DIAG.test(surface)
 						? 'read it, and say what to change'
-						: STATEMENT[status],
+						: status === 'deferred' && OVERRIDES.has(surface)
+							? OVERRIDES.get(surface)
+							: status === 'deferred' && attached === 'plan'
+								? PLANNED_USE
+								: STATEMENT[status],
 			group,
 			chapter,
 			planned,
 			gap,
+			attached: status === 'deferred' ? attached : undefined,
 			reason: reason && clean(reason, 'B0')
 		}).filter(([, v]) => v !== undefined)
 	)
 );
+
+/*
+ * The other direction: a deferred row for a surface the code uses. Either a
+ * chapter names it (and the row is then taught, not deferred), or OVERRIDES
+ * says what is built, or the run stops.
+ */
+{
+	const claimed = [];
+	for (const row of unique.filter((r) => r.status === 'deferred' && !OVERRIDES.has(r.surface))) {
+		const files = usedBy(row.surface);
+		if (files.length > 0) claimed.push(`${row.surface} (${row.gap}) is deferred, and ${files.slice(0, 2).join(', ')} uses it`);
+	}
+	for (const surface of OVERRIDES.keys()) {
+		const row = unique.find((r) => r.surface === surface);
+		if (!row || row.status !== 'deferred') claimed.push(`OVERRIDES names ${surface}, which is not a deferred row`);
+	}
+	if (claimed.length > 0) {
+		console.error(
+			`${claimed.length} deferred row(s) the project's code contradicts: name the surface in backticks in the chapter that teaches it, or say what is built in OVERRIDES:\n${claimed.join('\n')}`
+		);
+		process.exit(1);
+	}
+}
 unique.sort((a, b) => GROUPS.indexOf(a.group) - GROUPS.indexOf(b.group) || order.indexOf(a.chapter) - order.indexOf(b.chapter) || a.surface.localeCompare(b.surface));
 
 writeFileSync(join(root, 'content', 'backlog.json'), JSON.stringify(backlog, null, '\t') + '\n');

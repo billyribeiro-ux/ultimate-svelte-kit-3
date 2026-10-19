@@ -382,7 +382,7 @@ test('a chunk that never arrives is explained in the page’s language', async (
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">e2e/public.e2e.ts<span class="code__lines">:161-194</span></span>
+		<span class="code__file">e2e/public.e2e.ts<span class="code__lines">:161-208</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">test('health, the route API and the embed frame answer for machines', async ({ page, request }) =&gt; {
@@ -418,9 +418,23 @@ test('a chunk that never arrives is explained in the page’s language', async (
 	const localised = await page.goto(`/de/embed/${TRIPS.japan}`);
 	expect(localised?.status()).toBe(200);
 	expect(localised?.headers()['content-security-policy']).toContain('frame-ancestors *');
+
+	// The other half of the rule: the exception stays an exception. Every other page keeps
+	// `frame-ancestors 'none'` — a trip planner inside somebody else's frame is a clickjacking
+	// target — and `Vary: Cookie`, because its header names the person looking at it. A change
+	// that framed every route, or dropped the header from every page, would pass everything above.
+	const home = await request.get('/');
+	expect(home.headers()['content-security-policy']).toContain(&quot;frame-ancestors 'none'&quot;);
+	expect(home.headers()['vary']).toContain('Cookie');
+
+	// The machine endpoints carry no `Vary: Cookie`, and a locale prefix does not change that:
+	// `reroute` serves `/de/api/…` from `/api/…`, so the rule keys on the route id.
+	const localisedRoute = await request.get(`/de/api/route/${TRIPS.japan}.json`);
+	expect(localisedRoute.status()).toBe(200);
+	expect(localisedRoute.headers()['vary'] ?? '').not.toContain('Cookie');
 });</code></pre>
 </figure>
-<p>The machine-facing test uses <code>request</code> — Playwright’s API client, with no browser — for the health endpoint and the route API, and the page for the embed frame. The interesting assertions are the negative ones: the private trip’s API is a 404, the private trip’s frame is a 404, and the public frame’s Content-Security-Policy contains <code>frame-ancestors *</code> — the one route the hook allows to be framed (chapter <a href="security-headers-and-csp.html">47</a>). A security rule with no test is a security rule that will be refactored away. The last two lines guard a different kind of seam: the frame ships no script, so nothing at run time would notice if it shipped no *style* either — and for a while it did, because a compiler option meant for the custom element caught this page too (chapter <a href="embedding-a-trip.html">38</a>). They ask for two facts only the page’s own stylesheet makes true: the card’s computed <code>max-width</code> is the 22rem the CSS says, and its list has no indent. The first version asked whether *a* stylesheet was linked, and the root layout’s CSS is linked on every page — so the assertion was true with the bug as well. An assertion that cannot fail is a comment with a cost.</p>
+<p>The machine-facing test uses <code>request</code> — Playwright’s API client, with no browser — for the health endpoint and the route API, and the page for the embed frame. The interesting assertions are the negative ones: the private trip’s API is a 404, the private trip’s frame is a 404, and the public frame’s Content-Security-Policy contains <code>frame-ancestors *</code> — the one route the hook allows to be framed (chapter <a href="security-headers-and-csp.html">47</a>). A security rule with no test is a security rule that will be refactored away, and a rule has two halves: the exception, and everything the exception must not reach. The last assertions are the second half — <code>/</code> still carries <code>frame-ancestors 'none'</code> and <code>Vary: Cookie</code>, and the route API under a locale prefix carries no <code>Vary: Cookie</code> — so a change that framed every route would not pass. The two lines before them guard a different kind of seam: the frame ships no script, so nothing at run time would notice if it shipped no *style* either — and for a while it did, because a compiler option meant for the custom element caught this page too (chapter <a href="embedding-a-trip.html">38</a>). They ask for two facts only the page’s own stylesheet makes true: the card’s computed <code>max-width</code> is the 22rem the CSS says, and its list has no indent. The first version asked whether *a* stylesheet was linked, and the root layout’s CSS is linked on every page — so the assertion was true with the bug as well. An assertion that cannot fail is a comment with a cost.</p>
 
 <figure class="code">
 	<figcaption>
@@ -919,7 +933,7 @@ test('a note keeps its editor through a save and a companion arriving', async ({
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">e2e/public.e2e.ts<span class="code__lines">:203-212</span></span>
+		<span class="code__file">e2e/public.e2e.ts<span class="code__lines">:217-226</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">test('a dynamically rendered page carries its preloads as a Link header', async ({ request }) =&gt; {
@@ -937,7 +951,7 @@ test('a note keeps its editor through a save and a companion arriving', async ({
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">e2e/public.e2e.ts<span class="code__lines">:214-237</span></span>
+		<span class="code__file">e2e/public.e2e.ts<span class="code__lines">:228-251</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-ts">test('on a phone the closed menu is not in the accessibility tree, and Escape closes the open one', async ({
@@ -1159,6 +1173,27 @@ expect(localised?.status()).toBe(200);
 expect(localised?.headers()['content-security-policy']).toContain('frame-ancestors *');</code></pre>
 </figure>
 <p>Three lines added to “health, the route API and the embed frame answer for machines”: the German frame, <code>/de/embed/&lt;slug&gt;</code>, must carry <code>frame-ancestors *</code> like the English one. Against the old hook — a pathname test — it came back <code>'none'</code> (chapter <a href="security-headers-and-csp.html">47</a>).</p>
+<p>And the half that a test for the exception cannot see. Every assertion above passes if the hook frames *every* route, which is the worst way for it to be wrong, so the same test asks the home page what it sends: <code>frame-ancestors 'none'</code> in the policy, and <code>Vary: Cookie</code> on the response. Then it asks the route API under <code>/de/</code> for the opposite — no <code>Vary: Cookie</code> on an endpoint that names nobody — which is the case the pathname rule got wrong in the other direction. The test was run once against a hook that sets <code>frame-ancestors *</code> on every route, and it failed on the home page’s policy; the hook is as it was.</p>
+
+<figure class="code">
+	<figcaption>
+		<span class="code__file">e2e/public.e2e.ts<span class="code__lines">:195-207</span></span>
+		<button class="code__copy" type="button" data-copy>Copy</button>
+	</figcaption>
+	<pre><code class="lang-ts">// The other half of the rule: the exception stays an exception. Every other page keeps
+// `frame-ancestors 'none'` — a trip planner inside somebody else's frame is a clickjacking
+// target — and `Vary: Cookie`, because its header names the person looking at it. A change
+// that framed every route, or dropped the header from every page, would pass everything above.
+const home = await request.get('/');
+expect(home.headers()['content-security-policy']).toContain(&quot;frame-ancestors 'none'&quot;);
+expect(home.headers()['vary']).toContain('Cookie');
+
+// The machine endpoints carry no `Vary: Cookie`, and a locale prefix does not change that:
+// `reroute` serves `/de/api/…` from `/api/…`, so the rule keys on the route id.
+const localisedRoute = await request.get(`/de/api/route/${TRIPS.japan}.json`);
+expect(localisedRoute.status()).toBe(200);
+expect(localisedRoute.headers()['vary'] ?? '').not.toContain('Cookie');</code></pre>
+</figure>
 
 <figure class="code">
 	<figcaption>

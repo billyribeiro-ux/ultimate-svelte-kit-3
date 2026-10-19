@@ -86,7 +86,7 @@
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/+layout.svelte<span class="code__lines">:42-127</span></span>
+		<span class="code__file">src/routes/+layout.svelte<span class="code__lines">:42-142</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">/*
@@ -108,14 +108,24 @@
  * `goto(url, { shallow: true })` that only pushes `page.state`, which is
  * how the trip page opens its stop dialog — and a cross-fade over a page
  * that did not change is a flicker, so those are let through untouched.
- * `navigation.shallow` is the flag Kit sets for exactly this check, and
- * it is checked alone: Back or Forward onto an entry whose shallow URL
- * differs from the page's is a `popstate` with `shallow` set, and the
- * same flicker. (Back from the dialog to the entry it was opened on runs
- * no hooks at all — Kit only updates `page.state`.)
+ *
+ * `shallow` alone is not the test, though. Kit also sets it on a
+ * `popstate`: Back or Forward onto an entry that a shallow `goto` made,
+ * after the person has been to another page. That one renders the
+ * entry's page afresh — a real navigation, with a transition worth
+ * playing and chunks to fetch — so it must not be skipped. What tells
+ * the two apart is `type === 'goto'`, the pair the documentation names
+ * (&quot;`navigation.type === 'goto'` and `navigation.shallow === true`&quot;).
+ * Comparing `from` with `to` would not: `goto('/photos/123', { shallow:
+ * true })`, the documentation's own modal, changes the address and not
+ * the page. (Back from the dialog to the entry it was opened on runs no
+ * hooks at all — Kit only updates `page.state`.)
  */
+const isShallowGoto = ({ shallow, type }: { shallow: boolean; type: string }) =&gt;
+	shallow &amp;&amp; type === 'goto';
+
 onNavigate((navigation) =&gt; {
-	if (navigation.shallow) return;
+	if (isShallowGoto(navigation)) return;
 	if (!document.startViewTransition || reducedMotion.current) return;
 	return new Promise((resolve) =&gt; {
 		document.startViewTransition(async () =&gt; {
@@ -131,13 +141,15 @@ onNavigate((navigation) =&gt; {
  * navigation becomes a full page load. `version.pollInterval` in
  * `vite.config.ts` is what makes `updated.current` flip.
  *
- * Not for a shallow navigation, though: that asks for no chunk at all,
- * and turning &quot;open a dialog&quot; into a reload because a deploy happened
- * would lose whatever the person was typing. The next real navigation
- * reloads.
+ * Not for a shallow `goto`, though: that asks for no chunk at all, and
+ * turning &quot;open a dialog&quot; into a reload because a deploy happened would
+ * lose whatever the person was typing. The next real navigation
+ * reloads — including a `popstate` onto a shallow entry from another
+ * page, which does fetch the page it renders.
  */
-beforeNavigate(({ willUnload, to, shallow }) =&gt; {
-	if (shallow) return;
+beforeNavigate((navigation) =&gt; {
+	const { willUnload, to } = navigation;
+	if (isShallowGoto(navigation)) return;
 	if (updated.current &amp;&amp; !willUnload &amp;&amp; to?.url) location.href = to.url.href;
 });
 
@@ -153,14 +165,17 @@ beforeNavigate(({ willUnload, to, shallow }) =&gt; {
  * every tab the old one controls has closed; it does not swap itself in
  * under a page that is open.
  *
- * Two changes from the documentation's version. With no network there is
- * nothing to look for, so it does not ask — `afterNavigate` also runs
- * when a page hydrates, and a page read offline hydrates too. And a
- * check that fails for any other reason fails quietly: it is a
- * background chore, and the next navigation asks again.
+ * Three changes from the documentation's version. With no network there
+ * is nothing to look for, so it does not ask — `afterNavigate` also runs
+ * when a page hydrates, and a page read offline hydrates too. A shallow
+ * `goto` does not ask either: opening the stop dialog is not a visit
+ * to a page, and `afterNavigate` runs for it, so every open would
+ * fetch `service-worker.js` for nothing. And a check that fails for any
+ * other reason fails quietly: it is a background chore, and the next
+ * navigation asks again.
  */
-afterNavigate(async () =&gt; {
-	if (!('serviceWorker' in navigator) || !navigator.onLine) return;
+afterNavigate(async (navigation) =&gt; {
+	if (isShallowGoto(navigation) || !('serviceWorker' in navigator) || !navigator.onLine) return;
 	const registration = await navigator.serviceWorker.getRegistration();
 	if (registration) fireAndForget(registration.update(), 'service worker update check');
 });
@@ -177,11 +192,11 @@ onMount(() =&gt; {
 });</code></pre>
 </figure>
 <p>Two more things in that block belong to every page. <code>afterNavigate</code> asks the browser to look for a new service worker on each client-side navigation, because the browser only looks by itself on a full page load, and a tab left open across a deploy would otherwise keep the old worker for as long as it stays open — chapter <a href="the-offline-itinerary.html">39</a> explains the worker and why the check is skipped with no network. And the last thing in the script is one line in <code>onMount</code>: a <code>data-hydrated</code> attribute on the root element. <code>onMount</code> in the root layout runs once the whole tree has hydrated, so the attribute is an honest signal that the JavaScript is running — a stylesheet can hide a control that needs it until then, and the end-to-end suite waits for it in the test that proves text typed *before* hydration survives (chapter <a href="signing-in-and-up.html">34</a>).</p>
-<p>What is left at the root is what every page shares: the fonts and stylesheet, the toaster, the deploy banner, and the two navigation hooks. <code>onNavigate</code> wraps the completion of every client-side navigation in <code>document.startViewTransition</code>, so the old page cross-fades into the new — and an element with a <code>view-transition-name</code>, like the trip title, morphs. Unless the person prefers reduced motion: then no transition is started at all. Turning the CSS off is not enough, because the browser’s own default for a view transition — a 250ms cross-fade, and a position-and-size morph of every named element — runs unless something replaces it; not starting the transition is the one switch that covers all of it. <code>beforeNavigate</code> turns the next navigation into a full page load when <code>updated.current</code> says a new build was deployed, so no chunk from the old build is ever requested.</p>
+<p>What is left at the root is what every page shares: the fonts and stylesheet, the toaster, the deploy banner, and the two navigation hooks. <code>onNavigate</code> wraps the completion of every client-side navigation in <code>document.startViewTransition</code>, so the old page cross-fades into the new — and an element with a <code>view-transition-name</code>, like the trip title, morphs. Unless the person prefers reduced motion: then no transition is started at all. Turning the CSS off is not enough, because the browser’s own default for a view transition — a 250ms cross-fade, and a position-and-size morph of every named element — runs unless something replaces it; not starting the transition is the one switch that covers all of it. <code>beforeNavigate</code> turns the next navigation into a full page load when <code>updated.current</code> says a new build was deployed, so no chunk from the old build is ever requested — unless <code>willUnload</code> says the browser is already leaving the app, when a full load is coming anyway. A shallow <code>goto</code> is let through by all three navigation hooks, because no page changes and no chunk is asked for (the stop dialog, in chapter <a href="the-itinerary.html">27</a>).</p>
 
 <figure class="code">
 	<figcaption>
-		<span class="code__file">src/routes/+layout.svelte<span class="code__lines">:163-248</span></span>
+		<span class="code__file">src/routes/+layout.svelte<span class="code__lines">:178-263</span></span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code class="lang-svelte">{@render children()}
@@ -645,7 +660,7 @@ export function href&lt;T extends RouteIdWithSearchOrHash | PathnameWithSearchOr
 	return localizeHref(resolve&lt;T&gt;(...args)) as ResolvedPathname;
 }</code></pre>
 </figure>
-<p>A dozen lines of code under three dozen of comment, and the comment is the point. <code>resolve()</code> from <code>$app/paths</code> is SvelteKit’s typed link: the route id — groups included, which is why it is <code>/(site)/(app)/trips/new</code> and not <code>/trips/new</code> — is checked against the routes that exist, the parameters against the matchers in <code>src/params.ts</code>, and since 2.54 — <code>resolve()</code> itself is from 2.26; the search-string form came later, so every 3.x has it — the id may carry its own search string or hash, so <code>href(</code>/(site)/t/[slug=slug]?tab=${tab}<code>, { slug })</code> is one call and still typed. Paraglide’s <code>localizeHref</code> then puts the language in front. Wrapping the two in one function means a link cannot forget either half: rename a folder and every link to it is a type error in every component; add a language and every link already speaks it.</p>
+<p><code>href.ts</code> is a dozen lines of code under three dozen of comment, and the comment is the point. <code>resolve()</code> from <code>$app/paths</code> is SvelteKit’s typed link: the route id — groups included, which is why it is <code>/(site)/(app)/trips/new</code> and not <code>/trips/new</code> — is checked against the routes that exist, the parameters against the matchers in <code>src/params.ts</code>, and since 2.54 — <code>resolve()</code> itself is from 2.26; the search-string form came later, so every 3.x has it — the id may carry its own search string or hash, so <code>href(</code>/(site)/t/[slug=slug]?tab=${tab}<code>, { slug })</code> is one call and still typed. Paraglide’s <code>localizeHref</code> then puts the language in front. Wrapping the two in one function means a link cannot forget either half: rename a folder and every link to it is a type error in every component; add a language and every link already speaks it.</p>
 <aside class="callout callout--note"><p>The return type is <code>ResolvedPathname</code>, and that is not a trick played on the linter — on one condition, which <code>vite.config.ts</code> sets: <code>paths.relative: false</code>. With SvelteKit’s default, <code>true</code>, <code>resolve()</code> answers a *server* render with a path relative to the page, <code>./explore</code> or <code>../trips</code>, so the HTML still works if the whole app is moved under a subdirectory; Paraglide’s <code>localizeHref</code> then resolved that against an origin and handed back a whole URL, <code>http://localhost:4173/explore</code>. Every link in the server’s HTML carried the build’s origin, and so did every prerendered guide — and the header could not mark the page it was on, because <code>isCurrent</code> compares the page’s pathname with each <code>href</code>, and a URL is never equal to a pathname. Nobody saw it in a browser, which redraws the links as root-relative paths the moment it hydrates; chapter <a href="end-to-end.html">46</a> has the test that reads the server’s HTML with JavaScript off. This app is served from the root of its domain, so the portability was worth nothing and the setting is <code>false</code>. SvelteKit defines the type as <code>/${Path}</code> *or* <code>/${string}/${Path}</code> — a slot for a base path in front of every resolved pathname — and <code>/de/trips</code> is exactly that shape, a prefix that <code>reroute</code> in <code>src/hooks.ts</code> strips before routing. eslint-plugin-svelte’s <code>no-navigation-without-resolve</code> rule, which started recognising SvelteKit 3 projects in 3.23.1, accepts an <code>href</code> or a <code>goto()</code> of that type; it cannot see through <code>localizeHref</code>, and this is the honest way to tell it what the wrapper does. The one link in the app that bypasses <code>href()</code> is the language switcher in chapter <a href="three-languages-with-paraglide.html">21</a>, and it says why in a comment the linter reads.</p></aside>
 
 <figure class="code">
@@ -703,7 +718,7 @@ export function href&lt;T extends RouteIdWithSearchOrHash | PathnameWithSearchOr
 	&lt;/button&gt;
 &lt;/div&gt;</code></pre>
 </figure>
-<p>The footer is product copy, not a build log: one sentence and two links. <code>version</code> from <code>$app/env</code> — the commit hash — is on the element as <code>data-version</code>, so “which build is this?” is answered for whoever opens the inspector, and on the diagnostics page in words, without a hash sitting in front of every visitor. The banner appears when <code>updated.current</code> flips — under the header on a phone, where the toasts also go, never at the bottom where the stop sheet opens — and its button is a plain reload, because there is nothing to save that the server does not already have.</p>
+<p>The footer is product copy, not a build log: one sentence and two links. <code>version</code> from <code>$app/env</code> — the commit hash — is on the element as <code>data-version</code>, so “which build is this?” is answered for whoever opens the inspector, and on the diagnostics page in words, without a hash sitting in front of every visitor. <code>UpdateBanner</code> appears when <code>updated.current</code> flips — under the header on a phone, where the toasts also go, never at the bottom where the stop sheet opens — and its button is a plain reload, because there is nothing to save that the server does not already have.</p>
 <h3 id="errors">Two error pages, one view</h3>
 
 <figure class="code">
@@ -782,7 +797,7 @@ export function href&lt;T extends RouteIdWithSearchOrHash | PathnameWithSearchOr
 	&lt;ErrorView /&gt;
 &lt;/main&gt;</code></pre>
 </figure>
-<p>A URL that matches no route lands on the root <code>+error.svelte</code>, inside the root layout, which has no header — so the root error page brings a small one of its own. An error on a site page renders <code>(site)/+error.svelte</code>, inside the site layout, with the full header. Both render <code>ErrorView</code>, so the words live once: the status large in the display face and the secondary grey, over a faint compass rose turned 45° so its points fall between the digits — decoration, so <code>aria-hidden</code>, while the heading carries the meaning — a sentence, two ways out (back to your trips, or explore), and the reference id from <code>handleError</code> when there is one.</p>
+<p>A URL that matches no route lands on the root <code>+error.svelte</code>, inside the root layout, which has no header — so the root error page brings a small one of its own. An error on a site page renders <code>(site)/+error.svelte</code>, inside the site layout, with the full header. Both render <code>ErrorView</code>, so the words live once: <code>page.status</code> large in the display face and the secondary grey, over a faint compass rose turned 45° so its points fall between the digits — decoration, so <code>aria-hidden</code>, while the heading carries the meaning — a sentence, two ways out (back to your trips, or explore), and the reference id from <code>handleError</code> when there is one. <code>&lt;svelte:head&gt;</code> puts the same status in the tab’s title, so a bookmark of a dead link says 404 and not just the name of the product.</p>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>

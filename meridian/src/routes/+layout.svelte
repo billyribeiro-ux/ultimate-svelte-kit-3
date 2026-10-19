@@ -58,14 +58,24 @@
 	 * `goto(url, { shallow: true })` that only pushes `page.state`, which is
 	 * how the trip page opens its stop dialog — and a cross-fade over a page
 	 * that did not change is a flicker, so those are let through untouched.
-	 * `navigation.shallow` is the flag Kit sets for exactly this check, and
-	 * it is checked alone: Back or Forward onto an entry whose shallow URL
-	 * differs from the page's is a `popstate` with `shallow` set, and the
-	 * same flicker. (Back from the dialog to the entry it was opened on runs
-	 * no hooks at all — Kit only updates `page.state`.)
+	 *
+	 * `shallow` alone is not the test, though. Kit also sets it on a
+	 * `popstate`: Back or Forward onto an entry that a shallow `goto` made,
+	 * after the person has been to another page. That one renders the
+	 * entry's page afresh — a real navigation, with a transition worth
+	 * playing and chunks to fetch — so it must not be skipped. What tells
+	 * the two apart is `type === 'goto'`, the pair the documentation names
+	 * ("`navigation.type === 'goto'` and `navigation.shallow === true`").
+	 * Comparing `from` with `to` would not: `goto('/photos/123', { shallow:
+	 * true })`, the documentation's own modal, changes the address and not
+	 * the page. (Back from the dialog to the entry it was opened on runs no
+	 * hooks at all — Kit only updates `page.state`.)
 	 */
+	const isShallowGoto = ({ shallow, type }: { shallow: boolean; type: string }) =>
+		shallow && type === 'goto';
+
 	onNavigate((navigation) => {
-		if (navigation.shallow) return;
+		if (isShallowGoto(navigation)) return;
 		if (!document.startViewTransition || reducedMotion.current) return;
 		return new Promise((resolve) => {
 			document.startViewTransition(async () => {
@@ -81,13 +91,15 @@
 	 * navigation becomes a full page load. `version.pollInterval` in
 	 * `vite.config.ts` is what makes `updated.current` flip.
 	 *
-	 * Not for a shallow navigation, though: that asks for no chunk at all,
-	 * and turning "open a dialog" into a reload because a deploy happened
-	 * would lose whatever the person was typing. The next real navigation
-	 * reloads.
+	 * Not for a shallow `goto`, though: that asks for no chunk at all, and
+	 * turning "open a dialog" into a reload because a deploy happened would
+	 * lose whatever the person was typing. The next real navigation
+	 * reloads — including a `popstate` onto a shallow entry from another
+	 * page, which does fetch the page it renders.
 	 */
-	beforeNavigate(({ willUnload, to, shallow }) => {
-		if (shallow) return;
+	beforeNavigate((navigation) => {
+		const { willUnload, to } = navigation;
+		if (isShallowGoto(navigation)) return;
 		if (updated.current && !willUnload && to?.url) location.href = to.url.href;
 	});
 
@@ -103,14 +115,17 @@
 	 * every tab the old one controls has closed; it does not swap itself in
 	 * under a page that is open.
 	 *
-	 * Two changes from the documentation's version. With no network there is
-	 * nothing to look for, so it does not ask — `afterNavigate` also runs
-	 * when a page hydrates, and a page read offline hydrates too. And a
-	 * check that fails for any other reason fails quietly: it is a
-	 * background chore, and the next navigation asks again.
+	 * Three changes from the documentation's version. With no network there
+	 * is nothing to look for, so it does not ask — `afterNavigate` also runs
+	 * when a page hydrates, and a page read offline hydrates too. A shallow
+	 * `goto` does not ask either: opening the stop dialog is not a visit
+	 * to a page, and `afterNavigate` runs for it, so every open would
+	 * fetch `service-worker.js` for nothing. And a check that fails for any
+	 * other reason fails quietly: it is a background chore, and the next
+	 * navigation asks again.
 	 */
-	afterNavigate(async () => {
-		if (!('serviceWorker' in navigator) || !navigator.onLine) return;
+	afterNavigate(async (navigation) => {
+		if (isShallowGoto(navigation) || !('serviceWorker' in navigator) || !navigator.onLine) return;
 		const registration = await navigator.serviceWorker.getRegistration();
 		if (registration) fireAndForget(registration.update(), 'service worker update check');
 	});
