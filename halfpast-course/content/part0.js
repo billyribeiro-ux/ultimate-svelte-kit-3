@@ -109,7 +109,7 @@ if (clash.length === 0) {
 			{
 				type: 'ul',
 				items: [
-					'**Node 24.21.0** or newer — the current LTS. Chapter 3 covers installing it.',
+					'**Node 24.22.0** or newer — the current LTS. Chapter 3 covers installing it.',
 					'**pnpm 12** — installed with `npm i -g pnpm`.',
 					'A terminal, an editor, and a browser. No database server: SQLite lives in a file.'
 				]
@@ -226,7 +226,7 @@ if (clash.length === 0) {
 			},
 			{
 				type: 'p',
-				text: 'This project targets **Node 24.21.0**, codename Krypton, the active LTS line. Check what you have:'
+				text: 'This project targets **Node 24.22.0**, codename Krypton, the active LTS line. Check what you have:'
 			},
 			{ type: 'terminal', code: 'node --version' },
 			{
@@ -235,9 +235,9 @@ if (clash.length === 0) {
 			},
 			{
 				type: 'terminal',
-				code: `nvm install 24.21.0
-nvm use 24.21.0
-node --version   # v24.21.0`
+				code: `nvm install 24.22.0
+nvm use 24.22.0
+node --version   # v24.22.0`
 			},
 			{
 				type: 'note',
@@ -257,15 +257,15 @@ node --version   # v24.21.0`
 {
 	// …
 	"engines": {
-		"node": ">=24.21.0"
+		"node": ">=24.22.0"
 	},
-	"packageManager": "pnpm@12.10.1",
+	"packageManager": "pnpm@12.14.0",
 	// …
 }`
 			},
 			{
 				type: 'p',
-				text: '`engines` says which Node the project needs. `packageManager` does the same job for the package manager: pnpm reads it and switches to exactly 12.10.1 in this folder, whatever version is installed globally.'
+				text: '`engines` says which Node the project needs. `packageManager` does the same job for the package manager: pnpm reads it and switches to exactly 12.14.0 in this folder, whatever version is installed globally.'
 			},
 			{
 				type: 'p',
@@ -286,7 +286,7 @@ node --version   # v24.21.0`
 				code: `Error: ERR_PNPM_UNSUPPORTED_ENGINE
 
   × Unsupported engine for /home/you/halfpast-app: wanted:
-  │ {"node":">=24.21.0"} (current: {"node":"22.22.0"})`
+  │ {"node":">=24.22.0"} (current: {"node":"22.22.0"})`
 			},
 			{
 				type: 'warn',
@@ -301,7 +301,7 @@ node --version   # v24.21.0`
 				type: 'p',
 				text: 'Add an `.nvmrc` too, so `nvm use` in the project folder picks the right one with no arguments:'
 			},
-			{ type: 'code', file: '.nvmrc', lang: 'text', code: '24.21.0' },
+			{ type: 'code', file: '.nvmrc', lang: 'text', code: '24.22.0' },
 
 			{ type: 'h3', id: 'icu', text: 'A version really can change behaviour' },
 			{
@@ -321,7 +321,7 @@ new Intl.NumberFormat('en-US', {
 }).format(5600);
 
 // Node 22.22 (ICU 77.1) → "$5.60K"
-// Node 24.21 (ICU 78.3) → "$5.6K"`
+// Node 24.22 (ICU 78.3) → "$5.6K"`
 			},
 			{
 				type: 'p',
@@ -336,7 +336,7 @@ new Intl.NumberFormat('en-US', {
 			{ type: 'terminal', code: 'npm install -g pnpm\npnpm --version   # 12.x' },
 			{
 				type: 'checkpoint',
-				text: '`node --version` reports 24.21.0 or newer, and `pnpm --version` reports 12 or newer.'
+				text: '`node --version` reports 24.22.0 or newer, and `pnpm --version` reports 12 or newer.'
 			}
 		]
 	},

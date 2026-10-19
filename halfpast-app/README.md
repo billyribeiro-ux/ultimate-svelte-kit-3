@@ -7,9 +7,9 @@ updates every open browser when somebody books, honest time zone handling, and
 a database schema that makes double-booking impossible to write rather than
 merely unlikely.
 
-Requires **Node 24.21.0** (the current LTS, pinned in `.nvmrc` and `engines`)
-and **pnpm 12.10.1** (pinned in `packageManager`, so Corepack picks it for you).
-Built on SvelteKit 3.0.1, Svelte 5.57, Vite 8 and Vitest 5.
+Requires **Node 24.22.0** (the current LTS, pinned in `.nvmrc` and `engines`)
+and **pnpm 12.14.0** (pinned in `packageManager`, so Corepack picks it for you).
+Built on SvelteKit 3.1.0, Svelte 5.57, Vite 8 and Vitest 5.
 
 ## Quick start
 
