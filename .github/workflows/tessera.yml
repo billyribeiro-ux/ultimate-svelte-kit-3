@@ -1,0 +1,123 @@
+# Project 4 — Tessera, and its course.
+#
+# `verify` runs exactly what a developer runs before pushing: `pnpm run verify`
+# — type-check (app and service worker), prettier + eslint, unit and browser
+# tests, the production build, and the end-to-end suite on a desktop and a
+# phone profile against `node build/index.js`, with two replicas editing one
+# board.
+#
+# `course` proves the course: every quoted block is verbatim in the file it
+# names (`verify.js`), the pages build, and the committed `dist/` is the one the
+# build produces. The course has no page checker, so the job needs neither the
+# project's dependencies nor a browser.
+#
+# Path filters keep this from running for the other seven projects; they are
+# verified the same way from their own folders.
+
+name: tessera
+
+on:
+  push:
+    paths:
+      - 'tessera/**'
+      - 'tessera-course/**'
+      - '.github/workflows/tessera.yml'
+  pull_request:
+    paths:
+      - 'tessera/**'
+      - 'tessera-course/**'
+      - '.github/workflows/tessera.yml'
+
+concurrency:
+  group: tessera-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: tessera
+
+jobs:
+  verify:
+    name: verify (check · lint · unit · build · e2e)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CI: 'true'
+      # The end-to-end suite sets its own values in `playwright.config.ts`; these
+      # cover `svelte-kit sync`, the database preparation, the unit tests and the
+      # build. Every name is one `src/env.ts` declares, so no `.env` is needed.
+      DATABASE_URL: file:e2e.db
+      PUBLIC_ORIGIN: http://localhost:4173
+      BETTER_AUTH_SECRET: ci-only-secret-of-at-least-thirty-two-characters
+      BOARD_LOG_RETENTION_DAYS: '30'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: tessera/package.json
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: tessera/.nvmrc
+          cache: pnpm
+          cache-dependency-path: tessera/pnpm-lock.yaml
+
+      # `prepare` copies the fonts out of `node_modules` and syncs the types.
+      - run: pnpm install --frozen-lockfile
+
+      # One Chromium serves both Vitest's browser project and Playwright.
+      - run: pnpm exec playwright install --with-deps chromium
+
+      # `test:e2e`, the last thing `verify` runs, prepares this database itself,
+      # from nothing. It runs here first as well, so the unit tests and the build
+      # find an `e2e.db` with the schema and the seed in it, and a broken
+      # migration or seed is a red step of its own.
+      - run: node scripts/prepare-e2e-db.js
+
+      - run: pnpm run verify
+
+      # `verify` must leave git nothing to see: no tracked file rewritten, no
+      # new file that `.gitignore` does not cover.
+      - name: the working tree is as the checkout left it
+        run: |
+          changed=$(git -C .. status --porcelain -- tessera tessera-course)
+          if [ -n "$changed" ]; then echo "$changed"; exit 1; fi
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-traces
+          path: tessera/test-results
+          if-no-files-found: ignore
+
+  course:
+    name: course (verify quotes · build · dist in sync)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: tessera/.nvmrc
+
+      # `verify.js` and `build.js` read the project's source files and import
+      # nothing but Node's own modules, so there is no install here. A course
+      # with a page checker (`tools/check-dist.js`) borrows the project's
+      # Playwright and installs the dependencies and Chromium; this one has none.
+      - run: node ../tessera-course/verify.js
+      - run: node ../tessera-course/build.js
+
+      # The committed `dist/` must be the one the build produces.
+      - run: git -C .. diff --exit-code --stat -- tessera-course/dist
+
+      # `git diff` does not see a page the build wrote and nobody committed; this
+      # does, and it covers the project as well as the course.
+      - name: the working tree is as the checkout left it
+        run: |
+          changed=$(git -C .. status --porcelain -- tessera tessera-course)
+          if [ -n "$changed" ]; then echo "$changed"; exit 1; fi
