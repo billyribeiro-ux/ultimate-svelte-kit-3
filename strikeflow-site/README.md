@@ -1,7 +1,7 @@
 # StrikeFlow — marketing site
 
 A production-grade marketing site for a fictional real-time options flow data product,
-built on **SvelteKit 3** (3.0.1, the first stable release) and Svelte 5.
+built on **SvelteKit 3** (3.1.0) and Svelte 5.
 
 It exists as the worked example for a course, so every non-obvious decision is
 explained in a comment where the decision lives, rather than in documentation that
@@ -19,7 +19,7 @@ drifts out of date.
 
 | Concern    | Choice                                                |
 | ---------- | ----------------------------------------------------- |
-| Framework  | SvelteKit 3.0.1 (`@sveltejs/kit`), Svelte 5.57        |
+| Framework  | SvelteKit 3.1.0 (`@sveltejs/kit`), Svelte 5.57        |
 | Language   | TypeScript, `strict` plus `noUncheckedIndexedAccess`  |
 | Styling    | Vanilla CSS with custom properties. No Tailwind       |
 | Icons      | `phosphor-svelte`                                     |
@@ -32,8 +32,8 @@ drifts out of date.
 
 ## Requirements
 
-- **Node 24.21.0** — the current LTS, pinned in `.nvmrc` and `engines` (SvelteKit 3’s own floor is 22.17)
-- **pnpm 12.10.1** — pinned in `packageManager`; any pnpm 10+ switches to it automatically
+- **Node 24.22.0** — the current LTS, pinned in `.nvmrc` and `engines` (SvelteKit 3’s own floor is 22.17)
+- **pnpm 12.14.0** — pinned in `packageManager`; any pnpm 10+ switches to it automatically
 
 ## Getting started
 

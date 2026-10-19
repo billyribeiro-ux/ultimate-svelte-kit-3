@@ -98,7 +98,7 @@ export const part0 = [
 			{
 				type: 'ul',
 				items: [
-					'**Node 24 LTS**, 24.21 or newer (the root `package.json` says so in `engines`) — we use its ability to run TypeScript directly, with no build step for the server-side code',
+					'**Node 24 LTS**, 24.22 or newer (the root `package.json` says so in `engines`) — we use its ability to run TypeScript directly, with no build step for the server-side code',
 					'**pnpm 12** — the workspace is a monorepo and pnpm handles that better than the alternatives. `packageManager` in the root `package.json` pins the exact release',
 					'A terminal, an editor, and a browser',
 					'No prior knowledge of finance. Every term is defined the first time it appears.'

@@ -270,18 +270,18 @@ export const part0 = [
 		blocks: [
 			{
 				type: 'p',
-				text: 'Check your Node. This project needs 24.21 or newer, which is the current LTS at the time of writing. pnpm comes through Corepack, the package-manager manager that ships with Node: `corepack enable` puts a `pnpm` on your path, and `corepack install -g` decides which version it is when you are not inside a project. Outside one, there is nothing to pin the version to — Corepack would otherwise use its own idea of the latest — so ask for this course’s version by name.'
+				text: 'Check your Node. This project needs 24.22 or newer, which is the current LTS at the time of writing. pnpm comes through Corepack, the package-manager manager that ships with Node: `corepack enable` puts a `pnpm` on your path, and `corepack install -g` decides which version it is when you are not inside a project. Outside one, there is nothing to pin the version to — Corepack would otherwise use its own idea of the latest — so ask for this course’s version by name.'
 			},
 			{
 				type: 'terminal',
 				code: `
 node --version
-# v24.21.0
+# v24.22.0
 
 corepack enable
-corepack install -g pnpm@12.10.1
+corepack install -g pnpm@12.14.0
 pnpm --version
-# 12.10.1`
+# 12.14.0`
 			},
 			{
 				type: 'note',
@@ -294,7 +294,7 @@ pnpm --version
 				code: `
 pnpm dlx sv create --template minimal --types ts --no-add-ons --no-install tessera
 cd tessera
-corepack use pnpm@12.10.1`
+corepack use pnpm@12.14.0`
 			},
 			{
 				type: 'p',
@@ -302,7 +302,7 @@ corepack use pnpm@12.10.1`
 			},
 			{
 				type: 'p',
-				text: '`corepack use pnpm@12.10.1` is the line that pins the project. It writes `"packageManager": "pnpm@12.10.1"` into `package.json` and then installs, so from now on anybody with Corepack enabled who types `pnpm` in this folder gets exactly that version, whatever is installed globally on their machine — which is what makes a lockfile mean the same thing on every machine that reads it.'
+				text: '`corepack use pnpm@12.14.0` is the line that pins the project. It writes `"packageManager": "pnpm@12.14.0"` into `package.json` and then installs, so from now on anybody with Corepack enabled who types `pnpm` in this folder gets exactly that version, whatever is installed globally on their machine — which is what makes a lockfile mean the same thing on every machine that reads it.'
 			},
 			{
 				type: 'p',

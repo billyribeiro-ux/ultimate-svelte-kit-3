@@ -266,7 +266,7 @@ pnpm install`
 			},
 			{
 				type: 'note',
-				text: 'The versions this course was built and verified against: SvelteKit 3.0.1, Svelte 5.57, Vite 8.3, Vitest 5.0, Playwright 1.64, TypeScript 6.0, Node 24.21 (the current LTS) and pnpm 12.10. Two of those are not dependencies, and three settings look after them. `packageManager` in `package.json` records the exact pnpm the lockfile was written with, and both pnpm and Corepack read it. `engines.node` is the floor, and it is the check that runs at `pnpm install`: pnpm refuses an older Node there rather than three chapters in. `.nvmrc` holds the exact Node this was verified on, for version managers such as nvm and fnm; pnpm never reads it.'
+				text: 'The versions this course was built and verified against: SvelteKit 3.1.0, Svelte 5.57, Vite 8.3, Vitest 5.0, Playwright 1.64, TypeScript 6.0, Node 24.22 (the current LTS) and pnpm 12.14. Two of those are not dependencies, and three settings look after them. `packageManager` in `package.json` records the exact pnpm the lockfile was written with, and both pnpm and Corepack read it. `engines.node` is the floor, and it is the check that runs at `pnpm install`: pnpm refuses an older Node there rather than three chapters in. `.nvmrc` holds the exact Node this was verified on, for version managers such as nvm and fnm; pnpm never reads it.'
 			},
 			{
 				type: 'p',

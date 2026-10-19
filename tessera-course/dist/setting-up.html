@@ -35,7 +35,7 @@
 			<h1>Setting up: a SvelteKit 3 project</h1>
 			<p class="lede">Node, pnpm, the folder, and the single biggest change in SvelteKit 3 — there is no svelte.config.js any more.</p>
 			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Have an empty application that runs, with every framework option in one place and each one understood.</p></aside>
-			<p>Check your Node. This project needs 24.21 or newer, which is the current LTS at the time of writing. pnpm comes through Corepack, the package-manager manager that ships with Node: <code>corepack enable</code> puts a <code>pnpm</code> on your path, and <code>corepack install -g</code> decides which version it is when you are not inside a project. Outside one, there is nothing to pin the version to — Corepack would otherwise use its own idea of the latest — so ask for this course’s version by name.</p>
+			<p>Check your Node. This project needs 24.22 or newer, which is the current LTS at the time of writing. pnpm comes through Corepack, the package-manager manager that ships with Node: <code>corepack enable</code> puts a <code>pnpm</code> on your path, and <code>corepack install -g</code> decides which version it is when you are not inside a project. Outside one, there is nothing to pin the version to — Corepack would otherwise use its own idea of the latest — so ask for this course’s version by name.</p>
 
 <figure class="code code--terminal">
 	<figcaption>
@@ -43,12 +43,12 @@
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
 	<pre><code>node --version
-# v24.21.0
+# v24.22.0
 
 corepack enable
-corepack install -g pnpm@12.10.1
+corepack install -g pnpm@12.14.0
 pnpm --version
-# 12.10.1</code></pre>
+# 12.14.0</code></pre>
 </figure>
 <aside class="callout callout--note"><p>pnpm rather than npm for one concrete reason: it refuses to let a package import something it did not declare. That sounds pedantic until a dependency of a dependency disappears in a minor release and your application stops building on a machine that is not yours.</p></aside>
 <h3 id="creating-it">Creating the project</h3>
@@ -60,10 +60,10 @@ pnpm --version
 	</figcaption>
 	<pre><code>pnpm dlx sv create --template minimal --types ts --no-add-ons --no-install tessera
 cd tessera
-corepack use pnpm@12.10.1</code></pre>
+corepack use pnpm@12.14.0</code></pre>
 </figure>
 <p><code>sv</code> is the Svelte CLI, and <code>pnpm dlx</code> runs its latest release without installing it. <code>--template minimal --types ts</code> gives a bare SvelteKit 3 project in TypeScript. <code>--no-add-ons</code> skips the interactive add-on prompt, because everything else in this project is configured by hand, and <code>--no-install</code> leaves the dependencies until you are inside the folder.</p>
-<p><code>corepack use pnpm@12.10.1</code> is the line that pins the project. It writes <code>&quot;packageManager&quot;: &quot;pnpm@12.10.1&quot;</code> into <code>package.json</code> and then installs, so from now on anybody with Corepack enabled who types <code>pnpm</code> in this folder gets exactly that version, whatever is installed globally on their machine — which is what makes a lockfile mean the same thing on every machine that reads it.</p>
+<p><code>corepack use pnpm@12.14.0</code> is the line that pins the project. It writes <code>&quot;packageManager&quot;: &quot;pnpm@12.14.0&quot;</code> into <code>package.json</code> and then installs, so from now on anybody with Corepack enabled who types <code>pnpm</code> in this folder gets exactly that version, whatever is installed globally on their machine — which is what makes a lockfile mean the same thing on every machine that reads it.</p>
 <p>Open the folder and look at what is *not* there.</p>
 <aside class="callout callout--warn"><p>There is no <code>svelte.config.js</code>. In SvelteKit 3 every framework option moved into the <code>sveltekit()</code> plugin inside <code>vite.config.ts</code>. If you have written SvelteKit before, this is the change that will trip you the most: the adapter, <code>prerender</code>, <code>alias</code>, <code>paths</code>, compiler options — all of it is now one object, in one file, next to the rest of the build configuration.</p></aside>
 <h3 id="the-vite-config">The whole configuration, in one file</h3>

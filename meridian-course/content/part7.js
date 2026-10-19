@@ -29,7 +29,7 @@ export const part7 = [
 			{
 				type: 'terminal',
 				code: `
-$ pnpm add <package>           # against Svelte 5.57 / SvelteKit 3.0.1 / Vite 8.3
+$ pnpm add <package>           # against Svelte 5.57 / SvelteKit 3.1.0 / Vite 8.3
 $ pnpm run check               # svelte-check with the project's strict tsconfig
 $ pnpm run build               # the production build, including the server bundle
 $ pnpm exec vitest --project client   # a real Chromium, for anything that renders
@@ -45,14 +45,14 @@ $ pnpm why <package>           # what pulled it in, and whether it pins svelte@4
 			{
 				type: 'ul',
 				items: [
-					'**Headless — behaviour and accessibility, no pixels.** Bits UI 2.19 (Dialog, Combobox, Command, DateRangePicker, DatePicker); TanStack Table 9.2. Beat: Melt UI (Bits is built on its builders and adds the component layer), shadcn-svelte (a copy-in kit *on top of* Bits — right for a team that wants the styling done, wrong for a course about the primitives), Skeleton (a full framework with its own tokens; the project already has tokens), Flowbite-Svelte (styled, Tailwind, Svelte 4 lineage).',
-					'**Wrappers — components over an imperative library.** svelte-maplibre 2.0 over MapLibre GL 6.13; Threlte 8.6 / extras 9.22 over three.js 0.186; LayerChart 2.6 over d3 scales. Beat: raw MapLibre through an attachment (thirty markers want an `{#each}`), Mapbox GL (a licence, a key and a `connect-src`), Leaflet (raster, no vector styling, no WebGL), raw three.js (a scene graph wants a template), Chart.js and ECharts (canvas charts with their own theming and a `Chart` object to sync).',
-					'**Imperative through an attachment — wants one element and owns it.** Tiptap 3.31 through `{@attach}`, with `@tiptap/extension-placeholder` for the empty page (3KB, and one more extension rather than a hand-rolled decoration); GSAP 3.15 through `{@attach}`. Beat: the Svelte wrappers for Tiptap (nothing to add), ProseMirror directly (Tiptap *is* ProseMirror with a schema and commands), Lexical (React-first), Quill (its own data model).',
+					'**Headless — behaviour and accessibility, no pixels.** Bits UI 2.19 (Dialog, Combobox, Command, DateRangePicker, DatePicker); TanStack Table 9.3. Beat: Melt UI (Bits is built on its builders and adds the component layer), shadcn-svelte (a copy-in kit *on top of* Bits — right for a team that wants the styling done, wrong for a course about the primitives), Skeleton (a full framework with its own tokens; the project already has tokens), Flowbite-Svelte (styled, Tailwind, Svelte 4 lineage).',
+					'**Wrappers — components over an imperative library.** svelte-maplibre 2.0 over MapLibre GL 6.15; Threlte 8.6 / extras 9.22 over three.js 0.186; LayerChart 2.8 over d3 scales. Beat: raw MapLibre through an attachment (thirty markers want an `{#each}`), Mapbox GL (a licence, a key and a `connect-src`), Leaflet (raster, no vector styling, no WebGL), raw three.js (a scene graph wants a template), Chart.js and ECharts (canvas charts with their own theming and a `Chart` object to sync).',
+					'**Imperative through an attachment — wants one element and owns it.** Tiptap 3.32 through `{@attach}`, with `@tiptap/extension-placeholder` for the empty page (3KB, and one more extension rather than a hand-rolled decoration); GSAP 3.15 through `{@attach}`. Beat: the Svelte wrappers for Tiptap (nothing to add), ProseMirror directly (Tiptap *is* ProseMirror with a schema and commands), Lexical (React-first), Quill (its own data model).',
 					'**Actions.** svelte-dnd-action 0.9.80. Beat: Atlassian’s pragmatic-drag-and-drop (excellent, framework-agnostic, and needs a hundred lines of adapter for keyboard support that svelte-dnd-action has built in), `svelte-dnd-list` (Svelte 4), the HTML Drag and Drop API alone (no touch, no keyboard). It ships an action — the shape before attachments — and `fromAction` from `svelte/attachments` applies it as one, so choosing it cost no legacy syntax in the app (chapter {{the-itinerary}}).',
-					'**Compilers and preprocessors.** Paraglide 2.26; mdsvex 0.12.8; `@sveltejs/enhanced-img` 1.0.0; `phosphor-svelte` 3.1 with its Vite plugin. Beat: svelte-i18n (a runtime dictionary), `@inlang/paraglide-sveltekit` (folded into Paraglide 2 — see below), `svelte-markdown` (runtime parsing), `unplugin-icons` (fine; Phosphor’s own package has the weights the design uses), Lucide (also fine; a coin toss the design decided).',
-					'**Server libraries with a SvelteKit adapter.** Better Auth 1.7.7; Drizzle 0.45 with libSQL 0.18; OpenTelemetry’s Node SDK. Beat: Lucia (deprecated itself and recommends rolling your own or Better Auth), Auth.js (session-in-JWT by default, and a SvelteKit adapter that lags), Prisma (a query engine binary the image would carry; Drizzle is SQL with types), Kysely (close second; no relational query API).',
+					'**Compilers and preprocessors.** Paraglide 2.29; mdsvex 0.12.8; `@sveltejs/enhanced-img` 1.0.0; `phosphor-svelte` 3.1 with its Vite plugin. Beat: svelte-i18n (a runtime dictionary), `@inlang/paraglide-sveltekit` (folded into Paraglide 2 — see below), `svelte-markdown` (runtime parsing), `unplugin-icons` (fine; Phosphor’s own package has the weights the design uses), Lucide (also fine; a coin toss the design decided).',
+					'**Server libraries with a SvelteKit adapter.** Better Auth 1.7.10; Drizzle 0.45 with libSQL 0.18; OpenTelemetry’s Node SDK. Beat: Lucia (deprecated itself and recommends rolling your own or Better Auth), Auth.js (session-in-JWT by default, and a SvelteKit adapter that lags), Prisma (a query engine binary the image would carry; Drizzle is SQL with types), Kysely (close second; no relational query API).',
 					'**Utilities.** runed 0.37 (`Debounced`); valibot 1.5 (every schema); svelte-sonner 1.2 (toasts); `@internationalized/date` 3.12 (dates without time zones). Beat: zod (works; twice the bytes for the same validators, and valibot’s functions tree-shake), `svelte-french-toast` (Svelte 4), `dayjs` and `date-fns` (instants, not calendar dates; and `Intl` formats better than either).',
-					'**Packaging and proof.** `@sveltejs/package` 3.0.0, publint 0.3, `@arethetypeswrong/cli` 0.18, `vitest-browser-svelte` 3.1 on Vitest 5, Playwright 1.64, axe-core 4.14 through `@axe-core/playwright` 4.13. Beat: Lighthouse CI for accessibility (it runs axe too, on one URL at a time, without the signed-in states or the open dialogs the matrix reaches), pa11y (the same engine behind a second runner), `tsup` (does not understand `.svelte`), Storybook (chapter {{two-components-for-any-app}}’s components have tests instead; a Storybook is the right call for a design system with fifty components, and a heavy one for a library with two).'
+					'**Packaging and proof.** `@sveltejs/package` 3.0.1, publint 0.3, `@arethetypeswrong/cli` 0.18, `vitest-browser-svelte` 3.1 on Vitest 5, Playwright 1.64, axe-core 4.14 through `@axe-core/playwright` 4.14. Beat: Lighthouse CI for accessibility (it runs axe too, on one URL at a time, without the signed-in states or the open dialogs the matrix reaches), pa11y (the same engine behind a second runner), `tsup` (does not understand `.svelte`), Storybook (chapter {{two-components-for-any-app}}’s components have tests instead; a Storybook is the right call for a design system with fifty components, and a heavy one for a library with two).'
 				]
 			},
 
@@ -79,28 +79,28 @@ $ pnpm why <package>           # what pulled it in, and whether it pins svelte@4
 			{
 				type: 'terminal',
 				code: `
-node                   24.21.0    the current LTS; pnpm 12.10.1 through corepack
+node                   24.22.0    the current LTS; pnpm 12.14.0 through corepack
 svelte                 5.57.2     runes, attachments, await in markup, boundaries
-@sveltejs/kit          3.0.1      GA: remote functions, tracing, env.ts, defineParams
+@sveltejs/kit          3.1.0      GA: remote functions, tracing, env.ts, defineParams
 @sveltejs/adapter-node 6.0.0      no ORIGIN variable; content-hash ETags; GET/HEAD only
 vite                   8.3.x      rolldown-based; \`?worker&url\`, optimizeDeps as ever
 vitest                 5.0.x      projects inherit the config; exact locators
 typescript             6.0.x      the newest major Kit, svelte-check and typescript-eslint take
 bits-ui                2.19.x     headless; DateRangePicker on @internationalized/date
-svelte-maplibre        2.0.x      maplibre-gl 6.13 (deduped)
+svelte-maplibre        2.0.x      maplibre-gl 6.15 (deduped)
 @threlte/core          8.6.x      + @threlte/extras 9.22, three 0.186
-@tanstack/svelte-table 9.2.x      runes adapter; \`tableFeatures\`, \`columnMeta\` slot
-layerchart             2.6.x
-@tiptap/core           3.31.x     + starter-kit, pm
+@tanstack/svelte-table 9.3.x      runes adapter; \`tableFeatures\`, \`columnMeta\` slot
+layerchart             2.8.x
+@tiptap/core           3.32.x     + starter-kit, pm
 svelte-dnd-action      0.9.80
-@inlang/paraglide-js   2.26.x
-better-auth            1.7.7      \`better-auth/minimal\`; the 1.7.0 \`issuer\` column withdrawn
+@inlang/paraglide-js   2.29.x
+better-auth            1.7.10     \`better-auth/minimal\`; the 1.7.0 \`issuer\` column withdrawn
 drizzle-orm            0.45.x     drizzle-kit 0.31
 runed                  0.37.x
 mdsvex                 0.12.8
 @sveltejs/enhanced-img 1.0.0      GA
-@sveltejs/package      3.0.0      GA; reads config from Vite, rewrites #lib to relative
-axe-core               4.14.0     + @axe-core/playwright 4.13.0, handed the newer engine`
+@sveltejs/package      3.0.1      GA; reads config from Vite, rewrites #lib to relative
+axe-core               4.14.0     + @axe-core/playwright 4.14.0, still handed the project’s own engine`
 			},
 			{
 				type: 'why',

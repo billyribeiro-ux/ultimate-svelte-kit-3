@@ -1,4 +1,4 @@
-# Not a workspace — a single package. This file exists for three settings.
+# Not a workspace — a single package. This file exists for two settings.
 #
 # pnpm (since 10) refuses to run a dependency's install scripts unless you say
 # so by name, which is the correct default: `postinstall` is arbitrary code
@@ -22,14 +22,3 @@ minimumReleaseAgeExclude:
   - '@types/node@24.19.2'
   - eslint-plugin-svelte@3.23.1
   - phosphor-svelte@3.1.1
-
-# Better Auth 1.7.7 declares `@sveltejs/kit` as an *optional* peer at `^2.0.0`
-# and has not widened the range past 2 yet. The only Kit surface it touches is
-# `svelteKitHandler`, which takes `resolve` and `building` as arguments rather
-# than importing anything that changed in Kit 3, and `hooks.server.ts` proves
-# it against 3.0.1 on every end-to-end run — so the unmet-peer warning is noise
-# rather than information. Remove this line when a Better Auth release says
-# "SvelteKit 3"; `pnpm install` will stop warning the moment it is safe to.
-peerDependencyRules:
-  allowedVersions:
-    'better-auth>@sveltejs/kit': '3'

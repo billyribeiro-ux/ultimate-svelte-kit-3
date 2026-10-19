@@ -1,5 +1,5 @@
 /**
- * Better Auth's four tables, in the shape Better Auth 1.7.7 expects.
+ * Better Auth's four tables, in the shape Better Auth 1.7.10 expects.
  *
  * `pnpm run auth:schema` writes this file from `auth.ts`, and the result is
  * kept formatted the project's way rather than the generator's — the only
@@ -11,7 +11,7 @@
  * account: an OAuth provider's URL, or `local:credential` for a password —
  * with a unique index on `(issuer, account_id)`, and the first version of this
  * file carried both. 1.7.3 withdrew the idea: accounts are identified by
- * `(provider_id, account_id)` again, as in 1.6, and 1.7.7 never writes the
+ * `(provider_id, account_id)` again, as in 1.6, and 1.7.10 never writes the
  * column. It also checks the Drizzle schema at startup and refuses to run with
  * a `NOT NULL` column it will never fill, because every sign-up would fail on
  * the insert. The 1.7 upgrade guide's SQLite recipe — drop the index, then the

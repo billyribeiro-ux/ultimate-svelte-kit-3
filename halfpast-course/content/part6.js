@@ -562,7 +562,7 @@ expect(compact.format(5600)).toMatch(/^£5\\.60?k$/i);`
 			},
 			{
 				type: 'p',
-				text: '`Intl` output depends on the runtime\'s ICU version. Node 22.22, from the LTS line before this one, ships ICU 77.1; Node 24.21, the version this project pins, ships ICU 78.3; and between the two that compact pound changed from `£5.60K` to `£5.6k`: a zero dropped and the K went lower-case, which is why the pattern above allows both. A byte-exact assertion turns a routine Node upgrade into a failing build with no bug behind it. Halfpast\'s own `formatMoney` is a thin wrapper around `Intl.NumberFormat`, so its tests face exactly this trap.'
+				text: '`Intl` output depends on the runtime\'s ICU version. Node 22.22, from the LTS line before this one, ships ICU 77.1; Node 24.22, the version this project pins, ships ICU 78.3; and between the two that compact pound changed from `£5.60K` to `£5.6k`: a zero dropped and the K went lower-case, which is why the pattern above allows both. A byte-exact assertion turns a routine Node upgrade into a failing build with no bug behind it. Halfpast\'s own `formatMoney` is a thin wrapper around `Intl.NumberFormat`, so its tests face exactly this trap.'
 			},
 			{
 				type: 'p',
@@ -1200,7 +1200,7 @@ pnpm run build`
 "dependencies": {
 	…
 	"@libsql/client": "^0.18.0",
-	"better-auth": "^1.7.7",
+	"better-auth": "^1.7.10",
 	"drizzle-orm": "^0.45.4",
 	…
 }`
@@ -1227,15 +1227,15 @@ ssr: {
 				lang: 'json',
 				code: `
 "engines": {
-	"node": ">=24.21.0"
+	"node": ">=24.22.0"
 },
-"packageManager": "pnpm@12.10.1",`
+"packageManager": "pnpm@12.14.0",`
 			},
 			{
 				type: 'code',
 				file: '.nvmrc',
 				lang: 'text',
-				code: '24.21.0'
+				code: '24.22.0'
 			},
 			{
 				type: 'p',

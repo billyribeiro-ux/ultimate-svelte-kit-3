@@ -9,9 +9,9 @@ distributed systems is to build one whose bugs cost money.
 
 ## Toolchain
 
-Node **24.21.0** (the current LTS; `.nvmrc` pins it, and `engines` refuses
-anything older), pnpm **12.10.1** (pinned by `packageManager`, so Corepack or
-pnpm's own version check picks it up), SvelteKit **3.0.1** with adapter-node
+Node **24.22.0** (the current LTS; `.nvmrc` pins it, and `engines` refuses
+anything older), pnpm **12.14.0** (pinned by `packageManager`, so Corepack or
+pnpm's own version check picks it up), SvelteKit **3.1.0** with adapter-node
 **6**, Vitest **5**, TypeScript **6**. Everything else is at its latest
 release; `pnpm-lock.yaml` is the exact answer.
 

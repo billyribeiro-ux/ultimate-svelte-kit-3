@@ -135,7 +135,7 @@ export const part0 = [
 			code('vite.config.ts', 60, 97),
 			{
 				type: 'p',
-				text: 'Project 6 wrote an adapter from scratch. This one deploys the way most Node applications do — `node build` behind a reverse proxy, in a container — and spends its deployment chapter on what makes that safe. `precompress` writes `.br` and `.gz` beside every asset so the server never compresses on the fly.'
+				text: 'Project 6 wrote an adapter from scratch. This one deploys the way most Node applications do — `node build` behind a reverse proxy, in a container — and spends its deployment chapter on what makes that safe. `precompress` writes `.br` and `.gz` beside every asset so the server never compresses on the fly. The prerendered pages are written as `.html` files, and since SvelteKit 3.1 the `Content-Type` the adapter sends for them is worked out from the files the build wrote rather than from the prerendered paths, which have no extension.'
 			},
 			{
 				type: 'p',
@@ -151,7 +151,7 @@ export const part0 = [
 			code('vite.config.ts', 105, 140),
 			{
 				type: 'p',
-				text: '`mode: \'auto\'` uses hashes for prerendered pages — where the whole document is known at build time — and nonces for dynamically rendered ones. The directives that are specific to a spreadsheet are each explained in place. The one worth reading twice is `style-src \'unsafe-inline\'`: a virtualised grid positions ten thousand cells with `style:` attributes and column widths are numbers a person drags, and attributes cannot be hashed. The exposure is CSS injection, not script execution, and the comment says so rather than pretending the trade is free.'
+				text: '`mode: \'auto\'` uses hashes for prerendered pages — where the whole document is known at build time — and nonces for dynamically rendered ones. The directives that are specific to a spreadsheet are each explained in place. The one worth reading twice is `style-src \'unsafe-inline\'`: a virtualised grid positions ten thousand cells with `style:` attributes and column widths are numbers a person drags, and attributes cannot be hashed. The exposure is CSS injection, not script execution, and the comment says so rather than pretending the trade is free. SvelteKit 3.1 also accepts the hash-reporting keywords `report-sha256`, `report-sha384` and `report-sha512` in `script-src` and `style-src`, quoting them for you as it does `report-sample`; this policy reports no violations, so it uses none of them.'
 			},
 
 			{ type: 'h3', id: 'version', text: 'CSRF, versioning, bundling' },

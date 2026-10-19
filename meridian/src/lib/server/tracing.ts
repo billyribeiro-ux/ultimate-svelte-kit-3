@@ -3,12 +3,12 @@
  * ==================
  *
  * With `tracing.server` on, SvelteKit emits an OpenTelemetry span for every
- * `handle`, `load`, form action and remote function, and OpenTelemetry hands
- * finished spans to an *exporter*. The usual one sends them to a collector
- * over the network. This one keeps the last few hundred in memory, which is
- * all a single-process app needs to answer "what did that request actually
- * do?" on its own diagnostics page — including, for this project, how long
- * a live query stayed open and which command woke it.
+ * `handle`, `load`, form action, remote function and `+server` handler, and
+ * OpenTelemetry hands finished spans to an *exporter*. The usual one sends
+ * them to a collector over the network. This one keeps the last few hundred
+ * in memory, which is all a single-process app needs to answer "what did that
+ * request actually do?" on its own diagnostics page — including, for this
+ * project, how long a live query stayed open and which command woke it.
  *
  * It is deliberately not a collector. It forgets on restart, holds one
  * process's spans, and is bounded so that a busy hour cannot become a leak.

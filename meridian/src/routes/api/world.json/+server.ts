@@ -16,7 +16,7 @@
  * ------------------------------------------------------
  * The first version was one. It built fine and then failed to prerender:
  * `Asset does not exist`. SvelteKit registers the assets `read()` may open
- * by walking the server modules of routes and hooks — and, still in 3.0.1
+ * by walking the server modules of routes and hooks — and, still in 3.1.0
  * (`core/generate_manifest/find_server_assets.js` visits endpoints, page
  * nodes and the two hooks files, nothing else), not the `.remote.ts`
  * modules. An endpoint is walked; so this is one. The gazetteer in

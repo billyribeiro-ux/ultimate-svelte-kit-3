@@ -362,7 +362,7 @@ $ pnpm exec playwright test e2e/settings.e2e.ts -g 'cannot load'
 			code('vite.config.ts', 164, 178),
 			{
 				type: 'p',
-				text: 'Every directive is a decision. `script-src` with no `unsafe-inline`, because that keyword is what makes the whole policy decorative. `connect-src \'self\'`, so a script that somehow does run cannot post a query result to another host. `object-src \'none\'` and `base-uri \'self\'` because both are ways *around* `script-src` rather than risks of their own: a plugin document runs code outside it, and an injected `<base>` repoints every relative URL the policy is trusting.'
+				text: 'Every directive is a decision. `script-src` with no `unsafe-inline`, because that keyword is what makes the whole policy decorative. `connect-src \'self\'`, so a script that somehow does run cannot post a query result to another host. `object-src \'none\'` and `base-uri \'self\'` because both are ways *around* `script-src` rather than risks of their own: a plugin document runs code outside it, and an injected `<base>` repoints every relative URL the policy is trusting. SvelteKit 3.1 also accepts the hash-reporting keywords `report-sha256`, `report-sha384` and `report-sha512` in `script-src` and `style-src`, quoting them for you as it does `report-sample`; this policy has no `report-uri` or `report-to`, so it uses none of them.'
 			},
 			{
 				type: 'warn',

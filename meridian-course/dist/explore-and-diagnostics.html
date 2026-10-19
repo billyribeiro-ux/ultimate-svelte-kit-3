@@ -289,12 +289,12 @@ provider.register();</code></pre>
  * ==================
  *
  * With `tracing.server` on, SvelteKit emits an OpenTelemetry span for every
- * `handle`, `load`, form action and remote function, and OpenTelemetry hands
- * finished spans to an *exporter*. The usual one sends them to a collector
- * over the network. This one keeps the last few hundred in memory, which is
- * all a single-process app needs to answer &quot;what did that request actually
- * do?&quot; on its own diagnostics page — including, for this project, how long
- * a live query stayed open and which command woke it.
+ * `handle`, `load`, form action, remote function and `+server` handler, and
+ * OpenTelemetry hands finished spans to an *exporter*. The usual one sends
+ * them to a collector over the network. This one keeps the last few hundred
+ * in memory, which is all a single-process app needs to answer &quot;what did that
+ * request actually do?&quot; on its own diagnostics page — including, for this
+ * project, how long a live query stayed open and which command woke it.
  *
  * It is deliberately not a collector. It forgets on restart, holds one
  * process's spans, and is bounded so that a busy hour cannot become a leak.
@@ -316,7 +316,7 @@ export interface SpanRecord {
 	readonly attributes: Record&lt;string, string | number | boolean&gt;;
 }</code></pre>
 </figure>
-<p>With <code>tracing.server</code> on, SvelteKit emits an OpenTelemetry span for every <code>handle</code>, <code>load</code>, form action and remote function. <code>src/instrumentation.server.ts</code> is loaded before any application code — in development through Vite, in production because adapter-node wires it in front of the entry point — and registers a tracer provider with one processor that hands every finished span to an exporter. The usual exporter sends spans to a collector over the network; this one keeps the last three hundred in memory, which is all a single-process app needs to answer “what did that request do?” on its own page.</p>
+<p>With <code>tracing.server</code> on, SvelteKit emits an OpenTelemetry span for every <code>handle</code>, <code>load</code>, form action and remote function — and, since 3.1, for every <code>+server</code> handler, a <code>sveltekit.endpoint</code> span carrying the route and the method, so <code>/healthz</code> and the route API show in the table beside the pages. <code>src/instrumentation.server.ts</code> is loaded before any application code — in development through Vite, in production because adapter-node wires it in front of the entry point — and registers a tracer provider with one processor that hands every finished span to an exporter. The usual exporter sends spans to a collector over the network; this one keeps the last three hundred in memory, which is all a single-process app needs to answer “what did that request do?” on its own page.</p>
 
 <figure class="code">
 	<figcaption>

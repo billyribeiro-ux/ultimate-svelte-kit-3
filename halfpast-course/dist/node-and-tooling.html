@@ -36,7 +36,7 @@
 			<p class="lede">Getting the right runtime, and making the project refuse the wrong one.</p>
 			<aside class="callout callout--goal"><h4>By the end of this chapter</h4><p>Node 24 LTS installed, pnpm ready, and an understanding of why the version is pinned rather than suggested.</p></aside>
 			<p>Node has two release lines at any time. <strong>Current</strong> gets the new features; <strong>LTS</strong> — long-term support — gets the bug fixes and is what you run in production. Even-numbered majors become LTS in October of their year.</p>
-<p>This project targets <strong>Node 24.21.0</strong>, codename Krypton, the active LTS line. Check what you have:</p>
+<p>This project targets <strong>Node 24.22.0</strong>, codename Krypton, the active LTS line. Check what you have:</p>
 
 <figure class="code code--terminal">
 	<figcaption>
@@ -52,9 +52,9 @@
 		<span class="code__file">terminal</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code>nvm install 24.21.0
-nvm use 24.21.0
-node --version   # v24.21.0</code></pre>
+	<pre><code>nvm install 24.22.0
+nvm use 24.22.0
+node --version   # v24.22.0</code></pre>
 </figure>
 <aside class="callout callout--note"><p>Do not take a version number from a tutorial — including this one — as current. The authoritative list is <code>https://nodejs.org/dist/index.json</code>: every release, with its date and whether it is LTS. It is a plain JSON file and you can read it in a browser.</p></aside>
 <h3 id="engines">Making the project insist</h3>
@@ -68,13 +68,13 @@ node --version   # v24.21.0</code></pre>
 	<pre><code class="lang-json">{
 	// …
 	&quot;engines&quot;: {
-		&quot;node&quot;: &quot;&gt;=24.21.0&quot;
+		&quot;node&quot;: &quot;&gt;=24.22.0&quot;
 	},
-	&quot;packageManager&quot;: &quot;pnpm@12.10.1&quot;,
+	&quot;packageManager&quot;: &quot;pnpm@12.14.0&quot;,
 	// …
 }</code></pre>
 </figure>
-<p><code>engines</code> says which Node the project needs. <code>packageManager</code> does the same job for the package manager: pnpm reads it and switches to exactly 12.10.1 in this folder, whatever version is installed globally.</p>
+<p><code>engines</code> says which Node the project needs. <code>packageManager</code> does the same job for the package manager: pnpm reads it and switches to exactly 12.14.0 in this folder, whatever version is installed globally.</p>
 <p>On its own, <code>engines</code> is advisory: a statement of what the project needs, which nothing enforces. Making pnpm enforce it is one line, and it goes in <code>pnpm-workspace.yaml</code>, because that is where pnpm 12 reads its settings from:</p>
 
 <figure class="code">
@@ -94,7 +94,7 @@ node --version   # v24.21.0</code></pre>
 	<pre><code>Error: ERR_PNPM_UNSUPPORTED_ENGINE
 
   × Unsupported engine for /home/you/halfpast-app: wanted:
-  │ {&quot;node&quot;:&quot;&gt;=24.21.0&quot;} (current: {&quot;node&quot;:&quot;22.22.0&quot;})</code></pre>
+  │ {&quot;node&quot;:&quot;&gt;=24.22.0&quot;} (current: {&quot;node&quot;:&quot;22.22.0&quot;})</code></pre>
 </figure>
 <aside class="callout callout--warn"><p>You will see <code>engine-strict=true</code> in an <code>.npmrc</code> in a great many projects, and this one had it too. That is npm's spelling of the setting, and pnpm 12 does not read it. We checked rather than assumed: with only the <code>.npmrc</code> line, the same install under Node 22 printed <code>Done in 25ms using pnpm v12.10.1</code> and exited 0, with no warning of any kind, and <code>pnpm config get engine-strict</code> answered <code>undefined</code>. A guard that does nothing is worse than no guard, because everybody believes it is there. So the line moved to <code>pnpm-workspace.yaml</code> and the <code>.npmrc</code> went.</p></aside>
 
@@ -109,7 +109,7 @@ node --version   # v24.21.0</code></pre>
 		<span class="code__file">.nvmrc</span>
 		<button class="code__copy" type="button" data-copy>Copy</button>
 	</figcaption>
-	<pre><code class="lang-text">24.21.0</code></pre>
+	<pre><code class="lang-text">24.22.0</code></pre>
 </figure>
 <h3 id="icu">A version really can change behaviour</h3>
 <p>It is tempting to treat the Node version as bookkeeping. Here is a real example from this project, discovered while moving it from Node 22, the previous LTS line, to Node 24.</p>
@@ -127,7 +127,7 @@ node --version   # v24.21.0</code></pre>
 }).format(5600);
 
 // Node 22.22 (ICU 77.1) → &quot;$5.60K&quot;
-// Node 24.21 (ICU 78.3) → &quot;$5.6K&quot;</code></pre>
+// Node 24.22 (ICU 78.3) → &quot;$5.6K&quot;</code></pre>
 </figure>
 <p><code>Intl</code> is implemented by ICU, the Unicode library Node bundles, and ICU changes between releases. A test asserting the exact string <code>&quot;$5.60K&quot;</code> is not testing your formatting function — it is testing which Node is installed, and it fails on upgrade for a reason that has nothing to do with your code.</p>
 <aside class="callout callout--note"><p>The lesson, which we apply throughout: when asserting on <code>Intl</code> output, match a <em>pattern</em> that captures what your app actually needs — the right symbol, the right suffix, at most two decimals — not a byte-exact string.</p></aside>
@@ -144,7 +144,7 @@ pnpm --version   # 12.x</code></pre>
 
 <aside class="callout callout--check">
 	<h4>Checkpoint</h4>
-	<p><code>node --version</code> reports 24.21.0 or newer, and <code>pnpm --version</code> reports 12 or newer.</p>
+	<p><code>node --version</code> reports 24.22.0 or newer, and <code>pnpm --version</code> reports 12 or newer.</p>
 </aside>
 		</article>
 

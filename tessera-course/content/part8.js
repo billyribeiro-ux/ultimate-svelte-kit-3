@@ -1673,7 +1673,7 @@ self.addEventListener('activate', (event) => {
 			},
 			{
 				type: 'p',
-				text: 'The cache is named after `version`, which is unique per build, so a new deployment gets a new cache and the old one is deleted on activate. Naming it anything stable is how a service worker ends up serving an application from two releases ago with no way to clear it short of asking people to open devtools.'
+				text: 'The cache is named after `version`, which is unique per build, so a new deployment gets a new cache and the old one is deleted on activate. Naming it anything stable is how a service worker ends up serving an application from two releases ago with no way to clear it short of asking people to open devtools. SvelteKit helps from its side: when a client-side navigation fails and a check finds a newer build live, it asks the registered worker to update and then loads the page the plain way, and since 3.1 a failed update there — a phone that has just lost its signal, say — no longer stops that load.'
 			},
 			{
 				type: 'warn',

@@ -552,7 +552,7 @@ const asked = $derived(
 	JSON.stringify([data.tenant, submitted.q, submitted.range, submitted.run])
 );</code></pre>
 </figure>
-<aside class="callout callout--warn"><p>The first version was keyed on <code>query</code>, and the tab froze when two runs overlapped. The remote-functions documentation says that queries “are cached while they’re on the page, meaning <code>getPosts() === getPosts()</code>”, and in SvelteKit 3.0.1 the client does not do that: each call makes a new object in front of the shared cache entry. With two runs in flight, each read of the key found a new object and started the block over, without end. A string built from the arguments is equal to itself.</p></aside>
+<aside class="callout callout--warn"><p>The first version was keyed on <code>query</code>, and the tab froze when two runs overlapped. The remote-functions documentation says that queries “are cached while they’re on the page, meaning <code>getPosts() === getPosts()</code>”, and in SvelteKit 3.1.0 the client does not do that: each call makes a new object in front of the shared cache entry. With two runs in flight, each read of the key found a new object and started the block over, without end. A string built from the arguments is equal to itself.</p></aside>
 
 <figure class="code code--terminal">
 	<figcaption>

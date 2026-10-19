@@ -271,7 +271,7 @@ export interface Place {
  * ------------------------------------------------------
  * The first version was one. It built fine and then failed to prerender:
  * `Asset does not exist`. SvelteKit registers the assets `read()` may open
- * by walking the server modules of routes and hooks — and, still in 3.0.1
+ * by walking the server modules of routes and hooks — and, still in 3.1.0
  * (`core/generate_manifest/find_server_assets.js` visits endpoints, page
  * nodes and the two hooks files, nothing else), not the `.remote.ts`
  * modules. An endpoint is walked; so this is one. The gazetteer in
@@ -293,7 +293,7 @@ export async function GET() {
 	});
 }</code></pre>
 </figure>
-<p>And the one that is not a remote function, with the reason written above it. The world’s coastlines are read from the <code>world-atlas</code> package with <code>read()</code> from <code>$app/server</code>, the API for opening a file that was imported through Vite. The first version was a <code>prerender()</code> remote function and failed at build time with <code>Asset does not exist</code>, because SvelteKit registers the assets <code>read()</code> may open by walking the server modules of routes and hooks, and — still true in 3.0.1; <code>find_server_assets.js</code> in Kit’s source visits endpoints, page nodes and the two hooks files, nothing else — not the <code>.remote.ts</code> modules. An endpoint is walked, so this is one — prerendered, so it is a file in the output that the server never runs again. That is exactly the kind of thing a course should record: the constraint, the version, and the workaround.</p>
+<p>And the one that is not a remote function, with the reason written above it. The world’s coastlines are read from the <code>world-atlas</code> package with <code>read()</code> from <code>$app/server</code>, the API for opening a file that was imported through Vite. The first version was a <code>prerender()</code> remote function and failed at build time with <code>Asset does not exist</code>, because SvelteKit registers the assets <code>read()</code> may open by walking the server modules of routes and hooks, and — still true in 3.1.0; <code>find_server_assets.js</code> in Kit’s source visits endpoints, page nodes and the two hooks files, nothing else — not the <code>.remote.ts</code> modules. An endpoint is walked, so this is one — prerendered, so it is a file in the output that the server never runs again. That is exactly the kind of thing a course should record: the constraint, the version, and the workaround.</p>
 
 <figure class="code">
 	<figcaption>

@@ -1,5 +1,5 @@
 /**
- * Better Auth's four tables, in the shape Better Auth 1.7.7 expects.
+ * Better Auth's four tables, in the shape Better Auth 1.7.10 expects.
  *
  * `pnpm run auth:schema` wrote the first version of this file from `auth.ts`;
  * it is kept by hand so the column names follow the same `snake_case` as the
